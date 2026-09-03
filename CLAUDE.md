@@ -1,0 +1,77 @@
+# Needle — working rules
+
+The doctrine we work under — intent over orders, the two kinds of decisions,
+the inverted labour economics, the /clear cliff, closed loops — lives in the
+owner's global `CLAUDE.md` and loads in every session. This file holds only
+what is true of Needle.
+
+## What this is
+
+Needle is a kanban over a corpus of plans: the shared memory of a team made of
+one owner and many AI sessions with no memory of each other. The fixed point
+is `docs/INTENT.md`. Read it before anything else; when a rule here and that
+document disagree, the intent wins and this file gets fixed.
+
+## The rules
+
+**Intent first, plan second, code third.** Every slice has a plan in
+`docs/plans/` with an `Effort gate:` line and a "done means" per item. The
+folder is the status: `docs/plans/*.md` is live work, `docs/plans/done/` is
+the archive. No separate status list — a hand-kept one drifts.
+
+**Execution takes a lane.** Work that becomes commits runs in a git worktree
+under `.claude/worktrees/`, named `card-<id>-<slug>` once the board can see
+it, on a short-lived branch that fast-forwards into `main` when green and is
+deleted at the fold. The main checkout is for reading, docs and the fold.
+
+**The board reads what runs; it never is the thing that runs.** Nothing under
+`board/` spawns a process, opens a window or chooses a model. That is the
+runtime's job (`runtime/`), reached through a typed interface. A test refuses
+`subprocess` imports under `board/`.
+
+**One way to do each thing.** Two ways is failed alignment; consolidate. A new
+primitive — type, endpoint, component, event — is born after a search for the
+existing one, and the proof of search goes in the plan or the commit body.
+
+**Typed edges, lossless.** Backend types are Pydantic and are the contract;
+the frontend mirrors them one module per backend concept, no `any`, no
+`Record<string, unknown>`. If the backend shape changes, TypeScript fails.
+
+**Boundaries that matter are ratchets, not conventions.** A test under
+`tests/ratchets/` holds every boundary named in this file. Ratchet the intent,
+never the method: a ratchet that would have to change for a better method to
+ship was written at the wrong altitude.
+
+**Nothing ships half-done.** No TODO, no "later", no deferral markers; a
+ratchet refuses them. Say precisely what is not done instead.
+
+**Nothing is done without a review record.** A code-shipping slice closes with
+a review under `docs/reviews/` naming what was checked and what was found.
+
+**Docstrings say why, commits say what prompted.** Every commit has a body:
+what prompted the change and what the diff cannot convey.
+
+## Stack
+
+Backend: Python via `uv`, FastAPI, Pydantic, SQLAlchemy + Alembic on SQLite.
+Frontend: React + TypeScript + Vite, Tailwind, a small design system in
+`frontend/src/components/ui/` that is the only visual language. The exact
+versions live in `pyproject.toml` and `frontend/package.json`, never here.
+
+## Commands
+
+```bash
+uv run pytest -q                       # backend + ratchets
+cd frontend && npx tsc --noEmit        # types
+cd frontend && npx vitest run          # frontend tests
+```
+
+## Commit messages
+
+```
+<type>(<scope>): <what changed>
+
+<What prompted it, 1–2 sentences. What the diff alone cannot convey.>
+
+Co-Authored-By: <model> <noreply@anthropic.com>
+```
