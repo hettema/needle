@@ -98,17 +98,30 @@ What the machine can see that the drawing does not:
   every fix ships the thing that makes its class loud (a validator, a ratchet,
   an alarm), not just the patch. The "removes a class" bar is what keeps this
   from running until the death of the universe.
-- **Fixes run in the gaps.** The binding limit is not tokens; it is the
+- **The dial is his, on the board.** The owner's own shape, and better than
+  an idle-fill rule: a toggle on the head — *auto-fix defects* — and a number
+  beside it, how many fix lanes may run at once. He turns it to one while he
+  is building features and up when he goes to sleep; the head's Live count
+  already tells him what else is running. The board fills up to the number
+  from the rail and no further. The binding limit is not tokens but the
   subscription slots his ranked work needs and the one trunk every fold lands
-  on. So fix lanes take slots nothing else is using — his work first, defects
-  in the dead time, the machine working while he sleeps — and start one at a
-  time per project, raised on evidence. Needle's own defects run only when no
-  lane is live anywhere, because a fold on the board restarts the service under
-  every running lane.
+  on, and the dial is exactly the control for that. Collisions are the
+  existing machinery — a worktree per lane, Start refused when two lanes
+  would edit the same files, the second fold rebasing onto the first — with
+  one condition the plan must hold: a plan the board writes for a defect
+  declares its terrain honestly, or the collision check has nothing to read.
+  Needle's own defects run only when no lane is live anywhere, because a fold
+  on the board restarts the service under every running lane.
 - **The filer's mark has three values, not two.** The nineteen already say
   all three in prose: *fix now*, *fix when this trigger fires* (#377 says wait
   for one production row; #341 says wait for a shipped duplicate), and *his*.
-  A trigger that has not fired is not started.
+  A trigger that has not fired is not started — and "how do we know it
+  fired?" (the owner's question) has an answer already built: a shipped card
+  waits in Executed with a WATCH signal a session reads on a cadence
+  (`SignalKind.SESSION`, plan 09). A defect with a trigger carries the same
+  row, the same reader reads it, and when it fires the card's mark becomes
+  *fix now*. One mechanism, not a second one; today the trigger is prose
+  nobody reads, which is the open loop that rule exists to close.
 - **Two preconditions are on the rail already.** The close still accepts a
   code lane with no review record
   (`2026-09-04-a-close-without-a-review-record-is-accepted.md`) — an
@@ -116,14 +129,21 @@ What the machine can see that the drawing does not:
   And a green suite is not the truth for the served board (two of this
   slice's own defects only the live board could show), so a fix that touches
   the page carries a live check in its "done means".
-- **The measure, named now.** The rail's size over time on both boards, split
-  by who filed each card (a fix lane, a feature lane, a production reading,
-  the owner); per fix lane, folded green with a clean final pass / stopped to
-  ask / undone within a week; and how many fixes shipped a class-closer.
-  Prediction: within two weeks, arrivals from feature lanes stay flat (that is
-  the natural discovery rate), arrivals from fix lanes fall, and the rail
-  shrinks. If the rail grows, fixes are patching instances — stop the path and
-  read the last ten fixes before restarting it.
+- **The measure, named now, in lanes rather than days.** The cadence belongs
+  to the intent, not the calendar: the signal arrives once per fix lane, so
+  the look happens after the first ten fix lanes close, and again after
+  thirty. Per lane: folded green with a clean final pass / stopped to ask /
+  undone (reverted, or a defect filed against it) before the next look; and
+  whether it shipped a class-closer. Across the rail: its size on both boards,
+  split by who filed each card (a fix lane, a feature lane, a production
+  reading, the owner). Prediction at ten: no more than one undone, fewer than
+  half stopped to ask, most shipped a class-closer. Prediction at thirty:
+  arrivals from feature lanes flat (the natural discovery rate), arrivals from
+  fix lanes falling, the rail smaller than when the dial was first turned. If
+  the rail grows, fixes are patching instances — the dial goes to zero and
+  the last ten fixes get read before it moves again. Time enters only as the
+  guard: ten lanes not reached within a fortnight of the dial being on is
+  itself the finding that the path is not running.
 
 ## The decisions in this that are his, not mine
 
