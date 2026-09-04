@@ -1,0 +1,60 @@
+# 11 — Defects fix themselves
+
+**Status:** PENDING
+**Written:** 2026-09-04, from the owner's Idea door conversation (56f7b05f) that began with a lane band reporting a death on a lane that had finished, and ended with the cycle he drew: "a session runs a code review on their work — fixes → runs again → fixes → etc. It fixes bugs directly related to their work and directly adjacent until everything comes back clean. Anything outside of those two rings goes to the board. Now the board has a bunch of findings and I think they should be fixed automatically with the same review → fix → review → fix until clean → third ring to board logic. Anything that needs a call from me doesn't get auto fixed." And the control: "a needle board toggle I can switch 'auto fix bugs' or something. Maybe with a 'max concurrency' type limit. When I go to sleep I can dial it up if no other sessions are running. If I'm building features I might have only one lane running the bug fixes." The bar was tried on all nineteen defects on Hello Revenue's rail before this was written: twelve straight fixes, three a plan's worth, four his — and the four say so in their own words.
+**Carries:** `docs/slice-suggestions/2026-09-04-a-standing-ruling-lets-a-defect-enter-execution-without-him.md` (the idea, with the nineteen-defect evidence and every ruling the conversation made), `docs/slice-suggestions/2026-09-04-a-close-without-a-review-record-is-accepted.md` (the precondition).
+**Effort gate:** xhigh — items 1, 2, 3, 5 and 6 are mechanics with clear tests. Item 4 is a session that writes a plan with no owner in the loop and a board that presses Start on it: the judgment is in what that session is told and refused, it is unattended by construction, and the strongest model writes it inside the rulings below.
+**Sequencing:** before 08 — the two share `board/parse.py`, the store and `api/app.py`; whichever starts second rebases at the fold, and the owner ranked this one first. Reuses plan 09's windowless session (the reading session) and plan 06's rail and Plan door; nothing is invented where those exist.
+
+## Intent
+
+INTENT says one move is the owner's: he decides what enters execution. Today that decision is made once per card, by hand, three times over for a defect — a gate, a plan conversation, a Start. This plan lets him make it once, as a standing ruling the board applies: a defect whose finder marked it as needing nobody enters execution on its own, under a dial he holds, and walks the ordinary path — a plan, a lane, the review rings, a fold on green, a close the machine refuses without a review record. What needs him stops and asks where every lane's question already lands. The intent it serves, in the words settled in the conversation: **no defect fails silently, and no known defect waits on a human.** A fix that does not make its class loud is not a fix; it is the reason the rail would never empty.
+
+### 1. The close refuses a code lane without a review record
+
+Done means: `needle close` refuses a card whose lane's edits touch anything outside `docs/` unless `--review` names a file that exists in the project's tree, and says so in one sentence with the path it expected; a docs-only close passes without one; the attention line counts shipped cards with no REVIEW row, so a close that slipped through another door is still visible. This is the precondition for everything below: an unattended lane's "clean" has to be something the machine refuses to skip, not something a session remembers. It holds for every project on the board — the first board's refusal (Hello Revenue #178) did not carry over, so Hello Revenue's closes are convention-held today too.
+
+### 2. A suggestion says who fixes it
+
+Done means: a suggestion's head carries a `**Fix:**` line with one of three values — `now`, `when <signal>` in the WATCH grammar (`session …`, `url …`, `file …`, `command …`), or `his` — read on every read the way `Kind:` is; a suggestion with no `Fix:` line reads as `his` (the safe default; the face says *unmarked*); the collapsed and open card show the mark beside the kind; a ratchet over Needle's own corpus refuses a live suggestion without `Kind:` and `Fix:`; and the filing rule every reading and review session receives in its brief (`board/brief.py`, where `**Kind:** defect` is already taught) says to write the line, with the three-part bar as the test for `now` — against a written intent, inside its ring, and the fix removes a class rather than an instance.
+
+### 3. The dial is on the head
+
+Done means: the head carries an *auto-fix* toggle and a number beside it — how many fix lanes may run at once — one for the whole board, because the limit is the machine's slots and its one trunk, not a project; both persist in the store and survive a restart; with the toggle off nothing starts by itself; the head shows fix lanes live against the number; every change is audited as the owner's, so the record says when he turned it and to what.
+
+### 4. The board plans and starts a marked defect
+
+Done means: on its cadence, with the toggle on and fewer fix lanes live than the number, the board takes the oldest `Fix: now` defect on any project's rail whose Start would otherwise be open (no lane on it, no collision, a place to run) — and, for Needle's own rail, only when no lane is live on any project, because a fold on the board restarts the service under every running lane — and starts a windowless planning session in the project's checkout. Plan 09's reading session is the shape: a session that never has hands on a tree and writes back through the corpus. Its brief is the suggestion, the plan shape in `docs/plans/README.md`, and four rules it must hold: the plan's "done means" comes from the suggestion's own "what would hold it"; the plan carries an item that makes the class loud (a validator, a ratchet, an alarm) or says in one sentence why the class is already loud; a plan whose terrain touches `frontend/` carries a live check of the served page in its done means; and a session that finds the fix implies a decision that is the owner's writes nothing but a note on the card and stops — the card reads as `his` from that note, and the board never rewrites the document. The session commits and pushes the plan with its Carries line, the board cards it as it cards every plan, and the board then opens the Start door itself with actor *machine*, so the card's history says *started by the dial*. The lane runs as any lane — a worktree, the rings, the review, a fold on green, a close item 1 can refuse — and its questions land on Your move as every lane's do. A fix lane counts against the number from its Start to its fold.
+
+### 5. A trigger is a signal
+
+Done means: a defect marked `Fix: when <signal>` is read by the signal loop on the same cadence and by the same readers as an Executed card's WATCH row (a `session` signal starts plan 09's reading session with the suggestion's trigger as its brief); a reading of *delivered* is recorded on the card as it is for a shipped card, and from that reading the card is eligible under item 4 exactly as a `now`; *not delivered* leaves it waiting; *cannot tell* asks the owner with the evidence, as it does today. Eligibility is the document's mark plus the card's latest reading; the board edits nothing.
+
+### 6. The loop is counted, and this plan's own signal is ten lanes
+
+Done means: `needle fixes <project|all>` (and the API behind the head) returns, per fix lane the dial started: its card, whether it folded green with a clean final pass, whether it stopped to ask, whether a defect was filed against it or its fold reverted since, and whether its plan carried a class-closer; and, for the rail, its size now and at the moment the dial was first turned on, split by who filed each card (a fix lane, a feature lane, a reading session, the owner). This plan's WATCH row is `session` — *after ten fix lanes have closed, read `needle fixes all` against: at most one undone, fewer than half stopped to ask, most carried a class-closer; at thirty, the rail smaller than at dial-on on both boards* — with the guard that ten lanes not reached within fourteen days of the dial being on is itself the finding that the path is not running.
+
+## Terrain
+- `api/board_cli.py` (close; the `fixes` verb), `board/parse.py` (the `Fix:` line beside `Kind:`), `domain/document.py` (the mark), `board/brief.py` (the filing rule in every session's brief), `board/assemble.py` and `frontend/src/` (the mark on the face, the dial on the head), `infrastructure/store.py` (the dial, the fix-lane record), `api/loops.py` (the dial's cadence; the signal loop reading Backlog defects), `api/doors.py` and `runtime/` (the planning session — plan 09's windowless session with a new brief; Start with actor machine), `tests/ratchets/` (the head-field ratchet; the ratchet that nothing under `board/` starts a process still holds — the loop asks the runtime).
+- Hello Revenue's corpus is read, never written by the board; its nineteen defects are the first ten lanes' material, and the four marked his stay where they are until he answers them.
+
+## Acceptance criteria
+1. On a fixture project, `needle close` of a code lane without `--review` is refused with the expected path; a docs-only lane passes.
+2. A suggestion marked `Fix: now` on a fixture rail, with the toggle on and the number at one, is planned and started with no hand on it; the card's history says *started by the dial*; a second `now` defect waits until the first folds.
+3. The same suggestion marked `Fix: his`, or unmarked, is never started; a planning session that finds an owner's decision leaves a note and stops.
+4. A `Fix: when session …` defect is read on the cadence and becomes eligible on *delivered*.
+5. The toggle off stops every start; a restart of the service keeps the dial's state.
+6. `needle fixes all` returns the counts, and the served board shows the dial and the live count.
+7. The suite and the ratchets are green, and the first lane the dial starts on Needle's own rail is #32 or #33 — the two defects this conversation filed — read live as the proof.
+
+## Rulings
+Recorded before the build, from the conversation; each overturnable by the owner on the card.
+- **A fix lane folds on green.** The alternative — stop before the fold and wait for the owner — was rejected because the ratchets and the review loop are what make a fold safe, and a queue of unfolded lanes collides with itself and with everything else. The blast radius is the trunk; the owner heard that and did not object.
+- **The dial is one, for the board.** Per-project dials were rejected: the limit is the machine's slots and the one trunk, not a project.
+- **Unmarked reads as his.** Treating an unmarked defect as `now` would have the board decide eligibility on its own judgment, which INTENT forbids.
+- **Needle fixes itself only when quiet.** A fold on the board restarts the service under running lanes.
+- **The class-closer item is mandatory in a dial-written plan.** Without it the rail is fed by the path that drains it.
+- **Oldest first across projects.** A rank within the rail was rejected for now: the rail is machine-kept and carries no owner rank; age is the one fact every card has.
+
+## Estimate
+Execution clock: two lane-days. Gate clock: ten fix lanes — however long the dial takes to run them.

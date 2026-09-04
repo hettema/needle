@@ -1,6 +1,7 @@
 # A close without a review record is accepted
 
 **Kind:** defect
+**Carried by:** docs/plans/2026-09-04-11-defects-fix-themselves.md
 **Found by:** the lane on card #23 (plan 09), translating Hello Revenue's #178 signal — "the next lane close refuses until a review record exists" — and finding the refusal was the first board's, not Needle's (2026-09-04).
 
 ## Observation

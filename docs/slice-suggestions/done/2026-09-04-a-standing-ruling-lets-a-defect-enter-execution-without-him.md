@@ -1,6 +1,7 @@
 # A standing ruling lets a defect enter execution without him
 
 **Kind:** idea
+**Carried by:** docs/plans/2026-09-04-11-defects-fix-themselves.md
 **Found by:** the owner, from the board's Idea door on 2026-09-04 (conversation
 56f7b05f), after two defects were filed in one sitting: "Many of the defects
 are unambiguous? They're straight fix it tasks with no real input needed from
