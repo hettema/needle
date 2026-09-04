@@ -416,6 +416,22 @@ def test_folded_but_unwritten_goes_to_decision_moment_and_nothing_folded_goes_ba
     assert came_from([]) == Column.UP_NEXT
 
 
+def test_the_owner_keeping_a_card_in_executing_is_neither_an_exit_nor_an_entry():
+    """Accepting a verdict that stays on a doubted card re-places it by the
+    owner's hand (plan 05); that row must not read as him taking the card
+    out, nor as where the card came from."""
+    since = NOW - timedelta(hours=2)
+    kept = moved(Column.EXECUTING, Column.EXECUTING, Actor.OWNER, NOW - timedelta(minutes=5), id=3)
+    history = [kept, moved(Column.PLANNED, Column.EXECUTING, Actor.MACHINE, since)]
+    assert came_from(history) == Column.PLANNED
+    lane = lane_for(card(), facts(sessions=[session()], worktrees={LANE: "card-7-the-thing"}))
+    assert should_enter_executing(card(), lane, history) is not None
+    back = exit_for(
+        card(column=Column.EXECUTING), ended_lane(), history, folded=False, signal=None, since=since
+    )
+    assert back is not None and back.column == Column.PLANNED
+
+
 def test_a_delivered_row_from_this_life_stays_and_a_stale_one_goes_to_decision_moment():
     """Two cards sat in Executing on 2026-09-04 with a DELIVERED row from 0.1's
     close days earlier and a lane that had ended: the old guard kept them

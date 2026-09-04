@@ -373,6 +373,7 @@ def owner_moved_out_after(history: list[AuditEntry], since: datetime | None) -> 
         and e.actor == Actor.OWNER
         and e.from_place is not None
         and e.from_place.column == Column.EXECUTING
+        and (e.to_place is None or e.to_place.column != Column.EXECUTING)
         and e.at >= since
         for e in history
     )
@@ -396,13 +397,15 @@ def should_enter_executing(card: Card, lane: Lane, history: list[AuditEntry]) ->
 
 def came_from(history: list[AuditEntry]) -> Column:
     """Where the card was before it last entered Executing; Up next when the
-    record does not say."""
+    record does not say. A re-placement inside Executing (the owner keeping a
+    doubted card where it is, plan 05) is not an entry and names no origin."""
     for entry in history:
         if (
             entry.kind == AuditKind.MOVED
             and entry.to_place is not None
             and entry.to_place.column == Column.EXECUTING
             and entry.from_place is not None
+            and entry.from_place.column != Column.EXECUTING
         ):
             return entry.from_place.column
     return Column.UP_NEXT

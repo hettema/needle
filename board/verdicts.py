@@ -44,9 +44,7 @@ CLOSED: frozenset[Column] = frozenset({Column.DONE, Column.NOT_NOW})
 
 _CLASSES = sorted((c for c in EvidenceClass), key=lambda c: -len(c.value))
 _HEAD = re.compile(
-    r"^\s*(?P<cls>"
-    + "|".join(re.escape(c.value) for c in _CLASSES)
-    + r")\s*(?:[—–:-]|(?=→|->)|$)",
+    r"^\s*(?P<cls>" + "|".join(re.escape(c.value) for c in _CLASSES) + r")\s*(?:[—–:-]|(?=→|->)|$)",
     re.I,
 )
 _ARROW = re.compile(r"\s*(?:→|->)\s*")
