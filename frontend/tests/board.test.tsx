@@ -128,6 +128,11 @@ describe("the board at rest", () => {
     expect(second.getByText("4 points")).toBeInTheDocument();
   });
 
+  it("names the project in the window's tab", async () => {
+    await renderBoard();
+    expect(document.title).toBe(`${PROJECT.name} · Needle`);
+  });
+
   it("unfurls a rail into its column and back", async () => {
     await renderBoard();
     await userEvent.click(screen.getByRole("button", { name: "Executed — click to unfurl" }));

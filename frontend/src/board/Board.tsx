@@ -61,6 +61,16 @@ export function Board({ slug, store, projects, onSwitch }: { slug: string; store
   const pointerY = useRef(0);
   const liftRef = useRef<Lift | null>(null);
   liftRef.current = lift;
+  // The window's tab is the project's name: two boards tabbed together on
+  // one workspace both read "Needle" otherwise (owner, 2026-09-04).
+  const projectName = board?.project.name ?? null;
+  useEffect(() => {
+    if (projectName === null) return;
+    document.title = `${projectName} · Needle`;
+    return () => {
+      document.title = "Needle";
+    };
+  }, [projectName]);
 
   const setOpen = useCallback((number: number | null) => {
     setOpenState(number);
