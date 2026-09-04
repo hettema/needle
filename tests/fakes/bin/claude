@@ -1,0 +1,259 @@
+#!/usr/bin/env python3
+"""A stand-in for the Claude Code CLI on the test floor.
+
+It registers sessions the way the real one does on this machine (verified
+2026-09-04): `jobs/<short>/state.json` under the config directory, and
+`sessions/<pid>.json` with the pid and its /proc start time. The session's
+process is a `sleep`. What happens next is the scripted fate the test put in
+`$NEEDLE_FAKE_STATE` (`launches`): it keeps working, dies on a wall (the
+registry reads `blocked` and the wall detector's file appears), or vanishes.
+"""
+
+import fcntl
+import json
+import os
+import subprocess
+import sys
+import time
+import uuid
+from datetime import UTC, datetime
+from pathlib import Path
+
+STATE = Path(os.environ["NEEDLE_FAKE_STATE"])
+
+
+def _locked(function):
+    with (STATE.parent / (STATE.name + ".lock")).open("a+") as lock:
+        fcntl.flock(lock, fcntl.LOCK_EX)
+        try:
+            blob = json.loads(STATE.read_text(encoding="utf-8"))
+            result = function(blob)
+            STATE.write_text(json.dumps(blob, indent=1), encoding="utf-8")
+            return result
+        finally:
+            fcntl.flock(lock, fcntl.LOCK_UN)
+
+
+def _proc_start(pid: int) -> str:
+    return (Path("/proc") / str(pid) / "stat").read_text().rsplit(")", 1)[1].split()[19]
+
+
+def _write(path: Path, blob: dict) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    tmp = path.with_suffix(path.suffix + ".tmp")
+    tmp.write_text(json.dumps(blob, indent=1), encoding="utf-8")
+    tmp.replace(path)
+
+
+def _now() -> str:
+    return datetime.now(UTC).isoformat().replace("+00:00", "Z")
+
+
+def config_dir() -> Path:
+    return Path(os.environ.get("CLAUDE_CONFIG_DIR") or os.environ["NEEDLE_CLAUDE_HOME"])
+
+
+def _parse(args: list[str]) -> tuple[dict[str, str], list[str]]:
+    valued = {"--model", "--effort", "-n", "--resume", "--worktree", "--permission-mode"}
+    flags: dict[str, str] = {}
+    positional: list[str] = []
+    i = 0
+    while i < len(args):
+        arg = args[i]
+        if arg in valued and i + 1 < len(args):
+            flags[arg] = args[i + 1]
+            i += 2
+        elif arg.startswith("-"):
+            flags[arg] = ""
+            i += 1
+        else:
+            positional.append(arg)
+            i += 1
+    return flags, positional
+
+
+def background(args: list[str]) -> int:
+    flags, positional = _parse(args)
+    prompt = positional[-1] if positional else ""
+    fate = _locked(lambda blob: blob["launches"].pop(0) if blob.get("launches") else {"then": "work"})
+    session_id = flags.get("--resume") or str(uuid.uuid4())
+    short = session_id.split("-")[0]
+    cwd = os.getcwd()
+    name = flags.get("-n") or short
+    worktree = None
+    if "--worktree" in flags:
+        worktree = os.path.join(cwd, ".claude", "worktrees", flags["--worktree"])
+        os.makedirs(worktree, exist_ok=True)
+    process = subprocess.Popen(
+        ["sleep", "300"],
+        stdin=subprocess.DEVNULL,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+        start_new_session=True,
+    )
+    home = config_dir()
+    respawn = []
+    for flag in ("--effort", "-n", "--permission-mode", "--model"):
+        if flag in flags:
+            respawn += [flag, flags[flag]]
+    if "--strict-mcp-config" in flags:
+        respawn.append("--strict-mcp-config")
+    state = {
+        "state": "working",
+        "detail": "starting…",
+        "tempo": "active",
+        "sessionId": session_id,
+        "resumeSessionId": session_id,
+        "daemonShort": short,
+        "cwd": cwd,
+        "name": name,
+        "nameSource": "user",
+        "respawnFlags": respawn,
+        "intent": prompt,
+        "providerEnv": {"CLAUDE_CONFIG_DIR": str(home)} if "CLAUDE_CONFIG_DIR" in os.environ else {},
+        "backend": "daemon",
+        "createdAt": _now(),
+        "updatedAt": _now(),
+    }
+    if worktree:
+        state["worktreePath"] = worktree
+        state["worktreeBranch"] = f"worktree-{flags['--worktree']}"
+    _write(home / "jobs" / short / "state.json", state)
+    _write(
+        home / "sessions" / f"{process.pid}.json",
+        {
+            "pid": process.pid,
+            "sessionId": session_id,
+            "cwd": worktree or cwd,
+            "startedAt": int(time.time() * 1000),
+            "procStart": _proc_start(process.pid),
+            "kind": "bg",
+            "status": "busy",
+            "name": name,
+        },
+    )
+
+    def log(blob):
+        # pid AND its start time, so teardown can tell our sleep from a reuser.
+        blob.setdefault("pids", []).append([process.pid, _proc_start(process.pid)])
+        blob.setdefault("launch_log", []).append(
+            {
+                "argv": args,
+                "cwd": cwd,
+                "config_dir": str(home),
+                "short": short,
+                "session_id": session_id,
+                "pid": process.pid,
+                "fate": fate,
+            }
+        )
+
+    _locked(log)
+    fate = dict(fate, short=short, session_id=session_id, pid=process.pid, worktree=worktree or cwd)
+    fate["config_dir"] = str(home)
+    fate["slot"] = os.environ.get("CLAUDE_ACCOUNT") or "default"
+    fate["prompt"] = prompt
+    subprocess.Popen(
+        [sys.executable, __file__, "--fake-fate", json.dumps(fate)],
+        stdin=subprocess.DEVNULL,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+        start_new_session=True,
+    )
+    print(f"backgrounded · \x1b[36m{short}\x1b[39m · {name}")
+    print(f"  claude attach {short}    open in this terminal")
+    return 0
+
+
+def fate(blob: dict) -> int:
+    """What the session does after it registered: the scripted death or life."""
+    time.sleep(float(blob.get("after", 0.3)))
+    home = Path(blob["config_dir"])
+    path = home / "jobs" / blob["short"] / "state.json"
+    state = json.loads(path.read_text(encoding="utf-8"))
+    then = blob.get("then", "work")
+    if then == "wall":
+        state["state"] = "blocked"
+        state["detail"] = blob.get("reason", "You've reached your Fable limit.")
+        state["updatedAt"] = _now()
+        _write(path, state)
+        if not blob.get("no_handoff"):
+            handoff = {
+                "session_id": blob["session_id"],
+                "short_id": blob["short"],
+                "daemon_short": blob["short"],
+                "pid": blob["pid"],
+                "from": blob["slot"],
+                "cwd": blob["worktree"],
+                "worktree": blob["worktree"],
+                "account": blob.get("account", "beta"),
+                "model": blob.get("model"),
+                "prompt": blob.get("continue", "[claude-acct] Carry on."),
+                "reason": state["detail"],
+                "why": blob.get("why", "Fable headroom on beta"),
+                "at": time.time(),
+                "stopped": False,
+            }
+            _write(Path(os.environ["NEEDLE_HANDOFF_DIR"]) / f"{blob['session_id']}.json", handoff)
+    elif then == "vanish":
+        os.kill(blob["pid"], 9)
+        (home / "sessions" / f"{blob['pid']}.json").unlink(missing_ok=True)
+        state["state"] = "stopped"
+        state["detail"] = "stopped"
+        _write(path, state)
+    elif then == "done":
+        state["state"] = "done"
+        state["detail"] = blob.get("detail", "replied as instructed")
+        state["updatedAt"] = _now()
+        _write(path, state)
+    elif then == "question":
+        state["state"] = "blocked"
+        state["detail"] = blob.get("detail", "asking: which of the two?")
+        state["updatedAt"] = _now()
+        _write(path, state)
+    return 0
+
+
+def stop(short: str) -> int:
+    home = config_dir()
+    path = home / "jobs" / short / "state.json"
+    if not path.is_file():
+        print(f"no background session {short}", file=sys.stderr)
+        return 1
+    state = json.loads(path.read_text(encoding="utf-8"))
+    for record in (home / "sessions").glob("*.json") if (home / "sessions").is_dir() else []:
+        blob = json.loads(record.read_text(encoding="utf-8"))
+        if blob.get("sessionId") == state["sessionId"]:
+            try:
+                os.kill(int(blob["pid"]), 9)
+            except ProcessLookupError:
+                pass
+            record.unlink(missing_ok=True)
+    if state.get("state") != "done":
+        state["state"] = "stopped"
+        state["detail"] = "stopped"
+        _write(path, state)
+    _locked(lambda blob: blob.setdefault("stops", []).append({"short": short, "config_dir": str(home)}))
+    print(f"stopped {short}")
+    return 0
+
+
+def main(argv: list[str]) -> int:
+    if argv[:1] == ["--fake-fate"]:
+        return fate(json.loads(argv[1]))
+    if "--bg" in argv:
+        return background([a for a in argv if a != "--bg"])
+    if argv[:1] == ["stop"]:
+        return stop(argv[1])
+    if argv[:1] == ["rm"]:
+        import shutil
+
+        shutil.rmtree(config_dir() / "jobs" / argv[1], ignore_errors=True)
+        print(f"removed {argv[1]}")
+        return 0
+    _locked(lambda blob: blob.setdefault("other_calls", []).append(argv))
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main(sys.argv[1:]))

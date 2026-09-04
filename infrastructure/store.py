@@ -13,7 +13,7 @@ from pathlib import Path
 
 from alembic import command
 from alembic.config import Config
-from sqlalchemy import create_engine, event, select
+from sqlalchemy import create_engine, delete, event, select
 from sqlalchemy.engine import Engine
 from sqlalchemy.orm import Session
 
@@ -25,9 +25,22 @@ from domain.card import Actor, Card, CardOrigin, DocumentLink, Place
 from domain.column import COLUMN_DEFINITIONS, Column
 from domain.document import DocumentKind, DocumentRef
 from domain.gate import Gate
+from domain.launch import Rescue
 from domain.project import Project
 from domain.row import Row, RowKind
-from infrastructure.schema import AuditRow, CardRow, CardRowRow, GroupRow, ProjectRow
+from domain.session import SessionSlot
+from domain.slot import Model, Rung
+from domain.window import Window, WindowKind
+from infrastructure.schema import (
+    AuditRow,
+    CardRow,
+    CardRowRow,
+    GroupRow,
+    ProjectRow,
+    RescueRow,
+    SessionSlotRow,
+    WindowRow,
+)
 
 _COLUMN_ORDER: dict[str, int] = {d.column.value: i for i, d in enumerate(COLUMN_DEFINITIONS)}
 _MIGRATIONS = Path(__file__).parent / "migrations"
@@ -380,8 +393,142 @@ class Store:
             project.next_card_number = max(project.next_card_number, imported.next_number)
             project.imported_01_at = at
 
+    # ── the runtime's records ──────────────────────────────────────────
+    # Three tables with no foreign key to the board's: where a session runs,
+    # the rescues it has had, the windows it was given. Clearing a session's
+    # rescues never touches its slot (plan 02, item 3).
+
+    def record_session_slot(self, record: SessionSlot) -> None:
+        """Where a session runs, written only by the thing that started or moved it."""
+        with Session(self.engine) as session, session.begin():
+            row = session.get(SessionSlotRow, record.session_id)
+            if row is None:
+                session.add(
+                    SessionSlotRow(
+                        session_id=record.session_id,
+                        slot=record.slot,
+                        card=record.card,
+                        scope=record.scope,
+                        recorded_at=record.recorded_at,
+                    )
+                )
+            else:
+                row.slot = record.slot
+                row.card = record.card
+                row.scope = record.scope
+                row.recorded_at = record.recorded_at
+
+    def session_slot(self, session_id: str) -> SessionSlot | None:
+        with Session(self.engine) as session:
+            row = session.get(SessionSlotRow, session_id)
+            return None if row is None else _session_slot(row)
+
+    def session_slots(self) -> list[SessionSlot]:
+        with Session(self.engine) as session:
+            rows = session.scalars(select(SessionSlotRow).order_by(SessionSlotRow.recorded_at))
+            return [_session_slot(r) for r in rows]
+
+    def record_rescue(
+        self, session_id: str, from_rung: Rung | None, to_rung: Rung, reason: str, at: datetime
+    ) -> Rescue:
+        with Session(self.engine) as session, session.begin():
+            row = RescueRow(
+                session_id=session_id,
+                from_slot=from_rung.slot if from_rung else None,
+                from_model=from_rung.model.value if from_rung and from_rung.model else None,
+                to_slot=to_rung.slot,
+                to_model=to_rung.model.value if to_rung.model else None,
+                reason=reason,
+                at=at,
+            )
+            session.add(row)
+            session.flush()
+            return _rescue(row)
+
+    def rescues(self, session_id: str) -> list[Rescue]:
+        with Session(self.engine) as session:
+            rows = session.scalars(
+                select(RescueRow).where(RescueRow.session_id == session_id).order_by(RescueRow.id)
+            )
+            return [_rescue(r) for r in rows]
+
+    def clear_rescues(self, session_id: str) -> int:
+        """Forget a session's rescue history. Its slot record is untouched."""
+        with Session(self.engine) as session, session.begin():
+            result = session.execute(delete(RescueRow).where(RescueRow.session_id == session_id))
+            return int(result.rowcount or 0)
+
+    def record_window(
+        self, session_id: str, kind: WindowKind, app_id: str, address: str, at: datetime
+    ) -> Window:
+        with Session(self.engine) as session, session.begin():
+            row = WindowRow(
+                session_id=session_id,
+                kind=kind.value,
+                app_id=app_id,
+                address=address,
+                opened_at=at,
+                closed_at=None,
+            )
+            session.add(row)
+            session.flush()
+            return _window(row)
+
+    def windows(self, session_id: str | None = None, *, open_only: bool = False) -> list[Window]:
+        with Session(self.engine) as session:
+            query = select(WindowRow).order_by(WindowRow.id)
+            if session_id is not None:
+                query = query.where(WindowRow.session_id == session_id)
+            if open_only:
+                query = query.where(WindowRow.closed_at.is_(None))
+            return [_window(r) for r in session.scalars(query)]
+
+    def window_closed(self, window_id: int, at: datetime) -> None:
+        """The runtime found the window gone. It records the close; it never causes one."""
+        with Session(self.engine) as session, session.begin():
+            row = session.get(WindowRow, window_id)
+            if row is not None and row.closed_at is None:
+                row.closed_at = at
+
 
 # ── helpers ────────────────────────────────────────────────────────────
+
+
+def _session_slot(row: SessionSlotRow) -> SessionSlot:
+    return SessionSlot(
+        session_id=row.session_id,
+        slot=row.slot,
+        card=row.card,
+        scope=row.scope,
+        recorded_at=row.recorded_at,
+    )
+
+
+def _rescue(row: RescueRow) -> Rescue:
+    return Rescue(
+        id=row.id,
+        session_id=row.session_id,
+        from_rung=(
+            Rung(slot=row.from_slot, model=Model(row.from_model) if row.from_model else None)
+            if row.from_slot
+            else None
+        ),
+        to_rung=Rung(slot=row.to_slot, model=Model(row.to_model) if row.to_model else None),
+        reason=row.reason,
+        at=row.at,
+    )
+
+
+def _window(row: WindowRow) -> Window:
+    return Window(
+        id=row.id,
+        session_id=row.session_id,
+        kind=WindowKind(row.kind),
+        app_id=row.app_id,
+        address=row.address,
+        opened_at=row.opened_at,
+        closed_at=row.closed_at,
+    )
 
 
 def _project(row: ProjectRow) -> Project:

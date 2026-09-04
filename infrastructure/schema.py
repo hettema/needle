@@ -102,6 +102,51 @@ class CardRowRow(Base):
     text: Mapped[str] = mapped_column(Text)
 
 
+class SessionSlotRow(Base):
+    """Where a session the runtime started or moved runs. No foreign key to
+    cards: the runtime's records and the board's can be reset apart."""
+
+    __tablename__ = "session_slots"
+
+    session_id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    slot: Mapped[str] = mapped_column(String(40))
+    card: Mapped[str] = mapped_column(Text)
+    scope: Mapped[str] = mapped_column(Text)
+    recorded_at: Mapped[datetime] = mapped_column(UtcDateTime)
+
+
+class RescueRow(Base):
+    """One move of a session between rungs. Separate from session_slots so
+    clearing a session's history never clears its slot."""
+
+    __tablename__ = "rescues"
+    __table_args__ = (Index("ix_rescues_session", "session_id"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    session_id: Mapped[str] = mapped_column(String(36))
+    from_slot: Mapped[str | None] = mapped_column(String(40), nullable=True)
+    from_model: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    to_slot: Mapped[str] = mapped_column(String(40))
+    to_model: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    reason: Mapped[str] = mapped_column(Text)
+    at: Mapped[datetime] = mapped_column(UtcDateTime)
+
+
+class WindowRow(Base):
+    """A window the runtime opened and proved, by the compositor's address."""
+
+    __tablename__ = "windows"
+    __table_args__ = (Index("ix_windows_session", "session_id"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    session_id: Mapped[str] = mapped_column(String(36))
+    kind: Mapped[str] = mapped_column(String(20))
+    app_id: Mapped[str] = mapped_column(Text)
+    address: Mapped[str] = mapped_column(String(40))
+    opened_at: Mapped[datetime] = mapped_column(UtcDateTime)
+    closed_at: Mapped[datetime | None] = mapped_column(UtcDateTime, nullable=True)
+
+
 class AuditRow(Base):
     """One row per change. No foreign key to cards: a card's history outlives it."""
 

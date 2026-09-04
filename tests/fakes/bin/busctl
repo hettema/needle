@@ -1,0 +1,30 @@
+#!/usr/bin/env python3
+"""A stand-in for `busctl` on the test floor: records every adoption the
+runtime asks the user manager for. It moves nothing, so the runtime's own
+/proc check reports the scope as asked for and not verified."""
+
+import fcntl
+import json
+import os
+import sys
+from pathlib import Path
+
+STATE = Path(os.environ["NEEDLE_FAKE_STATE"])
+
+
+def main(argv: list[str]) -> int:
+    with (STATE.parent / (STATE.name + ".lock")).open("a+") as lock:
+        fcntl.flock(lock, fcntl.LOCK_EX)
+        blob = json.loads(STATE.read_text(encoding="utf-8"))
+        blob.setdefault("busctl_calls", []).append(argv)
+        STATE.write_text(json.dumps(blob, indent=1), encoding="utf-8")
+        fcntl.flock(lock, fcntl.LOCK_UN)
+    if blob.get("busctl_fails"):
+        print("Unit already exists", file=sys.stderr)
+        return 1
+    print('o "/org/freedesktop/systemd1/job/1"')
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main(sys.argv[1:]))

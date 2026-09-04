@@ -1,7 +1,7 @@
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parent.parent.parent
-BACKEND_PACKAGES = ["domain", "board", "infrastructure", "api"]
+BACKEND_PACKAGES = ["domain", "board", "infrastructure", "runtime", "api"]
 FRONTEND_SRC = REPO / "frontend" / "src"
 UI = FRONTEND_SRC / "components" / "ui"
 

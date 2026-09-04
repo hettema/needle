@@ -1,0 +1,52 @@
+#!/usr/bin/env python3
+"""A stand-in for Omarchy's terminal launcher on the test floor. Like the
+real one its exit code says nothing; unlike the real one it makes a window
+appear only when the test allows (`windows_open`), after the delay the test
+set, by adding a client under the app-id to the fake compositor."""
+
+import fcntl
+import json
+import os
+import sys
+import time
+from pathlib import Path
+
+STATE = Path(os.environ["NEEDLE_FAKE_STATE"])
+
+
+def main(argv: list[str]) -> int:
+    app_id = argv[0][len("--app-id=") :] if argv and argv[0].startswith("--app-id=") else "unnamed"
+    command = argv[1:]
+    with (STATE.parent / (STATE.name + ".lock")).open("a+") as lock:
+        fcntl.flock(lock, fcntl.LOCK_EX)
+        blob = json.loads(STATE.read_text(encoding="utf-8"))
+        blob.setdefault("spawned", []).append({"app_id": app_id, "command": command})
+        STATE.write_text(json.dumps(blob, indent=1), encoding="utf-8")
+        fcntl.flock(lock, fcntl.LOCK_UN)
+    if not blob.get("windows_open", True):
+        return 0
+    time.sleep(float(blob.get("window_delay", 0.0)))
+    with (STATE.parent / (STATE.name + ".lock")).open("a+") as lock:
+        fcntl.flock(lock, fcntl.LOCK_EX)
+        blob = json.loads(STATE.read_text(encoding="utf-8"))
+        number = len(blob.get("clients", [])) + 1
+        blob.setdefault("clients", []).append(
+            {
+                "address": f"0xfake{number:04x}",
+                "class": app_id,
+                "initialClass": app_id,
+                "title": "foot",
+                "pid": os.getpid(),
+                "workspace": {"id": 3, "name": "3"},
+                "mapped": True,
+                "hidden": False,
+                "grouped": [],
+            }
+        )
+        STATE.write_text(json.dumps(blob, indent=1), encoding="utf-8")
+        fcntl.flock(lock, fcntl.LOCK_UN)
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main(sys.argv[1:]))

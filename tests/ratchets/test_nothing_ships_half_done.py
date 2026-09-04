@@ -27,7 +27,7 @@ _PATTERN = re.compile("|".join(re.escape(m) for m in _MARKERS), re.I)
 
 
 def _files() -> list:
-    files = python_files("domain", "board", "infrastructure", "api", "tests")
+    files = python_files("domain", "board", "infrastructure", "runtime", "api", "tests")
     files += frontend_files()
     files += [REPO / "README.md"]
     files += sorted((REPO / "frontend" / "tests").rglob("*.ts*"))

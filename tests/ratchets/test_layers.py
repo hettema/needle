@@ -1,8 +1,10 @@
-"""The four layers import downward only: domain ← board ← infrastructure ← api.
+"""The layers import downward only: domain ← board ← infrastructure ← runtime ← api.
 
 `domain/` is what things are and imports nothing of ours; `board/` is what
-happens, pure over domain values; `infrastructure/` applies it; `api/` is the
-door. A reverse import is how a rule ends up living in a database session.
+happens, pure over domain values; `infrastructure/` applies it; `runtime/`
+is the thing that runs, with the store for its own records; `api/` is the
+door that composes the board and the runtime. A reverse import is how a rule
+ends up living in a database session, or a process in the board.
 """
 
 import ast
@@ -13,7 +15,8 @@ ALLOWED: dict[str, set[str]] = {
     "domain": set(),
     "board": {"domain"},
     "infrastructure": {"domain", "board"},
-    "api": {"domain", "board", "infrastructure"},
+    "runtime": {"domain", "infrastructure"},
+    "api": {"domain", "board", "infrastructure", "runtime"},
 }
 
 PURE_THIRD_PARTY = {"pydantic"}

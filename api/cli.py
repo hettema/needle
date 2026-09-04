@@ -1,8 +1,11 @@
-"""`needle`: the command line. Three verbs put a project on the board and serve it.
+"""`needle`: the command line. Three verbs put a project on the board and serve
+it; the runtime's verbs (`api/runtime_cli.py`) list, place, start, move, stop
+and open windows into sessions.
 
 needle add /path/to/repo --name "Harbourmaster"
 needle serve
 needle types
+needle sessions | where | start | move | stop | window | rescues
 
 `add` on a path already on the board re-reads its corpus and says what changed,
 so a rescan is always one command away.
@@ -226,6 +229,10 @@ def main(argv: list[str] | None = None) -> int:
 
     p_types = sub.add_parser("types", help="regenerate the frontend's types from the domain")
     p_types.set_defaults(run=types)
+
+    from api.runtime_cli import register
+
+    register(sub)
 
     args = parser.parse_args(argv)
     return int(args.run(args))

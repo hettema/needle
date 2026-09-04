@@ -25,6 +25,10 @@ MODULES: list[str] = [
     "audit",
     "project",
     "board",
+    "slot",
+    "session",
+    "window",
+    "launch",
 ]
 
 TYPES_DIR = Path(__file__).resolve().parent.parent / "frontend" / "src" / "types"

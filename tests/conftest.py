@@ -10,7 +10,9 @@ project's card titles are in the tree.
 """
 
 import json
+import os
 import shutil
+from collections.abc import Iterator
 from datetime import UTC, datetime
 from pathlib import Path
 
@@ -18,8 +20,29 @@ import pytest
 
 from domain.project import Project
 from infrastructure.store import Store
+from tests import floor as floor_mod
 
 FIXTURES = Path(__file__).parent / "fixtures"
+
+
+@pytest.fixture(autouse=True)
+def machine_floor(
+    tmp_path_factory: pytest.TempPathFactory, monkeypatch: pytest.MonkeyPatch
+) -> Iterator[floor_mod.Floor]:
+    """Every test stands on the fixture floor (`tests/floor.py`): no path the
+    runtime reads is on this machine and no command it runs is real, so no
+    test can open a window, touch a subscription or reach a daemon (plan 02,
+    criterion 6). A ratchet holds that this is so."""
+    floor = floor_mod.lay(tmp_path_factory.mktemp("machine"))
+    for variable, attribute in floor_mod.ENVIRONMENT.items():
+        monkeypatch.setenv(variable, str(getattr(floor, attribute)))
+    monkeypatch.setenv("PATH", f"{floor_mod.FAKE_BIN}{os.pathsep}{os.environ.get('PATH', '')}")
+    monkeypatch.delenv("CLAUDE_CONFIG_DIR", raising=False)
+    monkeypatch.delenv("CLAUDE_ACCOUNT", raising=False)
+    yield floor
+    floor.kill_everything()
+
+
 HARBOURMASTER = FIXTURES / "harbourmaster"
 CARD_FILE_01 = HARBOURMASTER / "docs" / "board" / "needle-board.json"
 
