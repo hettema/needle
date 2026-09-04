@@ -38,23 +38,35 @@ The review ran as a loop (`CLAUDE.md`): each pass one lens, the fixes landed, th
 
 The prediction fixed in the plan: under 80 ms per tool call including the interpreter, and half a second at worst when the board is down or hung.
 
-Measured on the lane's own machine with the real script and a real PostToolUse payload, old and new interleaved run for run so both carry the same noise. The machine was under load average 5–10 throughout (three lanes and a served board), which is the honest condition and also the reason the medians are noisy: the same old script measured 47.7 ms median in one round and 114.3 ms in the next.
+Measured on the lane's own machine with the real script and a real PostToolUse payload, old and new **interleaved run for run** so both carry the same noise. Taking them as two separate rounds is worthless here: the same unchanged old script measured 47.7 ms median in one round and 114.3 ms in the next. Load average is reported with every number, because it turned out to be the dominant term.
 
-| | median | p90 | max |
+Under load 5–10 (three lanes and a served board), 40 rounds:
+
+| load ~8 | median | p90 | max |
 |---|---|---|---|
 | before (four events, no word) | 114.3 ms | 266.1 ms | 344.3 ms |
-| after, board up, word empty | 155.1 ms | 327.7 ms | 502.3 ms |
+| after, board up | 155.1 ms | 327.7 ms | 502.3 ms |
 | after, board down | 113.6 ms | 318.9 ms | 615.8 ms |
 
-The interpreter alone accounts for most of it: `python3 -c pass` is 10.7 ms, the hook's standard-library imports take it to 24.7 ms, and `urllib.request` alone took it to 40.3 ms — which is finding 4, and why the word path now imports `http.client` inside `answer` instead.
+Read alone, that says the word costs ~40 ms and the prediction is missed. Re-measured on the same machine an hour later at load ~4, the same pair, two rounds of 40:
 
-**The prediction is not met on this machine under this load, and the honest reading is that the number was fixed for an idle machine.** The added cost of the word — the difference between the two board-up rows — is about 40 ms of the median, and the board being down costs nothing at all beyond the old script. What the ceiling does hold is the worst case: a hung board never held a call longer than the script's own half second, which is the property the plan called the real one. The re-measurement on a quiet machine is the first thing the WATCH row asks for.
+| load ~4 | median | p90 | max |
+|---|---|---|---|
+| before | 59.5 / 51.4 ms | 119.1 / 57.1 ms | 181.4 / 85.3 ms |
+| after, board up | 61.9 / 51.6 ms | 106.3 / 60.4 ms | 119.7 / 127.9 ms |
+| after, board down | 50.6 → 41.9 ms | 58.2 → 58.4 ms | 70.5 → 67.1 ms |
+
+**The prediction is met, and the ~40 ms was load, not code.** The word costs **0.2–2.4 ms of the median** over the old hook — a localhost round trip inside an interpreter start that dominates it — against the plan's 80 ms ceiling, and the new script's p90 is at or below the old one's. With the board down the new script is *faster* than the old (41.9 vs 50.6 ms median), because the word path no longer imports `urllib.request` at module level: `python3 -c pass` is 10.7 ms, the hook's standard-library imports take it to 24.7 ms, and `urllib.request` alone took it to 40.3 ms. That is finding 4, and it paid for the word twice over.
+
+The worst case holds as designed: a hung board never held a call longer than the script's own half second (asserted in `tests/api/test_hook_script.py` against a server that sleeps past the ceiling).
+
+**What this cost the review:** the first reading was written up as "the prediction is not met" before the re-measurement, on numbers taken under load 8. A performance number without the machine's state beside it is not a measurement, and this one would have sent the owner after a regression that does not exist. The WATCH row watches the delta on a quiet machine, not the absolute.
 
 ## What the build learned the plan got wrong
 
 - The plan said "the board keeps a word for each live lane and says it once", and had the mark move only when the word said something. That makes a quiet lane — nearly every tool call — recompute its baseline from the whole watercooler forever. The mark has to move whenever *hearing* moved, and only the saying is what the card shows (findings 1, 2, 6).
 - The plan named `lane.hands_on_since` nowhere but implied the session as the unit of hearing. The lane record's first sighting is the right one, because a resume forks the session id (finding 3).
-- The plan's cost prediction ("under 80 ms per tool call") was fixed without naming the machine's state. Under three lanes and a served board it is not met by either the old script or the new one; the number needs a quiet machine or a different shape (a p50 on an idle box, with the delta as the thing watched).
+- The plan's cost prediction ("under 80 ms per tool call") was fixed as an absolute, without naming the machine's state — and the absolute is mostly a property of the load, not of this change. At load 8 neither the old hook nor the new one is under 80 ms; at load 4 both are, comfortably. The measurable thing is the delta, and the prediction should have been written as one ("the word adds under N ms to the hook's median, measured interleaved on an otherwise quiet machine"). Fixing it as an absolute nearly bought a regression report for a 2 ms change.
 - The plan said the word carries "the '#M folded over this lane's edits' line when a fold lands over it" as one of three facts. It already arrives as a watercooler line the board itself says at the fold (slice 07), so it needs no separate branch — the test proves it lands.
 
 ## Not done, stated
