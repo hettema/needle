@@ -44,7 +44,7 @@ from board.lane import has_row, is_question
 from domain.audit import AuditKind
 from domain.card import Actor, Card
 from domain.dial import Dial as DialSetting
-from domain.dial import DialState, Fixes, FixLane, FixReport, FixStage
+from domain.dial import DialState, Fixes, FixLane, FixReport, FixStage, Waiting
 from domain.document import DocumentKind
 from domain.gate import Gate
 from domain.hook import HookKind
@@ -408,6 +408,57 @@ class Dial:
 
     # ── the loop, counted (item 6) ─────────────────────────────────────
 
+    def waiting(self, slug: str | None) -> list[Waiting]:
+        """Every defect on the rail the dial is not taking, with why, in the
+        order it would take them (review pass 2): a dial that is on with
+        nothing starting has to say which fact holds it — unmarked, his, a
+        trigger not yet fired, a lane on it, nowhere to run, the board's own
+        rail while a lane is live — or the fourteen-day guard in the plan's
+        WATCH row reads as the path not running when it is the rail."""
+        store = self.live.store
+        fix_lanes = store.fix_lanes()
+        lanes_by_project = {
+            s: live.snapshot.lanes for s, live in self.live.projects.items() if live.snapshot
+        }
+        quiet = is_quiet(lanes_by_project)
+        found: list[Waiting] = []
+        for project_slug, live in self.live.projects.items():
+            if slug is not None and project_slug != slug:
+                continue
+            snapshot = live.snapshot
+            readings = store.last_readings(project_slug)
+            planning = store.open_windowless_sessions(project_slug, SessionWork.PLANNING)
+            ran = {f.card_number for f in fix_lanes if f.project == project_slug}
+            for card, document in rail_defects(store.cards(project_slug), live.index):
+                why = why_not_eligible(
+                    card,
+                    document,
+                    last=readings.get(card.number),
+                    lane=snapshot.lanes.get(card.number) if snapshot else None,
+                    planning_open=card.number in planning,
+                    ran_before=card.number in ran,
+                )
+                if why is None:
+                    doors = snapshot.doors.get(card.number) if snapshot else None
+                    if snapshot is None:
+                        why = "the machine has not been read for this project yet"
+                    elif doors is None or doors.placement is None:
+                        why = f"nowhere to run: {doors.placement_note if doors else 'unread'}"
+                    elif self._own_board(live) and not quiet:
+                        why = "the board's own rail waits until no lane is live anywhere"
+                    else:
+                        why = "eligible: the next beat takes it if the number allows"
+                found.append(
+                    Waiting(
+                        project=project_slug,
+                        card_number=card.number,
+                        title=card.title,
+                        born_at=card.born_at,
+                        why=why,
+                    )
+                )
+        return sorted(found, key=lambda w: (w.born_at, w.card_number))
+
     def fixes(self, slug: str | None) -> Fixes:
         store = self.live.store
         reports: list[FixReport] = []
@@ -454,4 +505,5 @@ class Dial:
             lanes=reports,
             rail_now=self._rail_now(),
             rail_at_first_on=store.rail_at_on(),
+            waiting=self.waiting(slug),
         )

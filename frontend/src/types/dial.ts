@@ -58,10 +58,19 @@ export interface Fixes {
   lanes: FixReport[];
   rail_now: RailCount[];
   rail_at_first_on: RailCount[];
+  waiting: Waiting[];
 }
 
 export interface RailCount {
   project: string;
   counts: Record<string, number>;
   total: number;
+}
+
+export interface Waiting {
+  project: string;
+  card_number: number;
+  title: string;
+  born_at: string;
+  why: string;
 }

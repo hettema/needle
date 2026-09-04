@@ -245,6 +245,12 @@ def test_with_the_dial_on_the_oldest_now_defect_is_planned_then_started_by_the_d
     assert "class: a boot check refuses" in out
     assert "2 fix lanes, 1 closed: 0 folded with a review record" in out
     assert "rail proj:" in out and "(was 3 at dial-on)" in out
+    # Every defect still on the rail says why the dial leaves it there.
+    assert "The night audit re-reads the whole harbour log — unmarked (no Fix: line)" in out
+    assert f"#{gate_log:<4} The gate log loses its last line — the dial is planning it now" in out
+    assert [w["why"] for w in report["waiting"] if w["card_number"] == gate_log] == [
+        "the dial is planning it now"
+    ]
 
 
 def test_his_and_unmarked_defects_are_never_started_and_a_question_leaves_the_card_to_the_owner(

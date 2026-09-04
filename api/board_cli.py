@@ -533,6 +533,8 @@ def fixes(
         f"record, {asked} stopped to ask, {undone} undone (a defect filed against it, or the "
         f"fold reverted), {closers} carried a class-closer"
     )
+    for waiting in report.waiting:
+        print(f"rail  {waiting.project} #{waiting.card_number:<4} {waiting.title} — {waiting.why}")
     at_on = {r.project: r for r in report.rail_at_first_on}
     for rail in report.rail_now:
         before = at_on.get(rail.project)

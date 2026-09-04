@@ -131,11 +131,24 @@ class FixReport(BaseModel):
     the plan carries none."""
 
 
+class Waiting(BaseModel):
+    """One defect on the rail the dial has not taken, and the fact that
+    holds it: what the owner reads when the dial is on and nothing starts."""
+
+    project: str
+    card_number: int
+    title: str
+    born_at: datetime
+    why: str
+
+
 class Fixes(BaseModel):
     """The loop counted (plan 11, item 6): every fix lane the dial started,
-    and the rail now against the rail when the dial was first turned on."""
+    the rail now against the rail when the dial was first turned on, and
+    every defect still on the rail with why the dial leaves it there."""
 
     dial: Dial
     lanes: list[FixReport]
     rail_now: list[RailCount]
     rail_at_first_on: list[RailCount]
+    waiting: list[Waiting]
