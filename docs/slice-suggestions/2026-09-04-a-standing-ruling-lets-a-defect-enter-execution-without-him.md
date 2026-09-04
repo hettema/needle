@@ -75,6 +75,56 @@ Three of his moves per defect:
 5. **He can see and undo it**: the rail says which cards the board started on
    its own, and any class can be ruled back to hand-start in one edit.
 
+## The cycle, as the owner drew it, and what the machine adds
+
+The owner's drawing (same evening): a lane reviews its own work in rings —
+inside and adjacent fixed in the lane until a pass finds nothing, the outer
+ring filed to the board; the board's findings then get the same loop; anything
+marked as his is excluded; everything else goes on an automatic fix path; the
+limit is tokens and this laptop.
+
+That drawing is right, and it is a recursion: **the outer ring of one lane is
+the inner ring of the next.** Same loop, one ring out, until the rail is empty.
+What the machine can see that the drawing does not:
+
+- **The intent, sharpened so it can be measured.** "Bug-free" cannot be
+  counted. Two things can: *no defect fails silently*, and *no known defect
+  waits on a human*. Every one of the nineteen that cost something was silent —
+  a currency mislabelled, a repair reporting success, a theme paid three times,
+  five rows nobody opened. Rock-solid is software whose failures are loud.
+- **A fix that does not close its class churns the rail.** Each fix lane runs
+  a review that files its own outer ring, so the rail is fed by the path that
+  drains it. It drains only if fixes remove more than they file — which means
+  every fix ships the thing that makes its class loud (a validator, a ratchet,
+  an alarm), not just the patch. The "removes a class" bar is what keeps this
+  from running until the death of the universe.
+- **Fixes run in the gaps.** The binding limit is not tokens; it is the
+  subscription slots his ranked work needs and the one trunk every fold lands
+  on. So fix lanes take slots nothing else is using — his work first, defects
+  in the dead time, the machine working while he sleeps — and start one at a
+  time per project, raised on evidence. Needle's own defects run only when no
+  lane is live anywhere, because a fold on the board restarts the service under
+  every running lane.
+- **The filer's mark has three values, not two.** The nineteen already say
+  all three in prose: *fix now*, *fix when this trigger fires* (#377 says wait
+  for one production row; #341 says wait for a shipped duplicate), and *his*.
+  A trigger that has not fired is not started.
+- **Two preconditions are on the rail already.** The close still accepts a
+  code lane with no review record
+  (`2026-09-04-a-close-without-a-review-record-is-accepted.md`) — an
+  unattended lane's "clean" has to be a refused close, not a remembered rule.
+  And a green suite is not the truth for the served board (two of this
+  slice's own defects only the live board could show), so a fix that touches
+  the page carries a live check in its "done means".
+- **The measure, named now.** The rail's size over time on both boards, split
+  by who filed each card (a fix lane, a feature lane, a production reading,
+  the owner); per fix lane, folded green with a clean final pass / stopped to
+  ask / undone within a week; and how many fixes shipped a class-closer.
+  Prediction: within two weeks, arrivals from feature lanes stay flat (that is
+  the natural discovery rate), arrivals from fix lanes fall, and the rail
+  shrinks. If the rail grows, fixes are patching instances — stop the path and
+  read the last ten fixes before restarting it.
+
 ## The decisions in this that are his, not mine
 
 - **Does an unattended fix fold to `develop` on green, or stop before the fold
