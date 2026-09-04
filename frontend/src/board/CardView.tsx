@@ -1,7 +1,7 @@
 import type { KeyboardEvent, MouseEvent, PointerEventHandler } from "react";
 import { useDraggable } from "@dnd-kit/core";
 import type { CardSummary } from "../types/board";
-import { Band, CardFoot, CardShell, CardTitle, CardTop, Chip, Cid, DocState, Essence, FailNote, Grow, KbdHint, Points, Rank, type DragProps } from "../components/ui";
+import { Band, CardFoot, CardShell, CardTitle, CardTop, Chip, Cid, DocState, Doubt, Essence, FailNote, Grow, KbdHint, Points, Rank, StandingMark, type DragProps } from "../components/ui";
 import type { MoveStatus } from "../state/board";
 import { useLift } from "./LiftContext";
 import { OpenCard } from "./OpenCard";
@@ -30,6 +30,7 @@ export function CardBody({ card, rank, open, onClose }: { card: CardSummary; ran
         <Cid n={card.number} />
         {card.is_new ? <Chip kind="new">New</Chip> : null}
         {open ? <DocState state={card.document_state} path={card.document_path} /> : null}
+        {open ? <StandingMark standing={card.standing} /> : null}
         <Grow />
         {card.tags.map((t) => (
           <Chip key={t} kind="tag">
@@ -53,6 +54,7 @@ export function CardBody({ card, rank, open, onClose }: { card: CardSummary; ran
             <Points n={card.points} />
           </CardFoot>
           {card.lane_state !== "none" && card.lane_sentence ? <Band state={card.lane_state}>{card.lane_sentence}</Band> : null}
+          {card.standing.state === "doubted" && card.standing.words ? <Doubt>{card.standing.words}</Doubt> : null}
         </>
       ) : null}
     </>

@@ -12,6 +12,7 @@ from domain.audit import AuditKind
 from domain.board import TrunkState
 from domain.card import Actor, Place
 from domain.column import Column
+from domain.evidence import Evidence
 from domain.hook import HookKind, HookPosted
 from domain.lane import LaneRecord
 from domain.project import Project
@@ -47,19 +48,42 @@ def test_a_row_is_written_with_its_audit_row_and_a_record_row_is_one_per_card(bo
     )
     details = [h.detail for h in board.history("proj", 253) if h.kind == AuditKind.ROW]
     assert details[0] == "WAITS written: another"
-    assert "DELIVERED rewritten: second" in details and "DELIVERED written: first" in details
+    assert "DELIVERED rewritten: second — it read: first" in details, (
+        "a rewrite keeps the whole previous text in the history"
+    )
+    assert "DELIVERED written: first" in details
     with pytest.raises(StoreRefusal, match="no card #999"):
         board.add_row("proj", 999, Row(kind=RowKind.WAITS, text="x"), Actor.SESSION, NOW)
 
 
-def test_a_machine_move_must_say_why_and_the_reason_is_in_the_history(board: Store):
+def test_a_machine_move_must_say_why_and_name_its_evidence_and_both_are_in_the_history(
+    board: Store,
+):
     to = Place(column=Column.EXECUTING, group=None, position=0)
     with pytest.raises(StoreRefusal, match="must say why"):
         board.move("proj", 253, to, Actor.MACHINE, NOW)
-    board.move("proj", 253, to, Actor.MACHINE, NOW, detail="hands on: abcd1234 on alpha")
+    with pytest.raises(StoreRefusal, match="must name the evidence"):
+        board.move("proj", 253, to, Actor.MACHINE, NOW, detail="hands on: abcd1234 on alpha")
+    board.move(
+        "proj",
+        253,
+        to,
+        Actor.MACHINE,
+        NOW,
+        detail="hands on: abcd1234 on alpha",
+        evidence=Evidence.HANDS_ON,
+    )
     moved = board.history("proj", 253)[0]
     assert moved.actor == Actor.MACHINE and moved.kind == AuditKind.MOVED
     assert moved.detail == "Moved Up next → Executing — hands on: abcd1234 on alpha"
+    assert moved.evidence == Evidence.HANDS_ON
+    assert board.placements("proj")[253].id == moved.id
+    owner = board.move(
+        "proj", 253, Place(column=Column.UP_NEXT, group=None, position=0), Actor.OWNER, NOW
+    )
+    assert owner.place.column == Column.UP_NEXT
+    placed = board.placements("proj")[253]
+    assert placed.actor == Actor.OWNER and placed.evidence is None
 
 
 def test_executed_needs_a_watch_row_naming_a_signal_whoever_moves_the_card(board: Store):
@@ -70,7 +94,15 @@ def test_executed_needs_a_watch_row_naming_a_signal_whoever_moves_the_card(board
         "proj", 253, Row(kind=RowKind.WATCH, text="what reality has to confirm"), Actor.SESSION, NOW
     )
     with pytest.raises(StoreRefusal, match="names no reader"):
-        board.move("proj", 253, to, Actor.MACHINE, NOW, detail="the close landed")
+        board.move(
+            "proj",
+            253,
+            to,
+            Actor.MACHINE,
+            NOW,
+            detail="the close landed",
+            evidence=Evidence.CLOSE_LANDED,
+        )
     board.add_row(
         "proj",
         253,
@@ -78,7 +110,15 @@ def test_executed_needs_a_watch_row_naming_a_signal_whoever_moves_the_card(board
         Actor.SESSION,
         NOW,
     )
-    card = board.move("proj", 253, to, Actor.MACHINE, NOW, detail="the close landed")
+    card = board.move(
+        "proj",
+        253,
+        to,
+        Actor.MACHINE,
+        NOW,
+        detail="the close landed",
+        evidence=Evidence.CLOSE_LANDED,
+    )
     assert card.place.column == Column.EXECUTED
 
 

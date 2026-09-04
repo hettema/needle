@@ -18,7 +18,7 @@ import time
 from domain.gate import Gate
 from domain.session import Session, SessionKind
 from domain.slot import Placement
-from domain.window import Opened, WindowKind
+from domain.window import Focused, Opened, WindowKind
 from infrastructure import clock
 from infrastructure.store import Store
 from runtime import launch, machine
@@ -27,6 +27,8 @@ from runtime.launch import PROMPTS_SETTLED
 WINDOW_VERIFY_SECONDS = 8.0
 """A window appeared in 0.3 s on 2026-09-04; eight is generous for a busy machine."""
 WINDOW_POLL_SECONDS = 0.3
+FOCUS_VERIFY_SECONDS = 3.0
+"""Focus lands within a frame; three seconds covers a workspace switch."""
 APP_ID_PREFIX = "org.omarchy."
 """The owner's contract: `org.omarchy.<kind>-<card>`, routed by his compositor rule."""
 
@@ -56,6 +58,65 @@ def present(app_id: str) -> dict[str, dict[str, object]]:
         for c in clients()
         if c.get("class") == app_id or c.get("initialClass") == app_id
     }
+
+
+def active() -> dict[str, object]:
+    """The window the compositor reports focused, or an empty dict when none."""
+    try:
+        done = machine.run([machine.which("hyprctl"), "activewindow", "-j"], timeout=10)
+    except (OSError, machine.CommandMissing) as error:
+        raise WindowRefused(f"the compositor cannot be asked: {error}") from error
+    if done.returncode != 0:
+        raise WindowRefused(f"`hyprctl activewindow` failed: {done.stderr.strip()[:200]}")
+    try:
+        blob = json.loads(done.stdout or "{}")
+    except json.JSONDecodeError as error:
+        raise WindowRefused("`hyprctl activewindow -j` did not answer with JSON") from error
+    return blob if isinstance(blob, dict) else {}
+
+
+def focus_script(address: str) -> str:
+    """Hyprland here runs a Lua config, and `hyprctl dispatch` takes Lua
+    (verified 2026-09-04): the window is looked up by address and focused
+    through `hl.dsp.focus`; a missing window is an `error()`, the one way
+    `hyprctl eval` says anything but `ok`."""
+    safe = re.sub(r"[^0-9A-Za-z]", "", address)
+    return (
+        f"local w = hl.get_window('address:{safe}'); "
+        f"if not w then error('no window at {safe}') end; "
+        "hl.dispatch(hl.dsp.focus({window = w}))"
+    )
+
+
+def focus_window(store: Store, session: Session) -> Focused:
+    """Bring the session's open window forward and prove it by the
+    compositor's active window carrying its address."""
+    reconcile(store)
+    open_windows = store.windows(session.session_id, open_only=True)
+    if not open_windows:
+        raise WindowRefused(f"no window is open into {session.short_id}; open one first")
+    window = open_windows[0]
+    try:
+        done = machine.run(
+            [machine.which("hyprctl"), "eval", focus_script(window.address)], timeout=10
+        )
+    except (OSError, machine.CommandMissing) as error:
+        raise WindowRefused(f"the compositor cannot be asked: {error}") from error
+    if done.returncode != 0 or "error" in done.stdout.lower():
+        raise WindowRefused(
+            f"the compositor refused to focus {window.app_id} ({window.address}): "
+            f"{(done.stderr or done.stdout).strip()[:200]}"
+        )
+    deadline = time.time() + FOCUS_VERIFY_SECONDS
+    while time.time() < deadline:
+        now = active()
+        if str(now.get("address")) == window.address:
+            return Focused(window=window, app_id=str(now.get("class") or window.app_id))
+        time.sleep(WINDOW_POLL_SECONDS)
+    raise WindowRefused(
+        f"{window.app_id} ({window.address}) was told to focus and the compositor still "
+        f"reports {active().get('class') or 'no window'} active after {FOCUS_VERIFY_SECONDS:.0f} s"
+    )
 
 
 def app_id_for(kind: WindowKind, card: str) -> str:

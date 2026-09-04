@@ -14,6 +14,7 @@ from board.signals import (
     where_after,
 )
 from domain.column import Column
+from domain.evidence import Evidence
 from domain.signal import SignalKind
 
 NOW = datetime(2026, 9, 10, 12, 0, tzinfo=UTC)
@@ -70,10 +71,16 @@ def test_the_cadence_and_the_verdict_after_a_reading():
     assert is_due(signal, last_read=None, now=NOW)
     assert not is_due(signal, last_read=NOW.replace(hour=1), now=NOW)
     assert is_due(signal, last_read=NOW.replace(day=9, hour=23), now=NOW)
-    assert where_after(signal, True, NOW) == (Column.DONE, "the signal says delivered: x")
-    column, reason = where_after(signal, False, NOW)
-    assert column == Column.DECISION_MOMENT and "due date 2026-09-09 has passed" in reason
-    column, reason = where_after(signal, None, NOW)
-    assert column == Column.DECISION_MOMENT and "could not be read" in reason
+    done = where_after(signal, True, NOW)
+    assert (done.column, done.reason) == (Column.DONE, "the signal says delivered: x")
+    assert done.evidence == Evidence.SIGNAL_DELIVERED
+    failed = where_after(signal, False, NOW)
+    assert failed.column == Column.DECISION_MOMENT
+    assert "due date 2026-09-09 has passed" in failed.reason
+    assert failed.evidence == Evidence.SIGNAL_FAILED
+    unread = where_after(signal, None, NOW)
+    assert unread.column == Column.DECISION_MOMENT and "could not be read" in unread.reason
     not_yet = parse_watch("x — url https://x.test by 2026-09-11")
-    assert where_after(not_yet, False, NOW) == (None, "not delivered yet, and not yet due")
+    stays = where_after(not_yet, False, NOW)
+    assert (stays.column, stays.reason) == (None, "not delivered yet, and not yet due")
+    assert stays.evidence is None

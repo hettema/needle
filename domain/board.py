@@ -10,6 +10,7 @@ from domain.card import Card, Place
 from domain.column import ColumnDefinition
 from domain.corpus import CorpusSummary
 from domain.document import Document, DocumentRef, DocumentState
+from domain.evidence import Standing
 from domain.gate import Gate
 from domain.lane import Doors, Lane, LaneState
 from domain.project import Project
@@ -46,6 +47,8 @@ class CardSummary(BaseModel):
     lane_state: LaneState
     lane_sentence: str | None
     """What the card says about its lane, when it has one."""
+    standing: Standing
+    """Who placed the card here, on what evidence, and whether it holds on this read."""
 
 
 class GroupView(BaseModel):
@@ -70,9 +73,23 @@ class Attention(BaseModel):
     """Lanes whose session is gone without a close: Resume or Look is your choice."""
     signals_due: int
     """Executed cards past their signal's due time with nothing delivered yet."""
+    signals_asking: int
+    """Shipped cards whose signal only you can read, due now: one batched list (plan 04)."""
+    doubted: int
+    """Machine-placed cards whose evidence is gone on this read."""
     arrived_today: int
     documents_gone: int
     documents_without_card: int
+
+
+class OwnerAsk(BaseModel):
+    """One shipped card waiting on the owner's reading, in the batched list."""
+
+    number: int
+    title: str
+    what: str
+    """The question, as the WATCH row's `what`."""
+    due: date
 
 
 class TrunkState(BaseModel):
@@ -104,6 +121,8 @@ class BoardState(BaseModel):
     machine: MachineState
     columns: list[ColumnView]
     documents_without_card: list[DocumentRef]
+    asks: list[OwnerAsk]
+    """Every shipped card waiting on the owner's reading, one click each way per card."""
 
 
 class ProjectFile(BaseModel):

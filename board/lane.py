@@ -17,6 +17,7 @@ from board.brief import lane_name, lane_path
 from domain.audit import AuditEntry, AuditKind
 from domain.card import Actor, Card
 from domain.column import Column
+from domain.evidence import Evidence
 from domain.hook import HookEvent, HookKind
 from domain.lane import (
     HANDS_ON,
@@ -437,6 +438,8 @@ def close_is_current(card: Card, history: list[AuditEntry], since: datetime | No
 class Exit(BaseModel):
     column: Column
     reason: str
+    evidence: Evidence
+    """The predicate the move satisfied, recorded on the audit row and re-tested on every read."""
 
 
 def exit_for(
@@ -460,15 +463,18 @@ def exit_for(
             return Exit(
                 column=Column.EXECUTED,
                 reason="the close landed: the plan is archived and DELIVERED is written",
+                evidence=Evidence.CLOSE_LANDED,
             )
         return Exit(
             column=Column.DECISION_MOMENT,
             reason="the close landed, but the WATCH row names no signal the board can read",
+            evidence=Evidence.LANE_ENDED,
         )
     if folded:
         return Exit(
             column=Column.DECISION_MOMENT,
             reason="the work folded into origin/develop, but no session wrote it up",
+            evidence=Evidence.LANE_ENDED,
         )
     if has_row(card, RowKind.DELIVERED):
         if close_is_current(card, history, since):
@@ -476,12 +482,14 @@ def exit_for(
         return Exit(
             column=Column.DECISION_MOMENT,
             reason="the lane ended; DELIVERED is from a previous life and the close never landed",
+            evidence=Evidence.LANE_ENDED,
         )
     if folded is None and lane.session is None:
         return None
     return Exit(
         column=came_from(history),
         reason="the lane ended with nothing folded" + (f" ({lane.died})" if lane.died else ""),
+        evidence=Evidence.LANE_ENDED,
     )
 
 
@@ -586,7 +594,13 @@ def doors_for(
     )
     if background:
         if lane.window_open:
-            watch = _closed("Watch", "A window into this session is already open.")
+            # A window that is open is a door too (plan 04, item 2): the
+            # owner looked for Watch on #387 and found it gone, its reason in
+            # a tooltip nobody hovers.
+            watch = _open(
+                "Focus its window",
+                "Brings the open window into this session forward, through the compositor.",
+            )
         else:
             watch = _open("Watch", "Opens a window into the live session; closing it ends nothing.")
     elif live:

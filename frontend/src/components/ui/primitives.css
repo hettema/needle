@@ -64,6 +64,30 @@
 .att.bad   { border-color: var(--wrong); background: var(--wrong-2); color: var(--wrong); }
 .att.bad b { color: var(--wrong); }
 .attn-line .quiet { margin-left: auto; font-family: var(--mono); font-size: 10px; color: var(--ink-3); }
+button.att { cursor: pointer; }
+button.att:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.att.on { box-shadow: inset 0 0 0 1px var(--attn); }
+
+/* ── the batched question ──────────────────────────────────────────── */
+
+.asks {
+  margin: 16px 20px 0; border: 1px solid var(--attn); border-radius: var(--r-card);
+  background: var(--surface); overflow: hidden;
+}
+.asks-h {
+  font-family: var(--mono); font-size: 9.5px; letter-spacing: .12em; text-transform: uppercase;
+  color: var(--attn); background: var(--attn-2); padding: 7px 13px;
+  border-bottom: 1px solid var(--attn);
+}
+.ask-row {
+  display: grid; grid-template-columns: 52px minmax(160px, 1fr) minmax(220px, 2fr) 112px auto;
+  gap: 12px; align-items: center; padding: 8px 13px; font-size: 12.5px; line-height: 1.45;
+}
+.ask-row + .ask-row { border-top: 1px dotted var(--line); }
+.ask-row .ask-title { font-weight: 600; color: var(--ink); }
+.ask-row .ask-what { color: var(--ink-2); }
+.ask-row .ask-due { font-family: var(--mono); font-size: 10px; color: var(--ink-3); white-space: nowrap; }
+.ask-row .ask-acts { display: flex; gap: 6px; }
 
 /* ── the board ─────────────────────────────────────────────────────── */
 
@@ -243,6 +267,37 @@ button.chip:focus-visible { outline: 2px solid var(--accent); outline-offset: 1p
 .band.blocked .bstate, .band.moving .bstate { color: var(--attn); }
 .band.ended { background: var(--wrong-2); color: var(--wrong); }
 .band.ended .bstate { color: var(--wrong); }
+
+.doubt {
+  display: flex; align-items: baseline; gap: 7px;
+  margin: 7px -11px -9px; padding: 5px 11px 6px;
+  border-top: 1px solid var(--wrong);
+  border-radius: 0 0 var(--r-card) var(--r-card);
+  background: var(--wrong-2); color: var(--wrong);
+  font-size: 11.5px; line-height: 1.4;
+}
+.band + .doubt { margin-top: 9px; }
+.card.open .doubt { margin: 0; border-radius: 0; border-top: none; border-bottom: 1px solid var(--wrong); }
+.doubt .bstate {
+  flex: none; font-family: var(--mono); font-size: 9px; letter-spacing: .09em; text-transform: uppercase;
+  padding-top: 2px;
+}
+.doubt .bsay { min-width: 0; }
+.standing {
+  font-family: var(--mono); font-size: 9px; letter-spacing: .07em; text-transform: uppercase;
+  padding: 2.5px 6px; border-radius: var(--r-chip); white-space: nowrap;
+  border: 1px solid var(--line); color: var(--ink-3); background: transparent;
+}
+.standing.held { color: var(--landed); border-color: var(--landed); }
+.standing.doubted { color: var(--wrong); border-color: var(--wrong); background: var(--wrong-2); }
+.standing.unknown { border-style: dashed; }
+.closed-doors {
+  display: flex; flex-wrap: wrap; gap: 4px 14px;
+  padding: 6px 11px 8px; background: var(--surface-2); border-bottom: 1px solid var(--line);
+  font-size: 11.5px; line-height: 1.45; color: var(--ink-3);
+}
+.closed-doors b { font-weight: 600; color: var(--ink-2); }
+.open-body > .acts { border-radius: 0; border-bottom: 1px solid var(--line); }
 
 .ask-block {
   margin-top: 8px; padding: 9px 11px; border-radius: var(--r-ctrl);

@@ -22,7 +22,7 @@ from api.cli import main
 from board.import_01 import read_01
 from domain.card import CardOrigin
 from infrastructure.corpus import scan
-from infrastructure.live import sweep
+from infrastructure.live import Live, sweep
 from infrastructure.store import Store
 from runtime import launch, windows
 from tests.conftest import NOW
@@ -100,6 +100,16 @@ def column_of(client: TestClient, number: int) -> str:
 
 def detail(client: TestClient, number: int = CARD) -> dict:
     return client.get(f"/api/projects/proj/cards/{number}").json()
+
+
+def summary_of(client: TestClient, number: int = CARD) -> dict:
+    board = client.get("/api/projects/proj/board").json()
+    for column in board["columns"]:
+        for group in column["groups"]:
+            for card in group["cards"]:
+                if card["number"] == number:
+                    return card
+    raise AssertionError(f"#{number} is not on the board")
 
 
 def lane_path(repo: Path) -> str:
@@ -341,8 +351,24 @@ def test_watch_opens_a_tab_once_stop_ends_the_lane_and_look_takes_its_place(
     )
     spawned = machine_floor.state()["spawned"][0]
     assert f"exec claude attach {short}" in spawned["command"][-1]
+    # A window that is open is a door too (plan 04, item 2): Watch reads
+    # "Focus its window" and brings the tab forward, proved by the compositor.
+    with_window = detail(client)["doors"]["watch"]
+    assert with_window["offered"] and with_window["label"] == "Focus its window"
     again = client.post(f"/api/projects/proj/cards/{CARD}/watch")
-    assert again.status_code == 409 and "already open" in again.json()["detail"]
+    assert again.status_code == 200, again.text
+    assert again.json()["said"] == (
+        "Focused org.omarchy.board-watch-card-253-every-metered-kilowatt-is-billed; the "
+        "compositor reports org.omarchy.board-watch-card-253-every-metered-kilowatt-is-billed "
+        "active."
+    )
+    assert machine_floor.state()["focus_calls"] == ["0xfake0001"]
+    assert len(machine_floor.state()["spawned"]) == 1, "focus opens nothing"
+    machine_floor.update(focus_works=False)
+    unmoved = client.post(f"/api/projects/proj/cards/{CARD}/watch")
+    assert unmoved.status_code == 502 and "Focus did not land" in unmoved.json()["detail"]
+    assert "still reports" in unmoved.json()["detail"]
+    machine_floor.update(focus_works=True)
     look = client.post(f"/api/projects/proj/cards/{CARD}/look")
     assert look.status_code == 409 and "live" in look.json()["detail"]
 
@@ -516,6 +542,95 @@ def test_an_unreadable_signal_past_its_due_time_lands_in_decision_moment_with_th
     assert history[1]["detail"].startswith("Signal read as unreadable: https://gone.test could not")
     assert "could not be read" in history[0]["detail"] and "has passed" in history[0]["detail"]
     assert history[0]["actor"] == "machine"
+
+
+# ── plan 04, item 1: the evidence behind a machine placement, doubted when gone ──
+
+
+def test_a_lane_that_dies_mid_close_is_doubted_on_the_next_read_until_the_loop_moves_it(
+    client: TestClient, machine_floor: Floor, repo: Path
+):
+    """The mover and the doubt read the same facts, so a plain death is moved
+    back in the read that sees it. The doubt is for the reads where the mover
+    waits: here a close still landing (DELIVERED written, plan not yet
+    archived) when the session is killed."""
+    start(client)
+    launched = machine_floor.state()["launch_log"][0]
+    placed = detail(client)["history"][0]
+    assert placed["actor"] == "machine" and placed["evidence"] == "hands-on"
+    held = summary_of(client)["standing"]
+    assert held == {"actor": "machine", "evidence": "hands-on", "state": "held", "words": None}
+    # The card file puts three cards in machine columns on 0.1's word alone; the
+    # first read doubts those, and this lane adds to and then leaves that count.
+    doubted_before = client.get("/api/projects/proj/board").json()["attention"]["doubted"]
+
+    assert main(["row", "proj", str(CARD), "DELIVERED", "the meter bills"]) == 0
+    os.kill(launched["pid"], 9)
+    (machine_floor.config_dir("alpha") / "sessions" / f"{launched['pid']}.json").unlink()
+    reconcile(client)
+
+    assert column_of(client, CARD) == "Executing", "a close still landing is not dragged back"
+    doubted = summary_of(client)["standing"]
+    assert doubted["state"] == "doubted" and doubted["evidence"] == "hands-on"
+    assert doubted["words"].startswith(
+        "the board doubts this: no live session has hands on its worktree"
+    )
+    assert detail(client)["summary"]["standing"] == doubted
+    board = client.get("/api/projects/proj/board").json()
+    assert board["attention"]["doubted"] == doubted_before + 1
+
+    done = archive_plan(repo)
+    watch = f"the plan is archived — file {done.relative_to(repo)} by 2026-12-31"
+    assert main(["row", "proj", str(CARD), "WATCH", watch]) == 0
+    client.app.state.loops.live.rescan("proj")
+    reconcile(client)
+
+    assert column_of(client, CARD) == "Executed"
+    landed = detail(client)
+    assert landed["history"][0]["evidence"] == "close-landed"
+    assert landed["summary"]["standing"]["state"] == "held"
+    assert client.get("/api/projects/proj/board").json()["attention"]["doubted"] == doubted_before
+
+
+def test_the_imports_placements_read_unknown_before_the_first_read_and_are_tested_after(
+    store: Store, project, card_file_01, repo: Path
+):
+    """0.1's word is not evidence: the cards its file put in Executed read
+    "evidence unknown" until the loop's first read, which tests each one."""
+    store.add_project(project)
+    store.import_01(project.slug, read_01(card_file_01, scan(repo, NOW)), NOW)
+    sweep(store, project, origin=CardOrigin.FOUNDING, at=NOW)
+    live = Live(store)
+    live.load()
+    executed = [
+        s
+        for c in live.board("proj").columns
+        if c.definition.column == "Executed"
+        for g in c.groups
+        for s in g.cards
+    ]
+    assert executed and all(s.standing.state == "unknown" for s in executed)
+    assert all(s.standing.actor == "import" for s in executed)
+    assert executed[0].standing.words == (
+        "imported from Needle 0.1; evidence unknown until the first read"
+    )
+    with TestClient(create_app(store, dist=None)) as client:
+        board = client.get("/api/projects/proj/board").json()
+        states = {
+            c["number"]: (col["definition"]["column"], c["standing"])
+            for col in board["columns"]
+            for g in col["groups"]
+            for c in g["cards"]
+        }
+        tested = {n: s for n, (column, s) in states.items() if column == "Executed"}
+        assert tested and {s["state"] for s in tested.values()} <= {"held", "doubted"}
+        assert any(
+            s["state"] == "doubted" and "names no signal the board can read" in s["words"]
+            for s in tested.values()
+        )
+        assert board["attention"]["doubted"] == sum(
+            1 for _, s in states.values() if s["state"] == "doubted"
+        )
 
 
 # ── 6: rescue and the machine's reason ─────────────────────────────────

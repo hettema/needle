@@ -5,6 +5,7 @@ import type { DraggableAttributes } from "@dnd-kit/core";
 import { marked } from "marked";
 import DOMPurify from "dompurify";
 import type { DocumentState } from "../../types/document";
+import type { Standing } from "../../types/evidence";
 import type { LaneState } from "../../types/lane";
 import type { RowKind } from "../../types/row";
 import { ASK_ROWS, LANDED_ROWS, LEAD_ROWS } from "../../types/row";
@@ -126,11 +127,48 @@ export function AttentionLine({ children, quiet }: { children: ReactNode; quiet:
   );
 }
 
-export function Att({ n, label, tone = "plain" }: { n: number; label: string; tone?: "plain" | "you" | "bad" }) {
+export function Att({ n, label, tone = "plain", onClick, on }: { n: number; label: string; tone?: "plain" | "you" | "bad"; onClick?: (() => void) | undefined; on?: boolean }) {
+  const className = `att ${tone === "plain" ? "" : tone}${on ? " on" : ""}`;
+  if (onClick) {
+    return (
+      <button type="button" className={className} onClick={onClick} aria-pressed={on ?? false}>
+        <b>{n}</b> {label}
+      </button>
+    );
+  }
   return (
-    <span className={`att ${tone === "plain" ? "" : tone}`}>
+    <span className={className}>
       <b>{n}</b> {label}
     </span>
+  );
+}
+
+/** The batched question: every shipped card waiting on the owner's reading, one click each way per card (plan 04, item 3). */
+export function AskList({ children, title }: { children: ReactNode; title: string }) {
+  return (
+    <section className="asks" aria-label={title}>
+      <div className="asks-h">{title}</div>
+      {children}
+    </section>
+  );
+}
+
+export function AskRow({ number, title, what, due, onRead, disabled }: { number: number; title: string; what: string; due: string; onRead: (delivered: boolean) => void; disabled: boolean }) {
+  return (
+    <div className="ask-row" role="listitem">
+      <span className="cid">#{number}</span>
+      <span className="ask-title">{title}</span>
+      <span className="ask-what">{what}</span>
+      <span className="ask-due">due {due}</span>
+      <span className="ask-acts">
+        <button type="button" className="btn" onClick={() => onRead(true)} disabled={disabled}>
+          Delivered
+        </button>
+        <button type="button" className="btn ghost" onClick={() => onRead(false)} disabled={disabled}>
+          Not delivered
+        </button>
+      </span>
+    </div>
   );
 }
 
@@ -568,6 +606,49 @@ export function Band({ state, children }: { state: LaneState; children: ReactNod
     <div className={`band ${state}`} role="status">
       <span className="bstate">{LANE_LABEL[state]}</span>
       <span className="bsay">{children}</span>
+    </div>
+  );
+}
+
+/** The board doubts a machine-placed status: its evidence is gone, and the missing fact is said (plan 04, item 1). */
+export function Doubt({ children }: { children: ReactNode }) {
+  return (
+    <div className="doubt" role="status">
+      <span className="bstate">Doubted</span>
+      <span className="bsay">{children}</span>
+    </div>
+  );
+}
+
+const STANDING_LABEL: Record<Standing["state"], string> = {
+  held: "evidence holds",
+  doubted: "doubted",
+  unknown: "evidence unknown",
+  trusted: "",
+};
+
+/** What a placement rests on, in the open card's head: who put it here and whether that still holds. */
+export function StandingMark({ standing }: { standing: Standing }) {
+  if (standing.state === "trusted") return null;
+  const who = standing.actor === "owner" ? "you" : standing.actor === "machine" ? "the board" : standing.actor === "import" ? "0.1's import" : standing.actor;
+  return (
+    <span className={`standing ${standing.state}`} title={standing.words ?? `placed by ${who} on ${standing.evidence ?? "no"} evidence`}>
+      {STANDING_LABEL[standing.state]}
+      {standing.evidence ? ` · ${standing.evidence}` : ""}
+    </span>
+  );
+}
+
+/** The doors this card cannot open right now, each with its reason in text rather than a tooltip (plan 04, item 2). */
+export function ClosedDoors({ doors }: { doors: readonly { label: string; why: string }[] }) {
+  if (!doors.length) return null;
+  return (
+    <div className="closed-doors">
+      {doors.map((d) => (
+        <span key={d.label} className="closed-door">
+          <b>{d.label}</b> — {d.why}
+        </span>
+      ))}
     </div>
   );
 }

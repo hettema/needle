@@ -12,7 +12,7 @@ from domain.launch import Launch, Rescue, Start, Stopped
 from domain.session import Session
 from domain.signal import Signal
 from domain.slot import Placement, Rung, Slot, Where
-from domain.window import Opened, Window, WindowKind
+from domain.window import Focused, Opened, Window, WindowKind
 from infrastructure.store import Store
 from runtime import git, handoffs, launch, machine, reasons, registry, rule, signals, slots, windows
 
@@ -94,6 +94,10 @@ class Runtime:
         if session.pid is None:
             look = rule.where(session.slot, [], cached=False).placement
         return windows.open_window(self.store, session, kind=kind, card=card, look=look)
+
+    def focus(self, ref: str) -> Focused:
+        """Bring the session's open window forward, proved by the compositor."""
+        return windows.focus_window(self.store, self.session(ref))
 
     def resume(self, ref: str, *, prompt: str | None, card: str | None = None) -> Launch:
         """Stop the session where it runs and resume it where the rule says,

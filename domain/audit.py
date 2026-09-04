@@ -9,6 +9,7 @@ from enum import StrEnum
 from pydantic import BaseModel
 
 from domain.card import Actor, Place
+from domain.evidence import Evidence
 
 
 class AuditKind(StrEnum):
@@ -45,3 +46,5 @@ class AuditEntry(BaseModel):
     from_place: Place | None
     to_place: Place | None
     detail: str
+    evidence: Evidence | None = None
+    """The predicate a machine move satisfied (plan 04, item 1); None on every other row."""

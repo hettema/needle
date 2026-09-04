@@ -252,3 +252,4 @@ class AuditRow(Base):
     to_group: Mapped[str | None] = mapped_column(String(200), nullable=True)
     to_position: Mapped[int | None] = mapped_column(Integer, nullable=True)
     detail: Mapped[str] = mapped_column(Text)
+    evidence: Mapped[str | None] = mapped_column(String(30), nullable=True)

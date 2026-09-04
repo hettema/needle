@@ -8,6 +8,7 @@ file with nobody syncing anything.
 
 from datetime import datetime, timedelta
 
+from board.evidence import placement_from, standing_for
 from board.moves import GroupLayout
 from board.reconcile import ref
 from board.signals import is_due, past_due, read_or_decline
@@ -21,12 +22,14 @@ from domain.board import (
     EssenceSource,
     GroupView,
     MachineState,
+    OwnerAsk,
     TrunkState,
 )
 from domain.card import Card, CardOrigin
 from domain.column import COLUMN_DEFINITIONS, Column
 from domain.corpus import CorpusIndex, CorpusSummary
 from domain.document import Document, DocumentKind, DocumentRef, DocumentState
+from domain.evidence import EvidenceState
 from domain.gate import Gate
 from domain.lane import Doors, Lane, LaneSnapshot, LaneState
 from domain.project import Project
@@ -127,7 +130,14 @@ def signal_wants_reading(
 
 
 def summarize(
-    card: Card, index: CorpusIndex, now: datetime, lane: Lane | None = None
+    card: Card,
+    index: CorpusIndex,
+    now: datetime,
+    lane: Lane | None = None,
+    *,
+    placement: AuditEntry | None = None,
+    last: Reading | None = None,
+    read: bool = False,
 ) -> CardSummary:
     document = document_of(card, index)
     text, source = essence(card, document)
@@ -148,6 +158,7 @@ def summarize(
         place=card.place,
         lane_state=lane.state if lane is not None else LaneState.NONE,
         lane_sentence=lane.sentence if lane is not None and lane.sentence else None,
+        standing=standing_for(card, placement, lane, last, read=read),
     )
 
 
@@ -188,15 +199,29 @@ def assemble_board(
     readings: dict[int, Reading] | None = None,
     trunk: TrunkState | None = None,
     machine: MachineState | None = None,
+    placements: dict[int, AuditEntry] | None = None,
 ) -> BoardState:
     """`snapshot`, `readings`, `trunk` and `machine` are what the loop has
-    read; before its first read they are absent and the board says so."""
+    read; before its first read they are absent and the board says so.
+    `placements` is each card's placing audit row, what a read re-tests."""
     readings = readings or {}
+    placements = placements or {}
     trunk = trunk or TrunkState(level=None, behind=0, note=None, read_at=None)
     machine = machine or MachineState(missing=[])
     by_number = {c.number: c for c in cards}
     lanes = snapshot.lanes if snapshot is not None else {}
-    summaries = {n: summarize(c, index, now, lanes.get(n)) for n, c in by_number.items()}
+    summaries = {
+        n: summarize(
+            c,
+            index,
+            now,
+            lanes.get(n),
+            placement=placements.get(n),
+            last=readings.get(n),
+            read=snapshot is not None,
+        )
+        for n, c in by_number.items()
+    }
     signals = {n: watch_signal(c)[0] for n, c in by_number.items()}
 
     columns: list[ColumnView] = []
@@ -221,11 +246,13 @@ def assemble_board(
 
     without_card = documents_without_card(index, cards)
     asking_lanes = sum(1 for lane in lanes.values() if lane.state == LaneState.ASKING)
-    owner_signals = sum(
-        1 for n, c in by_number.items() if signal_asks_owner(c, signals[n], readings.get(n), now)
-    )
+    asks = [
+        OwnerAsk(number=n, title=c.title, what=signals[n].what, due=signals[n].due)
+        for n, c in sorted(by_number.items())
+        if signal_asks_owner(c, signals[n], readings.get(n), now) and signals[n] is not None
+    ]
     attention = Attention(
-        asking_you=count(Column.DECISION_MOMENT) + asking_lanes + owner_signals,
+        asking_you=count(Column.DECISION_MOMENT) + asking_lanes + len(asks),
         in_flight=count(Column.EXECUTING),
         lanes_ended=sum(
             1
@@ -237,6 +264,8 @@ def assemble_board(
         signals_due=sum(
             1 for n, c in by_number.items() if signal_overdue(c, signals[n], readings.get(n), now)
         ),
+        signals_asking=len(asks),
+        doubted=sum(1 for s in summaries.values() if s.standing.state == EvidenceState.DOUBTED),
         arrived_today=sum(1 for s in summaries.values() if s.is_new),
         documents_gone=sum(1 for s in summaries.values() if s.document_state == DocumentState.GONE),
         documents_without_card=len(without_card),
@@ -251,6 +280,7 @@ def assemble_board(
         machine=machine,
         columns=columns,
         documents_without_card=without_card,
+        asks=asks,
     )
 
 
@@ -263,14 +293,24 @@ def assemble_detail(
     lane: Lane | None,
     doors: Doors,
     readings: list[Reading],
+    read: bool = False,
 ) -> CardDetail:
+    """`readings` newest first; `read` is whether the loop has read the machine."""
     document = document_of(card, index)
     brief, record = split_rows(card.rows)
     own = cited_path(card)
     signal, signal_note = watch_signal(card)
     return CardDetail(
         card=card,
-        summary=summarize(card, index, now, lane),
+        summary=summarize(
+            card,
+            index,
+            now,
+            lane,
+            placement=placement_from(history),
+            last=readings[0] if readings else None,
+            read=read,
+        ),
         brief=brief,
         record=record,
         document=document,

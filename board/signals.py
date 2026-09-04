@@ -17,7 +17,10 @@ else is refused with this grammar in the message, never guessed at.
 import re
 from datetime import date, datetime
 
+from pydantic import BaseModel
+
 from domain.column import Column
+from domain.evidence import Evidence
 from domain.signal import Signal, SignalKind
 
 _KIND = re.compile(r"(?:^|\s|—|-|:)\s*(url|file|command|owner)\b", re.I)
@@ -104,16 +107,28 @@ def past_due(signal: Signal, now: datetime) -> bool:
     return now.date() > signal.due
 
 
-def where_after(signal: Signal, delivered: bool | None, now: datetime) -> tuple[Column | None, str]:
+class Landing(BaseModel):
+    """Where a reading sends an Executed card, why, and on what evidence."""
+
+    column: Column | None
+    """None: the card stays where it is."""
+    reason: str
+    evidence: Evidence | None
+
+
+def where_after(signal: Signal, delivered: bool | None, now: datetime) -> Landing:
     """Where a reading sends an Executed card, with the reason in a sentence."""
     if delivered:
-        return Column.DONE, f"the signal says delivered: {signal.what}"
-    if past_due(signal, now):
-        if delivered is None:
-            return Column.DECISION_MOMENT, (
-                f"the signal could not be read and its due date {signal.due.isoformat()} has passed"
-            )
-        return Column.DECISION_MOMENT, (
-            f"the signal says not delivered and its due date {signal.due.isoformat()} has passed"
+        return Landing(
+            column=Column.DONE,
+            reason=f"the signal says delivered: {signal.what}",
+            evidence=Evidence.SIGNAL_DELIVERED,
         )
-    return None, "not delivered yet, and not yet due"
+    if past_due(signal, now):
+        said = "could not be read" if delivered is None else "says not delivered"
+        return Landing(
+            column=Column.DECISION_MOMENT,
+            reason=f"the signal {said} and its due date {signal.due.isoformat()} has passed",
+            evidence=Evidence.SIGNAL_FAILED,
+        )
+    return Landing(column=None, reason="not delivered yet, and not yet due", evidence=None)

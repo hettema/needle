@@ -512,6 +512,22 @@ def test_a_live_lane_offers_watch_and_stop_and_answer_only_when_stopped():
         ),
     )
     assert doors(card(column=Column.EXECUTING), asking).answer.offered
+    window = Window(
+        id=1,
+        session_id="aaaa0001-0000-4000-8000-000000000000",
+        kind=WindowKind.WATCH,
+        app_id="org.omarchy.board-watch-card-7-the-thing",
+        address="0x1",
+        opened_at=NOW,
+        closed_at=None,
+    )
+    windowed = lane_for(
+        card(column=Column.EXECUTING), facts(sessions=[session()], windows=[window])
+    )
+    focus = doors(card(column=Column.EXECUTING), windowed).watch
+    assert focus.offered and focus.label == "Focus its window", (
+        "a window that is open is a door too, never a closed Watch with a tooltip"
+    )
 
 
 def test_an_ended_lane_offers_look_and_resume_and_never_watch():

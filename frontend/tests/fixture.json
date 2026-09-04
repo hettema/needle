@@ -21,6 +21,8 @@
       "in_flight": 2,
       "lanes_ended": 0,
       "signals_due": 0,
+      "signals_asking": 0,
+      "doubted": 0,
       "arrived_today": 1,
       "documents_gone": 2,
       "documents_without_card": 0
@@ -70,7 +72,13 @@
                   "position": 0
                 },
                 "lane_state": "none",
-                "lane_sentence": null
+                "lane_sentence": null,
+                "standing": {
+                  "actor": "import",
+                  "evidence": null,
+                  "state": "trusted",
+                  "words": null
+                }
               },
               {
                 "number": 242,
@@ -90,7 +98,13 @@
                   "position": 1
                 },
                 "lane_state": "none",
-                "lane_sentence": null
+                "lane_sentence": null,
+                "standing": {
+                  "actor": "import",
+                  "evidence": null,
+                  "state": "trusted",
+                  "words": null
+                }
               },
               {
                 "number": 232,
@@ -110,7 +124,13 @@
                   "position": 2
                 },
                 "lane_state": "none",
-                "lane_sentence": null
+                "lane_sentence": null,
+                "standing": {
+                  "actor": "import",
+                  "evidence": null,
+                  "state": "trusted",
+                  "words": null
+                }
               },
               {
                 "number": 120,
@@ -130,7 +150,13 @@
                   "position": 3
                 },
                 "lane_state": "none",
-                "lane_sentence": null
+                "lane_sentence": null,
+                "standing": {
+                  "actor": "import",
+                  "evidence": null,
+                  "state": "trusted",
+                  "words": null
+                }
               }
             ]
           },
@@ -161,7 +187,13 @@
                   "position": 0
                 },
                 "lane_state": "none",
-                "lane_sentence": null
+                "lane_sentence": null,
+                "standing": {
+                  "actor": "import",
+                  "evidence": null,
+                  "state": "trusted",
+                  "words": null
+                }
               }
             ]
           },
@@ -186,7 +218,13 @@
                   "position": 0
                 },
                 "lane_state": "none",
-                "lane_sentence": null
+                "lane_sentence": null,
+                "standing": {
+                  "actor": "corpus",
+                  "evidence": null,
+                  "state": "trusted",
+                  "words": null
+                }
               },
               {
                 "number": 264,
@@ -206,7 +244,13 @@
                   "position": 1
                 },
                 "lane_state": "none",
-                "lane_sentence": null
+                "lane_sentence": null,
+                "standing": {
+                  "actor": "corpus",
+                  "evidence": null,
+                  "state": "trusted",
+                  "words": null
+                }
               },
               {
                 "number": 265,
@@ -226,7 +270,13 @@
                   "position": 2
                 },
                 "lane_state": "none",
-                "lane_sentence": null
+                "lane_sentence": null,
+                "standing": {
+                  "actor": "corpus",
+                  "evidence": null,
+                  "state": "trusted",
+                  "words": null
+                }
               },
               {
                 "number": 266,
@@ -246,7 +296,13 @@
                   "position": 3
                 },
                 "lane_state": "none",
-                "lane_sentence": null
+                "lane_sentence": null,
+                "standing": {
+                  "actor": "corpus",
+                  "evidence": null,
+                  "state": "trusted",
+                  "words": null
+                }
               }
             ]
           }
@@ -290,7 +346,13 @@
                   "position": 0
                 },
                 "lane_state": "none",
-                "lane_sentence": null
+                "lane_sentence": null,
+                "standing": {
+                  "actor": "import",
+                  "evidence": null,
+                  "state": "trusted",
+                  "words": null
+                }
               }
             ]
           },
@@ -317,7 +379,13 @@
                   "position": 0
                 },
                 "lane_state": "none",
-                "lane_sentence": null
+                "lane_sentence": null,
+                "standing": {
+                  "actor": "import",
+                  "evidence": null,
+                  "state": "trusted",
+                  "words": null
+                }
               }
             ]
           },
@@ -344,7 +412,13 @@
                   "position": 0
                 },
                 "lane_state": "none",
-                "lane_sentence": null
+                "lane_sentence": null,
+                "standing": {
+                  "actor": "import",
+                  "evidence": null,
+                  "state": "trusted",
+                  "words": null
+                }
               }
             ]
           },
@@ -369,7 +443,13 @@
                   "position": 0
                 },
                 "lane_state": "none",
-                "lane_sentence": null
+                "lane_sentence": null,
+                "standing": {
+                  "actor": "corpus",
+                  "evidence": null,
+                  "state": "trusted",
+                  "words": null
+                }
               },
               {
                 "number": 267,
@@ -389,7 +469,13 @@
                   "position": 1
                 },
                 "lane_state": "none",
-                "lane_sentence": null
+                "lane_sentence": null,
+                "standing": {
+                  "actor": "corpus",
+                  "evidence": null,
+                  "state": "trusted",
+                  "words": null
+                }
               }
             ]
           }
@@ -431,7 +517,13 @@
                   "position": 0
                 },
                 "lane_state": "none",
-                "lane_sentence": null
+                "lane_sentence": null,
+                "standing": {
+                  "actor": "import",
+                  "evidence": null,
+                  "state": "trusted",
+                  "words": null
+                }
               },
               {
                 "number": 241,
@@ -451,7 +543,13 @@
                   "position": 1
                 },
                 "lane_state": "none",
-                "lane_sentence": null
+                "lane_sentence": null,
+                "standing": {
+                  "actor": "import",
+                  "evidence": null,
+                  "state": "trusted",
+                  "words": null
+                }
               },
               {
                 "number": 228,
@@ -471,7 +569,13 @@
                   "position": 2
                 },
                 "lane_state": "none",
-                "lane_sentence": null
+                "lane_sentence": null,
+                "standing": {
+                  "actor": "import",
+                  "evidence": null,
+                  "state": "trusted",
+                  "words": null
+                }
               },
               {
                 "number": 237,
@@ -491,7 +595,13 @@
                   "position": 3
                 },
                 "lane_state": "none",
-                "lane_sentence": null
+                "lane_sentence": null,
+                "standing": {
+                  "actor": "import",
+                  "evidence": null,
+                  "state": "trusted",
+                  "words": null
+                }
               },
               {
                 "number": 174,
@@ -513,7 +623,13 @@
                   "position": 4
                 },
                 "lane_state": "none",
-                "lane_sentence": null
+                "lane_sentence": null,
+                "standing": {
+                  "actor": "import",
+                  "evidence": null,
+                  "state": "trusted",
+                  "words": null
+                }
               }
             ]
           }
@@ -555,7 +671,13 @@
                   "position": 0
                 },
                 "lane_state": "none",
-                "lane_sentence": null
+                "lane_sentence": null,
+                "standing": {
+                  "actor": "import",
+                  "evidence": "hands-on",
+                  "state": "unknown",
+                  "words": "imported from Needle 0.1; evidence unknown until the first read"
+                }
               },
               {
                 "number": 223,
@@ -575,7 +697,13 @@
                   "position": 1
                 },
                 "lane_state": "none",
-                "lane_sentence": null
+                "lane_sentence": null,
+                "standing": {
+                  "actor": "import",
+                  "evidence": "hands-on",
+                  "state": "unknown",
+                  "words": "imported from Needle 0.1; evidence unknown until the first read"
+                }
               }
             ]
           }
@@ -619,7 +747,13 @@
                   "position": 0
                 },
                 "lane_state": "none",
-                "lane_sentence": null
+                "lane_sentence": null,
+                "standing": {
+                  "actor": "import",
+                  "evidence": null,
+                  "state": "trusted",
+                  "words": null
+                }
               },
               {
                 "number": 147,
@@ -642,7 +776,13 @@
                   "position": 1
                 },
                 "lane_state": "none",
-                "lane_sentence": null
+                "lane_sentence": null,
+                "standing": {
+                  "actor": "import",
+                  "evidence": null,
+                  "state": "trusted",
+                  "words": null
+                }
               }
             ]
           },
@@ -669,7 +809,13 @@
                   "position": 0
                 },
                 "lane_state": "none",
-                "lane_sentence": null
+                "lane_sentence": null,
+                "standing": {
+                  "actor": "import",
+                  "evidence": null,
+                  "state": "trusted",
+                  "words": null
+                }
               }
             ]
           },
@@ -696,7 +842,13 @@
                   "position": 0
                 },
                 "lane_state": "none",
-                "lane_sentence": null
+                "lane_sentence": null,
+                "standing": {
+                  "actor": "import",
+                  "evidence": null,
+                  "state": "trusted",
+                  "words": null
+                }
               }
             ]
           }
@@ -740,7 +892,13 @@
                   "position": 0
                 },
                 "lane_state": "none",
-                "lane_sentence": null
+                "lane_sentence": null,
+                "standing": {
+                  "actor": "import",
+                  "evidence": "close-landed",
+                  "state": "unknown",
+                  "words": "imported from Needle 0.1; evidence unknown until the first read"
+                }
               }
             ]
           }
@@ -803,7 +961,13 @@
                   "position": 0
                 },
                 "lane_state": "none",
-                "lane_sentence": null
+                "lane_sentence": null,
+                "standing": {
+                  "actor": "import",
+                  "evidence": null,
+                  "state": "trusted",
+                  "words": null
+                }
               }
             ]
           }
@@ -811,7 +975,8 @@
         "count": 1
       }
     ],
-    "documents_without_card": []
+    "documents_without_card": [],
+    "asks": []
   },
   "details": {
     "252": {
@@ -871,7 +1036,13 @@
           "position": 0
         },
         "lane_state": "none",
-        "lane_sentence": null
+        "lane_sentence": null,
+        "standing": {
+          "actor": "import",
+          "evidence": null,
+          "state": "trusted",
+          "words": null
+        }
       },
       "brief": [
         {
@@ -919,7 +1090,8 @@
           "card_number": 252,
           "from_place": null,
           "to_place": null,
-          "detail": "Linked to docs/slice-suggestions/2026-09-03-the-quay-display-polls-the-office-all-night.md, cited on the 0.1 card."
+          "detail": "Linked to docs/slice-suggestions/2026-09-03-the-quay-display-polls-the-office-all-night.md, cited on the 0.1 card.",
+          "evidence": null
         },
         {
           "id": 1,
@@ -933,7 +1105,8 @@
             "group": "Next to plan",
             "position": 0
           },
-          "detail": "Born from Needle 0.1's card file — column, position and 3 rows."
+          "detail": "Born from Needle 0.1's card file — column, position and 3 rows.",
+          "evidence": null
         }
       ],
       "lane": {
@@ -1066,7 +1239,13 @@
           "position": 1
         },
         "lane_state": "none",
-        "lane_sentence": null
+        "lane_sentence": null,
+        "standing": {
+          "actor": "import",
+          "evidence": null,
+          "state": "trusted",
+          "words": null
+        }
       },
       "brief": [
         {
@@ -1114,7 +1293,8 @@
           "card_number": 242,
           "from_place": null,
           "to_place": null,
-          "detail": "Linked to docs/slice-suggestions/2026-09-02-the-welcome-board-shows-one-boats-whole-stay.md, cited on the 0.1 card."
+          "detail": "Linked to docs/slice-suggestions/2026-09-02-the-welcome-board-shows-one-boats-whole-stay.md, cited on the 0.1 card.",
+          "evidence": null
         },
         {
           "id": 3,
@@ -1128,7 +1308,8 @@
             "group": "Next to plan",
             "position": 1
           },
-          "detail": "Born from Needle 0.1's card file — column, position and 3 rows."
+          "detail": "Born from Needle 0.1's card file — column, position and 3 rows.",
+          "evidence": null
         }
       ],
       "lane": {
@@ -1261,7 +1442,13 @@
           "position": 2
         },
         "lane_state": "none",
-        "lane_sentence": null
+        "lane_sentence": null,
+        "standing": {
+          "actor": "import",
+          "evidence": null,
+          "state": "trusted",
+          "words": null
+        }
       },
       "brief": [
         {
@@ -1309,7 +1496,8 @@
           "card_number": 232,
           "from_place": null,
           "to_place": null,
-          "detail": "Linked to docs/slice-suggestions/2026-09-01-the-night-audit-re-reads-the-whole-harbour-log.md, cited on the 0.1 card."
+          "detail": "Linked to docs/slice-suggestions/2026-09-01-the-night-audit-re-reads-the-whole-harbour-log.md, cited on the 0.1 card.",
+          "evidence": null
         },
         {
           "id": 5,
@@ -1323,7 +1511,8 @@
             "group": "Next to plan",
             "position": 2
           },
-          "detail": "Born from Needle 0.1's card file — column, position and 3 rows."
+          "detail": "Born from Needle 0.1's card file — column, position and 3 rows.",
+          "evidence": null
         }
       ],
       "lane": {
@@ -1448,7 +1637,13 @@
           "position": 3
         },
         "lane_state": "none",
-        "lane_sentence": null
+        "lane_sentence": null,
+        "standing": {
+          "actor": "import",
+          "evidence": null,
+          "state": "trusted",
+          "words": null
+        }
       },
       "brief": [],
       "record": [],
@@ -1463,7 +1658,8 @@
           "card_number": 120,
           "from_place": null,
           "to_place": null,
-          "detail": "Linked to docs/slice-suggestions/2026-07-12-berth-list-keys.md · 2026-08-19-office-screen-refresh.md, cited on the 0.1 card."
+          "detail": "Linked to docs/slice-suggestions/2026-07-12-berth-list-keys.md · 2026-08-19-office-screen-refresh.md, cited on the 0.1 card.",
+          "evidence": null
         },
         {
           "id": 7,
@@ -1477,7 +1673,8 @@
             "group": "Next to plan",
             "position": 3
           },
-          "detail": "Born from Needle 0.1's card file — column, position and 1 row."
+          "detail": "Born from Needle 0.1's card file — column, position and 1 row.",
+          "evidence": null
         }
       ],
       "lane": {
@@ -1599,7 +1796,13 @@
           "position": 0
         },
         "lane_state": "none",
-        "lane_sentence": null
+        "lane_sentence": null,
+        "standing": {
+          "actor": "import",
+          "evidence": null,
+          "state": "trusted",
+          "words": null
+        }
       },
       "brief": [],
       "record": [],
@@ -1618,7 +1821,8 @@
             "group": "Skipper-facing quality",
             "position": 0
           },
-          "detail": "Born from Needle 0.1's card file — column, position and 1 row."
+          "detail": "Born from Needle 0.1's card file — column, position and 1 row.",
+          "evidence": null
         }
       ],
       "lane": {
@@ -1738,7 +1942,13 @@
           "position": 0
         },
         "lane_state": "none",
-        "lane_sentence": null
+        "lane_sentence": null,
+        "standing": {
+          "actor": "corpus",
+          "evidence": null,
+          "state": "trusted",
+          "words": null
+        }
       },
       "brief": [],
       "record": [],
@@ -1781,7 +1991,8 @@
             "group": null,
             "position": 0
           },
-          "detail": "Born from docs/slice-suggestions/2026-08-29-two-meters-on-one-pontoon-disagree.md, at registration."
+          "detail": "Born from docs/slice-suggestions/2026-08-29-two-meters-on-one-pontoon-disagree.md, at registration.",
+          "evidence": null
         }
       ],
       "lane": {
@@ -1901,7 +2112,13 @@
           "position": 1
         },
         "lane_state": "none",
-        "lane_sentence": null
+        "lane_sentence": null,
+        "standing": {
+          "actor": "corpus",
+          "evidence": null,
+          "state": "trusted",
+          "words": null
+        }
       },
       "brief": [],
       "record": [],
@@ -1944,7 +2161,8 @@
             "group": null,
             "position": 1
           },
-          "detail": "Born from docs/slice-suggestions/2026-08-31-the-same-slip-is-mailed-twice.md, at registration."
+          "detail": "Born from docs/slice-suggestions/2026-08-31-the-same-slip-is-mailed-twice.md, at registration.",
+          "evidence": null
         }
       ],
       "lane": {
@@ -2064,7 +2282,13 @@
           "position": 2
         },
         "lane_state": "none",
-        "lane_sentence": null
+        "lane_sentence": null,
+        "standing": {
+          "actor": "corpus",
+          "evidence": null,
+          "state": "trusted",
+          "words": null
+        }
       },
       "brief": [],
       "record": [],
@@ -2107,7 +2331,8 @@
             "group": null,
             "position": 2
           },
-          "detail": "Born from docs/slice-suggestions/2026-09-01-the-waiting-list-forgets-who-asked-first.md, at registration."
+          "detail": "Born from docs/slice-suggestions/2026-09-01-the-waiting-list-forgets-who-asked-first.md, at registration.",
+          "evidence": null
         }
       ],
       "lane": {
@@ -2227,7 +2452,13 @@
           "position": 3
         },
         "lane_state": "none",
-        "lane_sentence": null
+        "lane_sentence": null,
+        "standing": {
+          "actor": "corpus",
+          "evidence": null,
+          "state": "trusted",
+          "words": null
+        }
       },
       "brief": [],
       "record": [],
@@ -2270,7 +2501,8 @@
             "group": null,
             "position": 3
           },
-          "detail": "Born from docs/slice-suggestions/2026-09-04-a-boat-longer-than-its-berth-is-accepted.md, at registration."
+          "detail": "Born from docs/slice-suggestions/2026-09-04-a-boat-longer-than-its-berth-is-accepted.md, at registration.",
+          "evidence": null
         }
       ],
       "lane": {
@@ -2407,7 +2639,13 @@
           "position": 0
         },
         "lane_state": "none",
-        "lane_sentence": null
+        "lane_sentence": null,
+        "standing": {
+          "actor": "import",
+          "evidence": null,
+          "state": "trusted",
+          "words": null
+        }
       },
       "brief": [
         {
@@ -2467,7 +2705,8 @@
           "card_number": 196,
           "from_place": null,
           "to_place": null,
-          "detail": "Linked to docs/plans/2026-09-01-the-waiting-list-offers-every-berth-that-fits.md, cited on the 0.1 card."
+          "detail": "Linked to docs/plans/2026-09-01-the-waiting-list-offers-every-berth-that-fits.md, cited on the 0.1 card.",
+          "evidence": null
         },
         {
           "id": 10,
@@ -2481,7 +2720,8 @@
             "group": "Season opening",
             "position": 0
           },
-          "detail": "Born from Needle 0.1's card file — column, position and 3 rows."
+          "detail": "Born from Needle 0.1's card file — column, position and 3 rows.",
+          "evidence": null
         }
       ],
       "lane": {
@@ -2614,7 +2854,13 @@
           "position": 0
         },
         "lane_state": "none",
-        "lane_sentence": null
+        "lane_sentence": null,
+        "standing": {
+          "actor": "import",
+          "evidence": null,
+          "state": "trusted",
+          "words": null
+        }
       },
       "brief": [
         {
@@ -2670,7 +2916,8 @@
           "card_number": 109,
           "from_place": null,
           "to_place": null,
-          "detail": "Linked to docs/plans/2026-09-02-the-skipper-sees-the-price-before-the-berth.md, cited on the 0.1 card."
+          "detail": "Linked to docs/plans/2026-09-02-the-skipper-sees-the-price-before-the-berth.md, cited on the 0.1 card.",
+          "evidence": null
         },
         {
           "id": 12,
@@ -2684,7 +2931,8 @@
             "group": "Skipper-facing quality",
             "position": 0
           },
-          "detail": "Born from Needle 0.1's card file — column, position and 2 rows."
+          "detail": "Born from Needle 0.1's card file — column, position and 2 rows.",
+          "evidence": null
         }
       ],
       "lane": {
@@ -2821,7 +3069,13 @@
           "position": 0
         },
         "lane_state": "none",
-        "lane_sentence": null
+        "lane_sentence": null,
+        "standing": {
+          "actor": "import",
+          "evidence": null,
+          "state": "trusted",
+          "words": null
+        }
       },
       "brief": [
         {
@@ -2881,7 +3135,8 @@
           "card_number": 172,
           "from_place": null,
           "to_place": null,
-          "detail": "Linked to docs/plans/2026-08-26-a-screen-nobody-opens-is-removed.md, cited on the 0.1 card."
+          "detail": "Linked to docs/plans/2026-08-26-a-screen-nobody-opens-is-removed.md, cited on the 0.1 card.",
+          "evidence": null
         },
         {
           "id": 14,
@@ -2895,7 +3150,8 @@
             "group": "Trust — from the winter review",
             "position": 0
           },
-          "detail": "Born from Needle 0.1's card file — column, position and 3 rows."
+          "detail": "Born from Needle 0.1's card file — column, position and 3 rows.",
+          "evidence": null
         }
       ],
       "lane": {
@@ -3015,7 +3271,13 @@
           "position": 0
         },
         "lane_state": "none",
-        "lane_sentence": null
+        "lane_sentence": null,
+        "standing": {
+          "actor": "corpus",
+          "evidence": null,
+          "state": "trusted",
+          "words": null
+        }
       },
       "brief": [],
       "record": [],
@@ -3070,7 +3332,8 @@
             "group": null,
             "position": 0
           },
-          "detail": "Born from docs/plans/2026-09-04-the-tide-table-is-the-harbours-own.md, at registration."
+          "detail": "Born from docs/plans/2026-09-04-the-tide-table-is-the-harbours-own.md, at registration.",
+          "evidence": null
         }
       ],
       "lane": {
@@ -3190,7 +3453,13 @@
           "position": 1
         },
         "lane_state": "none",
-        "lane_sentence": null
+        "lane_sentence": null,
+        "standing": {
+          "actor": "corpus",
+          "evidence": null,
+          "state": "trusted",
+          "words": null
+        }
       },
       "brief": [],
       "record": [],
@@ -3245,7 +3514,8 @@
             "group": null,
             "position": 1
           },
-          "detail": "Born from docs/plans/2026-09-04-a-storm-warning-reaches-every-skipper.md, after registration."
+          "detail": "Born from docs/plans/2026-09-04-a-storm-warning-reaches-every-skipper.md, after registration.",
+          "evidence": null
         }
       ],
       "lane": {
@@ -3382,7 +3652,13 @@
           "position": 0
         },
         "lane_state": "none",
-        "lane_sentence": null
+        "lane_sentence": null,
+        "standing": {
+          "actor": "import",
+          "evidence": null,
+          "state": "trusted",
+          "words": null
+        }
       },
       "brief": [
         {
@@ -3450,7 +3726,8 @@
           "card_number": 253,
           "from_place": null,
           "to_place": null,
-          "detail": "Linked to docs/plans/2026-09-03-every-metered-kilowatt-is-billed.md, cited on the 0.1 card."
+          "detail": "Linked to docs/plans/2026-09-03-every-metered-kilowatt-is-billed.md, cited on the 0.1 card.",
+          "evidence": null
         },
         {
           "id": 16,
@@ -3464,7 +3741,8 @@
             "group": null,
             "position": 0
           },
-          "detail": "Born from Needle 0.1's card file — column, position and 4 rows."
+          "detail": "Born from Needle 0.1's card file — column, position and 4 rows.",
+          "evidence": null
         }
       ],
       "lane": {
@@ -3605,7 +3883,13 @@
           "position": 1
         },
         "lane_state": "none",
-        "lane_sentence": null
+        "lane_sentence": null,
+        "standing": {
+          "actor": "import",
+          "evidence": null,
+          "state": "trusted",
+          "words": null
+        }
       },
       "brief": [
         {
@@ -3677,7 +3961,8 @@
           "card_number": 241,
           "from_place": null,
           "to_place": null,
-          "detail": "Linked to docs/plans/2026-09-02-a-gate-code-arrives-before-the-boat-does.md, cited on the 0.1 card."
+          "detail": "Linked to docs/plans/2026-09-02-a-gate-code-arrives-before-the-boat-does.md, cited on the 0.1 card.",
+          "evidence": null
         },
         {
           "id": 18,
@@ -3691,7 +3976,8 @@
             "group": null,
             "position": 1
           },
-          "detail": "Born from Needle 0.1's card file — column, position and 5 rows."
+          "detail": "Born from Needle 0.1's card file — column, position and 5 rows.",
+          "evidence": null
         }
       ],
       "lane": {
@@ -3821,7 +4107,13 @@
           "position": 2
         },
         "lane_state": "none",
-        "lane_sentence": null
+        "lane_sentence": null,
+        "standing": {
+          "actor": "import",
+          "evidence": null,
+          "state": "trusted",
+          "words": null
+        }
       },
       "brief": [
         {
@@ -3853,7 +4145,8 @@
             "group": null,
             "position": 2
           },
-          "detail": "Born from Needle 0.1's card file — column, position and 4 rows."
+          "detail": "Born from Needle 0.1's card file — column, position and 4 rows.",
+          "evidence": null
         }
       ],
       "lane": {
@@ -3990,7 +4283,13 @@
           "position": 3
         },
         "lane_state": "none",
-        "lane_sentence": null
+        "lane_sentence": null,
+        "standing": {
+          "actor": "import",
+          "evidence": null,
+          "state": "trusted",
+          "words": null
+        }
       },
       "brief": [
         {
@@ -4054,7 +4353,8 @@
           "card_number": 237,
           "from_place": null,
           "to_place": null,
-          "detail": "Linked to docs/plans/2026-08-28-a-berth-is-never-let-twice.md, cited on the 0.1 card."
+          "detail": "Linked to docs/plans/2026-08-28-a-berth-is-never-let-twice.md, cited on the 0.1 card.",
+          "evidence": null
         },
         {
           "id": 21,
@@ -4068,7 +4368,8 @@
             "group": null,
             "position": 3
           },
-          "detail": "Born from Needle 0.1's card file — column, position and 4 rows."
+          "detail": "Born from Needle 0.1's card file — column, position and 4 rows.",
+          "evidence": null
         }
       ],
       "lane": {
@@ -4205,7 +4506,13 @@
           "position": 4
         },
         "lane_state": "none",
-        "lane_sentence": null
+        "lane_sentence": null,
+        "standing": {
+          "actor": "import",
+          "evidence": null,
+          "state": "trusted",
+          "words": null
+        }
       },
       "brief": [
         {
@@ -4265,7 +4572,8 @@
           "card_number": 174,
           "from_place": null,
           "to_place": null,
-          "detail": "Linked to docs/plans/2026-08-30-the-booking-office-stops-growing-into-one-file.md, cited on the 0.1 card."
+          "detail": "Linked to docs/plans/2026-08-30-the-booking-office-stops-growing-into-one-file.md, cited on the 0.1 card.",
+          "evidence": null
         },
         {
           "id": 23,
@@ -4279,7 +4587,8 @@
             "group": null,
             "position": 4
           },
-          "detail": "Born from Needle 0.1's card file — column, position and 3 rows."
+          "detail": "Born from Needle 0.1's card file — column, position and 3 rows.",
+          "evidence": null
         }
       ],
       "lane": {
@@ -4420,7 +4729,13 @@
           "position": 0
         },
         "lane_state": "none",
-        "lane_sentence": null
+        "lane_sentence": null,
+        "standing": {
+          "actor": "import",
+          "evidence": "hands-on",
+          "state": "unknown",
+          "words": "imported from Needle 0.1; evidence unknown until the first read"
+        }
       },
       "brief": [
         {
@@ -4489,7 +4804,8 @@
           "card_number": 259,
           "from_place": null,
           "to_place": null,
-          "detail": "Linked to docs/plans/done/2026-08-25-the-fuel-pontoon-takes-cards.md, cited on the 0.1 card."
+          "detail": "Linked to docs/plans/done/2026-08-25-the-fuel-pontoon-takes-cards.md, cited on the 0.1 card.",
+          "evidence": null
         },
         {
           "id": 25,
@@ -4503,7 +4819,8 @@
             "group": null,
             "position": 0
           },
-          "detail": "Born from Needle 0.1's card file — column, position and 5 rows."
+          "detail": "Born from Needle 0.1's card file — column, position and 5 rows.",
+          "evidence": null
         }
       ],
       "lane": {
@@ -4640,7 +4957,13 @@
           "position": 1
         },
         "lane_state": "none",
-        "lane_sentence": null
+        "lane_sentence": null,
+        "standing": {
+          "actor": "import",
+          "evidence": "hands-on",
+          "state": "unknown",
+          "words": "imported from Needle 0.1; evidence unknown until the first read"
+        }
       },
       "brief": [
         {
@@ -4692,7 +5015,8 @@
           "card_number": 223,
           "from_place": null,
           "to_place": null,
-          "detail": "Linked to docs/slice-suggestions/2026-08-20-the-gate-code-goes-out-in-plain-text.md, cited on the 0.1 card."
+          "detail": "Linked to docs/slice-suggestions/2026-08-20-the-gate-code-goes-out-in-plain-text.md, cited on the 0.1 card.",
+          "evidence": null
         },
         {
           "id": 27,
@@ -4706,7 +5030,8 @@
             "group": null,
             "position": 1
           },
-          "detail": "Born from Needle 0.1's card file — column, position and 4 rows."
+          "detail": "Born from Needle 0.1's card file — column, position and 4 rows.",
+          "evidence": null
         }
       ],
       "lane": {
@@ -4855,7 +5180,13 @@
           "position": 0
         },
         "lane_state": "none",
-        "lane_sentence": null
+        "lane_sentence": null,
+        "standing": {
+          "actor": "import",
+          "evidence": null,
+          "state": "trusted",
+          "words": null
+        }
       },
       "brief": [
         {
@@ -4928,7 +5259,8 @@
           "card_number": 219,
           "from_place": null,
           "to_place": null,
-          "detail": "Linked to docs/plans/2026-09-02-the-pricing-rule-judged-against-a-real-season.md, cited on the 0.1 card."
+          "detail": "Linked to docs/plans/2026-09-02-the-pricing-rule-judged-against-a-real-season.md, cited on the 0.1 card.",
+          "evidence": null
         },
         {
           "id": 29,
@@ -4942,7 +5274,8 @@
             "group": null,
             "position": 0
           },
-          "detail": "Born from Needle 0.1's card file — column, position and 6 rows."
+          "detail": "Born from Needle 0.1's card file — column, position and 6 rows.",
+          "evidence": null
         }
       ],
       "lane": {
@@ -5074,7 +5407,13 @@
           "position": 1
         },
         "lane_state": "none",
-        "lane_sentence": null
+        "lane_sentence": null,
+        "standing": {
+          "actor": "import",
+          "evidence": null,
+          "state": "trusted",
+          "words": null
+        }
       },
       "brief": [
         {
@@ -5106,7 +5445,8 @@
             "group": null,
             "position": 1
           },
-          "detail": "Born from Needle 0.1's card file — column, position and 3 rows."
+          "detail": "Born from Needle 0.1's card file — column, position and 3 rows.",
+          "evidence": null
         }
       ],
       "lane": {
@@ -5247,7 +5587,13 @@
           "position": 0
         },
         "lane_state": "none",
-        "lane_sentence": null
+        "lane_sentence": null,
+        "standing": {
+          "actor": "import",
+          "evidence": null,
+          "state": "trusted",
+          "words": null
+        }
       },
       "brief": [
         {
@@ -5311,7 +5657,8 @@
           "card_number": 139,
           "from_place": null,
           "to_place": null,
-          "detail": "Linked to docs/plans/2026-08-18-berth-first-booking.md, cited on the 0.1 card."
+          "detail": "Linked to docs/plans/2026-08-18-berth-first-booking.md, cited on the 0.1 card.",
+          "evidence": null
         },
         {
           "id": 32,
@@ -5325,7 +5672,8 @@
             "group": "Rulings that unblock lanes",
             "position": 0
           },
-          "detail": "Born from Needle 0.1's card file — column, position and 4 rows."
+          "detail": "Born from Needle 0.1's card file — column, position and 4 rows.",
+          "evidence": null
         }
       ],
       "lane": {
@@ -5455,7 +5803,13 @@
           "position": 0
         },
         "lane_state": "none",
-        "lane_sentence": null
+        "lane_sentence": null,
+        "standing": {
+          "actor": "import",
+          "evidence": null,
+          "state": "trusted",
+          "words": null
+        }
       },
       "brief": [
         {
@@ -5487,7 +5841,8 @@
             "group": "Actions & sign-offs elsewhere",
             "position": 0
           },
-          "detail": "Born from Needle 0.1's card file — column, position and 3 rows."
+          "detail": "Born from Needle 0.1's card file — column, position and 3 rows.",
+          "evidence": null
         }
       ],
       "lane": {
@@ -5625,7 +5980,13 @@
           "position": 0
         },
         "lane_state": "none",
-        "lane_sentence": null
+        "lane_sentence": null,
+        "standing": {
+          "actor": "import",
+          "evidence": "close-landed",
+          "state": "unknown",
+          "words": "imported from Needle 0.1; evidence unknown until the first read"
+        }
       },
       "brief": [],
       "record": [
@@ -5687,7 +6048,8 @@
           "card_number": 134,
           "from_place": null,
           "to_place": null,
-          "detail": "Linked to docs/plans/done/2026-08-30-the-office-runs-its-own-checks.md, cited on the 0.1 card."
+          "detail": "Linked to docs/plans/done/2026-08-30-the-office-runs-its-own-checks.md, cited on the 0.1 card.",
+          "evidence": null
         },
         {
           "id": 35,
@@ -5701,7 +6063,8 @@
             "group": null,
             "position": 0
           },
-          "detail": "Born from Needle 0.1's card file — column, position and 3 rows."
+          "detail": "Born from Needle 0.1's card file — column, position and 3 rows.",
+          "evidence": null
         }
       ],
       "lane": {
@@ -5830,7 +6193,13 @@
           "position": 0
         },
         "lane_state": "none",
-        "lane_sentence": null
+        "lane_sentence": null,
+        "standing": {
+          "actor": "import",
+          "evidence": null,
+          "state": "trusted",
+          "words": null
+        }
       },
       "brief": [],
       "record": [
@@ -5850,7 +6219,8 @@
           "card_number": 201,
           "from_place": null,
           "to_place": null,
-          "detail": "Linked to docs/plans/done/2026-09-01-a-confirmed-booking-waits-for-the-tide.md, cited on the 0.1 card."
+          "detail": "Linked to docs/plans/done/2026-09-01-a-confirmed-booking-waits-for-the-tide.md, cited on the 0.1 card.",
+          "evidence": null
         },
         {
           "id": 37,
@@ -5864,7 +6234,8 @@
             "group": null,
             "position": 0
           },
-          "detail": "Born from Needle 0.1's card file — column, position and 2 rows."
+          "detail": "Born from Needle 0.1's card file — column, position and 2 rows.",
+          "evidence": null
         }
       ],
       "lane": {

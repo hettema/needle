@@ -41,6 +41,7 @@ from domain.audit import AuditKind
 from domain.board import MachineState, TrunkState
 from domain.card import Actor, Card, Place
 from domain.column import Column
+from domain.evidence import Evidence
 from domain.hook import HookEvent, HookPosted
 from domain.lane import Collision, Doors, Lane, LaneRecord, LaneSnapshot, LaneState
 from domain.launch import LaunchVerdict
@@ -417,6 +418,7 @@ class Loops:
                     Place(column=Column.EXECUTING, group=None, position=0),
                     actor=Actor.MACHINE,
                     detail=reason,
+                    evidence=Evidence.HANDS_ON,
                 )
                 changed = True
                 continue
@@ -436,6 +438,7 @@ class Loops:
                     Place(column=leaving.column, group=None, position=0),
                     actor=Actor.MACHINE,
                     detail=leaving.reason,
+                    evidence=leaving.evidence,
                 )
                 changed = True
             except Exception as error:  # noqa: BLE001 — refused, and the card says why
@@ -536,14 +539,15 @@ class Loops:
                     slug, card.number, now, delivered, words, Actor.MACHINE
                 )
                 self.live.bump()
-                column, reason = where_after(signal, delivered, now)
-                if column is not None:
+                landing = where_after(signal, delivered, now)
+                if landing.column is not None:
                     self.live.move(
                         slug,
                         card.number,
-                        Place(column=column, group=None, position=0),
+                        Place(column=landing.column, group=None, position=0),
                         actor=Actor.MACHINE,
-                        detail=reason,
+                        detail=landing.reason,
+                        evidence=landing.evidence,
                     )
 
     # ── the trunk loop ─────────────────────────────────────────────────

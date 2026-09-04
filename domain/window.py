@@ -34,6 +34,14 @@ class Window(BaseModel):
     """When the runtime found the window gone; the owner closes, the runtime never does."""
 
 
+class Focused(BaseModel):
+    """What a `focus` call answers: the window brought forward, and the app-id
+    the compositor reports active afterwards — the proof (plan 04, item 2)."""
+
+    window: Window
+    app_id: str
+
+
 class Opened(BaseModel):
     """What a `window` call answers: the window it proved, and what runs inside."""
 

@@ -159,6 +159,37 @@ def test_a_stale_copy_and_an_interactive_session_get_no_window(
         runtime.window("cafe0002", None)
 
 
+def test_focus_brings_the_open_window_forward_and_is_proved_by_the_active_window(
+    machine_floor: Floor, runtime: Runtime, live: str
+):
+    with pytest.raises(windows.WindowRefused, match=f"no window is open into {live}"):
+        runtime.focus(live)
+    opened = runtime.window(live, None)
+
+    focused = runtime.focus(live)
+
+    assert focused.window.id == opened.window.id
+    assert focused.app_id == "org.omarchy.lane-card-9-a-lane"
+    assert machine_floor.state()["focus_calls"] == [opened.window.address]
+    assert len(machine_floor.state()["spawned"]) == 1, "focus opens nothing"
+    script = windows.focus_script(opened.window.address)
+    assert script.startswith("local w = hl.get_window('address:0xfake0001')")
+    assert "hl.dispatch(hl.dsp.focus({window = w}))" in script
+
+
+def test_a_focus_the_compositor_does_not_honour_fails_by_name(
+    machine_floor: Floor, runtime: Runtime, live: str, monkeypatch: pytest.MonkeyPatch
+):
+    monkeypatch.setattr(windows, "FOCUS_VERIFY_SECONDS", 0.5)
+    runtime.window(live, None)
+    machine_floor.update(focus_works=False)
+    with pytest.raises(windows.WindowRefused, match="still reports no window active"):
+        runtime.focus(live)
+    machine_floor.update(clients=[])  # the owner closed it since
+    with pytest.raises(windows.WindowRefused, match="no window is open into"):
+        runtime.focus(live)
+
+
 def test_the_app_id_follows_the_owners_contract():
     assert (
         windows.app_id_for(WindowKind.WATCH, "card 12: a title")

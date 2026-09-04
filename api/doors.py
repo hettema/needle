@@ -14,6 +14,7 @@ from domain.audit import AuditKind
 from domain.board import CardDetail
 from domain.card import Actor, Place
 from domain.column import Column
+from domain.evidence import Evidence
 from domain.gate import Gate
 from domain.lane import DoorResult, LaneRecord, LaneState
 from domain.launch import LaunchVerdict, Start
@@ -158,6 +159,7 @@ class Doors:
             Place(column=Column.EXECUTING, group=None, position=0),
             actor=Actor.MACHINE,
             detail=f"hands on: {session.short_id} on {session.slot} in {name}",
+            evidence=Evidence.HANDS_ON,
         )
         self.loops.reconcile_now()
         return DoorResult(door="start", said=said)
@@ -194,7 +196,19 @@ class Doors:
         detail = self._detail(slug, number)
         if not detail.doors.watch.offered:
             raise DoorRefused(detail.doors.watch.why)
-        _, session = self._lane_session(detail, "watch")
+        lane, session = self._lane_session(detail, "watch")
+        if lane.window_open:
+            try:
+                focused = self.runtime.focus(session.short_id)
+            except WindowRefused as refusal:
+                raise DoorFailed(f"Focus did not land: {refusal}") from refusal
+            return DoorResult(
+                door="watch",
+                said=(
+                    f"Focused {focused.window.app_id}; the compositor reports "
+                    f"{focused.app_id} active."
+                ),
+            )
         try:
             opened = self.runtime.window(session.short_id, WindowKind.WATCH)
         except WindowRefused as refusal:
@@ -315,9 +329,9 @@ class Doors:
         now = clock.now()
         words = f"the owner read it as {'delivered' if delivered else 'not delivered'}"
         self.live.store.record_reading(slug, number, now, delivered, words, Actor.OWNER)
-        column, reason = where_after(detail.signal, delivered, now)
-        if column is None:
-            column, reason = Column.DECISION_MOMENT, "the owner read the signal as not delivered"
+        landing = where_after(detail.signal, delivered, now)
+        column = landing.column or Column.DECISION_MOMENT
+        reason = landing.reason if landing.column else "the owner read the signal as not delivered"
         self.live.move(
             slug,
             number,

@@ -6,6 +6,7 @@ needle start REPO CARD "BRIEF" [--effort LEVEL] [--from SLOT] [--json]
 needle move SHORT [--to SLOT] [--json]
 needle stop SHORT [--json]
 needle window SHORT [--as KIND] [--json]
+needle focus SHORT [--json]
 needle rescues SHORT [--clear] [--json]
 
 Each verb is a thin call into `runtime.service.Runtime`, answers in prose or
@@ -183,6 +184,21 @@ def window(runtime: Runtime, args: argparse.Namespace) -> int:
     return 0
 
 
+def focus(runtime: Runtime, args: argparse.Namespace) -> int:
+    try:
+        focused = runtime.focus(args.short)
+    except WindowRefused as refusal:
+        print(str(refusal), file=sys.stderr)
+        return 1
+    _emit(
+        args,
+        focused,
+        f"focused {focused.window.app_id} ({focused.window.address}); the compositor "
+        f"reports {focused.app_id} active",
+    )
+    return 0
+
+
 def rescues(runtime: Runtime, args: argparse.Namespace) -> int:
     if args.clear:
         count = runtime.clear_rescues(args.short)
@@ -251,6 +267,11 @@ def register(sub: "argparse._SubParsersAction[argparse.ArgumentParser]") -> None
         choices=[k.value for k in WindowKind],
         help="the window's kind; lane for a live session, board-look for one live nowhere",
     )
+
+    p_focus = parser(
+        "focus", "bring a session's open window forward, proved by the compositor", focus
+    )
+    p_focus.add_argument("short")
 
     p_rescues = parser("rescues", "a session's rescue history in the runtime's ledger", rescues)
     p_rescues.add_argument("short")

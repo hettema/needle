@@ -12,6 +12,8 @@ import {
   Band,
   Button,
   ClosedDoor,
+  ClosedDoors,
+  Doubt,
   EssenceBig,
   Hist,
   HistRow,
@@ -158,8 +160,55 @@ export function OpenCard({ card, onMoveTo }: { card: CardSummary; onMoveTo: (num
         ? "the first sentence of the document's intent, standing in"
         : undefined;
 
+  // The doors sit under the title, where the owner's hand already is (plan 04,
+  // item 2), and every door he would expect on this card that cannot open says
+  // why in text: on #387 he looked for Watch and found only a tooltip.
+  const expected: { label: string; why: string }[] = [];
+  if (lane && lane.state !== "none") {
+    for (const d of [doors.watch, doors.answer, doors.look, doors.resume, doors.stop]) if (!d.offered) expected.push({ label: d.label, why: d.why });
+  }
+  if (!doors.discuss.offered) expected.push({ label: doors.discuss.label, why: doors.discuss.why });
+
   return (
     <OpenBody>
+      <Acts>
+        {doors.start.offered ? (
+          <Button onClick={() => void through("start")} disabled={opening !== null} title={doors.start.why}>
+            {doors.start.label}
+          </Button>
+        ) : doors.start_anyway.offered ? (
+          <>
+            <ClosedDoor why={doors.start.why}>Start</ClosedDoor>
+            <Button onClick={() => void through("start", { anyway: true })} disabled={opening !== null} title={doors.start_anyway.why}>
+              {doors.start_anyway.label}
+            </Button>
+          </>
+        ) : card.gate && (card.place.column === "Up next" || card.place.column === "Planned") ? (
+          <ClosedDoor why={doors.start.why}>Start</ClosedDoor>
+        ) : null}
+        {door("watch", doors.watch)}
+        {door("look", doors.look)}
+        {door("resume", doors.resume)}
+        {door("stop", doors.stop)}
+        {door("discuss", doors.discuss)}
+        {doors.collision && doors.collision.verdict !== "clear" && (doors.start.offered || doors.start_anyway.offered) ? <Quiet>{doors.collision.sentence}</Quiet> : null}
+        {docPath && document ? <Button ghost onClick={() => void openFile(docPath, document.kind === "plan" ? "the plan" : "the suggestion")}>{wholeFile?.path === docPath ? "Close the file" : document.kind === "plan" ? "Open the plan" : "Open the suggestion"}</Button> : null}
+        {docPath ? (
+          <Button ghost onClick={() => void copyPath()}>
+            Copy path
+          </Button>
+        ) : null}
+        {reviewPath ? (
+          <Button ghost onClick={() => void openFile(reviewPath, "the review")}>
+            {wholeFile?.path === reviewPath ? "Close the review" : "Open the review"}
+          </Button>
+        ) : null}
+        {said ? <Said bad={said.bad}>{said.text}</Said> : null}
+        <MoveTo value={card.place.column} options={COLUMN_VALUES} onChange={(c) => void moveTo(c)} />
+      </Acts>
+      <ClosedDoors doors={expected} />
+      {detail.summary.standing.state === "doubted" && detail.summary.standing.words ? <Doubt>{detail.summary.standing.words}</Doubt> : null}
+
       <Section title="What it makes true" from={essenceFrom}>
         {detail.summary.essence ? (
           <EssenceBig>
@@ -273,41 +322,6 @@ export function OpenCard({ card, onMoveTo }: { card: CardSummary; onMoveTo: (num
         <Quiet>0.1 kept no history, so every card's record starts at the import. From here on, nothing moves without a row.</Quiet>
       </Section>
 
-      <Acts>
-        {doors.start.offered ? (
-          <Button onClick={() => void through("start")} disabled={opening !== null} title={doors.start.why}>
-            {doors.start.label}
-          </Button>
-        ) : doors.start_anyway.offered ? (
-          <>
-            <ClosedDoor why={doors.start.why}>Start</ClosedDoor>
-            <Button onClick={() => void through("start", { anyway: true })} disabled={opening !== null} title={doors.start_anyway.why}>
-              {doors.start_anyway.label}
-            </Button>
-          </>
-        ) : card.gate && (card.place.column === "Up next" || card.place.column === "Planned") ? (
-          <ClosedDoor why={doors.start.why}>Start</ClosedDoor>
-        ) : null}
-        {door("watch", doors.watch)}
-        {door("look", doors.look)}
-        {door("resume", doors.resume)}
-        {door("stop", doors.stop)}
-        {door("discuss", doors.discuss)}
-        {doors.collision && doors.collision.verdict !== "clear" && (doors.start.offered || doors.start_anyway.offered) ? <Quiet>{doors.collision.sentence}</Quiet> : null}
-        {docPath && document ? <Button ghost onClick={() => void openFile(docPath, document.kind === "plan" ? "the plan" : "the suggestion")}>{wholeFile?.path === docPath ? "Close the file" : document.kind === "plan" ? "Open the plan" : "Open the suggestion"}</Button> : null}
-        {docPath ? (
-          <Button ghost onClick={() => void copyPath()}>
-            Copy path
-          </Button>
-        ) : null}
-        {reviewPath ? (
-          <Button ghost onClick={() => void openFile(reviewPath, "the review")}>
-            {wholeFile?.path === reviewPath ? "Close the review" : "Open the review"}
-          </Button>
-        ) : null}
-        {said ? <Said bad={said.bad}>{said.text}</Said> : null}
-        <MoveTo value={card.place.column} options={COLUMN_VALUES} onChange={(c) => void moveTo(c)} />
-      </Acts>
     </OpenBody>
   );
 }

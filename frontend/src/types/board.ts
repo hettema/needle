@@ -4,6 +4,7 @@ import type { Card, Place } from "./card";
 import type { ColumnDefinition } from "./column";
 import type { CorpusSummary } from "./corpus";
 import type { Document, DocumentRef, DocumentState } from "./document";
+import type { Standing } from "./evidence";
 import type { Gate } from "./gate";
 import type { Doors, Lane, LaneState } from "./lane";
 import type { Project } from "./project";
@@ -18,6 +19,8 @@ export interface Attention {
   in_flight: number;
   lanes_ended: number;
   signals_due: number;
+  signals_asking: number;
+  doubted: number;
   arrived_today: number;
   documents_gone: number;
   documents_without_card: number;
@@ -33,6 +36,7 @@ export interface BoardState {
   machine: MachineState;
   columns: ColumnView[];
   documents_without_card: DocumentRef[];
+  asks: OwnerAsk[];
 }
 
 export interface CardDetail {
@@ -65,6 +69,7 @@ export interface CardSummary {
   place: Place;
   lane_state: LaneState;
   lane_sentence: string | null;
+  standing: Standing;
 }
 
 export interface ColumnView {
@@ -80,6 +85,13 @@ export interface GroupView {
 
 export interface MachineState {
   missing: string[];
+}
+
+export interface OwnerAsk {
+  number: number;
+  title: string;
+  what: string;
+  due: string;
 }
 
 export interface ProjectFile {

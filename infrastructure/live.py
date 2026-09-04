@@ -28,6 +28,7 @@ from domain.audit import AuditKind
 from domain.board import BoardState, CardDetail, MachineState
 from domain.card import Actor, Card, CardOrigin, Place
 from domain.corpus import CorpusIndex
+from domain.evidence import Evidence
 from domain.lane import Doors, Lane, LaneSnapshot
 from domain.project import Project
 from domain.row import Row
@@ -229,6 +230,7 @@ class Live:
             readings=self.store.last_readings(slug),
             trunk=self.store.trunk(slug),
             machine=self.machine,
+            placements=self.store.placements(slug),
         )
 
     def card(self, slug: str, number: int) -> Card:
@@ -250,6 +252,7 @@ class Live:
             lane=lane,
             doors=doors,
             readings=self.store.readings(slug, number),
+            read=live.snapshot is not None,
         )
 
     def lane_and_doors(self, slug: str, card: Card) -> tuple[Lane | None, Doors]:
@@ -269,9 +272,12 @@ class Live:
         *,
         actor: Actor = Actor.OWNER,
         detail: str | None = None,
+        evidence: Evidence | None = None,
     ) -> BoardState:
         live = self._live(slug)
-        self.store.move(live.project.slug, number, to, actor, self.now(), detail=detail)
+        self.store.move(
+            live.project.slug, number, to, actor, self.now(), detail=detail, evidence=evidence
+        )
         self.bump()
         return self.board(slug)
 

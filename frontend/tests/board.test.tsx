@@ -45,7 +45,7 @@ beforeEach(() => {
 });
 
 /** #253 with a lane: a live session on alpha, the doors a working lane offers. */
-function withLane(state: Lane["state"], sentence: string, question: string | null = null): CardDetail {
+function withLane(state: Lane["state"], sentence: string, question: string | null = null, windowOpen = false): CardDetail {
   const d = detail(253);
   const session = {
     slot: "alpha",
@@ -80,7 +80,7 @@ function withLane(state: Lane["state"], sentence: string, question: string | nul
     said: question,
     said_at: null,
     discussing: [],
-    window_open: false,
+    window_open: windowOpen,
     hands_on_since: null,
     died: state === "ended" ? "the journal says: Killed process 4242" : null,
     moved: null,
@@ -95,7 +95,7 @@ function withLane(state: Lane["state"], sentence: string, question: string | nul
   d.doors = {
     ...d.doors,
     start: closed("Start", `A session already has hands on it: ${sentence}`),
-    watch: state === "ended" ? closed("Watch", "No live session to watch.") : open("Watch", "Opens a window into the live session; closing it ends nothing."),
+    watch: state === "ended" ? closed("Watch", "No live session to watch.") : windowOpen ? open("Focus its window", "Brings the open window into this session forward, through the compositor.") : open("Watch", "Opens a window into the live session; closing it ends nothing."),
     answer: state === "asking" ? open("Answer", "Your sentence resumes the lane with it; one live copy stays.") : closed("Answer", "The session is working; answer it when it stops."),
     look: state === "ended" ? open("Look", "A fresh session in the worktree from the transcript; its first line says so.") : closed("Look", "The session is live; watch it instead."),
     resume: state === "ended" ? open("Resume", "Resumes the lane's session where the rule says.") : closed("Resume", "The session is live; watch it instead."),
@@ -215,6 +215,10 @@ describe("the open card", () => {
     await within(card).findByText("What it makes true");
     const headings = Array.from(card.querySelectorAll(".sec-h")).map((h) => h.firstChild?.textContent?.trim());
     expect(headings).toEqual(["What it makes true", "The brief", "The record", "The plan", "History"]);
+    // The doors sit directly under the title, before the summary (plan 04, item 2).
+    const body = card.querySelector(".open-body") as HTMLElement;
+    expect(body.firstElementChild?.className).toBe("acts");
+    expect(within(body.firstElementChild as HTMLElement).getByRole("combobox", { name: "Move to" })).toBeInTheDocument();
     expect(within(card).getByText(/Nothing has been done to this card/)).toBeInTheDocument();
     expect(within(card).getByText("TODAY")).toBeInTheDocument();
     expect(within(card).getByText("docs/plans/2026-09-03-every-metered-kilowatt-is-billed.md")).toBeInTheDocument();
@@ -302,9 +306,79 @@ describe("the doors", () => {
     expect(screen.getByRole("button", { name: "Stop" })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Look" })).not.toBeInTheDocument();
     expect(screen.getByText("Start")).toHaveAttribute("aria-disabled", "true");
+    // Every door he would expect on a card with a lane says why it is closed, in text.
+    const closedDoors = document.querySelector(".closed-doors") as HTMLElement;
+    expect(closedDoors).toHaveTextContent("Look — The session is live; watch it instead.");
+    expect(closedDoors).toHaveTextContent("Answer — The session is working; answer it when it stops.");
+    expect(closedDoors).toHaveTextContent("Resume — The session is live; watch it instead.");
     await userEvent.click(watch);
     await waitFor(() => expect(api.openDoor).toHaveBeenCalledWith(SLUG, 253, "watch", {}));
     expect(await screen.findByText(/closing it ends nothing/)).toBeInTheDocument();
+  });
+
+  it("offers Focus its window in Watch's place while a window is open, and it proves the focus", async () => {
+    api.getCard.mockResolvedValue(withLane("working", "Working, fable on alpha, hands on for 12 min.", null, true));
+    api.openDoor.mockResolvedValue({ door: "watch", said: "Focused org.omarchy.board-watch-card-253; the compositor reports org.omarchy.board-watch-card-253 active." });
+    await renderBoard();
+    await userEvent.click(screen.getByText("Every metered kilowatt is billed"));
+    const focus = await screen.findByRole("button", { name: "Focus its window" });
+    expect(screen.queryByRole("button", { name: "Watch" })).not.toBeInTheDocument();
+    expect(document.querySelector(".closed-doors")).not.toHaveTextContent("Watch");
+    await userEvent.click(focus);
+    await waitFor(() => expect(api.openDoor).toHaveBeenCalledWith(SLUG, 253, "watch", {}));
+    expect(await screen.findByText(/the compositor reports org.omarchy.board-watch-card-253 active/)).toBeInTheDocument();
+  });
+
+  it("marks a card whose evidence is gone as doubted, on the resting card and the open one, and counts it", async () => {
+    const words = "the board doubts this: no live session has hands on its worktree (its worktree is gone from disk)";
+    const b = board();
+    const column = b.columns.find((c) => c.definition.column === "Up next");
+    const card = column?.groups[0]?.cards.find((c) => c.number === 253);
+    if (!card) throw new Error("no #253");
+    card.standing = { actor: "machine", evidence: "hands-on", state: "doubted", words };
+    b.attention = { ...b.attention, doubted: 1 };
+    const d = detail(253);
+    d.summary.standing = card.standing;
+    api.getBoard.mockResolvedValue(b);
+    api.getCard.mockResolvedValue(d);
+    await renderBoard();
+    expect(screen.getByText("status doubted — its evidence is gone")).toBeInTheDocument();
+    const resting = screen.getByText("#253").closest("article") as HTMLElement;
+    expect(within(resting).getByRole("status")).toHaveTextContent(`Doubted${words}`);
+    await userEvent.click(screen.getByText("Every metered kilowatt is billed"));
+    const open = await waitFor(() => {
+      const el = screen.getByText("#253").closest("article") as HTMLElement;
+      expect(el.className).toContain("open");
+      return el;
+    });
+    await within(open).findByText("What it makes true");
+    expect(within(open).getByRole("status")).toHaveTextContent(words);
+    expect(within(open).getByText("doubted · hands-on")).toBeInTheDocument();
+  });
+
+  it("batches the signals only the owner can read into one list with one click each way per card", async () => {
+    const b = board();
+    b.attention = { ...b.attention, signals_asking: 2, asking_you: 2 };
+    b.asks = [
+      { number: 259, title: "The fuel pontoon takes cards, live", what: "Did the first card payment at the pontoon go through?", due: "2026-09-11" },
+      { number: 134, title: "The office runs its own checks, nightly", what: "Did the nightly check email name a real event?", due: "2026-09-11" },
+    ];
+    api.getBoard.mockResolvedValue(b);
+    api.openDoor.mockResolvedValue({ door: "signal", said: "Read as delivered; moved to Done." });
+    await renderBoard();
+    const rail = screen.getByRole("button", { name: "2 shipped cards wait on your reading" });
+    expect(screen.queryByText(/only you can read these signals/)).not.toBeInTheDocument();
+    await userEvent.click(rail);
+    const list = screen.getByRole("region", { name: /2 shipped cards wait on your reading/ });
+    const rows = within(list).getAllByRole("listitem");
+    expect(rows).toHaveLength(2);
+    expect(rows[0]).toHaveTextContent("#259");
+    expect(rows[0]).toHaveTextContent("Did the first card payment at the pontoon go through?");
+    await userEvent.click(within(rows[0] as HTMLElement).getByRole("button", { name: "Delivered" }));
+    await waitFor(() => expect(api.openDoor).toHaveBeenCalledWith(SLUG, 259, "signal", { delivered: true }));
+    expect(await screen.findByText("#259: Read as delivered; moved to Done.")).toBeInTheDocument();
+    await userEvent.click(within(rows[1] as HTMLElement).getByRole("button", { name: "Not delivered" }));
+    await waitFor(() => expect(api.openDoor).toHaveBeenCalledWith(SLUG, 134, "signal", { delivered: false }));
   });
 
   it("puts a lane's question on the card and one sentence answers it", async () => {

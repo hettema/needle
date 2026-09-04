@@ -4,7 +4,8 @@ import type { BoardState, CardSummary } from "../types/board";
 import type { Place } from "../types/card";
 import type { Column } from "../types/column";
 import type { Project } from "../types/project";
-import { AppHead, Att, AttentionLine, BoardStrip, CardShell, CorpusLine, HeadTools, Lens, List, Notice, Off, ProjectSwitcher, Rail, Strong, Wordmark } from "../components/ui";
+import { openDoor } from "../api";
+import { AppHead, AskList, AskRow, Att, AttentionLine, BoardStrip, CardShell, CorpusLine, HeadTools, Lens, List, Notice, Off, ProjectSwitcher, Rail, Strong, Wordmark } from "../components/ui";
 import type { BoardStore } from "../state/board";
 import { CardBody } from "./CardView";
 import { ColumnBlock, FOLD_AT } from "./ColumnBlock";
@@ -54,6 +55,9 @@ export function Board({ slug, store, projects, onSwitch }: { slug: string; store
     return new Set<Column>(wide ? [] : ["Executed", "Done", "Not now"]);
   });
   const [unfurledMore, setUnfurledMore] = useState<Set<Column>>(new Set());
+  const [asksOpen, setAsksOpen] = useState(false);
+  const [reading, setReading] = useState<number | null>(null);
+  const [readSaid, setReadSaid] = useState<string | null>(null);
   const pointerY = useRef(0);
   const liftRef = useRef<Lift | null>(null);
   liftRef.current = lift;
@@ -157,6 +161,24 @@ export function Board({ slug, store, projects, onSwitch }: { slug: string; store
     [store],
   );
 
+  // One click each way per card: the owner's reading is a reading, recorded
+  // and acted on by the same door the card offers; the board is re-read after.
+  const readSignal = useCallback(
+    async (number: number, delivered: boolean) => {
+      setReading(number);
+      try {
+        const result = await openDoor(slug, number, "signal", { delivered });
+        setReadSaid(`#${number}: ${result.said}`);
+      } catch (e) {
+        setReadSaid(`#${number}: the reading did not land — ${e instanceof Error ? e.message : String(e)}`);
+      } finally {
+        setReading(null);
+        await store.refresh();
+      }
+    },
+    [slug, store],
+  );
+
   if (!board) {
     return (
       <>
@@ -192,12 +214,22 @@ export function Board({ slug, store, projects, onSwitch }: { slug: string; store
         <Att n={board.attention.asking_you} label="asking you" tone="you" />
         <Att n={board.attention.in_flight} label="in flight" />
         {board.attention.lanes_ended > 0 ? <Att n={board.attention.lanes_ended} label={board.attention.lanes_ended === 1 ? "lane ended — Resume or Look" : "lanes ended — Resume or Look"} tone="bad" /> : null}
+        {board.attention.signals_asking > 0 ? <Att n={board.attention.signals_asking} label={board.attention.signals_asking === 1 ? "shipped card waits on your reading" : "shipped cards wait on your reading"} tone="you" onClick={() => setAsksOpen((v) => !v)} on={asksOpen} /> : null}
         {board.attention.signals_due > 0 ? <Att n={board.attention.signals_due} label={board.attention.signals_due === 1 ? "signal past due" : "signals past due"} tone="you" /> : null}
+        {board.attention.doubted > 0 ? <Att n={board.attention.doubted} label={board.attention.doubted === 1 ? "status doubted — its evidence is gone" : "statuses doubted — their evidence is gone"} tone="bad" /> : null}
         <Att n={board.attention.arrived_today} label="arrived today" />
         {board.attention.documents_gone > 0 ? <Att n={board.attention.documents_gone} label={board.attention.documents_gone === 1 ? "card cites a document that is nowhere" : "cards cite documents that are nowhere"} tone="bad" /> : null}
         {board.attention.documents_without_card > 0 ? <Att n={board.attention.documents_without_card} label="documents have no card" tone="bad" /> : null}
         {Object.values(store.statuses).filter((s) => s.kind === "failed").length > 0 ? <Att n={Object.values(store.statuses).filter((s) => s.kind === "failed").length} label="write failed" tone="bad" /> : null}
       </AttentionLine>
+      {asksOpen && board.asks.length ? (
+        <AskList title={`${board.asks.length} shipped card${board.asks.length === 1 ? "" : "s"} wait${board.asks.length === 1 ? "s" : ""} on your reading — only you can read these signals`}>
+          {board.asks.map((a) => (
+            <AskRow key={a.number} number={a.number} title={a.title} what={a.what} due={a.due} onRead={(delivered) => void readSignal(a.number, delivered)} disabled={reading !== null} />
+          ))}
+          {readSaid ? <Notice quiet>{readSaid}</Notice> : null}
+        </AskList>
+      ) : null}
       {store.error ? <Notice>The board could not be re-read: {store.error}. Showing it as last read, {ago(board.generated_at)}.</Notice> : null}
       {board.trunk.note ? <Notice>The main checkout is not level with origin/develop: {board.trunk.note}</Notice> : null}
       {board.documents_without_card.length ? (

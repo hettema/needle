@@ -3,6 +3,11 @@
 export const WINDOW_KIND_VALUES = ["lane", "board-watch", "board-look", "board-discuss"] as const;
 export type WindowKind = (typeof WINDOW_KIND_VALUES)[number];
 
+export interface Focused {
+  window: Window;
+  app_id: string;
+}
+
 export interface Opened {
   window: Window;
   fresh: boolean;

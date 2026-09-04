@@ -26,6 +26,7 @@ from domain.board import TrunkState
 from domain.card import Actor, Card, CardOrigin, DocumentLink, Place
 from domain.column import COLUMN_DEFINITIONS, Column
 from domain.document import DocumentKind, DocumentRef
+from domain.evidence import Evidence
 from domain.gate import Gate
 from domain.hook import HookEvent, HookKind, HookPosted
 from domain.lane import Discussion, LaneRecord
@@ -173,6 +174,24 @@ class Store:
             ).all()
             return [_audit_entry(r) for r in rows]
 
+    def placements(self, slug: str) -> dict[int, AuditEntry]:
+        """Each card's placement: the audit row that last put it in its column
+        (a move, else its birth), in one query. What a read re-tests."""
+        with Session(self.engine) as session:
+            rows = session.scalars(
+                select(AuditRow)
+                .where(
+                    AuditRow.project_slug == slug,
+                    AuditRow.kind.in_([AuditKind.MOVED.value, AuditKind.BORN.value]),
+                )
+                .order_by(AuditRow.id)
+            )
+            out: dict[int, AuditEntry] = {}
+            for row in rows:
+                if row.to_column is not None:
+                    out[row.card_number] = _audit_entry(row)
+            return out
+
     # ── writing ────────────────────────────────────────────────────────
 
     def move(
@@ -184,12 +203,16 @@ class Store:
         at: datetime,
         *,
         detail: str | None = None,
+        evidence: Evidence | None = None,
     ) -> Card:
-        """Put the card there. A machine move names its reason in `detail`;
-        a move into Executed needs a WATCH row naming a signal (plan 03,
-        item 5), whoever moves it."""
+        """Put the card there. A machine move names its reason in `detail`
+        and the predicate it satisfied in `evidence` (plan 04, item 1), so a
+        later read can ask that predicate again; a move into Executed needs
+        a WATCH row naming a signal (plan 03, item 5), whoever moves it."""
         if actor == Actor.MACHINE and not detail:
             raise StoreRefusal("A machine move must say why, in one sentence.")
+        if actor == Actor.MACHINE and evidence is None:
+            raise StoreRefusal("A machine move must name the evidence it rests on.")
         with Session(self.engine) as session, session.begin():
             if session.get(ProjectRow, slug) is None:
                 raise StoreRefusal(f'No project "{slug}" is on the board.')
@@ -223,6 +246,7 @@ class Store:
                     from_place=result.from_place,
                     to_place=result.to_place,
                     detail=f"{said} — {detail}" if detail else said,
+                    evidence=evidence,
                 )
             session.flush()
             row = session.get(CardRow, (slug, number))
@@ -448,7 +472,9 @@ class Store:
                 if row.kind in ONE_PER_CARD
                 else None
             )
+            was: str | None = None
             if replaced is not None:
+                was = replaced.text
                 replaced.text = row.text
                 verb = "rewritten"
             else:
@@ -468,6 +494,9 @@ class Store:
                 if len(row.text) <= ROW_DETAIL_LENGTH
                 else row.text[: ROW_DETAIL_LENGTH - 1] + "…"
             )
+            # A rewrite keeps the whole previous text in the history, not a
+            # cut of it: the 54 WATCH rows translated on 2026-09-04 are read
+            # from here when the new row is doubted (plan 04, item 3).
             _audit(
                 session,
                 slug,
@@ -477,7 +506,8 @@ class Store:
                 kind=AuditKind.ROW,
                 from_place=None,
                 to_place=None,
-                detail=f"{row.kind.value} {verb}: {shown}",
+                detail=f"{row.kind.value} {verb}: {shown}"
+                + (f" — it read: {was}" if was is not None else ""),
             )
             session.flush()
             group_row = session.get(GroupRow, card.group_id)
@@ -1002,6 +1032,7 @@ def _audit(
     from_place: Place | None,
     to_place: Place | None,
     detail: str,
+    evidence: Evidence | None = None,
 ) -> None:
     session.add(
         AuditRow(
@@ -1017,6 +1048,7 @@ def _audit(
             to_group=to_place.group if to_place else None,
             to_position=to_place.position if to_place else None,
             detail=detail,
+            evidence=evidence.value if evidence else None,
         )
     )
 
@@ -1041,6 +1073,7 @@ def _audit_entry(row: AuditRow) -> AuditEntry:
         from_place=from_place,
         to_place=to_place,
         detail=row.detail,
+        evidence=Evidence(row.evidence) if row.evidence else None,
     )
 
 
