@@ -1,6 +1,6 @@
 # The signal is the card's thesis, not its receipt
 
-**Carried by:** docs/plans/2026-09-05-14-the-board-never-asks-about-things-that-dont-matter.md
+**Carried by:** docs/plans/2026-09-05-14-the-board-never-asks-about-what-does-not-matter.md
 
 **Kind:** idea
 **Found by:** the owner, in conversation with the coordinating session on
