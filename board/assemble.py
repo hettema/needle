@@ -34,6 +34,7 @@ from domain.corpus import CorpusIndex, CorpusSummary
 from domain.document import Document, DocumentKind, DocumentRef, DocumentState, SuggestionKind
 from domain.evidence import EvidenceState
 from domain.gate import Gate
+from domain.hook import HeardMark
 from domain.lane import HANDS_ON, Doors, Lane, LaneSnapshot, LaneState
 from domain.project import Project
 from domain.row import ROW_HALF, Row, RowHalf, RowKind
@@ -416,6 +417,7 @@ def assemble_detail(
     watercooler: list[WatercoolerLine] | None = None,
     folded: list[FoldedCard] | None = None,
     reading: ReadingSession | None = None,
+    heard: HeardMark | None = None,
 ) -> CardDetail:
     """`readings` newest first; `read` is whether the loop has read the
     machine; `folded` the cards folded under this one; `reading` the
@@ -452,4 +454,5 @@ def assemble_detail(
         verdict=verdict,
         verdict_note=verdict_note,
         watercooler=watercooler or [],
+        heard=heard,
     )

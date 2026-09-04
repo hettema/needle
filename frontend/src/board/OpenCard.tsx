@@ -17,6 +17,7 @@ import {
   ClosedDoors,
   Doubt,
   EssenceBig,
+  Heard,
   Hist,
   HistRow,
   Inline,
@@ -255,7 +256,8 @@ export function OpenCard({ card, onMoveTo }: { card: CardSummary; onMoveTo: (num
       ) : null}
 
       {lane && lane.state !== "none" ? (
-        <Section title="The watercooler" from={detail.watercooler.length ? "what the lanes on this project say to each other; every lane reads it at start and before its fold" : "nothing said yet"}>
+        <Section title="The watercooler" from={detail.watercooler.length ? "what the lanes on this project say to each other; a running lane hears it inside its session within a minute, and every lane reads it at start and before its fold" : "nothing said yet"}>
+          {detail.heard && detail.heard.at && detail.heard.text ? <Heard who={`its lane heard, ${ago(detail.heard.at)}`}>{detail.heard.text}</Heard> : null}
           {detail.watercooler.length ? (
             <Hist>
               {detail.watercooler.map((line) => (

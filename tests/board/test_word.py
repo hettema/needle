@@ -1,0 +1,164 @@
+"""What the board tells a running lane, once (plan 10, item 1), pure over
+the loop's lane, the watercooler and the heard-mark."""
+
+from datetime import UTC, datetime, timedelta
+
+from board.word import CLEARED, SAY_SO, compose
+from domain.card import Actor
+from domain.hook import HeardMark
+from domain.lane import Collision, CollisionVerdict, Lane, LaneState
+from domain.watercooler import WatercoolerLine
+
+NOW = datetime(2026, 9, 4, 12, 0, tzinfo=UTC)
+READ_AT = NOW - timedelta(seconds=20)
+HANDS_ON_SINCE = NOW - timedelta(minutes=30)
+
+
+def lane(
+    number: int = 253,
+    *,
+    state: LaneState = LaneState.WORKING,
+    colliding: Collision | None = None,
+    path: str | None = "/srv/p/.claude/worktrees/card-253-x",
+) -> Lane:
+    return Lane(
+        card_number=number,
+        name="card-253-x",
+        path=path,
+        state=state,
+        sentence="Working.",
+        session=None,
+        question=None,
+        said=None,
+        said_at=None,
+        discussing=[],
+        window_open=False,
+        hands_on_since=HANDS_ON_SINCE,
+        died=None,
+        moved=None,
+        folded=False,
+        trunk_synced=False,
+        main_synced=False,
+        edits=["README.md"] if colliding else [],
+        declared=[],
+        colliding=colliding,
+    )
+
+
+def line(id: int, who: int | None, text: str, *, at: datetime = NOW) -> WatercoolerLine:
+    return WatercoolerLine(
+        id=id,
+        project="proj",
+        card_number=who,
+        actor=Actor.MACHINE if who is None else Actor.SESSION,
+        at=at,
+        text=text,
+    )
+
+
+DRIFT = Collision(
+    verdict=CollisionVerdict.COLLIDES,
+    sentence="#241's lane is also editing README.md.",
+    files=["README.md"],
+    cards=[241],
+)
+
+
+def test_a_drift_is_said_once_with_the_ask_and_its_clearing_is_said_once():
+    word, mark = compose(
+        "proj", lane(colliding=DRIFT), [], None, since=HANDS_ON_SINCE, now=NOW, read_at=READ_AT
+    )
+    assert word.sentences == [f"#241's lane is also editing README.md. {SAY_SO}"]
+    assert word.read_at == READ_AT
+    assert mark is not None and mark.collision == DRIFT.sentence and mark.at == NOW
+    assert mark.text == word.sentences[0]
+
+    again, moved = compose(
+        "proj", lane(colliding=DRIFT), [], mark, since=HANDS_ON_SINCE, now=NOW, read_at=READ_AT
+    )
+    assert again.sentences == [] and moved is None
+
+    cleared, after = compose(
+        "proj", lane(), [], mark, since=HANDS_ON_SINCE, now=NOW, read_at=READ_AT
+    )
+    assert cleared.sentences == [CLEARED]
+    assert after is not None and after.collision is None
+
+    quiet, none = compose("proj", lane(), [], after, since=HANDS_ON_SINCE, now=NOW, read_at=READ_AT)
+    assert quiet.sentences == [] and none is None
+
+
+def test_a_drift_that_names_different_files_is_said_again():
+    _, mark = compose(
+        "proj", lane(colliding=DRIFT), [], None, since=HANDS_ON_SINCE, now=NOW, read_at=READ_AT
+    )
+    wider = DRIFT.model_copy(
+        update={
+            "sentence": "#241's lane is also editing README.md, api/app.py.",
+            "files": ["README.md", "api/app.py"],
+        }
+    )
+    word, _ = compose(
+        "proj", lane(colliding=wider), [], mark, since=HANDS_ON_SINCE, now=NOW, read_at=READ_AT
+    )
+    assert word.sentences == [f"{wider.sentence} {SAY_SO}"]
+
+
+def test_other_lanes_lines_reach_the_lane_once_and_its_own_never():
+    lines = [
+        line(1, 241, "README.md is mine until the fold", at=NOW - timedelta(minutes=5)),
+        line(2, 253, "noted", at=NOW - timedelta(minutes=4)),
+        line(3, None, "#109 folded over #253's edits in README.md", at=NOW - timedelta(minutes=3)),
+    ]
+    word, mark = compose(
+        "proj", lane(), lines, None, since=HANDS_ON_SINCE, now=NOW, read_at=READ_AT
+    )
+    assert word.sentences == [
+        "#241 said on the watercooler: README.md is mine until the fold",
+        "The board said on the watercooler: #109 folded over #253's edits in README.md",
+    ]
+    assert mark is not None and mark.watercooler_id == 3
+    again, moved = compose(
+        "proj", lane(), lines, mark, since=HANDS_ON_SINCE, now=NOW, read_at=READ_AT
+    )
+    assert again.sentences == [] and moved is None
+
+    only_own = lines + [line(4, 253, "folding now")]
+    still, none = compose(
+        "proj", lane(), only_own, mark, since=HANDS_ON_SINCE, now=NOW, read_at=READ_AT
+    )
+    assert still.sentences == [] and none is None, "a lane never hears itself"
+    then = only_own + [line(5, 241, "go ahead")]
+    word, mark = compose("proj", lane(), then, mark, since=HANDS_ON_SINCE, now=NOW, read_at=READ_AT)
+    assert word.sentences == ["#241 said on the watercooler: go ahead"]
+    assert mark is not None and mark.watercooler_id == 5, "the own line is passed over with it"
+
+
+def test_before_any_mark_the_lines_its_brief_carried_are_already_heard():
+    before = line(1, 241, "said before this lane started", at=HANDS_ON_SINCE - timedelta(minutes=1))
+    after = line(2, 241, "said while it runs", at=HANDS_ON_SINCE + timedelta(minutes=1))
+    word, mark = compose(
+        "proj", lane(), [before, after], None, since=HANDS_ON_SINCE, now=NOW, read_at=READ_AT
+    )
+    assert word.sentences == ["#241 said on the watercooler: said while it runs"]
+    assert mark is not None and mark.watercooler_id == 2
+
+
+def test_drift_and_lines_come_as_one_word_and_a_lane_without_hands_hears_nothing():
+    lines = [line(1, 241, "leave README.md", at=NOW)]
+    word, _ = compose(
+        "proj", lane(colliding=DRIFT), lines, None, since=HANDS_ON_SINCE, now=NOW, read_at=READ_AT
+    )
+    assert len(word.sentences) == 2 and word.sentences[0].endswith(SAY_SO)
+    ended = lane(state=LaneState.ENDED, path=None, colliding=DRIFT)
+    nothing, none = compose(
+        "proj", ended, lines, None, since=HANDS_ON_SINCE, now=NOW, read_at=READ_AT
+    )
+    assert nothing.sentences == [] and none is None
+    existing = HeardMark(
+        project="proj", card_number=253, watercooler_id=0, collision=None, at=None, text=None
+    )
+    nothing, none = compose(
+        "proj", ended, lines, existing, since=HANDS_ON_SINCE, now=NOW, read_at=READ_AT
+    )
+    assert nothing.sentences == [] and none is None

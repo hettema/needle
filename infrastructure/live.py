@@ -279,6 +279,7 @@ class Live:
             watercooler=self.store.watercooler(slug, limit=WATERCOOLER_SHOWN),
             folded=folded_under(self.store.cards(slug)).get(number),
             reading=self.store.open_reading_sessions(slug).get(number),
+            heard=self.store.heard_mark(slug, number),
         )
 
     def lane_and_doors(self, slug: str, card: Card) -> tuple[Lane | None, Doors]:

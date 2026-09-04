@@ -180,8 +180,11 @@ class Doors:
             + "\nLeave those files to their lanes unless your plan names them. If you must "
             "touch one, say so in the watercooler first; the board re-reads every lane's "
             "actual edits on every read and marks two lanes in the same file as colliding "
-            "on both cards.\n\nThe watercooler — what the lanes on this project say to each "
-            f"other; read it now and again before your fold (`{needle} fold` shows it):\n"
+            "on both cards — and tells you, inside this session beside a tool result, within "
+            "a minute, when your edits collide with another lane's and when another lane or "
+            "the board says something on the watercooler; you need not poll for either."
+            "\n\nThe watercooler — what the lanes on this project say to each other; read it "
+            f"now, and once more before your fold (`{needle} fold` shows it):\n"
             + watercooler_text(self.live.store.watercooler(slug, limit=WATERCOOLER_SHOWN))
             + "\nSay something when you touch a file outside your footprint or change a "
             "seam another lane depends on:"

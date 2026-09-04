@@ -21,7 +21,7 @@ from api.doors import DoorFailed, DoorRefused, Doors
 from api.loops import Loops
 from domain.board import BoardState, CardDetail, ProjectFile
 from domain.card import Move
-from domain.hook import HookEvent, HookPosted
+from domain.hook import HookEvent, HookPosted, Word
 from domain.lane import DoorResult
 from domain.project import Project
 from domain.verdict import EvidenceClass, VerdictsRuled
@@ -249,6 +249,19 @@ def create_app(store: Store | None = None, *, dist: Path | None = FRONTEND_DIST)
         live = await live_for(request, slug)
         doors: Doors = request.app.state.doors
         return doors.brief_for_lane(live.detail(slug, number), slug, overrode=None)
+
+    @app.get("/api/word", response_model=Word)
+    async def word(cwd: str, request: Request) -> Word:
+        """What the board has not yet told the lane at `cwd` (plan 10): the
+        hook reads it on every tool use with half a second to spare, so
+        this route reads the loop's last read and the store and nothing
+        else — no reconcile, no git, no project sync. 404 when the
+        directory is no lane, which is most tool calls on the machine."""
+        loops: Loops = request.app.state.loops
+        word = await loops.word(cwd)
+        if word is None:
+            raise HTTPException(status_code=404, detail=f"{cwd} is no lane on the board.")
+        return word
 
     @app.post("/api/hooks", response_model=HooksReceived)
     async def hooks(body: list[HookPosted], request: Request) -> HooksReceived:

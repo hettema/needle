@@ -418,6 +418,8 @@ button.chip:focus-visible { outline: 2px solid var(--accent); outline-offset: 1p
   font-size: 11px; line-height: 1.4; color: var(--ink-2);
 }
 .band + .heard { margin-top: 9px; }
+.card.open .heard { margin: 0 0 8px; padding: 4px 0 5px; border-top: none; border-bottom: 1px dashed var(--line); background: transparent; }
+.card.open .heard .hsay { white-space: normal; }
 .heard .hwho { flex: none; font-family: var(--mono); font-size: 9px; letter-spacing: .09em; text-transform: uppercase; color: var(--ink-3); padding-top: 2px; }
 .heard .hsay { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .standing {

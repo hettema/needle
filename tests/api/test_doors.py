@@ -859,6 +859,95 @@ def test_two_lanes_in_one_file_collide_on_both_cards_know_each_other_and_the_fol
     assert last["text"] == "#253 folded over #241's edits in README.md"
 
 
+# ── plan 10: a running lane hears the board ────────────────────────────
+
+
+def word_of(client: TestClient, cwd: str) -> list[str]:
+    response = client.get("/api/word", params={"cwd": cwd})
+    assert response.status_code == 200, response.text
+    return response.json()["sentences"]
+
+
+def test_a_running_lane_hears_its_drift_and_the_other_lanes_lines_once(
+    client: TestClient, machine_floor: Floor, repo: Path, store: Store, capsys
+):
+    """Plan 10, item 1, on the two-lane fixture: A drifts into B's file and
+    A's word names B's edits once; B's watercooler line reaches A's word
+    once and never B's own; the open card shows when A last heard and what;
+    the mark is where it was after the store is reopened."""
+    start(client)
+    mine = Path(lane_path(repo))
+    other = repo / ".claude" / "worktrees" / "card-241-the-deploy"
+    git(repo, "worktree", "add", "-q", "-b", "card-241-the-deploy", str(other))
+    (other / "README.md").write_text("their edit\n")
+    session_id = machine_floor.write_job(
+        "alpha", "beef0241", cwd=str(other), worktree=str(other), name="card-241-the-deploy"
+    )
+    machine_floor.write_process("alpha", session_id, os.getpid(), cwd=str(other))
+    reconcile(client)
+    assert word_of(client, str(mine)) == [], "nothing has happened since the brief"
+    assert client.get("/api/word", params={"cwd": str(repo)}).status_code == 404
+    assert client.get("/api/word", params={"cwd": "/elsewhere"}).status_code == 404
+    assert detail(client)["heard"] is None
+
+    # A drifts into B's file: named once, with the ask; then nothing.
+    (mine / "README.md").write_text("my edit\n")
+    reconcile(client)
+    assert word_of(client, str(mine / "docs")) == [
+        "#241's lane is also editing README.md. Say in the watercooler what you are doing there."
+    ]
+    assert word_of(client, str(mine)) == []
+    heard = detail(client)["heard"]
+    assert heard["collision"] == "#241's lane is also editing README.md."
+    assert heard["text"].startswith("#241's lane is also editing README.md.")
+    assert heard["at"] is not None
+
+    # B's line reaches A once; B never hears its own, only its side of the drift.
+    line = "README.md is mine until the fold; leave it"
+    assert main(["watercooler", "proj", "241", line]) == 0
+    assert "hears it inside its own session within a minute" in capsys.readouterr().out
+    assert word_of(client, str(mine)) == [f"#241 said on the watercooler: {line}"]
+    assert word_of(client, str(mine)) == []
+    assert word_of(client, str(other)) == [
+        "#253's lane is also editing README.md. Say in the watercooler what you are doing there."
+    ]
+    assert word_of(client, str(other)) == []
+    heard = detail(client)["heard"]
+    assert heard["text"] == f"#241 said on the watercooler: {line}"
+    assert heard["watercooler_id"] == 1
+
+    # The mark survives the board: a fresh store reads the same one.
+    reopened = Store(store.path)
+    try:
+        assert reopened.heard_mark("proj", CARD) == client.app.state.live.store.heard_mark(
+            "proj", CARD
+        )
+    finally:
+        reopened.close()
+
+    # B leaves the file: the clearing is said once, and B's fold over A's
+    # edit reaches A as the board's line.
+    (other / "README.md").unlink()
+    reconcile(client)
+    assert word_of(client, str(mine)) == [
+        "The collision has cleared: no other live lane is editing a file this lane is editing."
+    ]
+    assert word_of(client, str(mine)) == []
+    assert word_of(client, str(other)) == [
+        "The collision has cleared: no other live lane is editing a file this lane is editing."
+    ]
+    git(mine, "add", "-A")
+    git(mine, "commit", "-q", "-m", "my edit")
+    (other / "README.md").write_text("their edit again\n")
+    reconcile(client)
+    assert word_of(client, str(other))[0].startswith("#253's lane is also editing README.md.")
+    assert main(["fold", "--worktree", str(mine)]) == 0
+    capsys.readouterr()
+    assert word_of(client, str(other)) == [
+        "The board said on the watercooler: #253 folded over #241's edits in README.md"
+    ]
+
+
 # ── plan 06: the board at a glance ─────────────────────────────────────
 
 
@@ -923,7 +1012,9 @@ def test_plan_opens_a_plan_writing_conversation_for_one_suggestion_or_several(
 
     one = client.post("/api/projects/proj/plan", json={"numbers": [first]})
     assert one.status_code == 200, one.text
-    assert one.json()["said"].startswith(f"Planning #{first} in org.omarchy.board-plan-card-{first}-")
+    assert one.json()["said"].startswith(
+        f"Planning #{first} in org.omarchy.board-plan-card-{first}-"
+    )
     command = machine_floor.state()["spawned"][0]["command"][-1]
     assert command.startswith(f"cd {repo} &&"), "the conversation runs in the project's checkout"
     assert "--effort xhigh" in command and "--session-id" in command
@@ -953,7 +1044,9 @@ def test_plan_opens_a_plan_writing_conversation_for_one_suggestion_or_several(
     board = client.get("/api/projects/proj/board").json()
     assert board["attention"]["in_discussion"] == 1
     assert board["conversations"][0]["what"] == f"Plan #{second}, #{first}"
-    assert board["attention"]["in_flight"] == in_flight_before, "a conversation is never hands on a tree"
+    assert board["attention"]["in_flight"] == in_flight_before, (
+        "a conversation is never hands on a tree"
+    )
 
     refused = client.post("/api/projects/proj/plan", json={"numbers": [CARD]})
     assert refused.status_code == 409 and "not behind a live suggestion" in refused.json()["detail"]
@@ -983,7 +1076,9 @@ def test_a_plan_that_lands_citing_suggestions_takes_the_first_card_and_folds_the
     )
     paths = [summary_of(client, n)["document_path"] for n in (first, second, third)]
     before = client.get("/api/projects/proj/board").json()
-    unplanned_before = before["attention"]["unplanned_ideas"] + before["attention"]["unplanned_defects"]
+    unplanned_before = (
+        before["attention"]["unplanned_ideas"] + before["attention"]["unplanned_defects"]
+    )
 
     plan = repo / "docs" / "plans" / "2026-09-04-three-together.md"
     plan.write_text(
@@ -1009,7 +1104,9 @@ def test_a_plan_that_lands_citing_suggestions_takes_the_first_card_and_folds_the
     assert after == unplanned_before - 3
     history = detail(client, first)["history"]
     assert history[0]["kind"] == "moved" and "a plan appeared for it" in history[0]["detail"]
-    assert history[1]["kind"] == "linked" and "carries this card's suggestion" in history[1]["detail"]
+    assert (
+        history[1]["kind"] == "linked" and "carries this card's suggestion" in history[1]["detail"]
+    )
     folded_row = detail(client, second)["history"][0]
     assert folded_row["kind"] == "folded-into" and f"Folded into #{first}" in folded_row["detail"]
     brief = client.get(f"/api/projects/proj/cards/{first}/brief").text

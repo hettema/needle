@@ -126,3 +126,43 @@ def test_kinds_prints_every_live_suggestions_kind_and_why(corpus: Path, database
     assert "defect  docs/slice-suggestions/" in out and "(its title or Found-by)" in out
     assert "idea    docs/slice-suggestions/" in out and "(no sign of a defect)" in out
     assert main(["kinds", "nowhere"]) == 1
+
+
+def test_hook_install_registers_every_event_once_and_names_the_word_hooks_ceiling(
+    tmp_path: Path, capsys
+):
+    """Plan 10, item 2: `needle hook install` adds PostToolUse to a project
+    that has the four session events, keeps what is there, and is idempotent."""
+    import json
+
+    from api.board_cli import HOOK_EVENTS, hook_command
+
+    settings = tmp_path / ".claude" / "settings.json"
+    settings.parent.mkdir()
+    ours = {"type": "command", "command": hook_command()}
+    theirs = {"type": "command", "command": "echo theirs"}
+    settings.write_text(
+        json.dumps(
+            {
+                "hooks": {
+                    "Stop": [{"matcher": "", "hooks": [ours]}],
+                    "UserPromptSubmit": [{"matcher": "", "hooks": [theirs]}],
+                }
+            }
+        )
+    )
+    assert main(["hook", "install", str(tmp_path)]) == 0
+    out = capsys.readouterr().out
+    assert out.strip().endswith("for SessionStart, SessionEnd, StopFailure, PostToolUse")
+    blob = json.loads(settings.read_text())
+    for event in HOOK_EVENTS:
+        hooks = [h for entry in blob["hooks"][event] for h in entry["hooks"]]
+        assert [h["command"] for h in hooks] == [hook_command()], event
+    word = blob["hooks"]["PostToolUse"][0]["hooks"][0]
+    assert word["timeout"] == 5, "the PostToolUse entry names its own ceiling"
+    assert "timeout" not in blob["hooks"]["Stop"][0]["hooks"][0]
+    assert blob["hooks"]["UserPromptSubmit"][0]["hooks"][0] == theirs
+
+    assert main(["hook", "install", str(tmp_path)]) == 0
+    assert "already registered" in capsys.readouterr().out
+    assert json.loads(settings.read_text()) == blob, "idempotent"

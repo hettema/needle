@@ -607,6 +607,7 @@ describe("conversations and lanes that know each other", () => {
       d.lane.colliding = mine.colliding;
     }
     d.watercooler = b.watercooler;
+    d.heard = { project: SLUG, card_number: 253, watercooler_id: 2, collision: "#241's lane is also editing engine/metering.py.", at: "2026-09-04T08:26:00+00:00", text: "The board said on the watercooler: #241 folded over #253's edits in engine/metering.py" };
     api.getCard.mockResolvedValue(d);
     await renderBoard();
     expect(screen.getByText("lanes colliding — editing each other's files", { exact: false })).toBeInTheDocument();
@@ -627,6 +628,10 @@ describe("conversations and lanes that know each other", () => {
     expect(cooler).toHaveTextContent("touching engine/metering.py for the tariff; leave it");
     expect(cooler).toHaveTextContent("#241");
     expect(cooler).toHaveTextContent("board");
+    // The open card says when its lane last heard the board inside its session, and what (plan 10).
+    const heard = within(cooler).getByRole("note");
+    expect(heard).toHaveTextContent("its lane heard");
+    expect(heard).toHaveTextContent("The board said on the watercooler: #241 folded over #253's edits in engine/metering.py");
   });
 });
 

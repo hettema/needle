@@ -44,6 +44,7 @@ from board.lane import (
     with_footprints,
 )
 from board.signals import where_after
+from board.word import compose
 from domain.audit import AuditKind
 from domain.board import MachineState, TrunkState
 from domain.card import Actor, Card, Place
@@ -51,7 +52,7 @@ from domain.column import Column
 from domain.document import DocumentKind
 from domain.evidence import Evidence
 from domain.gate import Gate
-from domain.hook import HookEvent, HookPosted
+from domain.hook import HookEvent, HookPosted, Word
 from domain.lane import Collision, Doors, Lane, LaneRecord, LaneSnapshot, LaneState
 from domain.launch import LaunchVerdict, ReadingStart
 from domain.session import Session, SessionState
@@ -115,6 +116,13 @@ class Loops:
         self._deaths: dict[str, str] = {}
         self._parked: set[str] = set()
         """Session ids whose second wall was parked, so the card is told once."""
+        self._word_lock = asyncio.Lock()
+        """The word's own lock (plan 10): a read of a lane's word and the
+        move of its heard-mark are one act, so two hooks firing from one
+        session's parallel tool calls cannot both carry the same word. Not
+        the loops' lock: that one is held through a reconcile's git reads,
+        and a word that waited behind it would outlive the hook's half
+        second while the server still moved the mark — the word lost."""
 
     # ── lifecycle ──────────────────────────────────────────────────────
 
@@ -201,6 +209,44 @@ class Loops:
         recorded = self.record_hooks(posted)
         await self.reconcile()
         return recorded
+
+    async def word(self, cwd: str) -> Word | None:
+        """What the board has not yet told the lane at `cwd` (plan 10, item
+        1), and the mark moved so it is told once; None when the directory
+        is no lane of a registered project. Reads the loop's last read and
+        the store, never git."""
+        project = project_of_cwd(cwd, self.live.projects)
+        if project is None:
+            return None
+        number = card_of_cwd(cwd, project.project.path)
+        if number is None:
+            return None
+        async with self._word_lock:
+            return await asyncio.to_thread(self.word_now, project, number)
+
+    def word_now(self, live: LiveProject, number: int) -> Word:
+        slug = live.project.slug
+        now = clock.now()
+        snapshot = live.snapshot
+        if snapshot is None or number not in snapshot.lanes:
+            return Word(project=slug, card_number=number, sentences=[], read_at=now)
+        store = self.live.store
+        lane = snapshot.lanes[number]
+        record = store.lane(slug, number)
+        mark = store.heard_mark(slug, number)
+        word, mark = compose(
+            slug,
+            lane,
+            store.watercooler(slug, after=mark.watercooler_id if mark is not None else 0),
+            mark,
+            since=record.first_seen if record is not None else lane.hands_on_since,
+            now=now,
+            read_at=snapshot.read_at,
+        )
+        if mark is not None:
+            store.mark_heard(mark)
+            self.live.bump()
+        return word
 
     def record_hooks(self, posted: list[HookPosted]) -> list[HookEvent]:
         attributed: list[tuple[HookPosted, str | None, int | None]] = []

@@ -3,6 +3,15 @@
 export const HOOK_KIND_VALUES = ["SessionStart", "Stop", "SessionEnd", "StopFailure"] as const;
 export type HookKind = (typeof HOOK_KIND_VALUES)[number];
 
+export interface HeardMark {
+  project: string;
+  card_number: number;
+  watercooler_id: number;
+  collision: string | null;
+  at: string | null;
+  text: string | null;
+}
+
 export interface HookEvent {
   kind: HookKind;
   session_id: string;
@@ -28,4 +37,11 @@ export interface HookPosted {
   reason: string | null;
   error: string | null;
   transcript_path: string | null;
+}
+
+export interface Word {
+  project: string;
+  card_number: number;
+  sentences: string[];
+  read_at: string;
 }

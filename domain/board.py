@@ -12,6 +12,7 @@ from domain.corpus import CorpusSummary
 from domain.document import Document, DocumentRef, DocumentState, SuggestionKind
 from domain.evidence import Standing
 from domain.gate import Gate
+from domain.hook import HeardMark
 from domain.lane import Collision, Conversation, Door, Doors, Lane, LaneState, Readiness
 from domain.project import Project
 from domain.row import Row
@@ -207,3 +208,6 @@ class CardDetail(BaseModel):
     """Why the VERDICT row names no verdict the board can act on, when it does not."""
     watercooler: list[WatercoolerLine]
     """The project's watercooler, newest last: what a lane on this card reads."""
+    heard: HeardMark | None
+    """When this card's lane last heard the board inside its session, and
+    what (plan 10, item 1); None when it has never been told anything."""

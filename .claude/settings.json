@@ -9,9 +9,27 @@
             "command": "python3 /home/dennis/Work/needle/hooks/needle_hook.py"
           }
         ]
+      },
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 /home/dennis/Work/needle/hooks/needle_hook.py"
+          }
+        ]
       }
     ],
     "Stop": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 /home/dennis/Work/needle/hooks/needle_hook.py"
+          }
+        ]
+      },
       {
         "matcher": "",
         "hooks": [
@@ -31,6 +49,15 @@
             "command": "python3 /home/dennis/Work/needle/hooks/needle_hook.py"
           }
         ]
+      },
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 /home/dennis/Work/needle/hooks/needle_hook.py"
+          }
+        ]
       }
     ],
     "StopFailure": [
@@ -40,6 +67,27 @@
           {
             "type": "command",
             "command": "python3 /home/dennis/Work/needle/hooks/needle_hook.py"
+          }
+        ]
+      },
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 /home/dennis/Work/needle/hooks/needle_hook.py"
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 /home/dennis/Work/needle/hooks/needle_hook.py",
+            "timeout": 5
           }
         ]
       }

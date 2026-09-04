@@ -244,6 +244,23 @@ class LaneRow(Base):
     main_synced_at: Mapped[datetime | None] = mapped_column(UtcDateTime, nullable=True)
 
 
+class HeardRow(Base):
+    """Where a running lane's hearing stands (plan 10, item 1): the newest
+    watercooler line it was told and the drift sentence it was last told, so
+    the board says each fact once and a restart forgets nothing. No foreign
+    key to cards or lanes: the mark is cleared with the lane record when the
+    card is launched again."""
+
+    __tablename__ = "heard"
+
+    project_slug: Mapped[str] = mapped_column(String(80), primary_key=True)
+    card_number: Mapped[int] = mapped_column(Integer, primary_key=True)
+    watercooler_id: Mapped[int] = mapped_column(Integer)
+    collision: Mapped[str | None] = mapped_column(Text, nullable=True)
+    at: Mapped[datetime | None] = mapped_column(UtcDateTime, nullable=True)
+    text: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+
 class ReadingRow(Base):
     """One reading of a card's WATCH signal, by the board, by a reading
     session's finding, or by the owner."""

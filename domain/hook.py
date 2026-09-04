@@ -46,3 +46,35 @@ class HookEvent(HookPosted):
     id: int
     project: str | None
     card_number: int | None
+
+
+class HeardMark(BaseModel):
+    """Where a running lane's hearing stands (plan 10, item 1): the last
+    watercooler line it was told, the drift sentence it was last told, and
+    when and what it last heard. Kept in the store so "once" survives a
+    restart of the board and never depends on the hook remembering."""
+
+    project: str
+    card_number: int
+    watercooler_id: int
+    """The newest watercooler line the lane has heard; 0 before any."""
+    collision: str | None
+    """The drift sentence the lane was last told; None when it was told none."""
+    at: datetime | None
+    """When the lane last heard a word that said something."""
+    text: str | None
+    """What it heard then, as the card shows it."""
+
+
+class Word(BaseModel):
+    """What the board has not yet told a running lane, in the board's voice:
+    one sentence per fact, empty when there is nothing new. Read by the hook
+    on every tool use and given to the session once; reading it moves the
+    lane's HeardMark."""
+
+    project: str
+    card_number: int
+    sentences: list[str]
+    read_at: datetime
+    """When the loop last read the lane the drift comes from: the same
+    staleness the pill has, at most the loop's beat."""

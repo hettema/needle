@@ -51,8 +51,12 @@ from infrastructure.store import Store, StoreRefusal
 from runtime.service import Runtime
 
 DEFAULT_URL = "http://127.0.0.1:8480"
-HOOK_EVENTS = ("SessionStart", "Stop", "SessionEnd", "StopFailure")
+HOOK_EVENTS = ("SessionStart", "Stop", "SessionEnd", "StopFailure", "PostToolUse")
 HOOK_SCRIPT = REPO_ROOT / "hooks" / "needle_hook.py"
+WORD_HOOK_TIMEOUT_SECONDS = 5
+"""Claude Code's own ceiling on the PostToolUse hook, in the settings entry:
+the script's half second is the real one, this is the belt for an
+interpreter that cannot start, where Claude Code's default is 600 s."""
 
 
 def _board() -> tuple[Store, Live, Runtime, Loops, Doors]:
@@ -108,7 +112,8 @@ def watercooler(
         return 1
     live.say(args.slug, args.number, Actor.SESSION, args.text)
     print(
-        f"#{args.number} said it; every lane on {args.slug} reads it at start and before its fold"
+        f"#{args.number} said it; every running lane on {args.slug} hears it inside its own "
+        "session within a minute, and every lane reads it at start and before its fold"
     )
     return 0
 
@@ -305,7 +310,10 @@ def hook_install(args: argparse.Namespace) -> int:
         )
         if present:
             continue
-        entries.append({"matcher": "", "hooks": [{"type": "command", "command": command}]})
+        hook: dict = {"type": "command", "command": command}
+        if event == "PostToolUse":
+            hook["timeout"] = WORD_HOOK_TIMEOUT_SECONDS
+        entries.append({"matcher": "", "hooks": [hook]})
         added.append(event)
     settings.parent.mkdir(parents=True, exist_ok=True)
     settings.write_text(json.dumps(blob, indent=2) + "\n", encoding="utf-8")
@@ -504,7 +512,9 @@ def register(sub: "argparse._SubParsersAction[argparse.ArgumentParser]") -> None
     p_hook = sub.add_parser("hook", help="the session hook")
     hook_sub = p_hook.add_subparsers(dest="hook_command", required=True)
     p_install = hook_sub.add_parser(
-        "install", help="register the hook in a project's .claude/settings.json"
+        "install",
+        help="register the hook in a project's .claude/settings.json for every event it "
+        "serves; idempotent, so run it again when an event is added",
     )
     p_install.add_argument("repo")
     p_install.set_defaults(run=hook_install)

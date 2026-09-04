@@ -31,7 +31,7 @@ from domain.column import COLUMN_DEFINITIONS, DEFECTS_RAIL, DEFECTS_RAIL_POSITIO
 from domain.document import DocumentKind, DocumentRef, SuggestionKind
 from domain.evidence import Evidence
 from domain.gate import Gate
-from domain.hook import HookEvent, HookKind, HookPosted
+from domain.hook import HeardMark, HookEvent, HookKind, HookPosted
 from domain.lane import Discussion, LaneRecord
 from domain.launch import Rescue
 from domain.project import Project
@@ -47,6 +47,7 @@ from infrastructure.schema import (
     CardRowRow,
     DiscussionRow,
     GroupRow,
+    HeardRow,
     HookEventRow,
     LaneRow,
     ProjectRow,
@@ -824,10 +825,16 @@ class Store:
             session.flush()
             return _watercooler_line(row)
 
-    def watercooler(self, slug: str, *, limit: int | None = None) -> list[WatercoolerLine]:
-        """The project's lines, oldest first; with `limit`, the newest that many."""
+    def watercooler(
+        self, slug: str, *, limit: int | None = None, after: int = 0
+    ) -> list[WatercoolerLine]:
+        """The project's lines, oldest first; with `limit`, the newest that
+        many; with `after`, only the lines past that id — what a running
+        lane has not heard (plan 10), read on every tool call."""
         with self._session() as session:
-            query = select(WatercoolerRow).where(WatercoolerRow.project_slug == slug)
+            query = select(WatercoolerRow).where(
+                WatercoolerRow.project_slug == slug, WatercoolerRow.id > after
+            )
             if limit is not None:
                 rows = session.scalars(query.order_by(WatercoolerRow.id.desc()).limit(limit)).all()
                 return [_watercooler_line(r) for r in reversed(rows)]
@@ -868,11 +875,34 @@ class Store:
             return None if row is None else _lane_record(row)
 
     def forget_lane(self, slug: str, number: int) -> None:
-        """The card is being launched again: its lane record starts over."""
+        """The card is being launched again: its lane record starts over, and
+        so does its hearing — the new lane's brief carries the watercooler."""
         with self._session() as session, session.begin():
             row = session.get(LaneRow, (slug, number))
             if row is not None:
                 session.delete(row)
+            heard = session.get(HeardRow, (slug, number))
+            if heard is not None:
+                session.delete(heard)
+
+    # ── what a running lane has heard ──────────────────────────────────
+
+    def heard_mark(self, slug: str, number: int) -> HeardMark | None:
+        with self._session() as session:
+            row = session.get(HeardRow, (slug, number))
+            return None if row is None else _heard_mark(row)
+
+    def mark_heard(self, mark: HeardMark) -> None:
+        """The lane was told: the mark moves to what it has now heard."""
+        with self._session() as session, session.begin():
+            row = session.get(HeardRow, (mark.project, mark.card_number))
+            if row is None:
+                row = HeardRow(project_slug=mark.project, card_number=mark.card_number)
+                session.add(row)
+            row.watercooler_id = mark.watercooler_id
+            row.collision = mark.collision
+            row.at = mark.at
+            row.text = mark.text
 
     # ── signal readings ────────────────────────────────────────────────
 
@@ -1193,6 +1223,17 @@ def _discussion(row: DiscussionRow) -> Discussion:
         session_id=row.session_id,
         slot=row.slot,
         started_at=row.started_at,
+    )
+
+
+def _heard_mark(row: HeardRow) -> HeardMark:
+    return HeardMark(
+        project=row.project_slug,
+        card_number=row.card_number,
+        watercooler_id=row.watercooler_id,
+        collision=row.collision,
+        at=row.at,
+        text=row.text,
     )
 
 
