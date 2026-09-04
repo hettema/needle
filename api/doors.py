@@ -39,7 +39,12 @@ class DoorFailed(Exception):
 
 
 def needle_command() -> str:
-    return f"uv --directory {REPO_ROOT} run needle"
+    # `--project`, never `--directory`: the latter changes directory to
+    # Needle's checkout before the verb runs, so a lane's `needle fold` read
+    # its worktree as `.` and pushed Needle's own HEAD to Needle's trunk
+    # (found by Hello Revenue card #387's review, 2026-09-04). `--project`
+    # only picks the environment; the verb runs where the lane stands.
+    return f"uv --project {REPO_ROOT} run needle"
 
 
 class Doors:
