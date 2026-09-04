@@ -54,8 +54,17 @@ ship was written at the wrong altitude.
 **Nothing ships half-done.** No TODO, no "later", no deferral markers; a
 ratchet refuses them. Say precisely what is not done instead.
 
-**Nothing is done without a review record.** A code-shipping slice closes with
-a review under `docs/reviews/` naming what was checked and what was found.
+**Nothing is done without a review record, and a review is a loop, not a
+pass.** A code-shipping slice closes with a review under `docs/reviews/`. The
+review runs in passes: each pass reads the work through one lens, names its
+findings with file and line, the fixes land, and the next pass reads the
+fixed work again — until a pass finds nothing new. The lenses, in order: the
+feature against its plan's "done means"; the seams (concurrency and races,
+failure and restart, the truth of what the board shows); the boundaries this
+file names. The record lists every pass with what it found and what changed.
+One clean pass after a pass with findings is the floor; a review that stopped
+at its first pass is not a review (owner ruling 2026-09-04, from watching a
+nine-pass close on the first board: "review, fix, review again").
 
 **Docstrings say why, commits say what prompted.** Every commit has a body:
 what prompted the change and what the diff cannot convey.
