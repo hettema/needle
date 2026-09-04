@@ -14,9 +14,10 @@ from domain.corpus import CorpusIndex
 from domain.document import DocumentKind, DocumentState
 from domain.evidence import Evidence, EvidenceState, Standing
 from domain.hook import HookKind
-from domain.lane import Collision, CollisionVerdict, LaneState
+from domain.lane import Collision, CollisionVerdict, LaneRecord, LaneState
 from domain.session import SessionState
 from domain.signal import Reading, ReadingSession
+from domain.slot import Handoff
 from tests.board.test_lane import LANE, NOW, PLACEMENT, card, doors, event, facts, session
 
 TRUSTED = Standing(actor=Actor.OWNER, evidence=None, state=EvidenceState.TRUSTED, words=None)
@@ -111,6 +112,106 @@ def test_a_lane_asking_is_yours_with_the_question_and_answer_filled():
         "Answer",
         True,
     )
+
+
+def test_a_lane_that_stopped_or_is_blocked_is_yours_with_the_way_on():
+    """Every state the WAITING_ON_YOU branch can name, and the door it allows."""
+    c = card(column=Column.EXECUTING)
+    stopped = lane_for(
+        c,
+        facts(
+            sessions=[session(state=SessionState.DONE, recorded="done")],
+            events=[event(HookKind.STOP, "The parser is in. Nothing else to do.")],
+        ),
+    )
+    assert stopped.state == LaneState.STOPPED
+    s = state(c, lane=stopped)
+    assert (s.word, s.meaning) == ("stopped · fable on alpha", Meaning.YOURS)
+    assert s.detail == "The parser is in. Nothing else to do."
+    assert s.door is not None and s.door.label == "Answer"
+
+    blocked = lane_for(
+        c, facts(sessions=[session(state=SessionState.BLOCKED, detail="waiting on a permission")])
+    )
+    assert blocked.state == LaneState.BLOCKED
+    b = state(c, lane=blocked)
+    assert (b.word, b.meaning) == ("blocked · fable on alpha", Meaning.YOURS)
+    assert b.detail == "waiting on a permission"
+
+
+def test_a_lane_the_runtime_is_moving_is_live_and_says_where_it_went():
+    c = card(column=Column.EXECUTING)
+    wall = Handoff(
+        session_id="aaaa0001-0000-4000-8000-000000000000",
+        short_id="aaaa0001",
+        from_slot="alpha",
+        account="beta",
+        model=None,
+        prompt="carry on",
+        reason="You've reached your Fable limit.",
+        at=NOW,
+        cwd=LANE,
+        worktree=LANE,
+        pid=4242,
+        stopped=False,
+        path="/h/x.json",
+    )
+    moving = lane_for(c, facts(sessions=[session(state=SessionState.BLOCKED, wall=wall)]))
+    assert moving.state == LaneState.MOVING
+    s = state(c, lane=moving)
+    assert (s.word, s.meaning) == ("moving · fable on alpha", Meaning.LIVE)
+
+
+def test_a_lane_that_folded_is_finished_and_a_lane_that_lost_its_work_is_broken():
+    """The discriminator is what the lane left behind, not that it ended. A
+    folded lane's worktree on disk is quiet — Start says "lane exists". A lane
+    that ended with nothing folded lost its work, and that is red."""
+    c = card()
+    record = LaneRecord(
+        project="proj",
+        card_number=7,
+        name="card-7-the-thing",
+        path=LANE,
+        branch="card-7-the-thing",
+        birth=None,
+        tip=None,
+        first_seen=NOW - timedelta(hours=2),
+        last_seen=NOW - timedelta(minutes=30),
+        gone_at=None,
+        folded_at=NOW - timedelta(minutes=20),
+        trunk_synced_at=NOW - timedelta(minutes=20),
+        main_synced_at=None,
+    )
+    folded = lane_for(c, facts(records=[record]))
+    assert folded.state == LaneState.ENDED and folded.folded
+    s = state(c, lane=folded, doors={"placement": PLACEMENT})
+    assert (s.word, s.meaning) == ("lane exists", Meaning.QUIET)
+    assert s.detail is not None and LANE in s.detail
+    assert Claim.LANE_ENDED not in claims_of(
+        c,
+        document_state=DocumentState.PLAN,
+        lane=folded,
+        standing=TRUSTED,
+        signal=None,
+        last=None,
+        reading=None,
+        verdict=None,
+        now=NOW,
+    )
+
+    lost = lane_for(c, facts(records=[record.model_copy(update={"folded_at": None})]))
+    assert lost.state == LaneState.ENDED and not lost.folded
+    assert state(c, lane=lost).word == "lane ended"
+
+
+def test_an_archived_plan_outside_the_shipped_columns_is_quiet():
+    s = state(
+        card(column=Column.BACKLOG, archived=True),
+        document_state=DocumentState.ARCHIVED,
+    )
+    assert (s.word, s.meaning) == ("archived", Meaning.QUIET) and s.hint == "open ▸"
+    planned = state(card(column=Column.PLANNED, gate=None), doors={"gate_named": False})
+    assert planned.word == "no gate"
 
 
 def test_two_lanes_in_one_file_is_broken_and_beats_live():

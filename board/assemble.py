@@ -234,6 +234,16 @@ def _signal_line(signal: Signal) -> str:
     return f"Signal: {signal.what} — by {_due(signal)}"
 
 
+def _lane_died(card: Card, lane: Lane) -> bool:
+    """An ended lane that is broken rather than simply finished. A lane that
+    folded is done: its worktree is still on disk and Start says so in one
+    quiet word ("lane exists"). A lane that ended with nothing folded lost the
+    work it was doing, and that is what red is for."""
+    return (
+        not lane.folded and card.place.column not in SHIPPED and card.place.column != Column.NOT_NOW
+    )
+
+
 def _door(name: FaceDoorName, label: str, why: str, *, primary: bool) -> FaceDoor:
     return FaceDoor(name=name, label=label, why=why, primary=primary)
 
@@ -359,12 +369,7 @@ def state_of(
         )
     if standing.state == EvidenceState.DOUBTED:
         return _state("doubted", Meaning.BROKEN, detail=standing.words, hint="open to decide")
-    if (
-        lane is not None
-        and lane.state == LaneState.ENDED
-        and card.place.column not in SHIPPED
-        and card.place.column != Column.NOT_NOW
-    ):
+    if lane is not None and lane.state == LaneState.ENDED and _lane_died(card, lane):
         return _state(
             "lane ended",
             Meaning.BROKEN,
@@ -512,12 +517,7 @@ def claims_of(
         claims.append(Claim.SIGNAL_OVERDUE)
     if card.place.column == Column.DECISION_MOMENT:
         claims.append(Claim.DECISION)
-    if (
-        lane is not None
-        and lane.state == LaneState.ENDED
-        and card.place.column not in SHIPPED
-        and card.place.column != Column.NOT_NOW
-    ):
+    if lane is not None and lane.state == LaneState.ENDED and _lane_died(card, lane):
         claims.append(Claim.LANE_ENDED)
     if standing.state == EvidenceState.DOUBTED:
         claims.append(Claim.DOUBTED)
