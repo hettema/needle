@@ -131,7 +131,12 @@ Recorded as the build makes them, each with the alternative rejected. The design
     card would have done it. Rejected: painting every `LaneState.ENDED` red,
     which is what the first build did and what the comp implies by drawing
     only the lane that died.
-12. **The page test reads the rule back from the backend, not from a copy of
+12. **The state word wraps; it never truncates.** A loop line cut before its
+    date has lost what it was there to say, and the ellipsis blames the word
+    rather than the column. Rejected: shortening the words to fit ("board
+    reads 6 Sep") — the words are the language, and inventing abbreviations to
+    fit a width is how a language stops being read.
+13. **The page test reads the rule back from the backend, not from a copy of
     it.** `tools/board_fixture.py` grows `language_cases()`: one `CardSummary`
     per state, produced by the real `state_of`, written into
     `frontend/tests/fixture.json` and held current by the existing ratchet.

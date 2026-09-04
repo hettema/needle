@@ -9,7 +9,7 @@ cannot replace it.
 code commits: the language itself; what the served board showed and jsdom
 could not; the signal that could go unnoticed. The docs commit that follows
 carries this record and the archived plan).
-**Findings:** 13 — 12 fixed, 1 filed.
+**Findings:** 14 — 13 fixed, 1 filed.
 
 ## The passes
 
@@ -58,7 +58,8 @@ lens, the fixes landed, and the next pass re-read the fixed work.
    new language. One wrong word, and the worst kind: card #26, shipped and
    closed, read "stopped · opus on gmail" in amber (finding 13). Every card
    would have, because a card closes at exactly the moment its session's turn
-   ends. Fixed, asserted, and folded again.
+   ends (finding 13), and one truncated word (finding 14). Both fixed,
+   folded, and the board re-read.
 6. **Clean.** The suite re-run whole: 312 backend tests including the
    ratchets, `tsc` clean, 55 page scenarios; the live check re-run against the
    rebuilt board with no findings; the four screenshots re-read. Nothing new.
@@ -146,6 +147,12 @@ lens, the fixes landed, and the next pass re-read the fixed work.
     card, a folded lane that has stopped or ended says nothing and the loop is
     the state; a lane that has *not* folded still asks, wherever its card sits
     (plan ruling 11).
+14. **A loop line truncated before its date.** `loop open · the board reads
+    it…` on a 288 px column: the ellipsis fell exactly where the only thing
+    the line existed to say begins, and it reads as though the word were long
+    rather than the column narrow. FIXED: the state word wraps instead of
+    truncating — the state line already wrapped for the door's answer, so
+    nothing new was needed.
 
 ## What was checked
 
