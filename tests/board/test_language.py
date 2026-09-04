@@ -54,7 +54,9 @@ def test_a_free_card_is_proven_and_its_one_door_is_start_filled():
     s = state(card())
     assert (s.word, s.meaning) == ("free to start", Meaning.PROVEN)
     assert s.door is not None and s.door.name == FaceDoorName.START and s.door.primary
-    assert s.door.label == "Start · fable on alpha" and s.hint is None and s.loop is None
+    # The collapsed door is one word; where it would run is in its reason.
+    assert s.door.label == "Start" and s.hint is None and s.loop is None
+    assert s.door.why.startswith("Start · fable on alpha — ")
 
 
 def test_a_collision_before_start_is_quiet_and_waits():
@@ -169,7 +171,8 @@ def test_a_shipped_cards_state_is_its_loop():
     c = card(column=Column.EXECUTED, archived=True)
     open_loop = state(c, signal=SESSION_SIGNAL, document_state=DocumentState.ARCHIVED)
     assert open_loop.word == "loop open · a session reads it 11 Sep"
-    assert open_loop.meaning == Meaning.QUIET and open_loop.hint == "open ▸"
+    # A card carrying a loop has said everything on its line; no hint beside it.
+    assert open_loop.meaning == Meaning.QUIET and open_loop.hint is None
     assert open_loop.loop is not None and open_loop.loop.state == LoopState.OPEN
     assert not open_loop.loop.owner_only
     assert open_loop.detail == "Signal: no session re-grows the old doors — by 11 Sep"

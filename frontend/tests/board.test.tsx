@@ -687,7 +687,7 @@ describe("the board at a glance (plan 06)", () => {
     const mine = cardOf(b, 253);
     const theirs = cardOf(b, 241);
     const note = cardOf(b, 228);
-    mine.state = { word: "free to start", meaning: "proven", detail: null, loop: null, door: { name: "start", label: "Start · fable on alpha", why, primary: true }, hint: null };
+    mine.state = { word: "free to start", meaning: "proven", detail: null, loop: null, door: { name: "start", label: "Start", why: `Start · fable on alpha — ${why}`, primary: true }, hint: null };
     theirs.state = { word: "collides with #253 · waits", meaning: "quiet", detail: null, loop: null, door: null, hint: "1 file · open to see" };
     note.state = { word: "no gate", meaning: "quiet", detail: "This card names no effort gate; only a planned card is startable.", loop: null, door: null, hint: "open to see" };
     api.getBoard.mockResolvedValue(b);
@@ -704,7 +704,7 @@ describe("the board at a glance (plan 06)", () => {
     const gateless = screen.getByText("#228").closest("article") as HTMLElement;
     expect(within(gateless).getByText("no gate")).toBeInTheDocument();
     // Start on the collapsed face, the same door as the open card's, and the card does not open on the click.
-    await userEvent.click(within(resting).getByRole("button", { name: "Start · fable on alpha" }));
+    await userEvent.click(within(resting).getByRole("button", { name: "Start" }));
     await waitFor(() => expect(api.openDoor).toHaveBeenCalledWith(SLUG, 253, "start"));
     expect(await within(resting).findByText(/Started aaaa0001/)).toBeInTheDocument();
     expect(resting.className).not.toContain("open");
@@ -884,8 +884,10 @@ describe("the colour language", () => {
     return screen.getByText("A card in every state").closest("article") as HTMLElement;
   }
 
-  const table: { case: string; word: string; meaning: string; border: boolean; door: string }[] = [
-    { case: "free to start", word: "free to start", meaning: "proven", border: false, door: "Start · fable on alpha" },
+  // `door` is the label of the one door the state allows, or the grey line
+  // where it would be — `null` where the state has said everything already.
+  const table: { case: string; word: string; meaning: string; border: boolean; door: string | null }[] = [
+    { case: "free to start", word: "free to start", meaning: "proven", border: false, door: "Start" },
     { case: "collides", word: "collides with #241 · waits", meaning: "quiet", border: false, door: "1 file · open to see" },
     { case: "no gate", word: "no gate", meaning: "quiet", border: false, door: "open to see" },
     { case: "nowhere to run", word: "nowhere to run", meaning: "quiet", border: false, door: "open to see" },
@@ -896,11 +898,11 @@ describe("the colour language", () => {
     { case: "doubted", word: "doubted", meaning: "broken", border: true, door: "open to decide" },
     { case: "document nowhere", word: "document nowhere", meaning: "broken", border: true, door: "open to see" },
     { case: "your move", word: "your move", meaning: "yours", border: true, door: "Decide" },
-    { case: "loop open", word: "loop open · a session reads it 11 Sep", meaning: "quiet", border: false, door: "open ▸" },
-    { case: "loop open, owner only", word: "loop open · you read it 11 Sep", meaning: "quiet", border: false, door: "open ▸" },
+    { case: "loop open", word: "loop open · a session reads it 11 Sep", meaning: "quiet", border: false, door: null },
+    { case: "loop open, owner only", word: "loop open · you read it 11 Sep", meaning: "quiet", border: false, door: null },
     { case: "signal for you to read", word: "signal for you to read", meaning: "yours", border: true, door: "Read" },
-    { case: "a session is reading it", word: "loop open · a session reads it now · beta", meaning: "live", border: true, door: "open ▸" },
-    { case: "loop closed", word: "loop closed · read 09:30, delivered", meaning: "proven", border: false, door: "open ▸" },
+    { case: "a session is reading it", word: "loop open · a session reads it now · beta", meaning: "live", border: true, door: null },
+    { case: "loop closed", word: "loop closed · read 09:30, delivered", meaning: "proven", border: false, door: null },
     { case: "not now", word: "not now", meaning: "quiet", border: false, door: "open ▸" },
   ];
 
@@ -921,10 +923,16 @@ describe("the colour language", () => {
       expect(card.dataset["meaning"]).toBe(expected.meaning);
       // The border takes the state's colour only for live, asking you and broken.
       expect(["live", "yours", "broken"].includes(expected.meaning)).toBe(expected.border);
-      // The one door the state allows, bottom-right — or what opening gives.
-      const door = within(state).queryByRole("button", { name: expected.door });
-      if (door) expect(door).toBeInTheDocument();
-      else expect(within(state).getByText(expected.door)).toBeInTheDocument();
+      // The one door the state allows, bottom-right — or what opening gives,
+      // or nothing at all where the loop line is the whole sentence.
+      if (expected.door === null) {
+        expect(state.querySelector(".btn")).toBeNull();
+        expect(state.querySelector(".hint")).toBeNull();
+      } else {
+        const door = within(state).queryByRole("button", { name: expected.door });
+        if (door) expect(door).toBeInTheDocument();
+        else expect(within(state).getByText(expected.door)).toBeInTheDocument();
+      }
     });
   });
 
@@ -971,6 +979,13 @@ describe("the colour language", () => {
 
     await userEvent.click(screen.getByRole("button", { name: /^Your move/ }));
     expect(upNextOrder()).toEqual([253, 241]);
+    // A filtered column counts what it shows and names no empty group.
+    const upNext = document.querySelector('[data-column="Up next"]') as HTMLElement;
+    expect(within(upNext).getByRole("heading", { name: "Up next" }).nextElementSibling).toHaveTextContent("2");
+    expect(upNext.querySelector(".more-row")).toBeNull();
+    const backlog = document.querySelector('[data-column="Backlog"]') as HTMLElement;
+    expect(backlog.querySelectorAll(".group-h")).toHaveLength(0);
+    expect(backlog.querySelector(".more-row")).toBeNull();
     const breakdown = screen.getByRole("group", { name: "What Your move counts" });
     expect(within(breakdown).getAllByRole("button").map((el) => el.textContent)).toEqual(["1 lane asking", "1 decision", "clear"]);
 

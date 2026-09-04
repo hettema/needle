@@ -1,6 +1,6 @@
 # The colour language
 
-**Status:** PENDING
+**Status:** DONE
 **Written:** 2026-09-04, from the owner's reading of the served board after cards #9, #16 and #17 landed: "I have literally no idea what all those pills mean and do. Colours should mean something." The proposal was drawn as a design canvas over today's feature set, revised three times on his notes, and signed the same evening. The comp is `docs/design/2026-09-04-the-colour-language/` (six artboards and their layout; the same canvas is at https://claude.ai/code/artifact/d1bb4c0b-72c0-4dd7-8d45-7e8dcd8da62a).
 **Effort gate:** high — the comp settles every visual decision; the judgment is in holding one rule across every surface without exception, and in a page test that proves it. No new feature; every element in the comp exists on the board today.
 **Sequencing:** independent of #20 (identity and the record) and of plan 10; touches only `frontend/` and the assemble step that names states. Shares the page with nothing running.
@@ -53,6 +53,81 @@ Done means: a test renders one card per state and asserts, for each, the state w
 
 ## Rulings
 Recorded as the build makes them, each with the alternative rejected. The design rulings made on the canvas are in the comp's notes and in this plan's rule table.
+
+1. **A surface must name its meaning before it can be painted.** `tokens.css`
+   gains one block — `[data-meaning="yours|broken|live|proven|quiet"]` — that
+   sets `--meaning` and `--meaning-2`, and nothing else in the frontend may
+   name `--attn`, `--wrong`, `--accent` or `--landed`
+   (`tests/ratchets/test_the_colour_language.py`). Rejected: a ratchet that
+   greps for hard-coded colours, which is what the plan's item 6 asked for —
+   the tokens were *already* the only colours on the board and it still grew a
+   count coloured for its size, a category coloured for its kind, buttons in
+   accent and a whole column in amber. Greppng for hex is the wrong altitude:
+   the intent is that colour means one of five things, so the mechanism has to
+   make claiming a meaning the only way to reach one. This ratchets the intent
+   and lets any better painting method ship.
+2. **The board names a card's state; the page renders it.** `CardState`
+   (word, meaning, detail, loop, door, hint) is named once by
+   `board.assemble.state_of`, whose branch order *is* the rule's precedence:
+   broken before yours, yours before live, the loop before the queue, the
+   queue before the quiet. Rejected: a page-side map from lane state to
+   colour — that is a second judgment about a card, and the two would drift
+   the first time a lane grew a state. It also let five surfaces that had been
+   saying the same thing in different places (the readiness pill, the lane
+   band, the doubt band, the clash band, the collapsed doors) collapse into
+   one line.
+3. **The head's counts are claims, not fields.** `Attention` stops being
+   fifteen integers and becomes three lists of `ClaimCount`, each from the
+   same `claims_of` that the cards carry — so the number beside "Broken" and
+   the set of cards a click leaves on the board cannot disagree. Rejected:
+   keeping the integers and filtering by a page-side predicate per pill, which
+   is exactly how a count and its cards drift apart.
+4. **A count of zero is quiet, whatever the word.** "Live 0" renders grey and
+   is not clickable. Rejected: hiding a word whose count is zero — the head
+   would then change shape as work moves, and "nothing is broken" is worth
+   saying.
+5. **The head is one line and stays one line, so the fold is gone.** Plan 06's
+   ruling 12 folded the head to one line while a column was scrolled; the head
+   *is* one line now, so the fold folded nothing. `HeadFrame.folded`, the
+   scroll tracking in `Board`, `ColumnBox.onScroll` and the vitest fold
+   scenario are removed, and `tools/scroll_check.py` now asserts the head does
+   not move at all. Two ways to do one thing is failed alignment; this is the
+   consolidation.
+6. **The collapsed door is one word.** The comp's collapsed door reads
+   "Start"; the backend's label is "Start · fable on alpha". At a column's
+   width the long label pushed the state word to `free to sta…` — seen on the
+   served board, not in jsdom. The face door is "Start" with the placement in
+   its reason and on the open face. The Plan door's label became "Create plan"
+   in `doors_for` itself, so both faces say the same thing rather than the
+   collapsed face relabelling what the open face calls something else.
+7. **A card carrying a loop shows no hint beside it.** The comp puts "open ▸"
+   at the right of a shipped card; at 288 px that truncated the loop line it
+   sits beside (`loop open · you read i…`). Every card opens on a click, so
+   the hint said nothing the gesture did not — dropped for loop states only.
+8. **A filtered column counts and folds what it is showing.** The first build
+   filtered the cards but left `count` and the group headings from the whole
+   board, so a filtered Backlog read "9" over an empty column and offered
+   "+ 9 more". Empty groups are dropped and the count is recomputed.
+9. **The gesture for planning several suggestions together waits for the
+   hand.** The `+` beside the Plan door would be a second door on a card whose
+   anatomy allows one; it appears on hover or focus, and once a selection
+   exists every suggestion card shows its checkbox as before. Rejected:
+   dropping the gesture (it is plan 06, item 5, shipped) and keeping it always
+   visible (it breaks the one-door reading the comp is built on).
+10. **The comp's example card titles were replaced with synthetic ones.** Six
+    of them were real Hello Revenue titles and
+    `tests/ratchets/test_the_fixture_project_is_synthetic.py` refused the
+    tree. Every design decision is unchanged; only the sample text moved to
+    Harbourmaster's vocabulary. A signed comp is signed for its decisions, and
+    a real project's titles stay in that project's repository.
+11. **The page test reads the rule back from the backend, not from a copy of
+    it.** `tools/board_fixture.py` grows `language_cases()`: one `CardSummary`
+    per state, produced by the real `state_of`, written into
+    `frontend/tests/fixture.json` and held current by the existing ratchet.
+    The page test renders each and asserts the word, the meaning, the border
+    and the door. Rejected: a hand-typed table in the page test — it would
+    pass while the board said something else, which is the failure mode the
+    plan's item 6 exists to prevent.
 
 ## Estimate
 Execution clock: one lane-day. Gate clock: the owner's day of use.

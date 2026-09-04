@@ -266,11 +266,16 @@ export function Board({ slug, store, projects, onSwitch }: { slug: string; store
   // Clicking a word again clears it — the whole board is one click away.
   const attention = board.attention;
   const admitted = filter ? claimsOf(attention, filter) : null;
+  // A filtered column counts and folds what it is actually showing: a group
+  // with nothing left in it names nothing, and "+ N more" never promises
+  // cards the filter has already taken away.
   const shown = admitted
-    ? board.columns.map((column) => ({
-        ...column,
-        groups: column.groups.map((group) => ({ ...group, cards: group.cards.filter((c) => keeps(c, admitted)) })),
-      }))
+    ? board.columns.map((column) => {
+        const groups = column.groups
+          .map((group) => ({ ...group, cards: group.cards.filter((c) => keeps(c, admitted)) }))
+          .filter((group) => group.cards.length > 0);
+        return { ...column, groups, count: groups.reduce((n, g) => n + g.cards.length, 0) };
+      })
     : board.columns;
   // Clicking the word that is already filtering clears it, narrowed or not:
   // the whole board is always one click away.

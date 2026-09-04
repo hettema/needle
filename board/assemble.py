@@ -235,13 +235,16 @@ def _state(
     door: FaceDoor | None = None,
     hint: str | None = None,
 ) -> CardState:
+    # A card carrying a loop has said everything on its line already; an
+    # "open ▸" beside it is noise, and at a column's width it is noise that
+    # truncates the loop itself. Every card opens on a click regardless.
     return CardState(
         word=word,
         meaning=meaning,
         detail=detail,
         loop=loop,
         door=door,
-        hint=None if door is not None else (hint or OPEN_TO_SEE),
+        hint=None if door is not None or loop is not None else (hint or OPEN_TO_SEE),
     )
 
 
@@ -265,7 +268,6 @@ def _loop_state(
             f"loop closed{read}",
             Meaning.PROVEN,
             loop=Loop(state=LoopState.CLOSED, owner_only=owner_only),
-            hint="open ▸",
         )
     if signal is None:
         return _state("no signal named", Meaning.QUIET, detail=signal_note)
@@ -276,7 +278,6 @@ def _loop_state(
             Meaning.LIVE,
             detail=_signal_line(signal),
             loop=open_loop,
-            hint="open ▸",
         )
     if signal_asks_owner(card, signal, last, now):
         evidence = asked_evidence(signal, last)
@@ -306,7 +307,7 @@ def _loop_state(
         if past_due(signal, now)
         else f"loop open · {who} {_due(signal)}"
     )
-    return _state(word, Meaning.QUIET, detail=_signal_line(signal), loop=open_loop, hint="open ▸")
+    return _state(word, Meaning.QUIET, detail=_signal_line(signal), loop=open_loop)
 
 
 def state_of(
@@ -428,10 +429,18 @@ def state_of(
     if card.place.column in STARTABLE_COLUMNS and card.folded_into is None:
         readiness = doors.readiness
         if readiness.state == StartState.FREE:
+            # The collapsed door is one word: at a column's width, "Start ·
+            # fable on alpha" crowds the state word off the line. Where it
+            # would run is in the door's own reason, and on the open face.
             return _state(
                 "free to start",
                 Meaning.PROVEN,
-                door=_door(FaceDoorName.START, doors.start.label, doors.start.why, primary=True),
+                door=_door(
+                    FaceDoorName.START,
+                    "Start",
+                    f"{doors.start.label} — {doors.start.why}",
+                    primary=True,
+                ),
             )
         if readiness.state == StartState.COLLIDES:
             files = len(readiness.files)
