@@ -58,7 +58,23 @@ back where it came from when nothing folded), and moves on to Done when the
 signal its WATCH row names arrives. Every door on the card — Start, Watch,
 Answer, Discuss, Look, Resume, Stop — opens through the runtime, proves its
 effect, and fails loudly by name. Every machine move is an audit row with its
-reason in one sentence, in the card's history.
+reason in one sentence, in the card's history. The head carries one door
+about no card yet: **Idea** opens a conversation in the project's checkout,
+with the line typed beside it as its opening prompt, listed on the attention
+line as in discussion while it lives and never hands on a tree; the corpus
+is the only way in, so what it writes into `docs/` becomes a card whose
+history says it was born from that conversation.
+
+Lanes that run together know about each other. Every lane's brief lists the
+other live lanes with what each is touching; the board re-reads every live
+worktree's actual edits on every read and marks two lanes in one file as
+colliding on both cards and the attention line; the project's watercooler —
+one line per act, kept in the board's store, never in a tree — is what a
+lane reads at its start and before its fold and writes to when it touches a
+seam another lane depends on, and its last line sits on every live card; a
+fold that lands over another live lane's edits says so on both cards. Start
+itself is the owner's click and nothing else's: a ratchet holds that only
+the doors and his terminal reach the runtime's start, never a loop.
 
 Sessions push; the board never polls a session. The hook in
 `hooks/needle_hook.py` is registered in each project's `.claude/settings.json`
@@ -75,6 +91,7 @@ uv run needle close hellorevenue 253 --delivered "…" \
     --review docs/reviews/2026-09-10-the-work.md      # rows and the move, one act
 uv run needle fold [--main]                          # from the lane: fast-forward push to origin/develop, trunk levelled
 uv run needle start-card hellorevenue 253            # Start, through the running board (what a discussion's "go" runs)
+uv run needle watercooler hellorevenue 253 "…"       # one line to every other lane; without a card and a line, reads it
 uv run needle sync | signals | lanes hellorevenue    # the loops, by hand
 ```
 
