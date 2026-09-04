@@ -11,6 +11,7 @@ import { CardBody } from "./CardView";
 import { ColumnBlock, FOLD_AT } from "./ColumnBlock";
 import { LiftContext, type LiftController } from "./LiftContext";
 import { ProjectContext } from "./ProjectContext";
+import { Triage } from "./Triage";
 import { samePlace, stepTarget, targetInGroup, type LensKind, type Lift, type StepKey } from "./dnd";
 import { ago } from "./time";
 
@@ -20,6 +21,7 @@ const LENSES: readonly { value: LensKind; label: string }[] = [
   { value: "rank", label: "Rank" },
   { value: "age", label: "Age" },
   { value: "gate", label: "Gate" },
+  { value: "triage", label: "Triage" },
 ];
 
 function cardFromHash(): number | null {
@@ -227,6 +229,7 @@ export function Board({ slug, store, projects, onSwitch }: { slug: string; store
         {board.attention.signals_asking > 0 ? <Att n={board.attention.signals_asking} label={board.attention.signals_asking === 1 ? "shipped card waits on your reading" : "shipped cards wait on your reading"} tone="you" onClick={() => setAsksOpen((v) => !v)} on={asksOpen} /> : null}
         {board.attention.signals_due > 0 ? <Att n={board.attention.signals_due} label={board.attention.signals_due === 1 ? "signal past due" : "signals past due"} tone="you" /> : null}
         {board.attention.doubted > 0 ? <Att n={board.attention.doubted} label={board.attention.doubted === 1 ? "status doubted — its evidence is gone" : "statuses doubted — their evidence is gone"} tone="bad" /> : null}
+        {board.attention.verdicts_unread > 0 ? <Att n={board.attention.verdicts_unread} label={board.attention.verdicts_unread === 1 ? "card carries a verdict you have not read" : "cards carry a verdict you have not read"} tone="you" onClick={() => setLens(lens === "triage" ? "rank" : "triage")} on={lens === "triage"} /> : null}
         <Att n={board.attention.arrived_today} label="arrived today" />
         {board.attention.documents_gone > 0 ? <Att n={board.attention.documents_gone} label={board.attention.documents_gone === 1 ? "card cites a document that is nowhere" : "cards cite documents that are nowhere"} tone="bad" /> : null}
         {board.attention.documents_without_card > 0 ? <Att n={board.attention.documents_without_card} label="documents have no card" tone="bad" /> : null}
@@ -248,6 +251,9 @@ export function Board({ slug, store, projects, onSwitch }: { slug: string; store
           <List items={board.documents_without_card.map((d) => `${d.path} — ${d.title}`)} />
         </Notice>
       ) : null}
+      {lens === "triage" ? (
+        <Triage slug={slug} verdicts={board.verdicts} onRuled={() => store.refresh()} />
+      ) : (
       <DndContext sensors={sensors} collisionDetection={collision} onDragStart={onDragStart} onDragMove={onDragMove} onDragEnd={onDragEnd} onDragCancel={() => controller.cancel()}>
         <BoardStrip>
           {board.columns.map((column, index) =>
@@ -294,6 +300,7 @@ export function Board({ slug, store, projects, onSwitch }: { slug: string; store
           ) : null}
         </DragOverlay>
       </DndContext>
+      )}
     </LiftContext.Provider>
     </ProjectContext.Provider>
   );

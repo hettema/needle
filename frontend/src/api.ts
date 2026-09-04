@@ -4,6 +4,7 @@ import type { BoardState, CardDetail, ProjectFile } from "./types/board";
 import type { Move, Place } from "./types/card";
 import type { DoorResult } from "./types/lane";
 import type { Project } from "./types/project";
+import type { EvidenceClass, VerdictsRuled } from "./types/verdict";
 
 export class ApiError extends Error {
   readonly status: number;
@@ -62,13 +63,22 @@ export function moveCard(slug: string, number: number, to: Place): Promise<Board
 }
 
 /** The doors a card offers; each answers with what it did, or fails by name. */
-export type DoorName = "start" | "answer" | "watch" | "look" | "discuss" | "resume" | "stop" | "signal";
+export type DoorName = "start" | "answer" | "watch" | "look" | "discuss" | "resume" | "stop" | "signal" | "accept" | "overturn";
 
 export function openDoor(slug: string, number: number, door: DoorName, body: object = {}): Promise<DoorResult> {
   return call<DoorResult>(`/api/projects/${encodeURIComponent(slug)}/cards/${number}/${door}`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
+  });
+}
+
+/** Accept every unread verdict in one class, each as its own act; the answer counts and names refusals. */
+export function acceptClass(slug: string, evidenceClass: EvidenceClass): Promise<VerdictsRuled> {
+  return call<VerdictsRuled>(`/api/projects/${encodeURIComponent(slug)}/triage/accept`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ evidence_class: evidenceClass }),
   });
 }
 

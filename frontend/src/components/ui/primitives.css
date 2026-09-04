@@ -89,6 +89,38 @@ button.att:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px
 .ask-row .ask-due { font-family: var(--mono); font-size: 10px; color: var(--ink-3); white-space: nowrap; }
 .ask-row .ask-acts { display: flex; gap: 6px; }
 
+/* ── the triage lens ───────────────────────────────────────────────── */
+
+.triage {
+  margin: 16px 20px 30px; border: 1px solid var(--attn); border-radius: var(--r-card);
+  background: var(--surface); overflow: hidden;
+}
+.triage-h {
+  font-family: var(--mono); font-size: 9.5px; letter-spacing: .12em; text-transform: uppercase;
+  color: var(--attn); background: var(--attn-2); padding: 7px 13px;
+  border-bottom: 1px solid var(--attn);
+}
+.triage-group + .triage-group { border-top: 1px solid var(--line); }
+.triage-gh {
+  display: flex; align-items: center; gap: 10px;
+  padding: 9px 13px; background: var(--surface-2); border-bottom: 1px solid var(--line);
+}
+.triage-gh .tg-name { font-size: 12.5px; font-weight: 700; letter-spacing: .02em; color: var(--ink); }
+.triage-gh .tg-count { font-family: var(--mono); font-size: 10.5px; color: var(--ink-3); }
+.triage-gh .btn { margin-left: auto; }
+.triage-row {
+  display: grid; grid-template-columns: 52px minmax(160px, 1fr) 118px minmax(260px, 2.4fr) 132px auto;
+  gap: 12px; align-items: center; padding: 8px 13px; font-size: 12.5px; line-height: 1.45;
+}
+.triage-row + .triage-row { border-top: 1px dotted var(--line); }
+.triage-row .tr-title { font-weight: 600; color: var(--ink); }
+.triage-row .tr-col { font-family: var(--mono); font-size: 10px; color: var(--ink-3); white-space: nowrap; }
+.triage-row .tr-evidence { color: var(--ink-2); }
+.triage-row .tr-to { font-family: var(--mono); font-size: 10.5px; color: var(--accent); white-space: nowrap; }
+.triage-row .tr-acts { display: flex; gap: 6px; }
+.triage-row .tr-word { grid-column: 1 / -1; }
+.triage-row.overturning { background: var(--attn-2); }
+
 /* ── the board ─────────────────────────────────────────────────────── */
 
 .board {

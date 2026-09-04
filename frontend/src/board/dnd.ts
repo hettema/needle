@@ -133,13 +133,13 @@ export function groupSlots(
   return { slots, rankNext: rank };
 }
 
-export type LensKind = "rank" | "age" | "gate";
+export type LensKind = "rank" | "age" | "gate" | "triage";
 
 const GATE_ORDER: Record<string, number> = { xhigh: 0, high: 1, medium: 2, low: 3 };
 
 /** A lens, never a write: sorting changes what you see and never the stored order. */
 export function throughLens(cards: readonly CardSummary[], lens: LensKind): CardSummary[] {
-  if (lens === "rank") return [...cards];
+  if (lens === "rank" || lens === "triage") return [...cards];
   const sorted = [...cards];
   if (lens === "age") sorted.sort((a, b) => (a.age_date < b.age_date ? -1 : a.age_date > b.age_date ? 1 : 0));
   if (lens === "gate") sorted.sort((a, b) => (GATE_ORDER[a.gate ?? ""] ?? 9) - (GATE_ORDER[b.gate ?? ""] ?? 9));

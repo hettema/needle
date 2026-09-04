@@ -7,6 +7,7 @@ import type { BoardState, CardDetail } from "../src/types/board";
 import type { Place } from "../src/types/card";
 import type { DoorResult, Lane } from "../src/types/lane";
 import type { Project } from "../src/types/project";
+import type { EvidenceClass, VerdictLine, VerdictsRuled } from "../src/types/verdict";
 
 const api = vi.hoisted(() => ({
   getBoard: vi.fn<(slug: string) => Promise<BoardState>>(),
@@ -15,6 +16,7 @@ const api = vi.hoisted(() => ({
   getFile: vi.fn(),
   getProjects: vi.fn<() => Promise<Project[]>>(),
   openDoor: vi.fn<(slug: string, number: number, door: DoorName, body?: object) => Promise<DoorResult>>(),
+  acceptClass: vi.fn<(slug: string, evidenceClass: EvidenceClass) => Promise<VerdictsRuled>>(),
   streamUrl: (slug: string) => `/api/projects/${slug}/stream`,
 }));
 
@@ -41,6 +43,7 @@ beforeEach(() => {
   api.getCard.mockReset().mockImplementation((_slug: string, number: number) => Promise.resolve(detail(number)));
   api.moveCard.mockReset();
   api.openDoor.mockReset();
+  api.acceptClass.mockReset();
   window.history.replaceState(null, "", "/");
 });
 
@@ -489,5 +492,60 @@ describe("the board that cannot be read", () => {
     render(<App />);
     expect(await screen.findByRole("alert")).toHaveTextContent("The board could not be read: The board could not be reached: fetch failed");
     act(() => undefined);
+  });
+});
+
+describe("the triage lens", () => {
+  const verdicts: VerdictLine[] = [
+    { number: 228, title: "The skipper is told what the office decided", place: { column: "Up next", group: null, position: 2 }, verdict: { evidence_class: "superseded", evidence: "card #263 carries the same intent as a plan", to: "Not now" } },
+    { number: 237, title: "The fuel pontoon takes cards, live", place: { column: "Up next", group: null, position: 3 }, verdict: { evidence_class: "built under another name", evidence: "docs/plans/done/2026-09-03-the-fuel-pontoon.md delivered it", to: "Done" } },
+    { number: 241, title: "Berths are billed by the metre", place: { column: "Up next", group: null, position: 1 }, verdict: { evidence_class: "live and open", evidence: "waits on the four Search rulings (#144)", to: null } },
+  ];
+
+  function withVerdicts() {
+    const b = board();
+    b.verdicts = verdicts;
+    b.attention = { ...b.attention, verdicts_unread: verdicts.length };
+    return b;
+  }
+
+  it("is reached from the attention line, lists every unread verdict grouped by class, and rules through the doors", async () => {
+    api.getBoard.mockResolvedValue(withVerdicts());
+    api.openDoor.mockResolvedValue({ door: "accept", said: "#228 moved to Not now: superseded — card #263 carries the same intent as a plan" });
+    api.acceptClass.mockResolvedValue({ evidence_class: "live and open", accepted: 1, refused: [] });
+    await renderBoard();
+    expect(screen.queryByRole("region", { name: /carry a verdict you have not read/ })).not.toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "3 cards carry a verdict you have not read" }));
+    const lens = screen.getByRole("region", { name: "3 cards carry a verdict you have not read" });
+    expect(screen.queryByRole("heading", { name: "Backlog" })).not.toBeInTheDocument();
+    const groups = Array.from(lens.querySelectorAll(".tg-name")).map((el) => el.textContent);
+    expect(groups).toEqual(["built under another name", "superseded", "live and open"]);
+    const superseded = within(lens).getByRole("list", { name: "superseded" });
+    const row = within(superseded).getByRole("listitem");
+    expect(row).toHaveTextContent("#228");
+    expect(row).toHaveTextContent("card #263 carries the same intent as a plan");
+    expect(row).toHaveTextContent("→ Not now");
+    expect(within(within(lens).getByRole("list", { name: "live and open" })).getByRole("listitem")).toHaveTextContent("stays");
+
+    await userEvent.click(within(row).getByRole("button", { name: "Accept" }));
+    await waitFor(() => expect(api.openDoor).toHaveBeenCalledWith(SLUG, 228, "accept", {}));
+    expect(await screen.findByText("#228 moved to Not now: superseded — card #263 carries the same intent as a plan")).toBeInTheDocument();
+    await waitFor(() => expect(api.getBoard.mock.calls.length).toBeGreaterThan(1));
+
+    const open = within(lens).getByRole("list", { name: "live and open" }).closest(".triage-group") as HTMLElement;
+    await userEvent.click(within(open).getByRole("button", { name: "Accept all in this class" }));
+    await waitFor(() => expect(api.acceptClass).toHaveBeenCalledWith(SLUG, "live and open"));
+    expect(await screen.findByText('Accepted 1 in "live and open"')).toBeInTheDocument();
+
+    const built = within(within(lens).getByRole("list", { name: "built under another name" })).getByRole("listitem");
+    api.openDoor.mockResolvedValue({ door: "overturn", said: "#237 stays in Up next; your word: that plan built the pump" });
+    await userEvent.click(within(built).getByRole("button", { name: "Overturn" }));
+    const word = within(built).getByRole("textbox", { name: "Overturn" });
+    await userEvent.type(word, "that plan built the pump{enter}");
+    await waitFor(() => expect(api.openDoor).toHaveBeenCalledWith(SLUG, 237, "overturn", { text: "that plan built the pump" }));
+    expect(await screen.findByText("#237 stays in Up next; your word: that plan built the pump")).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole("button", { name: "Rank" }));
+    expect(screen.getByRole("heading", { name: "Backlog" })).toBeInTheDocument();
   });
 });

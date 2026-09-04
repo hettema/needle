@@ -658,8 +658,8 @@ export function Ask({ children }: { children: ReactNode }) {
   return <div className="ask-block">{children}</div>;
 }
 
-/** One sentence typed on the card resumes the lane with it. */
-export function AnswerBox({ onSend, disabled, hint }: { onSend: (text: string) => void; disabled?: boolean; hint: string }) {
+/** One sentence typed on the card resumes the lane with it — or, labelled Overturn, is the owner's word on a verdict. */
+export function AnswerBox({ onSend, disabled, hint, label = "Answer" }: { onSend: (text: string) => void; disabled?: boolean; hint: string; label?: string }) {
   return (
     <form
       className="answer"
@@ -672,9 +672,9 @@ export function AnswerBox({ onSend, disabled, hint }: { onSend: (text: string) =
         if (field) field.value = "";
       }}
     >
-      <input name="answer" type="text" aria-label="Answer" title={hint} disabled={disabled ?? false} autoComplete="off" />
+      <input name="answer" type="text" aria-label={label} title={hint} disabled={disabled ?? false} autoComplete="off" />
       <button type="submit" className="btn" disabled={disabled ?? false}>
-        Answer
+        {label}
       </button>
     </form>
   );
@@ -704,6 +704,78 @@ export function MoveTo<T extends string>({
         ))}
       </select>
     </span>
+  );
+}
+
+// ── the triage lens ───────────────────────────────────────────────────
+
+/** Every card carrying an unread verdict, grouped by class (plan 05, item 2). */
+export function TriageList({ children, title }: { children: ReactNode; title: string }) {
+  return (
+    <section className="triage" aria-label={title}>
+      <div className="triage-h">{title}</div>
+      {children}
+    </section>
+  );
+}
+
+export function TriageGroup({ name, count, onAcceptAll, disabled, children }: { name: string; count: number; onAcceptAll: () => void; disabled: boolean; children: ReactNode }) {
+  return (
+    <div className="triage-group">
+      <div className="triage-gh">
+        <span className="tg-name">{name}</span>
+        <span className="tg-count">{count}</span>
+        <button type="button" className="btn" onClick={onAcceptAll} disabled={disabled}>
+          Accept all in this class
+        </button>
+      </div>
+      <div role="list" aria-label={name}>
+        {children}
+      </div>
+    </div>
+  );
+}
+
+export function TriageRow({
+  number,
+  title,
+  column,
+  evidence,
+  landing,
+  onAccept,
+  onOverturn,
+  overturning,
+  disabled,
+  children,
+}: {
+  number: number;
+  title: string;
+  column: string;
+  evidence: string;
+  landing: string;
+  onAccept: () => void;
+  onOverturn: () => void;
+  overturning: boolean;
+  disabled: boolean;
+  children?: ReactNode;
+}) {
+  return (
+    <div className={`triage-row${overturning ? " overturning" : ""}`} role="listitem">
+      <span className="cid">#{number}</span>
+      <span className="tr-title">{title}</span>
+      <span className="tr-col">{column}</span>
+      <span className="tr-evidence">{evidence}</span>
+      <span className="tr-to">{landing}</span>
+      <span className="tr-acts">
+        <button type="button" className="btn" onClick={onAccept} disabled={disabled}>
+          Accept
+        </button>
+        <button type="button" className="btn ghost" onClick={onOverturn} disabled={disabled} aria-pressed={overturning}>
+          Overturn
+        </button>
+      </span>
+      {children ? <div className="tr-word">{children}</div> : null}
+    </div>
   );
 }
 
