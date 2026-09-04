@@ -87,6 +87,37 @@ Three of his moves per defect:
 - **Whether a defect he filed himself is eligible**, or only ones a session
   found with evidence.
 
+## The bar, tried on the nineteen defects Hello Revenue holds today
+
+The owner's test, the same evening: "if there is no ambiguity in the 19, I
+think we might have our answer." All nineteen documents on Hello Revenue's
+defects rail read in full (cards #128, #129, #341, #355, #361, #377, #379,
+#383, #384, #385, #386, #391, #392, #393, #394, #395, #397, #399, #402).
+
+| Verdict | Cards | What they have in common |
+|---|---|---|
+| **A straight fix. Needs nobody.** | #361, #377, #383, #384, #385, #386, #391, #392, #393, #394, #397, #399 — twelve | The intent is written (a CLAUDE.md rule, a shipped plan's intent, a validator that already states the bar). The document names the fix, usually with the test that proves it. Where a judgment remains it is technical and the document already ranks the candidates. |
+| **Mine, but a plan's worth, not a fix.** | #379, #395, #402 — three | No question for the owner. The fix touches a contract many call sites share, or adds a seat, or has an unproven cause the document says to confirm first. A session writes the plan; the plan only reaches him if it finds a call that is his. |
+| **Carries a decision that is his.** | #128, #129, #341, #355 — four | Each is a missing sentence of intent, not a bug: should a wrong-looking ad account get a confirm moment (a product surface); should a broken checker stop the build (risk); should a duplicate-copy floor bite harder (quality against cost); should chat grow a clickable budget door (a new surface). Two of the four are half straight fix (#128's server-side check, #355's second item once its upstream lands). |
+
+Two findings that matter more than the count:
+
+- **The filing sessions already mark it.** The four that are his say so in
+  their own words — "owner call", "intent question for the owner", "a
+  calibration decision the owner takes on evidence", "comp-first surface
+  change". The twelve say "one-way-to-do-each-thing tidy", "one route test",
+  "the fix is two one-line edits". Nobody had to judge them afterwards; the
+  evidence was written at filing time by the session holding it. The head
+  field in item 1 is that sentence, made machine-readable.
+- **Several straight fixes were deferred for a ritual, not a doubt.** #391 and
+  #392 "ride the next real edit" because a prompt change drags a walk record
+  and a battery replay. That is human labour economics reasoning in a session
+  whose labour is free; under a standing ruling the ritual is simply paid.
+
+And the owner's framing holds: every "ambiguous" defect here is a place where
+intent is unwritten. Four one-line rulings from him turn the four into
+straight fixes, and the class they belong to stays autonomous afterwards.
+
 ## A precondition worth naming
 
 Eligibility would be read off the document's head, so the head has to be there.
