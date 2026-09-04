@@ -14,10 +14,18 @@ export interface Collision {
   files: string[];
 }
 
+export interface Conversation {
+  short_id: string;
+  slot: string;
+  card_number: number | null;
+  what: string;
+  started_at: string;
+}
+
 export interface Discussion {
   id: number;
   project: string;
-  card_number: number;
+  card_number: number | null;
   session_id: string;
   slot: string;
   started_at: string;
@@ -67,6 +75,9 @@ export interface Lane {
   folded: boolean;
   trunk_synced: boolean;
   main_synced: boolean;
+  edits: string[];
+  declared: string[];
+  colliding: Collision | null;
 }
 
 export interface LaneRecord {
@@ -88,6 +99,7 @@ export interface LaneRecord {
 export interface LaneSnapshot {
   lanes: Record<string, Lane>;
   doors: Record<string, Doors>;
+  conversations: Conversation[];
   read_at: string;
 }
 

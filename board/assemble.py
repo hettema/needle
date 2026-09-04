@@ -32,11 +32,12 @@ from domain.corpus import CorpusIndex, CorpusSummary
 from domain.document import Document, DocumentKind, DocumentRef, DocumentState
 from domain.evidence import EvidenceState
 from domain.gate import Gate
-from domain.lane import Doors, Lane, LaneSnapshot, LaneState
+from domain.lane import HANDS_ON, Doors, Lane, LaneSnapshot, LaneState
 from domain.project import Project
 from domain.row import ROW_HALF, Row, RowHalf, RowKind
 from domain.signal import Reading, Signal, SignalKind
 from domain.verdict import Verdict, VerdictLine
+from domain.watercooler import WatercoolerLine
 
 NEW_FOR = timedelta(days=1)
 
@@ -178,6 +179,7 @@ def summarize(
         place=card.place,
         lane_state=lane.state if lane is not None else LaneState.NONE,
         lane_sentence=lane.sentence if lane is not None and lane.sentence else None,
+        colliding=lane.colliding if lane is not None and lane.state in HANDS_ON else None,
         standing=standing_for(card, placement, lane, last, read=read),
     )
 
@@ -220,11 +222,14 @@ def assemble_board(
     trunk: TrunkState | None = None,
     machine: MachineState | None = None,
     placements: dict[int, AuditEntry] | None = None,
+    watercooler: list[WatercoolerLine] | None = None,
 ) -> BoardState:
     """`snapshot`, `readings`, `trunk` and `machine` are what the loop has
     read; before its first read they are absent and the board says so.
-    `placements` is each card's placing audit row, what a read re-tests."""
+    `placements` is each card's placing audit row, what a read re-tests;
+    `watercooler` the project's lines, newest last."""
     readings = readings or {}
+    watercooler = watercooler or []
     placements = placements or {}
     trunk = trunk or TrunkState(level=None, behind=0, note=None, read_at=None)
     machine = machine or MachineState(missing=[])
@@ -272,9 +277,12 @@ def assemble_board(
         if signal_asks_owner(c, signals[n], readings.get(n), now) and signals[n] is not None
     ]
     verdicts = verdict_lines(cards)
+    conversations = snapshot.conversations if snapshot is not None else []
     attention = Attention(
         asking_you=count(Column.DECISION_MOMENT) + asking_lanes + len(asks),
         in_flight=count(Column.EXECUTING),
+        colliding=sum(1 for s in summaries.values() if s.colliding is not None),
+        in_discussion=len(conversations),
         lanes_ended=sum(
             1
             for n, lane in lanes.items()
@@ -304,6 +312,8 @@ def assemble_board(
         documents_without_card=without_card,
         asks=asks,
         verdicts=verdicts,
+        conversations=conversations,
+        watercooler=watercooler,
     )
 
 
@@ -317,6 +327,7 @@ def assemble_detail(
     doors: Doors,
     readings: list[Reading],
     read: bool = False,
+    watercooler: list[WatercoolerLine] | None = None,
 ) -> CardDetail:
     """`readings` newest first; `read` is whether the loop has read the machine."""
     document = document_of(card, index)
@@ -347,4 +358,5 @@ def assemble_detail(
         readings=readings,
         verdict=verdict,
         verdict_note=verdict_note,
+        watercooler=watercooler or [],
     )

@@ -13,6 +13,7 @@ needle sync [SLUG]                       # level each main checkout with origin/
 needle signals [SLUG]                    # read every due signal now
 needle lanes SLUG                        # every card's lane, as the board reads it
 needle verdicts SLUG [--write]           # the verdicts the board's own facts settle (plan 05)
+needle watercooler SLUG [N "text"]       # read the watercooler, or say one line as #N's lane
 
 Rows are written to the store directly — the one writer — and the running
 board hears the store change; a start goes through the server so the board
@@ -30,12 +31,13 @@ from pathlib import Path
 
 from api.doors import REPO_ROOT, DoorFailed, DoorRefused, Doors
 from api.loops import Loops, project_of_cwd
+from board.brief import watercooler_text
 from board.lane import has_row
 from board.verdicts import CLOSED, VerdictUnreadable, machine_verdict, parse_verdict, render_verdict
 from domain.audit import AuditKind
 from domain.card import Actor
 from domain.column import Column
-from domain.lane import LaneState
+from domain.lane import HANDS_ON, LaneState
 from domain.row import Row, RowKind
 from domain.verdict import EvidenceClass
 from infrastructure import clock
@@ -80,9 +82,29 @@ def hook_command() -> str:
 
 
 def card(args: argparse.Namespace, live: Live, runtime: Runtime, loops: Loops, doors: Doors) -> int:
+    if args.lane:
+        # The riders name the other live lanes, which only a read of the machine knows.
+        loops.reconcile_now()
     detail = live.detail(args.slug, args.number)
     print(
         doors.brief_for_lane(detail, args.slug, overrode=None) if args.lane else _brief(live, args)
+    )
+    return 0
+
+
+def watercooler(
+    args: argparse.Namespace, live: Live, runtime: Runtime, loops: Loops, doors: Doors
+) -> int:
+    """Read the project's watercooler, or say one line on it as a card's lane."""
+    if args.number is None:
+        print(watercooler_text(live.store.watercooler(args.slug)))
+        return 0
+    if args.text is None or not args.text.strip():
+        print('a watercooler line says something: needle watercooler SLUG N "…"', file=sys.stderr)
+        return 1
+    live.say(args.slug, args.number, Actor.SESSION, args.text)
+    print(
+        f"#{args.number} said it; every lane on {args.slug} reads it at start and before its fold"
     )
     return 0
 
@@ -132,15 +154,24 @@ def fold(args: argparse.Namespace, live: Live, runtime: Runtime, loops: Loops, d
     if project is None:
         print(f"{worktree} is in no project on the board", file=sys.stderr)
         return 1
+    from board.lane import card_of_cwd
+
+    number = card_of_cwd(worktree, project.project.path)
+    slug = project.project.slug
+    # A lane re-reads the watercooler before it folds, and is told which live
+    # lane's edits its fold lands over (plan 07, item 2): the machine is read
+    # first so the other lanes' footprints are today's.
+    loops.reconcile_now()
+    print("The watercooler, before the fold:")
+    print(watercooler_text(live.store.watercooler(slug)))
+    over = _folds_over(live, slug, number, runtime.edits(worktree)) if number is not None else []
+    for other, files in over:
+        print(f"this fold lands over #{other}'s edits in {', '.join(files)}")
     folded = runtime.fold(worktree, promote_main=args.main)
     if not folded.pushed:
         print(f"not folded: {folded.words}", file=sys.stderr)
         return 1
     print(f"folded: {folded.words}")
-    from board.lane import card_of_cwd
-
-    number = card_of_cwd(worktree, project.project.path)
-    slug = project.project.slug
     now = clock.now()
     if number is not None and folded.tip:
         record = live.store.lane(slug, number)
@@ -149,6 +180,25 @@ def fold(args: argparse.Namespace, live: Live, runtime: Runtime, loops: Loops, d
                 record.model_copy(update={"tip": folded.tip, "folded_at": record.folded_at or now})
             )
         live.note(slug, number, AuditKind.FOLDED, Actor.SESSION, f"Folded: {folded.words}")
+        for other, files in over:
+            shown = ", ".join(files)
+            live.note(
+                slug,
+                number,
+                AuditKind.FOLDED,
+                Actor.MACHINE,
+                f"Folded over #{other}'s edits in {shown}",
+            )
+            live.note(
+                slug,
+                other,
+                AuditKind.FOLDED,
+                Actor.MACHINE,
+                f"#{number} folded over this lane's edits in {shown}; re-verify them at the fold",
+            )
+            live.say(
+                slug, None, Actor.MACHINE, f"#{number} folded over #{other}'s edits in {shown}"
+            )
     else:
         print("(this worktree is not a card's lane, so no card carries the fold)")
     state = loops.level_project(project)
@@ -174,6 +224,21 @@ def fold(args: argparse.Namespace, live: Live, runtime: Runtime, loops: Loops, d
             print("main not promoted: see above", file=sys.stderr)
             return 1
     return 0
+
+
+def _folds_over(live: Live, slug: str, number: int, mine: set[str]) -> list[tuple[int, list[str]]]:
+    """The other live lanes whose edits this fold lands over, with the files."""
+    project = live.projects.get(slug)
+    if project is None or project.snapshot is None:
+        return []
+    found: list[tuple[int, list[str]]] = []
+    for other, lane in sorted(project.snapshot.lanes.items()):
+        if other == number or lane.state not in HANDS_ON:
+            continue
+        overlap = sorted(mine & set(lane.edits))
+        if overlap:
+            found.append((other, overlap))
+    return found
 
 
 def start_card(args: argparse.Namespace) -> int:
@@ -392,3 +457,11 @@ def register(sub: "argparse._SubParsersAction[argparse.ArgumentParser]") -> None
     p_verdicts.add_argument("slug")
     p_verdicts.add_argument("--write", action="store_true", help="write them as VERDICT rows")
     p_verdicts.set_defaults(run=_with_board(verdicts))
+
+    p_water = sub.add_parser(
+        "watercooler", help="the project's watercooler: read it, or say one line as a card's lane"
+    )
+    p_water.add_argument("slug")
+    p_water.add_argument("number", type=int, nargs="?", help="the card whose lane is speaking")
+    p_water.add_argument("text", nargs="?", help="the line")
+    p_water.set_defaults(run=_with_board(watercooler))

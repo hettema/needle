@@ -19,6 +19,8 @@
     "attention": {
       "asking_you": 4,
       "in_flight": 2,
+      "colliding": 0,
+      "in_discussion": 0,
       "lanes_ended": 0,
       "signals_due": 0,
       "signals_asking": 0,
@@ -74,6 +76,7 @@
                 },
                 "lane_state": "none",
                 "lane_sentence": null,
+                "colliding": null,
                 "standing": {
                   "actor": "import",
                   "evidence": null,
@@ -100,6 +103,7 @@
                 },
                 "lane_state": "none",
                 "lane_sentence": null,
+                "colliding": null,
                 "standing": {
                   "actor": "import",
                   "evidence": null,
@@ -126,6 +130,7 @@
                 },
                 "lane_state": "none",
                 "lane_sentence": null,
+                "colliding": null,
                 "standing": {
                   "actor": "import",
                   "evidence": null,
@@ -152,6 +157,7 @@
                 },
                 "lane_state": "none",
                 "lane_sentence": null,
+                "colliding": null,
                 "standing": {
                   "actor": "import",
                   "evidence": null,
@@ -189,6 +195,7 @@
                 },
                 "lane_state": "none",
                 "lane_sentence": null,
+                "colliding": null,
                 "standing": {
                   "actor": "import",
                   "evidence": null,
@@ -220,6 +227,7 @@
                 },
                 "lane_state": "none",
                 "lane_sentence": null,
+                "colliding": null,
                 "standing": {
                   "actor": "corpus",
                   "evidence": null,
@@ -246,6 +254,7 @@
                 },
                 "lane_state": "none",
                 "lane_sentence": null,
+                "colliding": null,
                 "standing": {
                   "actor": "corpus",
                   "evidence": null,
@@ -272,6 +281,7 @@
                 },
                 "lane_state": "none",
                 "lane_sentence": null,
+                "colliding": null,
                 "standing": {
                   "actor": "corpus",
                   "evidence": null,
@@ -298,6 +308,7 @@
                 },
                 "lane_state": "none",
                 "lane_sentence": null,
+                "colliding": null,
                 "standing": {
                   "actor": "corpus",
                   "evidence": null,
@@ -348,6 +359,7 @@
                 },
                 "lane_state": "none",
                 "lane_sentence": null,
+                "colliding": null,
                 "standing": {
                   "actor": "import",
                   "evidence": null,
@@ -381,6 +393,7 @@
                 },
                 "lane_state": "none",
                 "lane_sentence": null,
+                "colliding": null,
                 "standing": {
                   "actor": "import",
                   "evidence": null,
@@ -414,6 +427,7 @@
                 },
                 "lane_state": "none",
                 "lane_sentence": null,
+                "colliding": null,
                 "standing": {
                   "actor": "import",
                   "evidence": null,
@@ -445,6 +459,7 @@
                 },
                 "lane_state": "none",
                 "lane_sentence": null,
+                "colliding": null,
                 "standing": {
                   "actor": "corpus",
                   "evidence": null,
@@ -471,6 +486,7 @@
                 },
                 "lane_state": "none",
                 "lane_sentence": null,
+                "colliding": null,
                 "standing": {
                   "actor": "corpus",
                   "evidence": null,
@@ -519,6 +535,7 @@
                 },
                 "lane_state": "none",
                 "lane_sentence": null,
+                "colliding": null,
                 "standing": {
                   "actor": "import",
                   "evidence": null,
@@ -545,6 +562,7 @@
                 },
                 "lane_state": "none",
                 "lane_sentence": null,
+                "colliding": null,
                 "standing": {
                   "actor": "import",
                   "evidence": null,
@@ -571,6 +589,7 @@
                 },
                 "lane_state": "none",
                 "lane_sentence": null,
+                "colliding": null,
                 "standing": {
                   "actor": "import",
                   "evidence": null,
@@ -597,6 +616,7 @@
                 },
                 "lane_state": "none",
                 "lane_sentence": null,
+                "colliding": null,
                 "standing": {
                   "actor": "import",
                   "evidence": null,
@@ -625,6 +645,7 @@
                 },
                 "lane_state": "none",
                 "lane_sentence": null,
+                "colliding": null,
                 "standing": {
                   "actor": "import",
                   "evidence": null,
@@ -673,6 +694,7 @@
                 },
                 "lane_state": "none",
                 "lane_sentence": null,
+                "colliding": null,
                 "standing": {
                   "actor": "import",
                   "evidence": "hands-on",
@@ -699,6 +721,7 @@
                 },
                 "lane_state": "none",
                 "lane_sentence": null,
+                "colliding": null,
                 "standing": {
                   "actor": "import",
                   "evidence": "hands-on",
@@ -749,6 +772,7 @@
                 },
                 "lane_state": "none",
                 "lane_sentence": null,
+                "colliding": null,
                 "standing": {
                   "actor": "import",
                   "evidence": null,
@@ -778,6 +802,7 @@
                 },
                 "lane_state": "none",
                 "lane_sentence": null,
+                "colliding": null,
                 "standing": {
                   "actor": "import",
                   "evidence": null,
@@ -811,6 +836,7 @@
                 },
                 "lane_state": "none",
                 "lane_sentence": null,
+                "colliding": null,
                 "standing": {
                   "actor": "import",
                   "evidence": null,
@@ -844,6 +870,7 @@
                 },
                 "lane_state": "none",
                 "lane_sentence": null,
+                "colliding": null,
                 "standing": {
                   "actor": "import",
                   "evidence": null,
@@ -894,6 +921,7 @@
                 },
                 "lane_state": "none",
                 "lane_sentence": null,
+                "colliding": null,
                 "standing": {
                   "actor": "import",
                   "evidence": "close-landed",
@@ -963,6 +991,7 @@
                 },
                 "lane_state": "none",
                 "lane_sentence": null,
+                "colliding": null,
                 "standing": {
                   "actor": "import",
                   "evidence": null,
@@ -978,7 +1007,9 @@
     ],
     "documents_without_card": [],
     "asks": [],
-    "verdicts": []
+    "verdicts": [],
+    "conversations": [],
+    "watercooler": []
   },
   "details": {
     "252": {
@@ -1039,6 +1070,7 @@
         },
         "lane_state": "none",
         "lane_sentence": null,
+        "colliding": null,
         "standing": {
           "actor": "import",
           "evidence": null,
@@ -1128,7 +1160,10 @@
         "moved": null,
         "folded": false,
         "trunk_synced": false,
-        "main_synced": false
+        "main_synced": false,
+        "edits": [],
+        "declared": [],
+        "colliding": null
       },
       "doors": {
         "start": {
@@ -1184,7 +1219,8 @@
       "signal_note": "no WATCH row names a signal",
       "readings": [],
       "verdict": null,
-      "verdict_note": "no VERDICT row is written"
+      "verdict_note": "no VERDICT row is written",
+      "watercooler": []
     },
     "242": {
       "card": {
@@ -1244,6 +1280,7 @@
         },
         "lane_state": "none",
         "lane_sentence": null,
+        "colliding": null,
         "standing": {
           "actor": "import",
           "evidence": null,
@@ -1333,7 +1370,10 @@
         "moved": null,
         "folded": false,
         "trunk_synced": false,
-        "main_synced": false
+        "main_synced": false,
+        "edits": [],
+        "declared": [],
+        "colliding": null
       },
       "doors": {
         "start": {
@@ -1389,7 +1429,8 @@
       "signal_note": "no WATCH row names a signal",
       "readings": [],
       "verdict": null,
-      "verdict_note": "no VERDICT row is written"
+      "verdict_note": "no VERDICT row is written",
+      "watercooler": []
     },
     "232": {
       "card": {
@@ -1449,6 +1490,7 @@
         },
         "lane_state": "none",
         "lane_sentence": null,
+        "colliding": null,
         "standing": {
           "actor": "import",
           "evidence": null,
@@ -1538,7 +1580,10 @@
         "moved": null,
         "folded": false,
         "trunk_synced": false,
-        "main_synced": false
+        "main_synced": false,
+        "edits": [],
+        "declared": [],
+        "colliding": null
       },
       "doors": {
         "start": {
@@ -1594,7 +1639,8 @@
       "signal_note": "no WATCH row names a signal",
       "readings": [],
       "verdict": null,
-      "verdict_note": "no VERDICT row is written"
+      "verdict_note": "no VERDICT row is written",
+      "watercooler": []
     },
     "120": {
       "card": {
@@ -1646,6 +1692,7 @@
         },
         "lane_state": "none",
         "lane_sentence": null,
+        "colliding": null,
         "standing": {
           "actor": "import",
           "evidence": null,
@@ -1702,7 +1749,10 @@
         "moved": null,
         "folded": false,
         "trunk_synced": false,
-        "main_synced": false
+        "main_synced": false,
+        "edits": [],
+        "declared": [],
+        "colliding": null
       },
       "doors": {
         "start": {
@@ -1758,7 +1808,8 @@
       "signal_note": "no WATCH row names a signal",
       "readings": [],
       "verdict": null,
-      "verdict_note": "no VERDICT row is written"
+      "verdict_note": "no VERDICT row is written",
+      "watercooler": []
     },
     "105": {
       "card": {
@@ -1807,6 +1858,7 @@
         },
         "lane_state": "none",
         "lane_sentence": null,
+        "colliding": null,
         "standing": {
           "actor": "import",
           "evidence": null,
@@ -1852,7 +1904,10 @@
         "moved": null,
         "folded": false,
         "trunk_synced": false,
-        "main_synced": false
+        "main_synced": false,
+        "edits": [],
+        "declared": [],
+        "colliding": null
       },
       "doors": {
         "start": {
@@ -1908,7 +1963,8 @@
       "signal_note": "no WATCH row names a signal",
       "readings": [],
       "verdict": null,
-      "verdict_note": "no VERDICT row is written"
+      "verdict_note": "no VERDICT row is written",
+      "watercooler": []
     },
     "263": {
       "card": {
@@ -1955,6 +2011,7 @@
         },
         "lane_state": "none",
         "lane_sentence": null,
+        "colliding": null,
         "standing": {
           "actor": "corpus",
           "evidence": null,
@@ -2024,7 +2081,10 @@
         "moved": null,
         "folded": false,
         "trunk_synced": false,
-        "main_synced": false
+        "main_synced": false,
+        "edits": [],
+        "declared": [],
+        "colliding": null
       },
       "doors": {
         "start": {
@@ -2080,7 +2140,8 @@
       "signal_note": "no WATCH row names a signal",
       "readings": [],
       "verdict": null,
-      "verdict_note": "no VERDICT row is written"
+      "verdict_note": "no VERDICT row is written",
+      "watercooler": []
     },
     "264": {
       "card": {
@@ -2127,6 +2188,7 @@
         },
         "lane_state": "none",
         "lane_sentence": null,
+        "colliding": null,
         "standing": {
           "actor": "corpus",
           "evidence": null,
@@ -2196,7 +2258,10 @@
         "moved": null,
         "folded": false,
         "trunk_synced": false,
-        "main_synced": false
+        "main_synced": false,
+        "edits": [],
+        "declared": [],
+        "colliding": null
       },
       "doors": {
         "start": {
@@ -2252,7 +2317,8 @@
       "signal_note": "no WATCH row names a signal",
       "readings": [],
       "verdict": null,
-      "verdict_note": "no VERDICT row is written"
+      "verdict_note": "no VERDICT row is written",
+      "watercooler": []
     },
     "265": {
       "card": {
@@ -2299,6 +2365,7 @@
         },
         "lane_state": "none",
         "lane_sentence": null,
+        "colliding": null,
         "standing": {
           "actor": "corpus",
           "evidence": null,
@@ -2368,7 +2435,10 @@
         "moved": null,
         "folded": false,
         "trunk_synced": false,
-        "main_synced": false
+        "main_synced": false,
+        "edits": [],
+        "declared": [],
+        "colliding": null
       },
       "doors": {
         "start": {
@@ -2424,7 +2494,8 @@
       "signal_note": "no WATCH row names a signal",
       "readings": [],
       "verdict": null,
-      "verdict_note": "no VERDICT row is written"
+      "verdict_note": "no VERDICT row is written",
+      "watercooler": []
     },
     "266": {
       "card": {
@@ -2471,6 +2542,7 @@
         },
         "lane_state": "none",
         "lane_sentence": null,
+        "colliding": null,
         "standing": {
           "actor": "corpus",
           "evidence": null,
@@ -2540,7 +2612,10 @@
         "moved": null,
         "folded": false,
         "trunk_synced": false,
-        "main_synced": false
+        "main_synced": false,
+        "edits": [],
+        "declared": [],
+        "colliding": null
       },
       "doors": {
         "start": {
@@ -2596,7 +2671,8 @@
       "signal_note": "no WATCH row names a signal",
       "readings": [],
       "verdict": null,
-      "verdict_note": "no VERDICT row is written"
+      "verdict_note": "no VERDICT row is written",
+      "watercooler": []
     },
     "196": {
       "card": {
@@ -2660,6 +2736,7 @@
         },
         "lane_state": "none",
         "lane_sentence": null,
+        "colliding": null,
         "standing": {
           "actor": "import",
           "evidence": null,
@@ -2761,7 +2838,10 @@
         "moved": null,
         "folded": false,
         "trunk_synced": false,
-        "main_synced": false
+        "main_synced": false,
+        "edits": [],
+        "declared": [],
+        "colliding": null
       },
       "doors": {
         "start": {
@@ -2817,7 +2897,8 @@
       "signal_note": "no WATCH row names a signal",
       "readings": [],
       "verdict": null,
-      "verdict_note": "no VERDICT row is written"
+      "verdict_note": "no VERDICT row is written",
+      "watercooler": []
     },
     "109": {
       "card": {
@@ -2877,6 +2958,7 @@
         },
         "lane_state": "none",
         "lane_sentence": null,
+        "colliding": null,
         "standing": {
           "actor": "import",
           "evidence": null,
@@ -2974,7 +3056,10 @@
         "moved": null,
         "folded": false,
         "trunk_synced": false,
-        "main_synced": false
+        "main_synced": false,
+        "edits": [],
+        "declared": [],
+        "colliding": null
       },
       "doors": {
         "start": {
@@ -3030,7 +3115,8 @@
       "signal_note": "no WATCH row names a signal",
       "readings": [],
       "verdict": null,
-      "verdict_note": "no VERDICT row is written"
+      "verdict_note": "no VERDICT row is written",
+      "watercooler": []
     },
     "172": {
       "card": {
@@ -3094,6 +3180,7 @@
         },
         "lane_state": "none",
         "lane_sentence": null,
+        "colliding": null,
         "standing": {
           "actor": "import",
           "evidence": null,
@@ -3195,7 +3282,10 @@
         "moved": null,
         "folded": false,
         "trunk_synced": false,
-        "main_synced": false
+        "main_synced": false,
+        "edits": [],
+        "declared": [],
+        "colliding": null
       },
       "doors": {
         "start": {
@@ -3251,7 +3341,8 @@
       "signal_note": "no WATCH row names a signal",
       "readings": [],
       "verdict": null,
-      "verdict_note": "no VERDICT row is written"
+      "verdict_note": "no VERDICT row is written",
+      "watercooler": []
     },
     "262": {
       "card": {
@@ -3298,6 +3389,7 @@
         },
         "lane_state": "none",
         "lane_sentence": null,
+        "colliding": null,
         "standing": {
           "actor": "corpus",
           "evidence": null,
@@ -3379,7 +3471,10 @@
         "moved": null,
         "folded": false,
         "trunk_synced": false,
-        "main_synced": false
+        "main_synced": false,
+        "edits": [],
+        "declared": [],
+        "colliding": null
       },
       "doors": {
         "start": {
@@ -3435,7 +3530,8 @@
       "signal_note": "no WATCH row names a signal",
       "readings": [],
       "verdict": null,
-      "verdict_note": "no VERDICT row is written"
+      "verdict_note": "no VERDICT row is written",
+      "watercooler": []
     },
     "267": {
       "card": {
@@ -3482,6 +3578,7 @@
         },
         "lane_state": "none",
         "lane_sentence": null,
+        "colliding": null,
         "standing": {
           "actor": "corpus",
           "evidence": null,
@@ -3563,7 +3660,10 @@
         "moved": null,
         "folded": false,
         "trunk_synced": false,
-        "main_synced": false
+        "main_synced": false,
+        "edits": [],
+        "declared": [],
+        "colliding": null
       },
       "doors": {
         "start": {
@@ -3619,7 +3719,8 @@
       "signal_note": "no WATCH row names a signal",
       "readings": [],
       "verdict": null,
-      "verdict_note": "no VERDICT row is written"
+      "verdict_note": "no VERDICT row is written",
+      "watercooler": []
     },
     "253": {
       "card": {
@@ -3683,6 +3784,7 @@
         },
         "lane_state": "none",
         "lane_sentence": null,
+        "colliding": null,
         "standing": {
           "actor": "import",
           "evidence": null,
@@ -3792,7 +3894,10 @@
         "moved": null,
         "folded": false,
         "trunk_synced": false,
-        "main_synced": false
+        "main_synced": false,
+        "edits": [],
+        "declared": [],
+        "colliding": null
       },
       "doors": {
         "start": {
@@ -3848,7 +3953,8 @@
       "signal_note": "no WATCH row names a signal",
       "readings": [],
       "verdict": null,
-      "verdict_note": "no VERDICT row is written"
+      "verdict_note": "no VERDICT row is written",
+      "watercooler": []
     },
     "241": {
       "card": {
@@ -3916,6 +4022,7 @@
         },
         "lane_state": "none",
         "lane_sentence": null,
+        "colliding": null,
         "standing": {
           "actor": "import",
           "evidence": null,
@@ -4029,7 +4136,10 @@
         "moved": null,
         "folded": false,
         "trunk_synced": false,
-        "main_synced": false
+        "main_synced": false,
+        "edits": [],
+        "declared": [],
+        "colliding": null
       },
       "doors": {
         "start": {
@@ -4085,7 +4195,8 @@
       "signal_note": "no WATCH row names a signal",
       "readings": [],
       "verdict": null,
-      "verdict_note": "no VERDICT row is written"
+      "verdict_note": "no VERDICT row is written",
+      "watercooler": []
     },
     "228": {
       "card": {
@@ -4142,6 +4253,7 @@
         },
         "lane_state": "none",
         "lane_sentence": null,
+        "colliding": null,
         "standing": {
           "actor": "import",
           "evidence": null,
@@ -4200,7 +4312,10 @@
         "moved": null,
         "folded": false,
         "trunk_synced": false,
-        "main_synced": false
+        "main_synced": false,
+        "edits": [],
+        "declared": [],
+        "colliding": null
       },
       "doors": {
         "start": {
@@ -4256,7 +4371,8 @@
       "signal_note": "no WATCH row names a signal",
       "readings": [],
       "verdict": null,
-      "verdict_note": "no VERDICT row is written"
+      "verdict_note": "no VERDICT row is written",
+      "watercooler": []
     },
     "237": {
       "card": {
@@ -4320,6 +4436,7 @@
         },
         "lane_state": "none",
         "lane_sentence": null,
+        "colliding": null,
         "standing": {
           "actor": "import",
           "evidence": null,
@@ -4425,7 +4542,10 @@
         "moved": null,
         "folded": false,
         "trunk_synced": false,
-        "main_synced": false
+        "main_synced": false,
+        "edits": [],
+        "declared": [],
+        "colliding": null
       },
       "doors": {
         "start": {
@@ -4481,7 +4601,8 @@
       "signal_note": "no WATCH row names a signal",
       "readings": [],
       "verdict": null,
-      "verdict_note": "no VERDICT row is written"
+      "verdict_note": "no VERDICT row is written",
+      "watercooler": []
     },
     "174": {
       "card": {
@@ -4545,6 +4666,7 @@
         },
         "lane_state": "none",
         "lane_sentence": null,
+        "colliding": null,
         "standing": {
           "actor": "import",
           "evidence": null,
@@ -4646,7 +4768,10 @@
         "moved": null,
         "folded": false,
         "trunk_synced": false,
-        "main_synced": false
+        "main_synced": false,
+        "edits": [],
+        "declared": [],
+        "colliding": null
       },
       "doors": {
         "start": {
@@ -4702,7 +4827,8 @@
       "signal_note": "no WATCH row names a signal",
       "readings": [],
       "verdict": null,
-      "verdict_note": "no VERDICT row is written"
+      "verdict_note": "no VERDICT row is written",
+      "watercooler": []
     },
     "259": {
       "card": {
@@ -4770,6 +4896,7 @@
         },
         "lane_state": "none",
         "lane_sentence": null,
+        "colliding": null,
         "standing": {
           "actor": "import",
           "evidence": "hands-on",
@@ -4880,7 +5007,10 @@
         "moved": null,
         "folded": false,
         "trunk_synced": false,
-        "main_synced": false
+        "main_synced": false,
+        "edits": [],
+        "declared": [],
+        "colliding": null
       },
       "doors": {
         "start": {
@@ -4936,7 +5066,8 @@
       "signal_note": "the WATCH row names no reader (url, file, command or owner). The grammar: WATCH: <what> — url|file|command|owner <target> [expect <value>] by <YYYY-MM-DD> [every <N>h|<N>d]",
       "readings": [],
       "verdict": null,
-      "verdict_note": "no VERDICT row is written"
+      "verdict_note": "no VERDICT row is written",
+      "watercooler": []
     },
     "223": {
       "card": {
@@ -5000,6 +5131,7 @@
         },
         "lane_state": "none",
         "lane_sentence": null,
+        "colliding": null,
         "standing": {
           "actor": "import",
           "evidence": "hands-on",
@@ -5093,7 +5225,10 @@
         "moved": null,
         "folded": false,
         "trunk_synced": false,
-        "main_synced": false
+        "main_synced": false,
+        "edits": [],
+        "declared": [],
+        "colliding": null
       },
       "doors": {
         "start": {
@@ -5149,7 +5284,8 @@
       "signal_note": "no WATCH row names a signal",
       "readings": [],
       "verdict": null,
-      "verdict_note": "no VERDICT row is written"
+      "verdict_note": "no VERDICT row is written",
+      "watercooler": []
     },
     "219": {
       "card": {
@@ -5225,6 +5361,7 @@
         },
         "lane_state": "none",
         "lane_sentence": null,
+        "colliding": null,
         "standing": {
           "actor": "import",
           "evidence": null,
@@ -5339,7 +5476,10 @@
         "moved": null,
         "folded": false,
         "trunk_synced": false,
-        "main_synced": false
+        "main_synced": false,
+        "edits": [],
+        "declared": [],
+        "colliding": null
       },
       "doors": {
         "start": {
@@ -5395,7 +5535,8 @@
       "signal_note": "the WATCH row names no reader (url, file, command or owner). The grammar: WATCH: <what> — url|file|command|owner <target> [expect <value>] by <YYYY-MM-DD> [every <N>h|<N>d]",
       "readings": [],
       "verdict": null,
-      "verdict_note": "no VERDICT row is written"
+      "verdict_note": "no VERDICT row is written",
+      "watercooler": []
     },
     "147": {
       "card": {
@@ -5454,6 +5595,7 @@
         },
         "lane_state": "none",
         "lane_sentence": null,
+        "colliding": null,
         "standing": {
           "actor": "import",
           "evidence": null,
@@ -5512,7 +5654,10 @@
         "moved": null,
         "folded": false,
         "trunk_synced": false,
-        "main_synced": false
+        "main_synced": false,
+        "edits": [],
+        "declared": [],
+        "colliding": null
       },
       "doors": {
         "start": {
@@ -5568,7 +5713,8 @@
       "signal_note": "no WATCH row names a signal",
       "readings": [],
       "verdict": null,
-      "verdict_note": "no VERDICT row is written"
+      "verdict_note": "no VERDICT row is written",
+      "watercooler": []
     },
     "139": {
       "card": {
@@ -5636,6 +5782,7 @@
         },
         "lane_state": "none",
         "lane_sentence": null,
+        "colliding": null,
         "standing": {
           "actor": "import",
           "evidence": null,
@@ -5741,7 +5888,10 @@
         "moved": null,
         "folded": false,
         "trunk_synced": false,
-        "main_synced": false
+        "main_synced": false,
+        "edits": [],
+        "declared": [],
+        "colliding": null
       },
       "doors": {
         "start": {
@@ -5797,7 +5947,8 @@
       "signal_note": "no WATCH row names a signal",
       "readings": [],
       "verdict": null,
-      "verdict_note": "no VERDICT row is written"
+      "verdict_note": "no VERDICT row is written",
+      "watercooler": []
     },
     "149": {
       "card": {
@@ -5854,6 +6005,7 @@
         },
         "lane_state": "none",
         "lane_sentence": null,
+        "colliding": null,
         "standing": {
           "actor": "import",
           "evidence": null,
@@ -5912,7 +6064,10 @@
         "moved": null,
         "folded": false,
         "trunk_synced": false,
-        "main_synced": false
+        "main_synced": false,
+        "edits": [],
+        "declared": [],
+        "colliding": null
       },
       "doors": {
         "start": {
@@ -5968,7 +6123,8 @@
       "signal_note": "no WATCH row names a signal",
       "readings": [],
       "verdict": null,
-      "verdict_note": "no VERDICT row is written"
+      "verdict_note": "no VERDICT row is written",
+      "watercooler": []
     },
     "134": {
       "card": {
@@ -6033,6 +6189,7 @@
         },
         "lane_state": "none",
         "lane_sentence": null,
+        "colliding": null,
         "standing": {
           "actor": "import",
           "evidence": "close-landed",
@@ -6136,7 +6293,10 @@
         "moved": null,
         "folded": false,
         "trunk_synced": false,
-        "main_synced": false
+        "main_synced": false,
+        "edits": [],
+        "declared": [],
+        "colliding": null
       },
       "doors": {
         "start": {
@@ -6192,7 +6352,8 @@
       "signal_note": "the WATCH row names no reader (url, file, command or owner). The grammar: WATCH: <what> — url|file|command|owner <target> [expect <value>] by <YYYY-MM-DD> [every <N>h|<N>d]",
       "readings": [],
       "verdict": null,
-      "verdict_note": "no VERDICT row is written"
+      "verdict_note": "no VERDICT row is written",
+      "watercooler": []
     },
     "201": {
       "card": {
@@ -6248,6 +6409,7 @@
         },
         "lane_state": "none",
         "lane_sentence": null,
+        "colliding": null,
         "standing": {
           "actor": "import",
           "evidence": null,
@@ -6309,7 +6471,10 @@
         "moved": null,
         "folded": false,
         "trunk_synced": false,
-        "main_synced": false
+        "main_synced": false,
+        "edits": [],
+        "declared": [],
+        "colliding": null
       },
       "doors": {
         "start": {
@@ -6365,7 +6530,8 @@
       "signal_note": "no WATCH row names a signal",
       "readings": [],
       "verdict": null,
-      "verdict_note": "no VERDICT row is written"
+      "verdict_note": "no VERDICT row is written",
+      "watercooler": []
     }
   }
 }

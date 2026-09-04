@@ -32,11 +32,16 @@ from domain.evidence import Evidence
 from domain.lane import Doors, Lane, LaneSnapshot
 from domain.project import Project
 from domain.row import Row
+from domain.watercooler import WatercoolerLine
 from infrastructure import clock
 from infrastructure.corpus import scan, watch
 from infrastructure.store import Store, StoreRefusal
 
 log = logging.getLogger("needle")
+
+WATERCOOLER_SHOWN = 20
+"""How many of the newest watercooler lines the page and a brief carry; the
+whole file is `needle watercooler SLUG`."""
 
 
 def sweep(
@@ -231,6 +236,7 @@ class Live:
             trunk=self.store.trunk(slug),
             machine=self.machine,
             placements=self.store.placements(slug),
+            watercooler=self.store.watercooler(slug, limit=WATERCOOLER_SHOWN),
         )
 
     def card(self, slug: str, number: int) -> Card:
@@ -253,6 +259,7 @@ class Live:
             doors=doors,
             readings=self.store.readings(slug, number),
             read=live.snapshot is not None,
+            watercooler=self.store.watercooler(slug, limit=WATERCOOLER_SHOWN),
         )
 
     def lane_and_doors(self, slug: str, card: Card) -> tuple[Lane | None, Doors]:
@@ -311,6 +318,13 @@ class Live:
         )
         self.bump()
         return card
+
+    def say(self, slug: str, number: int | None, actor: Actor, text: str) -> WatercoolerLine:
+        """One line on the project's watercooler, from a card's lane or the board."""
+        self._live(slug)
+        line = self.store.say(slug, number, actor, self.now(), text)
+        self.bump()
+        return line
 
     def note(self, slug: str, number: int, kind: AuditKind, actor: Actor, detail: str) -> None:
         self._live(slug)

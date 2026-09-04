@@ -37,3 +37,21 @@ def test_clear_and_unknown_say_so():
     assert verdict({"a.py"}, editing={}, declared={}).verdict == CollisionVerdict.CLEAR
     unknown = verdict(set(), editing={"x": {"a.py"}}, declared={})
     assert unknown.verdict == CollisionVerdict.UNKNOWN and "names no files" in unknown.sentence
+
+
+def test_two_live_lanes_editing_the_same_file_collide_on_both_sides_and_others_do_not():
+    from board.collision import drift
+
+    said = drift(
+        {
+            "#7's lane": {"a.py", "b.py", "shared.py"},
+            "#9's lane": {"shared.py", "c.py"},
+            "#11's lane": {"d.py"},
+        }
+    )
+    seven, nine = said["#7's lane"], said["#9's lane"]
+    assert seven is not None and nine is not None and said["#11's lane"] is None
+    assert seven.verdict == CollisionVerdict.COLLIDES and seven.files == ["shared.py"]
+    assert seven.sentence == "#9's lane is also editing shared.py."
+    assert nine.sentence == "#7's lane is also editing shared.py."
+    assert drift({}) == {} and drift({"#7's lane": {"a.py"}}) == {"#7's lane": None}

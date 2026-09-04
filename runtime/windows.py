@@ -182,7 +182,7 @@ def discuss_command(
     chosen here so the board can tell the conversation from hands on a tree."""
     banner = (
         f"{what} — {placement.model.value} on the {placement.slot} subscription. "
-        "A conversation, never hands on the card's tree; closing this window ends only it."
+        "A conversation, never hands on any tree; closing this window ends only it."
     )
     parts = ["claude", "--model", placement.model.value, "--session-id", session_id]
     if effort is not None:

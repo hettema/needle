@@ -166,6 +166,8 @@ def test_the_board_always_has_eight_columns_each_with_a_group_and_counts_attenti
     assert board.attention.model_dump() == {
         "asking_you": 1,
         "in_flight": 1,
+        "colliding": 0,
+        "in_discussion": 0,
         "lanes_ended": 0,
         "signals_due": 0,
         "signals_asking": 0,

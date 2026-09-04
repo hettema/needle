@@ -12,11 +12,12 @@ from domain.corpus import CorpusSummary
 from domain.document import Document, DocumentRef, DocumentState
 from domain.evidence import Standing
 from domain.gate import Gate
-from domain.lane import Doors, Lane, LaneState
+from domain.lane import Collision, Conversation, Doors, Lane, LaneState
 from domain.project import Project
 from domain.row import Row
 from domain.signal import Reading, Signal
 from domain.verdict import Verdict, VerdictLine
+from domain.watercooler import WatercoolerLine
 
 
 class EssenceSource(StrEnum):
@@ -48,6 +49,8 @@ class CardSummary(BaseModel):
     lane_state: LaneState
     lane_sentence: str | None
     """What the card says about its lane, when it has one."""
+    colliding: Collision | None
+    """The lane has drifted into another live lane's files, named (plan 07, item 2)."""
     standing: Standing
     """Who placed the card here, on what evidence, and whether it holds on this read."""
 
@@ -70,6 +73,10 @@ class Attention(BaseModel):
     """Cards in Decision moment, lanes stopped with a question, and signals only you can read."""
     in_flight: int
     """Lanes with hands on them."""
+    colliding: int
+    """Live lanes editing a file another live lane is also editing (plan 07, item 2)."""
+    in_discussion: int
+    """Conversations alive right now: ideas and card discussions (plan 07, item 1)."""
     lanes_ended: int
     """Lanes whose session is gone without a close: Resume or Look is your choice."""
     signals_due: int
@@ -128,6 +135,10 @@ class BoardState(BaseModel):
     """Every shipped card waiting on the owner's reading, one click each way per card."""
     verdicts: list[VerdictLine]
     """Every card carrying an unread verdict, for the triage lens (plan 05)."""
+    conversations: list[Conversation]
+    """Every conversation alive right now, as the rail lists them (plan 07, item 1)."""
+    watercooler: list[WatercoolerLine]
+    """The project's watercooler, newest last; the page shows its last line on every live card."""
 
 
 class ProjectFile(BaseModel):
@@ -159,3 +170,5 @@ class CardDetail(BaseModel):
     """The verdict the card's VERDICT row names, when one parses."""
     verdict_note: str | None
     """Why the VERDICT row names no verdict the board can act on, when it does not."""
+    watercooler: list[WatercoolerLine]
+    """The project's watercooler, newest last: what a lane on this card reads."""

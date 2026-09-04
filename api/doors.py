@@ -1,13 +1,16 @@
-"""The doors: Start, Answer, Watch, Look, Discuss, Resume, Stop, the owner's
-reading of a signal, and a session's close. Each opens through the runtime,
-proves its effect by evidence, and fails loudly by name (INTENT.md lesson
-5); none is a silent no-op. Every door writes what it did on the card.
+"""The doors: Start, Answer, Watch, Look, Discuss, Idea, Resume, Stop, the
+owner's reading of a signal, and a session's close. Each opens through the
+runtime, proves its effect by evidence, and fails loudly by name (INTENT.md
+lesson 5); none is a silent no-op. Every door writes what it did on the
+card — Idea, which is about no card yet, on the board's record of
+conversations.
 """
 
+import uuid
 from pathlib import Path
 
 from api.loops import Loops
-from board.brief import lane_name, render
+from board.brief import lane_name, neighbours_text, render, watercooler_text
 from board.lane import HANDS_ON
 from board.signals import GRAMMAR, read_or_decline, where_after
 from domain.audit import AuditKind
@@ -18,11 +21,12 @@ from domain.evidence import Evidence, EvidenceState
 from domain.gate import Gate
 from domain.lane import DoorResult, LaneRecord, LaneState
 from domain.launch import LaunchVerdict, Start
+from domain.project import Project
 from domain.row import Row, RowKind
 from domain.verdict import EvidenceClass, VerdictsRuled
 from domain.window import WindowKind
 from infrastructure import clock
-from infrastructure.live import Live
+from infrastructure.live import WATERCOOLER_SHOWN, Live
 from infrastructure.store import StoreRefusal
 from runtime.service import Runtime
 from runtime.windows import WindowRefused
@@ -39,6 +43,37 @@ class DoorRefused(Exception):
 class DoorFailed(Exception):
     """The door was opened and the machine did not do what it should; the
     message carries the machine's words."""
+
+
+def idea_brief(project: Project, session_id: str, first_line: str | None, today: str) -> str:
+    """What an idea conversation opens with (plan 07, item 1): whose idea it
+    is, that the corpus is the only way in, and that the document names this
+    conversation so the card it becomes says where it was born."""
+    short = session_id[:8]
+    asked = (
+        f'The owner typed this into the door: "{first_line.strip()}" — that is his opening '
+        "line; answer it."
+        if first_line and first_line.strip()
+        else "He typed nothing into the door: ask him, in one line, what is on his mind."
+    )
+    return (
+        f"An idea from the owner, opened from the board's Idea door on {project.name} "
+        f"({project.path}), {today}. Nothing is a card yet; this window is a conversation "
+        "about nothing yet, never hands on any tree.\n\n"
+        "The corpus is the only way in. What this conversation produces becomes a card only "
+        "by being written into it: a plan into docs/plans/ (with an `**Effort gate:**` line "
+        'and a "done means" per item, in the shape docs/plans/README.md describes), or a '
+        "suggestion into docs/slice-suggestions/ (with its `**Kind:** idea` or `**Kind:** "
+        "defect` line on the second line). Head the document with\n"
+        f"  **Found by:** the owner, from the board's Idea door on {today} (conversation {short})\n"
+        "so the card it becomes says it was born from this conversation. Write nothing else "
+        "to the repository. Commit the document in this checkout on develop with a body that "
+        "says what prompted it, and push it (`git push origin develop`); the board cards the "
+        "file the moment it lands.\n\n"
+        "Your FIRST message is two or three short plain sentences — no headers, no file "
+        f"paths. {asked} Challenge the idea where it deserves it, and say when it is already "
+        "in the corpus under another name."
+    )
 
 
 def needle_command() -> str:
@@ -74,6 +109,22 @@ class Doors:
                 "files to that lane unless your plan actually changes them, and expect to "
                 "re-verify them at the fold."
             )
+        snapshot = self.live.projects[slug].snapshot
+        lanes = snapshot.lanes if snapshot is not None else {}
+        titles = {c.number: c.title for c in self.live.store.cards(slug)}
+        text += (
+            "\n\nOther lanes with hands on this project right now:\n"
+            + neighbours_text(lanes, titles, card.number)
+            + "\nLeave those files to their lanes unless your plan names them. If you must "
+            "touch one, say so in the watercooler first; the board re-reads every lane's "
+            "actual edits on every read and marks two lanes in the same file as colliding "
+            "on both cards.\n\nThe watercooler — what the lanes on this project say to each "
+            f"other; read it now and again before your fold (`{needle} fold` shows it):\n"
+            + watercooler_text(self.live.store.watercooler(slug, limit=WATERCOOLER_SHOWN))
+            + "\nSay something when you touch a file outside your footprint or change a "
+            "seam another lane depends on:"
+            f'\n  {needle} watercooler {slug} {card.number} "…"'
+        )
         text += (
             f"\n\nYou were launched at {gate.value if gate else 'the default'} from the card's "
             "gate; the launch is the owner's effort-gate confirmation — do not stop to ask."
@@ -321,6 +372,38 @@ class Doors:
         self.live.note(slug, number, AuditKind.DISCUSSED, Actor.OWNER, said)
         self.loops.reconcile_now()
         return DoorResult(door="discuss", said=said)
+
+    def idea(self, slug: str, first_line: str | None) -> DoorResult:
+        """A conversation about nothing yet, in the project's checkout (plan
+        07, item 1): the session id is chosen here so the brief can name it,
+        and the document the session writes names it back."""
+        project = self.live.projects[slug].project
+        session_id = str(uuid.uuid4())
+        today = clock.now().date().isoformat()
+        brief = idea_brief(project, session_id, first_line, today)
+        try:
+            opened, session_id, placement = self.runtime.discuss(
+                repo=project.path,
+                card=slug,
+                brief=brief,
+                effort=DISCUSS_EFFORT,
+                what=f"An idea for {project.name}",
+                kind=WindowKind.IDEA,
+                session_id=session_id,
+            )
+        except WindowRefused as refusal:
+            raise DoorFailed(f"Idea did not open: {refusal}") from refusal
+        self.live.store.record_discussion(slug, None, session_id, placement.slot, clock.now())
+        self.live.bump()
+        self.loops.reconcile_now()
+        return DoorResult(
+            door="idea",
+            said=(
+                f"Talking in {opened.window.app_id}, {placement.model.value} on "
+                f"{placement.slot}; a conversation about nothing yet ({session_id[:8]}), never "
+                "hands on a tree. What it writes into the corpus becomes a card."
+            ),
+        )
 
     # ── the owner reads a signal ───────────────────────────────────────
 

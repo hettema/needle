@@ -30,11 +30,13 @@ from board.lane import (
     STARTABLE_COLUMNS,
     LaneFacts,
     card_of_cwd,
+    conversations_alive,
     doors_for,
     entered_executing_at,
     exit_for,
     lane_for,
     should_enter_executing,
+    with_footprints,
 )
 from board.signals import where_after
 from domain.audit import AuditKind
@@ -234,8 +236,13 @@ class Loops:
             facts = self._facts(live, sessions, windows, records, worktrees, now)
             lanes = {c.number: lane_for(c, facts) for c in cards}
         cards = self._machine_moves(slug, cards, lanes, records)
-        doors = self._doors(project.path, cards, lanes, records, placement, placement_note, now)
-        self.live.set_snapshot(slug, LaneSnapshot(lanes=lanes, doors=doors, read_at=now))
+        lanes = with_footprints(lanes, *self._footprints(live, cards, lanes))
+        doors = self._doors(live, cards, lanes, placement, placement_note, now)
+        conversations = conversations_alive(facts.sessions, facts.discussions)
+        self.live.set_snapshot(
+            slug,
+            LaneSnapshot(lanes=lanes, doors=doors, conversations=conversations, read_at=now),
+        )
 
     def _facts(
         self,
@@ -451,51 +458,53 @@ class Loops:
                 )
         return self.live.store.cards(slug) if changed else cards
 
+    def _plan_footprint(self, live: LiveProject, card: Card) -> set[str]:
+        """The files the card's live plan names in backticks and that exist."""
+        root = Path(live.project.path)
+        if card.link is None:
+            return set()
+        document = live.index.find(card.link.kind, card.link.stem)
+        if document is None or document.archived:
+            return set()
+        try:
+            text = (root / document.path).read_text(encoding="utf-8", errors="replace")
+        except OSError:
+            return set()
+        return footprint(text, lambda path: (root / path).is_file())
+
+    def _footprints(
+        self, live: LiveProject, cards: list[Card], lanes: dict[int, Lane]
+    ) -> tuple[dict[int, set[str]], dict[int, set[str]]]:
+        """For every lane with hands on its worktree: what the worktree has
+        actually changed (git, re-read on every read) and what its plan
+        names. Read once here for the lanes, the drift and the doors."""
+        edits: dict[int, set[str]] = {}
+        declared: dict[int, set[str]] = {}
+        for card in cards:
+            lane = lanes[card.number]
+            if lane.state in HANDS_ON and lane.path:
+                edits[card.number] = self.runtime.edits(lane.path)
+                declared[card.number] = self._plan_footprint(live, card)
+        return edits, declared
+
     def _doors(
         self,
-        project_path: str,
+        live: LiveProject,
         cards: list[Card],
         lanes: dict[int, Lane],
-        records: list[LaneRecord],
         placement: Placement | None,
         placement_note: str,
         now: datetime,
     ) -> dict[int, Doors]:
-        live = self.live.projects[cards[0].project] if cards else None
-        index = live.index if live else None
-        root = Path(project_path)
-
-        def exists(path: str) -> bool:
-            return (root / path).is_file()
-
-        def plan_footprint(card: Card) -> set[str]:
-            if index is None or card.link is None:
-                return set()
-            document = index.find(card.link.kind, card.link.stem)
-            if document is None or document.archived:
-                return set()
-            try:
-                text = (root / document.path).read_text(encoding="utf-8", errors="replace")
-            except OSError:
-                return set()
-            return footprint(text, exists)
-
-        editing: dict[str, set[str]] = {}
-        declared: dict[str, set[str]] = {}
-        for card in cards:
-            lane = lanes[card.number]
-            if lane.state in HANDS_ON and lane.path:
-                who = f"#{card.number}'s lane"
-                editing[who] = self.runtime.edits(lane.path)
-                declared[who] = plan_footprint(card)
-        readings = self.live.store.last_readings(cards[0].project) if cards else {}
+        live_lanes = [n for n, lane in lanes.items() if lane.state in HANDS_ON and lane.path]
+        editing = {f"#{n}'s lane": set(lanes[n].edits) for n in live_lanes}
+        declared = {f"#{n}'s lane": set(lanes[n].declared) for n in live_lanes}
+        readings = self.live.store.last_readings(live.project.slug)
         doors: dict[int, Doors] = {}
         for card in cards:
             lane = lanes[card.number]
             document = (
-                index.find(card.link.kind, card.link.stem)
-                if index is not None and card.link is not None
-                else None
+                live.index.find(card.link.kind, card.link.stem) if card.link is not None else None
             )
             gate = document.gate if document is not None and document.gate else card.gate
             collision: Collision | None = None
@@ -504,7 +513,7 @@ class Loops:
                 and card.place.column in STARTABLE_COLUMNS
                 and lane.state == LaneState.NONE
             ):
-                mine = plan_footprint(card)
+                mine = self._plan_footprint(live, card)
                 collision = verdict(mine, editing=editing, declared=declared)
             signal, _ = watch_signal(card)
             asks_owner = signal_asks_owner(card, signal, readings.get(card.number), now)

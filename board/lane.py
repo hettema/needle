@@ -14,6 +14,7 @@ from datetime import UTC, datetime, timedelta
 from pydantic import BaseModel
 
 from board.brief import lane_name, lane_path
+from board.collision import drift
 from domain.audit import AuditEntry, AuditKind
 from domain.card import Actor, Card
 from domain.column import Column
@@ -23,6 +24,7 @@ from domain.lane import (
     HANDS_ON,
     Collision,
     CollisionVerdict,
+    Conversation,
     Discussion,
     Door,
     Doors,
@@ -342,7 +344,53 @@ def lane_for(card: Card, facts: LaneFacts) -> Lane:
         folded=folded,
         trunk_synced=trunk_synced,
         main_synced=main_synced,
+        edits=[],
+        declared=[],
+        colliding=None,
     )
+
+
+def with_footprints(
+    lanes: dict[int, Lane], edits: dict[int, set[str]], declared: dict[int, set[str]]
+) -> dict[int, Lane]:
+    """Every lane with its footprint read in, and each live lane's drift into
+    another live lane's files named on both (plan 07, item 2). `edits` is
+    what each live worktree has changed, read from git by the caller;
+    `declared` is what each card's plan names."""
+    editing = {f"#{number}'s lane": files for number, files in edits.items()}
+    colliding = drift(editing)
+    out: dict[int, Lane] = {}
+    for number, lane in lanes.items():
+        out[number] = lane.model_copy(
+            update={
+                "edits": sorted(edits.get(number, set())),
+                "declared": sorted(declared.get(number, set())),
+                "colliding": colliding.get(f"#{number}'s lane"),
+            }
+        )
+    return out
+
+
+def conversations_alive(
+    sessions: list[Session], discussions: list[Discussion]
+) -> list[Conversation]:
+    """Every discussion whose session has a live process, for the rail."""
+    by_id = {d.session_id: d for d in discussions}
+    alive: list[Conversation] = []
+    for session in sessions:
+        record = by_id.get(session.session_id)
+        if record is None or session.pid is None or session.stale:
+            continue
+        alive.append(
+            Conversation(
+                short_id=session.short_id,
+                slot=session.slot,
+                card_number=record.card_number,
+                what="Idea" if record.card_number is None else f"#{record.card_number}",
+                started_at=record.started_at,
+            )
+        )
+    return sorted(alive, key=lambda c: c.started_at)
 
 
 # ── the machine's moves ────────────────────────────────────────────────

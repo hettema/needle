@@ -22,6 +22,9 @@ BIRTH_COLUMN: dict[DocumentKind, Column] = {
 class Born(BaseModel):
     document: DocumentRef
     column: Column
+    found_by: str | None
+    """The document's `Found by` line, so a birth can say which conversation
+    it came from when the line names one (plan 07, item 1)."""
 
 
 class Renamed(BaseModel):
@@ -126,7 +129,13 @@ def reconcile(index: CorpusIndex, cards: list[Card]) -> Effects:
                 Relinked(card_number=target.number, document=ref(document), archived=False)
             )
             continue
-        born.append(Born(document=ref(document), column=BIRTH_COLUMN[document.kind]))
+        born.append(
+            Born(
+                document=ref(document),
+                column=BIRTH_COLUMN[document.kind],
+                found_by=document.found_by,
+            )
+        )
 
     # An archived document is never born (the corpus is the only way in, and
     # done/ is the record of what already came in), but one that names its

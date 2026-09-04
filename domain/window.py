@@ -20,6 +20,9 @@ class WindowKind(StrEnum):
     """A fresh session from a transcript, for a session live nowhere."""
     DISCUSS = "board-discuss"
     """A fresh conversation about a card, never hands on its tree."""
+    IDEA = "board-idea"
+    """A fresh conversation about nothing yet, in the project's checkout; what
+    it writes into the corpus becomes a card (plan 07, item 1)."""
 
 
 class Window(BaseModel):

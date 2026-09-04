@@ -68,15 +68,28 @@ class LaneRecord(BaseModel):
 
 
 class Discussion(BaseModel):
-    """A conversation about a card, opened from its Discuss door. Talking
-    about a card is not executing it: a discussion never counts as hands on
-    the tree and never blocks Start."""
+    """A conversation opened from the board: a card's Discuss door, or the
+    head's Idea door about nothing yet (plan 07, item 1). Talking is not
+    executing: a discussion never counts as hands on any tree and never
+    blocks Start."""
 
     id: int
     project: str
-    card_number: int
+    card_number: int | None
+    """The card discussed; None for an idea, which is about no card yet."""
     session_id: str
     slot: str
+    started_at: datetime
+
+
+class Conversation(BaseModel):
+    """A discussion whose session is alive right now, as the rail lists it."""
+
+    short_id: str
+    slot: str
+    card_number: int | None
+    what: str
+    """`Idea`, or `#N` for a card's Discuss."""
     started_at: datetime
 
 
@@ -106,6 +119,14 @@ class Lane(BaseModel):
     folded: bool
     trunk_synced: bool
     main_synced: bool
+    edits: list[str]
+    """The lane's actual footprint: what its worktree has changed against the
+    trunk, re-read from git on every read while a session has hands on it."""
+    declared: list[str]
+    """The files the card's plan names: the footprint promised before Start."""
+    colliding: "Collision | None"
+    """Another live lane is editing files this one is also editing, named;
+    None while no live lane's edits overlap (plan 07, item 2)."""
 
 
 class DoorResult(BaseModel):
@@ -121,6 +142,8 @@ class LaneSnapshot(BaseModel):
 
     lanes: dict[int, Lane]
     doors: dict[int, "Doors"]
+    conversations: list[Conversation]
+    """Every discussion with a live session, an idea or a card's, for the rail."""
     read_at: datetime
 
 
@@ -163,4 +186,5 @@ class Doors(BaseModel):
     """The owner's one-click answer to a signal only he can read, when it is due."""
 
 
+Lane.model_rebuild()
 LaneSnapshot.model_rebuild()

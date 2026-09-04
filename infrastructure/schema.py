@@ -172,18 +172,35 @@ class HookEventRow(Base):
 
 
 class DiscussionRow(Base):
-    """A conversation opened from a card's Discuss door: its session id and
-    the slot it runs on, so the one list can tell it from hands on the tree."""
+    """A conversation opened from the board — a card's Discuss door, or the
+    head's Idea door about no card yet — by its session id and the slot it
+    runs on, so the one list can tell it from hands on a tree."""
 
     __tablename__ = "discussions"
     __table_args__ = (Index("ix_discussions_card", "project_slug", "card_number"),)
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     project_slug: Mapped[str] = mapped_column(String(80))
-    card_number: Mapped[int] = mapped_column(Integer)
+    card_number: Mapped[int | None] = mapped_column(Integer, nullable=True)
     session_id: Mapped[str] = mapped_column(String(36))
     slot: Mapped[str] = mapped_column(String(40))
     started_at: Mapped[datetime] = mapped_column(UtcDateTime)
+
+
+class WatercoolerRow(Base):
+    """One line of a project's watercooler: what a lane, or the board, said
+    to every other lane (plan 07, item 2). No foreign key to cards: the
+    board's own lines name no card."""
+
+    __tablename__ = "watercooler"
+    __table_args__ = (Index("ix_watercooler_project", "project_slug"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    project_slug: Mapped[str] = mapped_column(String(80))
+    card_number: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    actor: Mapped[str] = mapped_column(String(20))
+    at: Mapped[datetime] = mapped_column(UtcDateTime)
+    text: Mapped[str] = mapped_column(Text)
 
 
 class LaneRow(Base):

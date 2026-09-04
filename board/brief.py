@@ -6,7 +6,9 @@ from a terminal read the same brief (plan 03, item 3).
 import re
 
 from domain.board import CardDetail
+from domain.lane import HANDS_ON, Lane
 from domain.project import Project
+from domain.watercooler import WatercoolerLine
 
 LANE_SLUG_LENGTH = 32
 """0.1 cut the slug at 32 characters; the same cut keeps a lane name legible in
@@ -59,3 +61,37 @@ def render(detail: CardDetail, project: Project) -> str:
         f".claude/worktrees/ named so the board sees hands on the card"
     )
     return "\n".join(lines)
+
+
+def _shown_files(files: list[str], limit: int = 8) -> str:
+    more = f" … and {len(files) - limit} more" if len(files) > limit else ""
+    return ", ".join(files[:limit]) + more
+
+
+def watercooler_text(lines: list[WatercoolerLine]) -> str:
+    """The watercooler as a lane reads it: one line per act, oldest first, in UTC."""
+    if not lines:
+        return "  (nothing said yet)"
+    return "\n".join(
+        f"  {line.at.strftime('%Y-%m-%d %H:%MZ')} "
+        f"{f'#{line.card_number}' if line.card_number is not None else 'the board'}: {line.text}"
+        for line in lines
+    )
+
+
+def neighbours_text(lanes: dict[int, Lane], titles: dict[int, str], number: int) -> str:
+    """The other lanes with hands on the project right now, each with its
+    footprint and one line, as every lane is told before it starts (plan
+    07, item 2). `lanes` is the loop's last read; `titles` the cards'."""
+    lines: list[str] = []
+    for other, lane in sorted(lanes.items()):
+        if other == number or lane.state not in HANDS_ON:
+            continue
+        touching = (
+            f" Touching: {_shown_files(lane.edits)}." if lane.edits else " Touching nothing yet."
+        )
+        declared = f" Its plan names: {_shown_files(lane.declared)}." if lane.declared else ""
+        lines.append(
+            f"  #{other} {titles.get(other, lane.name)} — {lane.sentence}{touching}{declared}"
+        )
+    return "\n".join(lines) if lines else "  (no other lane has hands on this project)"

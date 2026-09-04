@@ -114,21 +114,33 @@ class Runtime:
         )
 
     def discuss(
-        self, *, repo: str, card: str, brief: str, effort: Gate | None, what: str
+        self,
+        *,
+        repo: str,
+        card: str,
+        brief: str,
+        effort: Gate | None,
+        what: str,
+        kind: WindowKind = WindowKind.DISCUSS,
+        session_id: str | None = None,
     ) -> tuple[Opened, str, Placement]:
         """A fresh conversation in a window, on the slot and model the rule
-        chooses; answers the window, the session id it was given and where it runs."""
+        chooses; answers the window, the session id it was given and where it
+        runs. `kind` is the window's app-id kind: a card's Discuss, or the
+        head's Idea about no card yet. The caller may choose the session id
+        when its brief has to name it (an idea's document names the
+        conversation it came from)."""
         where = rule.where(None, [], cached=False)
         if where.placement is None:
             raise windows.WindowRefused(f"the rule found nowhere to run: {where.reason}")
-        session_id = str(uuid.uuid4())
+        session_id = session_id or str(uuid.uuid4())
         banner, command = windows.discuss_command(
             where.placement, cwd=repo, session_id=session_id, brief=brief, effort=effort, what=what
         )
         opened = windows.open_fresh(
             self.store,
             session_id=session_id,
-            kind=WindowKind.DISCUSS,
+            kind=kind,
             card=card,
             command=command,
             banner=banner,

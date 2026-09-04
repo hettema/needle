@@ -7,6 +7,7 @@ leaves the store as it was; any other failure propagates with the database's
 own words, which the page shows verbatim.
 """
 
+import re
 import sqlite3
 from datetime import datetime
 from pathlib import Path
@@ -36,6 +37,7 @@ from domain.row import Row, RowKind
 from domain.session import SessionSlot
 from domain.signal import Reading
 from domain.slot import Model, Rung
+from domain.watercooler import WatercoolerLine
 from domain.window import Window, WindowKind
 from infrastructure.schema import (
     AuditRow,
@@ -50,6 +52,7 @@ from infrastructure.schema import (
     RescueRow,
     SessionSlotRow,
     TrunkRow,
+    WatercoolerRow,
     WindowRow,
 )
 
@@ -62,6 +65,11 @@ ONE_PER_CARD: frozenset[RowKind] = frozenset(
 close written twice never says two things about what shipped, and a card
 never carries two verdicts."""
 ROW_DETAIL_LENGTH = 140
+_CONVERSATION = re.compile(r"conversation\s+([0-9a-f]{8})\b", re.I)
+"""How a document names the conversation it was born from: the Idea door's
+brief asks the session to write `conversation <short id>` on its `Found by`
+line, and the birth row then says so from the board's own record of that
+conversation (plan 07, item 1)."""
 
 
 class StoreRefusal(Exception):
@@ -370,6 +378,7 @@ class Store:
                 group = _landing_group(session, slug, birth.column)
                 position = _group_size(session, group.id)
                 number = project.next_card_number
+                conversation = _conversation_named(session, slug, birth.found_by)
                 project.next_card_number = number + 1
                 session.add(
                     CardRow(
@@ -392,6 +401,13 @@ class Store:
                 )
                 place = Place(column=birth.column, group=None, position=position)
                 how = "at registration" if origin == CardOrigin.FOUNDING else "after registration"
+                detail = f"Born from {birth.document.path}, {how}."
+                if conversation is not None:
+                    day = conversation.started_at.date().isoformat()
+                    detail += (
+                        f" Born from a conversation on {day} ({conversation.session_id[:8]} on "
+                        f"{conversation.slot}, from the Idea door)."
+                    )
                 _audit(
                     session,
                     slug,
@@ -401,7 +417,7 @@ class Store:
                     kind=AuditKind.BORN,
                     from_place=None,
                     to_place=place,
-                    detail=f"Born from {birth.document.path}, {how}.",
+                    detail=detail,
                 )
                 born.append(number)
         return born
@@ -626,8 +642,9 @@ class Store:
             return [_hook_event(r) for r in rows]
 
     def record_discussion(
-        self, slug: str, number: int, session_id: str, slot: str, at: datetime
+        self, slug: str, number: int | None, session_id: str, slot: str, at: datetime
     ) -> Discussion:
+        """A conversation opened from the board; `number` is None for an idea."""
         with Session(self.engine) as session, session.begin():
             row = DiscussionRow(
                 project_slug=slug,
@@ -648,6 +665,38 @@ class Store:
                 .order_by(DiscussionRow.id)
             )
             return [_discussion(r) for r in rows]
+
+    # ── the watercooler ────────────────────────────────────────────────
+
+    def say(
+        self, slug: str, number: int | None, actor: Actor, at: datetime, text: str
+    ) -> WatercoolerLine:
+        """One line on the project's watercooler, from a card's lane or the board."""
+        text = text.strip()
+        if not text:
+            raise StoreRefusal("A watercooler line must say something.")
+        with Session(self.engine) as session, session.begin():
+            if session.get(ProjectRow, slug) is None:
+                raise StoreRefusal(f'No project "{slug}" is on the board.')
+            if number is not None and session.get(CardRow, (slug, number)) is None:
+                raise StoreRefusal(f"There is no card #{number} on this board.")
+            row = WatercoolerRow(
+                project_slug=slug, card_number=number, actor=actor.value, at=at, text=text
+            )
+            session.add(row)
+            session.flush()
+            return _watercooler_line(row)
+
+    def watercooler(self, slug: str, *, limit: int | None = None) -> list[WatercoolerLine]:
+        """The project's lines, oldest first; with `limit`, the newest that many."""
+        with Session(self.engine) as session:
+            query = select(WatercoolerRow).where(WatercoolerRow.project_slug == slug)
+            if limit is not None:
+                rows = session.scalars(query.order_by(WatercoolerRow.id.desc()).limit(limit)).all()
+                return [_watercooler_line(r) for r in reversed(rows)]
+            return [
+                _watercooler_line(r) for r in session.scalars(query.order_by(WatercoolerRow.id))
+            ]
 
     # ── the board's record of each lane ────────────────────────────────
 
@@ -913,6 +962,32 @@ def _hook_event(row: HookEventRow) -> HookEvent:
         project=row.project_slug,
         card_number=row.card_number,
     )
+
+
+def _watercooler_line(row: WatercoolerRow) -> WatercoolerLine:
+    return WatercoolerLine(
+        id=row.id,
+        project=row.project_slug,
+        card_number=row.card_number,
+        actor=Actor(row.actor),
+        at=row.at,
+        text=row.text,
+    )
+
+
+def _conversation_named(session: Session, slug: str, found_by: str | None) -> Discussion | None:
+    """The idea conversation a document's `Found by` line names, when the
+    board's own record holds one with that short id on this project."""
+    match = _CONVERSATION.search(found_by or "")
+    if match is None:
+        return None
+    short = match.group(1).lower()
+    rows = session.scalars(
+        select(DiscussionRow)
+        .where(DiscussionRow.project_slug == slug, DiscussionRow.session_id.like(f"{short}%"))
+        .order_by(DiscussionRow.id.desc())
+    ).all()
+    return _discussion(rows[0]) if rows else None
 
 
 def _discussion(row: DiscussionRow) -> Discussion:

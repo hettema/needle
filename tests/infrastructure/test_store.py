@@ -147,6 +147,7 @@ def test_births_land_last_in_the_unnamed_group_and_number_onward(
                     title="New plan",
                 ),
                 column=Column.PLANNED,
+                found_by=None,
             ),
             Born(
                 document=DocumentRef(
@@ -156,6 +157,7 @@ def test_births_land_last_in_the_unnamed_group_and_number_onward(
                     title="Idea",
                 ),
                 column=Column.BACKLOG,
+                found_by=None,
             ),
         ],
     )
@@ -183,6 +185,7 @@ def test_births_land_last_in_the_unnamed_group_and_number_onward(
                         kind=DocumentKind.PLAN, stem="p3", path="docs/plans/p3.md", title="P3"
                     ),
                     column=Column.PLANNED,
+                    found_by=None,
                 )
             ],
         ),

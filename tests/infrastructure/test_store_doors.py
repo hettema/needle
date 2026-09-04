@@ -8,10 +8,12 @@ from pathlib import Path
 import pytest
 
 from board.import_01 import read_01
+from board.reconcile import Born, Effects
 from domain.audit import AuditKind
 from domain.board import TrunkState
-from domain.card import Actor, Place
+from domain.card import Actor, CardOrigin, Place
 from domain.column import Column
+from domain.document import DocumentKind, DocumentRef
 from domain.evidence import Evidence
 from domain.hook import HookKind, HookPosted
 from domain.lane import LaneRecord
@@ -261,3 +263,88 @@ def test_a_ruling_on_a_verdict_is_one_act_the_row_the_move_and_the_owners_name(b
     kept = board.placements("proj")[259]
     assert kept.actor == Actor.OWNER and kept.from_place == kept.to_place == before.place
     assert kept.detail.startswith("Kept in Executing — accepted the verdict")
+
+
+# ── plan 07: the watercooler, and a conversation about no card yet ─────
+
+
+def test_the_watercooler_keeps_every_line_in_order_and_a_discussion_may_be_about_no_card(
+    board: Store,
+):
+    later = NOW + timedelta(minutes=3)
+    said = board.say("proj", 253, Actor.SESSION, NOW, "  touching engine/metering.py; leave it  ")
+    assert said.card_number == 253 and said.text == "touching engine/metering.py; leave it"
+    board.say("proj", None, Actor.MACHINE, later, "#253 folded over #241's edits in engine/x.py")
+    lines = board.watercooler("proj")
+    assert [(ln.card_number, ln.actor) for ln in lines] == [
+        (253, Actor.SESSION),
+        (None, Actor.MACHINE),
+    ]
+    assert [ln.text for ln in board.watercooler("proj", limit=1)] == [
+        "#253 folded over #241's edits in engine/x.py"
+    ]
+    with pytest.raises(StoreRefusal, match="must say something"):
+        board.say("proj", 253, Actor.SESSION, NOW, "   ")
+    with pytest.raises(StoreRefusal, match="no card #999"):
+        board.say("proj", 999, Actor.SESSION, NOW, "x")
+    with pytest.raises(StoreRefusal, match='No project "nope"'):
+        board.say("nope", None, Actor.MACHINE, NOW, "x")
+
+    idea = board.record_discussion(
+        "proj", None, "a1b2c3d4-0000-4000-8000-000000000000", "alpha", NOW
+    )
+    assert idea.card_number is None
+    assert [d.card_number for d in board.discussions("proj")] == [None]
+
+
+def test_a_document_naming_its_conversation_is_born_from_it(board: Store):
+    board.record_discussion("proj", None, "a1b2c3d4-0000-4000-8000-000000000000", "beta", NOW)
+
+    def born(stem: str, found_by: str | None) -> Effects:
+        return Effects(
+            renamed=[],
+            relinked=[],
+            archived=[],
+            born=[
+                Born(
+                    document=DocumentRef(
+                        kind=DocumentKind.SUGGESTION,
+                        stem=stem,
+                        path=f"docs/slice-suggestions/{stem}.md",
+                        title=stem,
+                    ),
+                    column=Column.BACKLOG,
+                    found_by=found_by,
+                )
+            ],
+        )
+
+    later = NOW + timedelta(hours=2)
+    from_idea = board.apply_effects(
+        "proj",
+        born(
+            "from-the-door",
+            "the owner, from the board's Idea door on 2026-09-03 (conversation a1b2c3d4)",
+        ),
+        origin=CardOrigin.ARRIVED,
+        at=later,
+    )[0]
+    assert board.history("proj", from_idea)[0].detail == (
+        "Born from docs/slice-suggestions/from-the-door.md, after registration. Born from a "
+        "conversation on 2026-09-03 (a1b2c3d4 on beta, from the Idea door)."
+    )
+    by_hand = board.apply_effects(
+        "proj", born("by-hand", "the owner, 2026-09-03"), origin=CardOrigin.ARRIVED, at=later
+    )[0]
+    assert board.history("proj", by_hand)[0].detail == (
+        "Born from docs/slice-suggestions/by-hand.md, after registration."
+    )
+    unknown = board.apply_effects(
+        "proj",
+        born("unknown", "a review (conversation deadbeef)"),
+        origin=CardOrigin.ARRIVED,
+        at=later,
+    )[0]
+    assert "conversation" not in board.history("proj", unknown)[0].detail, (
+        "a conversation the board never opened is not claimed"
+    )

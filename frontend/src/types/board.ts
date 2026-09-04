@@ -6,11 +6,12 @@ import type { CorpusSummary } from "./corpus";
 import type { Document, DocumentRef, DocumentState } from "./document";
 import type { Standing } from "./evidence";
 import type { Gate } from "./gate";
-import type { Doors, Lane, LaneState } from "./lane";
+import type { Collision, Conversation, Doors, Lane, LaneState } from "./lane";
 import type { Project } from "./project";
 import type { Row } from "./row";
 import type { Reading, Signal } from "./signal";
 import type { Verdict, VerdictLine } from "./verdict";
+import type { WatercoolerLine } from "./watercooler";
 
 export const ESSENCE_SOURCE_VALUES = ["card", "document"] as const;
 export type EssenceSource = (typeof ESSENCE_SOURCE_VALUES)[number];
@@ -18,6 +19,8 @@ export type EssenceSource = (typeof ESSENCE_SOURCE_VALUES)[number];
 export interface Attention {
   asking_you: number;
   in_flight: number;
+  colliding: number;
+  in_discussion: number;
   lanes_ended: number;
   signals_due: number;
   signals_asking: number;
@@ -40,6 +43,8 @@ export interface BoardState {
   documents_without_card: DocumentRef[];
   asks: OwnerAsk[];
   verdicts: VerdictLine[];
+  conversations: Conversation[];
+  watercooler: WatercoolerLine[];
 }
 
 export interface CardDetail {
@@ -57,6 +62,7 @@ export interface CardDetail {
   readings: Reading[];
   verdict: Verdict | null;
   verdict_note: string | null;
+  watercooler: WatercoolerLine[];
 }
 
 export interface CardSummary {
@@ -74,6 +80,7 @@ export interface CardSummary {
   place: Place;
   lane_state: LaneState;
   lane_sentence: string | null;
+  colliding: Collision | null;
   standing: Standing;
 }
 

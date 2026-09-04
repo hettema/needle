@@ -693,3 +693,166 @@ def test_a_lane_killed_otherwise_carries_the_machines_reason(
     assert resumed.status_code == 200, resumed.text
     assert resumed.json()["said"].startswith("Resumed as ")
     assert column_of(client, CARD) == "Executing"
+
+
+# ── plan 07: conversations and lanes that know each other ──────────────
+
+
+def test_idea_opens_a_conversation_the_rail_lists_and_a_document_it_writes_is_born_from_it(
+    client: TestClient, machine_floor: Floor, repo: Path
+):
+    """Item 1: Idea in the head opens a conversation in the project's checkout
+    with the brief and the owner's first line; it is in discussion on the rail
+    while its session lives and never hands on a tree; a document naming the
+    conversation becomes a card whose history says where it was born."""
+    board_before = client.get("/api/projects/proj/board").json()
+    assert board_before["attention"]["in_discussion"] == 0 and board_before["conversations"] == []
+    opened = client.post(
+        "/api/projects/proj/idea", json={"text": "should berths be priced by the metre?"}
+    )
+    assert opened.status_code == 200, opened.text
+    assert opened.json()["said"].startswith(
+        "Talking in org.omarchy.board-idea-proj, fable on alpha"
+    )
+    spawned = machine_floor.state()["spawned"][0]
+    assert spawned["app_id"] == "org.omarchy.board-idea-proj"
+    command = spawned["command"][-1]
+    assert command.startswith(f"cd {repo} &&"), "the conversation runs in the project's checkout"
+    assert "--effort xhigh" in command and "--session-id" in command
+    session_id = command.split("--session-id ")[1].split()[0]
+    short = session_id[:8]
+    assert f"conversation {short}" in command, "the brief names the conversation to be named back"
+    assert "should berths be priced by the metre?" in command and "answer it" in command
+    assert "The corpus is the only way in" in command and "Write nothing else" in command
+
+    # No process yet: the window was spawned but the fake launcher runs nothing.
+    assert client.get("/api/projects/proj/board").json()["attention"]["in_discussion"] == 0
+    machine_floor.write_job("alpha", short, session_id=session_id, cwd=str(repo), name="idea")
+    machine_floor.write_process("alpha", session_id, os.getpid(), cwd=str(repo), kind="interactive")
+    reconcile(client)
+    board = client.get("/api/projects/proj/board").json()
+    assert board["attention"]["in_discussion"] == 1
+    talk = board["conversations"][0]
+    assert talk["what"] == "Idea" and talk["short_id"] == short and talk["card_number"] is None
+    assert board["attention"]["in_flight"] == board_before["attention"]["in_flight"], (
+        "a conversation is never hands on a tree"
+    )
+    assert all(
+        c["lane_state"] == "none"
+        for col in board["columns"]
+        for g in col["groups"]
+        for c in g["cards"]
+    )
+
+    # The session writes a suggestion that names the conversation; the watcher cards it.
+    (repo / "docs" / "slice-suggestions" / "2026-09-04-berths-by-the-metre.md").write_text(
+        "# Berths priced by the metre\n\n"
+        "**Found by:** the owner, from the board's Idea door on 2026-09-04 "
+        f"(conversation {short})\n"
+        "**Kind:** idea\n\n## Observation\n\nA berth is priced by the slot, not the boat.\n",
+        encoding="utf-8",
+    )
+    client.app.state.loops.live.rescan("proj")
+    born = client.get("/api/projects/proj/board").json()
+    number = next(
+        c["number"]
+        for col in born["columns"]
+        for g in col["groups"]
+        for c in g["cards"]
+        if c["title"] == "Berths priced by the metre"
+    )
+    history = detail(client, number)["history"]
+    today = datetime.now(UTC).date().isoformat()
+    assert history[-1]["kind"] == "born"
+    assert (
+        f"Born from a conversation on {today} ({short} on alpha, from the Idea door)."
+        in history[-1]["detail"]
+    )
+
+    # An empty first line: the session asks.
+    machine_floor.update(clients=[])
+    again = client.post("/api/projects/proj/idea", json={"text": ""})
+    assert again.status_code == 200, again.text
+    second = machine_floor.state()["spawned"][1]["command"][-1]
+    assert "ask him, in one line, what is on his mind" in second
+
+
+def test_two_lanes_in_one_file_collide_on_both_cards_know_each_other_and_the_fold_says_so(
+    client: TestClient, machine_floor: Floor, repo: Path, capsys
+):
+    """Item 2: two lanes with overlapping actual edits are colliding on the next
+    read, on both cards and the rail; each lane's brief names the other with
+    its footprint; a watercooler line from one is on the other's card; a fold
+    over the other's edits is named on both cards and in the watercooler."""
+    start(client)
+    mine = Path(lane_path(repo))
+    # #241's lane: a real worktree with a live session, editing README.md.
+    other = repo / ".claude" / "worktrees" / "card-241-the-deploy"
+    git(repo, "worktree", "add", "-q", "-b", "card-241-the-deploy", str(other))
+    (other / "README.md").write_text("their edit\n")
+    (other / "theirs.py").write_text("x\n")
+    session_id = machine_floor.write_job(
+        "alpha", "beef0241", cwd=str(other), worktree=str(other), name="card-241-the-deploy"
+    )
+    machine_floor.write_process("alpha", session_id, os.getpid(), cwd=str(other))
+    reconcile(client)
+    board = client.get("/api/projects/proj/board").json()
+    assert board["attention"]["colliding"] == 0
+    assert summary_of(client, 241)["colliding"] is None
+
+    # Every lane's brief names the other live lanes with their footprints.
+    brief = client.get("/api/projects/proj/cards/253/brief").text
+    assert "Other lanes with hands on this project right now:" in brief
+    assert "#241 " in brief and "Touching: README.md, theirs.py." in brief
+    assert "say so in the watercooler first" in brief and "needle watercooler proj 253" in brief
+    assert "(nothing said yet)" in brief
+
+    # #253 drifts into README.md: colliding on both cards on the next read.
+    (mine / "README.md").write_text("my edit\n")
+    reconcile(client)
+    board = client.get("/api/projects/proj/board").json()
+    assert board["attention"]["colliding"] == 2
+    assert summary_of(client, CARD)["colliding"] == {
+        "verdict": "collides",
+        "sentence": "#241's lane is also editing README.md.",
+        "files": ["README.md"],
+    }
+    assert summary_of(client, 241)["colliding"]["sentence"] == (
+        "#253's lane is also editing README.md."
+    )
+    lane = detail(client)["lane"]
+    assert lane["edits"] == ["README.md"] and lane["colliding"]["files"] == ["README.md"]
+
+    # A watercooler line from #241 is on #253's card and in its brief.
+    line = "README.md is mine until the fold; leave it"
+    assert main(["watercooler", "proj", "241", line]) == 0
+    assert "#241 said it" in capsys.readouterr().out
+    client.app.state.loops.live.bump()
+    board = client.get("/api/projects/proj/board").json()
+    assert board["watercooler"][-1]["card_number"] == 241
+    assert board["watercooler"][-1]["text"] == line
+    assert detail(client)["watercooler"][-1]["text"] == line
+    assert f"#241: {line}" in client.get("/api/projects/proj/cards/253/brief").text
+    assert main(["watercooler", "proj"]) == 0
+    assert f"#241: {line}" in capsys.readouterr().out
+    assert main(["watercooler", "proj", "241", "  "]) == 1
+
+    # #253 folds over #241's edit: said on both cards and in the watercooler.
+    git(mine, "add", "-A")
+    git(mine, "commit", "-q", "-m", "my edit")
+    assert main(["fold", "--worktree", str(mine)]) == 0
+    out = capsys.readouterr().out
+    assert "The watercooler, before the fold:" in out
+    assert f"#241: {line}" in out
+    assert "this fold lands over #241's edits in README.md" in out
+    assert "folded:" in out
+    client.app.state.loops.live.bump()
+    mine_history = [h["detail"] for h in detail(client)["history"]]
+    assert "Folded over #241's edits in README.md" in mine_history
+    theirs_history = [h["detail"] for h in detail(client, 241)["history"]]
+    assert "#253 folded over this lane's edits in README.md; re-verify them at the fold" in (
+        theirs_history
+    )
+    last = client.get("/api/projects/proj/board").json()["watercooler"][-1]
+    assert last["card_number"] is None
+    assert last["text"] == "#253 folded over #241's edits in README.md"
