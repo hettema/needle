@@ -5,6 +5,7 @@ suggestion from "the closed card…" to "the collapsed card…" on the owner's
 word: the board birthed a new card (#18) and left the old one (#11) with its
 document gone, instead of following the document.
 **Kind:** defect
+**Carried by:** docs/plans/2026-09-04-08-identity-and-the-record.md
 
 ## Observation
 

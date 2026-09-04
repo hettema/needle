@@ -6,6 +6,7 @@ which had to stance every ratchet of that board on its intent before deleting
 it. Four intents were held by a test there and are held by nothing here.
 Each is written so a Needle session can decide it; none is urgent enough to
 have blocked the retirement.
+**Carried by:** docs/plans/2026-09-04-07-conversations-and-lanes-know-each-other (item 1) and 08-identity-and-the-record (items 2 and 3); item 4 is not Needle's
 
 ## 1. Start is his click — held by no ratchet
 

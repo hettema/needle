@@ -5,6 +5,7 @@ running: "how do I see if I can kick off cards concurrently? … the closed
 card should clearly show if it's free to kick off", and "do you think we
 should have a start button on the card (its collapsed view)?"
 **Kind:** idea
+**Carried by:** docs/plans/2026-09-04-06-the-board-at-a-glance.md
 
 ## Observation
 

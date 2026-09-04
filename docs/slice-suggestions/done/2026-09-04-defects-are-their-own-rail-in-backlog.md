@@ -4,6 +4,7 @@
 should have a separate backlog lane for bug reports. Backlog should be for
 ideas in my mind, easier to scan that way."
 **Kind:** idea
+**Carried by:** docs/plans/2026-09-04-06-the-board-at-a-glance.md
 
 ## Observation
 

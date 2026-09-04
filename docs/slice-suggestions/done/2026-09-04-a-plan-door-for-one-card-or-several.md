@@ -5,6 +5,7 @@ be executed. I think we should have a 'create plan' button on the card (also
 on the card in its collapsed view)", and "do all the cards you created need to be separate
 cards or can some be folded? That feels like an efficiency gain."
 **Kind:** idea
+**Carried by:** docs/plans/2026-09-04-06-the-board-at-a-glance.md
 
 ## Observation
 

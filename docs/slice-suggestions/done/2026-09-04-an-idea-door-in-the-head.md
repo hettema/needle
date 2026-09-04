@@ -4,6 +4,7 @@
 needle board? If I have a HR idea, or question etc, I'd like to start a
 session from the board easily."
 **Kind:** idea
+**Carried by:** docs/plans/2026-09-04-07-conversations-and-lanes-know-each-other.md
 
 ## Observation
 

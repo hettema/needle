@@ -4,6 +4,7 @@
 lane names or the header anymore. So when I come back to a board that's
 scrolled down I have to scroll up to orient myself."
 **Kind:** idea
+**Carried by:** docs/plans/2026-09-04-06-the-board-at-a-glance.md
 
 ## Observation
 

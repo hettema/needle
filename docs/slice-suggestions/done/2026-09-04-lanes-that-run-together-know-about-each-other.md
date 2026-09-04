@@ -6,6 +6,7 @@ am assuming that the sessions will work things out amongst themselves
 efficiently? Maybe with the watercooler thing or a similar mechanism which is
 board specific?"
 **Kind:** idea
+**Carried by:** docs/plans/2026-09-04-07-conversations-and-lanes-know-each-other.md
 
 ## Observation
 

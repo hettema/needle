@@ -3,6 +3,7 @@
 **Found by:** the coordinating session, 2026-09-04 15:30, when the owner
 looked for slice 04 on the board and the three slices already shipped were
 still sitting in Planned and Up next.
+**Carried by:** docs/plans/2026-09-04-06-the-board-at-a-glance.md
 
 ## Observation
 
