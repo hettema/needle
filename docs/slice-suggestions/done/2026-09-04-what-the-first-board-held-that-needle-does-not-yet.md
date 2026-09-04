@@ -25,6 +25,12 @@ the top card when the machine is idle is one line, locally reasonable, and
 would fail no test. Shape that fits Needle's layout: a ratchet that the
 runtime's `start` is called from `api/doors.py` only, never from `api/loops.py`.
 
+**Closed by plan 07 (card #17, 2026-09-04):** `tests/ratchets/test_start_is_the_owners_click.py`
+reads `api/`'s AST and refuses any call of the runtime's `start` outside the
+two modules where a person presses — `api/doors.py` and `api/runtime_cli.py`
+(`needle start` in his own terminal) — and any import of the doors by the
+loops. Items 2 and 3 are plan 08's; item 4 is not Needle's.
+
 ## 2. A close answers every promise — held at Hello Revenue's archive gate now, not at Needle's close
 
 0.1's close door refused a close whose archived plan carried unstanced
