@@ -888,7 +888,9 @@ def test_a_running_lane_hears_its_drift_and_the_other_lanes_lines_once(
     assert word_of(client, str(mine)) == [], "nothing has happened since the brief"
     assert client.get("/api/word", params={"cwd": str(repo)}).status_code == 404
     assert client.get("/api/word", params={"cwd": "/elsewhere"}).status_code == 404
-    assert detail(client)["heard"] is None
+    # The first word wrote the baseline, so the next tool call reads no
+    # watercooler at all; the card is told nothing, because nothing was said.
+    assert detail(client)["heard"]["at"] is None
 
     # A drifts into B's file: named once, with the ask; then nothing.
     (mine / "README.md").write_text("my edit\n")
@@ -943,9 +945,17 @@ def test_a_running_lane_hears_its_drift_and_the_other_lanes_lines_once(
     assert word_of(client, str(other))[0].startswith("#253's lane is also editing README.md.")
     assert main(["fold", "--worktree", str(mine)]) == 0
     capsys.readouterr()
+    # The board's own read, said rather than raced: the fold's writes reach
+    # this server through the write stamp a second later, and the drift is
+    # only gone once the loop has re-read the worktrees.
+    reconcile(client)
+    # The fold puts #253's edits in the trunk, so #241's drift clears in the
+    # same breath the board says the fold landed over it: one word, both facts.
     assert word_of(client, str(other)) == [
-        "The board said on the watercooler: #253 folded over #241's edits in README.md"
+        "The collision has cleared: no other live lane is editing a file this lane is editing.",
+        "The board said on the watercooler: #253 folded over #241's edits in README.md",
     ]
+    assert word_of(client, str(other)) == []
 
 
 # ── plan 06: the board at a glance ─────────────────────────────────────

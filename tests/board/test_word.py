@@ -124,10 +124,12 @@ def test_other_lanes_lines_reach_the_lane_once_and_its_own_never():
     assert again.sentences == [] and moved is None
 
     only_own = lines + [line(4, 253, "folding now")]
-    still, none = compose(
+    still, passed = compose(
         "proj", lane(), only_own, mark, since=HANDS_ON_SINCE, now=NOW, read_at=READ_AT
     )
-    assert still.sentences == [] and none is None, "a lane never hears itself"
+    assert still.sentences == [], "a lane never hears itself"
+    assert passed is not None and passed.watercooler_id == 4, "but the mark passes its own line"
+    assert passed.at == mark.at and passed.text == mark.text, "which the card is not told about"
     then = only_own + [line(5, 241, "go ahead")]
     word, mark = compose("proj", lane(), then, mark, since=HANDS_ON_SINCE, now=NOW, read_at=READ_AT)
     assert word.sentences == ["#241 said on the watercooler: go ahead"]
@@ -162,3 +164,65 @@ def test_drift_and_lines_come_as_one_word_and_a_lane_without_hands_hears_nothing
         "proj", ended, lines, existing, since=HANDS_ON_SINCE, now=NOW, read_at=READ_AT
     )
     assert nothing.sentences == [] and none is None
+
+
+def test_a_quiet_lane_records_its_baseline_so_it_never_re_reads_the_watercooler():
+    """The word runs on every tool call, so hearing that moved is written
+    down even when there was nothing to say: a lane told nothing records the
+    baseline it started from, and a lane whose own line went by records
+    passing it. Only a word that said something stamps `at` and `text`,
+    which is what the card shows — so the caller can tell a silent mark from
+    one worth turning the page over for."""
+    said_before = line(1, 241, "in the brief", at=HANDS_ON_SINCE - timedelta(minutes=1))
+    quiet, mark = compose(
+        "proj", lane(), [said_before], None, since=HANDS_ON_SINCE, now=NOW, read_at=READ_AT
+    )
+    assert quiet.sentences == []
+    assert mark is not None and mark.watercooler_id == 1, "the baseline is written down"
+    assert mark.at is None and mark.text is None, "nothing was said, so the card shows nothing"
+
+    # Nothing has changed since: no mark to write at all.
+    again, none = compose("proj", lane(), [], mark, since=HANDS_ON_SINCE, now=NOW, read_at=READ_AT)
+    assert again.sentences == [] and none is None
+
+    # The lane's own line goes by: the mark advances, still silently.
+    own = [line(2, 253, "folding now")]
+    still, moved = compose(
+        "proj", lane(), own, mark, since=HANDS_ON_SINCE, now=NOW, read_at=READ_AT
+    )
+    assert still.sentences == []
+    assert moved is not None and moved.watercooler_id == 2 and moved.at is None
+
+
+def test_how_much_of_the_watercooler_the_caller_must_read_is_the_marks_to_decide():
+    """The contract `Loops.word_now` is written against: with a mark, only
+    the lines past it are needed; without one, the whole watercooler, since
+    the baseline is read from what was said before `since`. Reading less
+    than that on a fresh lane loses a line said after it — the one shape of
+    starvation this composer cannot detect for itself."""
+    said_before = line(1, 241, "in the brief", at=HANDS_ON_SINCE - timedelta(minutes=1))
+    while_running = line(2, 241, "said while it runs", at=HANDS_ON_SINCE + timedelta(minutes=1))
+    whole, mark = compose(
+        "proj",
+        lane(),
+        [said_before, while_running],
+        None,
+        since=HANDS_ON_SINCE,
+        now=NOW,
+        read_at=READ_AT,
+    )
+    assert whole.sentences == ["#241 said on the watercooler: said while it runs"]
+    assert mark is not None and mark.watercooler_id == 2
+
+    # Starved past the running line, the fresh lane never hears it: the
+    # caller reads from 0 while the mark is None, and this is why.
+    starved, _ = compose("proj", lane(), [], None, since=HANDS_ON_SINCE, now=NOW, read_at=READ_AT)
+    assert starved.sentences == [], "a line not handed in cannot be said"
+
+    # With a mark, the lines past it are all the composer needs.
+    past = [line(3, 241, "after the mark")]
+    word, moved = compose(
+        "proj", lane(), past, mark, since=HANDS_ON_SINCE, now=NOW, read_at=READ_AT
+    )
+    assert word.sentences == ["#241 said on the watercooler: after the mark"]
+    assert moved is not None and moved.watercooler_id == 3

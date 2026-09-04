@@ -37,17 +37,36 @@ def compose(
     now: datetime,
     read_at: datetime,
 ) -> tuple[Word, HeardMark | None]:
-    """The word for a lane and the mark to write when it says something;
-    the mark is None when there is nothing new. `lines` is the project's
-    watercooler, oldest first, at least every line past the mark; `mark`
-    where the lane's hearing stands, or
-    None when it has never been told anything — then the lines its brief
-    already carried, said before `since` (the lane's first sighting, which
-    outlives a resume of its session), are heard. A lane without hands on
-    its worktree is told nothing: there is no session to hear it."""
+    """The word for a lane and the mark to write, or None when the mark
+    already says where the lane's hearing stands.
+
+    The mark moves whenever hearing moved, which is not only when the word
+    says something: a lane that is told nothing still records the baseline
+    it started from, and a lane whose own lines went by records passing
+    them. Otherwise a quiet lane would keep no mark, and every tool call it
+    makes — thousands over a lane-day — would read the project's whole
+    watercooler again to work out that it had nothing to hear. Only a word
+    that said something stamps `at` and `text`, which is what the card
+    shows.
+
+    `mark` is where the lane's hearing stands, and it decides how much of
+    the watercooler `lines` must carry — the caller reads exactly that
+    much, because this runs on every tool call:
+
+    - a mark, and `lines` need only be the lines past `mark.watercooler_id`;
+    - no mark (the lane has never been told anything), and `lines` must be
+      the project's whole watercooler, because the baseline is read from
+      it: everything said before `since` was already in the lane's brief
+      and counts as heard.
+
+    `since` is the lane record's first sighting, not the session's start,
+    so a resume — which forks the session id — keeps what the lane heard.
+    A lane without hands on its worktree is told nothing: there is no
+    session to hear it."""
     empty = Word(project=slug, card_number=lane.card_number, sentences=[], read_at=read_at)
     if lane.state not in HANDS_ON or lane.path is None:
         return empty, None
+    known = mark
     if mark is None:
         heard_upto = max(
             (ln.id for ln in lines if since is None or ln.at <= since),
@@ -73,9 +92,11 @@ def compose(
         (ln.id for ln in lines if ln.id > mark.watercooler_id), default=mark.watercooler_id
     )
     if not sentences:
-        # The lane's own lines advance the mark silently when the next word
-        # is written; nothing to say means nothing to write.
-        return empty, None
+        # Nothing to say means the drift already reads as the mark records
+        # it, so only the watercooler can have moved: the baseline of a lane
+        # never told anything, or the lane's own lines going by.
+        quiet = mark.model_copy(update={"watercooler_id": newest})
+        return empty, None if quiet == known else quiet
     word = Word(project=slug, card_number=lane.card_number, sentences=sentences, read_at=read_at)
     moved = mark.model_copy(
         update={

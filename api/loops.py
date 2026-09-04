@@ -225,6 +225,11 @@ class Loops:
             return await asyncio.to_thread(self.word_now, project, number)
 
     def word_now(self, live: LiveProject, number: int) -> Word:
+        """The word for one lane, and its mark moved. Before the loop's
+        first read the board knows no lane's drift and says nothing rather
+        than guess. The mark is written by this server's own store, so the
+        write stamp counts it as the server's own and the change loop does
+        not read the board back to itself (plan 06, item 6)."""
         slug = live.project.slug
         now = clock.now()
         snapshot = live.snapshot
@@ -245,7 +250,12 @@ class Loops:
         )
         if mark is not None:
             store.mark_heard(mark)
-            self.live.bump()
+            # Only a word that said something changed what the card shows;
+            # a mark that moved silently (the baseline, the lane's own lines
+            # going by) would otherwise turn every open page over for a line
+            # that reads the same, on every tool call of every lane.
+            if word.sentences:
+                self.live.bump()
         return word
 
     def record_hooks(self, posted: list[HookPosted]) -> list[HookEvent]:
