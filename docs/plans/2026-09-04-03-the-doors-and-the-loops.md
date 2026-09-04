@@ -36,7 +36,11 @@ Every door proves its effect by evidence and fails loudly by name; none is a sil
 
 Done means: a card cannot enter Executed without a WATCH row naming its signal (what will be observed, where, and by when); Needle reads the signals it can (a URL returning a value, a file appearing, a command's output, a count in a project's own data) on a cadence the row states, and moves the card to Done when the signal says delivered, or to Decision moment with the finding when it says not; a signal only the owner can read is shown to him as a question in the attention rail at its due time, with one click each way; nothing sits in Executed past its due time without the board saying so.
 
-### 6. Rescue, said out loud
+### 6. The fold reaches origin, and the checkout follows
+
+Done means: a lane folds by fast-forward push to `origin/develop` from its own worktree (the worktree guard refuses local merges); the runtime keeps every registered project's main checkout level with `origin/develop` on a poll and after each fold, refusing — and saying so on the attention rail — when that checkout has uncommitted work that is not its own; `main` is promoted from `develop` at a slice close by the close door, never by hand; the card shows "folded, trunk synced, main synced" as three facts, each written only when true. This is Hello Revenue's convention (`develop` trunk, `main` stable, the main-sync ritual), adopted for every project on the board so one fold serves all.
+
+### 7. Rescue, said out loud
 
 Done means: a lane that dies on a model or subscription limit is moved by the runtime's rule and the card says "moved to <model> on <slot>, new window opened" at that moment; a lane that dies for any other reason (memory kill, exit, the machine restarting) carries the machine's reason in one line read from the journal or the job record, and the owner's choice is Resume or Look, never a guess; one automatic retry per run-out, and the ledger that holds that line is separate from the record of where the lane lives.
 

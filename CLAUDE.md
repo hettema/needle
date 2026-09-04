@@ -19,10 +19,19 @@ document disagree, the intent wins and this file gets fixed.
 folder is the status: `docs/plans/*.md` is live work, `docs/plans/done/` is
 the archive. No separate status list — a hand-kept one drifts.
 
-**Execution takes a lane.** Work that becomes commits runs in a git worktree
-under `.claude/worktrees/`, named `card-<id>-<slug>` once the board can see
-it, on a short-lived branch that fast-forwards into `main` when green and is
-deleted at the fold. The main checkout is for reading, docs and the fold.
+**Execution takes a lane, and the trunk is `develop`.** Work that becomes
+commits runs in a git worktree under `.claude/worktrees/`, named
+`card-<id>-<slug>` once the board can see it, on a short-lived branch. The
+fold is a fast-forward push to `origin/develop` (`git push origin HEAD:develop`)
+when the suite is green; the branch is deleted at the fold. Claude Code's
+worktree guard refuses a lane any git command aimed at the main checkout, so
+a lane never merges locally — origin is the meeting point, and the local
+checkout follows `origin/develop` (kept level by the runtime once slice 03
+lands; by the coordinating session until then). `main` is promoted from
+`develop` at each slice close and is what the public repository shows as
+stable; nothing commits to `main` directly. The main checkout is for reading,
+docs and the sync. Same shape as Hello Revenue, so one convention serves
+every project on the board.
 
 **The board reads what runs; it never is the thing that runs.** Nothing under
 `board/` spawns a process, opens a window or chooses a model. That is the
