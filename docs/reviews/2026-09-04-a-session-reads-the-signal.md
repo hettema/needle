@@ -2,8 +2,8 @@
 
 **Plan:** docs/plans/done/2026-09-04-09-a-session-reads-the-signal.md
 **Reviewer:** the build session (Claude Fable 5.1 at high), reviewing its own diff in passes before the fold. No second session was in the loop; the first reading round on the served board, and the owner's first look at a batch that holds only what is his, are the sign-off this record cannot replace.
-**Diff range:** 34dfc52..77dc915 (one code commit on the lane `card-23-09-a-session-reads-the-signal`: the `session` reader and the parse fix, the reading session's launch, tending and limit move, the `reading` door and verb, the actor on a reading with migration 0007, the narrowed batch, the page, the regenerated types and fixture, ten tests). The docs commit that follows carries this record, the archived plan, the filed suggestion and the translations' reasoning.
-**Findings:** 9 — 6 fixed before this record, 2 no change with the reason, 1 filed.
+**Diff range:** 34dfc52..77dc915 plus the one-line store fix from the live round, in the closing commit (one code commit on the lane `card-23-09-a-session-reads-the-signal`: the `session` reader and the parse fix, the reading session's launch, tending and limit move, the `reading` door and verb, the actor on a reading with migration 0007, the narrowed batch, the page, the regenerated types and fixture, ten tests). The docs commit that follows carries this record, the archived plan, the filed suggestion and the translations' reasoning.
+**Findings:** 10 — 7 fixed before this record, 2 no change with the reason, 1 filed.
 
 ## The passes
 
@@ -25,16 +25,17 @@ The review ran as a loop (CLAUDE.md): each pass one lens, fixes landed, the next
 7. **`first_read` starts up to two reading sessions before the board is served**, when session signals are due at a restart. NO CHANGE: bounded by `READINGS_AT_ONCE` at two launches of about five seconds each, and a caller who saw the server start has then seen a complete read of the signals as of every other loop; a reading skipped at the first read would be one the timer starts a minute later with nobody the wiser.
 8. **`needle signals` from a terminal and the served board's loop can both start a reading for the same card** inside one launch's verify window (about five seconds), since the record is written after the launch is proved alive. NO CHANGE: the verb is a hand tool, the window is small, and a second reading writes a second finding on the same card rather than corrupting anything; the store-side claim that would close it (a row before the launch, with no session id yet) is a primitive this slice does not need.
 9. **`needle close` accepts a card without a review record**, found translating #178's signal, whose refusal was the first board's. OUTSIDE THE CHANGE: filed as `docs/slice-suggestions/2026-09-04-a-close-without-a-review-record-is-accepted.md`, `Kind: defect`.
+10. **A session's cannot-tell was written on the card's history as "Signal read as unreadable"**, the machine's word for a reading it could not make (seen on #101's history, 17:01Z). FIXED: the store writes "cannot tell" when the actor is a session; the test asserts the history row.
 
 ## What was checked
 
 - **The suite on the fixture floor**: 291 backend tests including the ratchets (10 new in `tests/api/test_reading.py`: the start and the listing, delivered, not delivered, cannot tell and the owner's click, the replacement row and the next cadence, the death and the ceiling, the limit move, the cap, a start that fails, the row that needs a target), `npx tsc --noEmit` clean, 33 vitest scenarios (the batch scenario extended: a cannot-tell row shows the session's words, an owner's row does not).
 - **The grammar against the 52 real rows**: every one of the 51 translated rows parses as `session` with a target and no `by <date>` inside it; the #177 hazard row parses as the owner's.
-- **On the served board, after the fold and the restart**: recorded below and on the card.
+- **On the served board, after the fold and the restart**: the first round, recorded below and on the card.
 
 ## The first reading round
 
-Recorded after the fold: how many of the 51 the served board's loop started on the lane's day, and what the first findings said.
+Recorded after the fold, from the served board's store and the sessions' transcripts. The 51 rows landed at 16:58Z. Two readings started within the minute (#101, #102), each a `claude --bg` in Hello Revenue's checkout in a `needle-reading-card-…` scope, listed by `needle sessions` under the `reading-` name and by the board on the card, never as a lane; their transcripts show the plan read, the schema read, the read-only role used with the credential redacted in their own output, no worktree and no write. #101 ended **cannot tell** at 17:01Z (2 min 25 s): no one-channel account has clicked Recommend since the ship, the query named, the one slate that says nothing either way named, and what would decide it — and the rail's batch went from 0 to 1 with those words as the evidence, `asking_you` with it. #102 ended **delivered** at 17:02Z (3 min 28 s) with the timings of the three real builds since the ship against the 16 Aug build, moved to Done on `signal-delivered`, and replaced its own measure with a reasoned one (whole-build floor and per-stage parallelism, because per-asset wall-clock ignores size the other way). The loop stopped the finished #101 session and started #103 on its next tick. Finding 10 came from this round: a session's cannot-tell was written on the history as "Signal read as unreadable", the machine's word. FIXED: the store writes "cannot tell" for a session's None. The rest of the round is the loop's, two at a time, and the card's own WATCH row counts the readings.
 
 ## What the build learned the plan got wrong
 

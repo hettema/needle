@@ -146,6 +146,7 @@ def test_cannot_tell_asks_the_owner_with_the_sessions_words_and_his_click_answer
     words = "no metered row since the close; the next meter read is Friday's, which decides it"
     assert main(["reading", "proj", str(CARD), "cannot-tell", words]) == 0
     assert column_of(client, CARD) == "Executed"
+    assert detail(client)["history"][0]["detail"].startswith(f"Signal read as cannot tell: {words}")
     state = board(client)
     assert state["attention"]["signals_asking"] == 1 and state["attention"]["asking_you"] >= 1
     assert state["asks"] == [

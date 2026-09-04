@@ -895,7 +895,11 @@ class Store:
                 actor=actor.value,
             )
             session.add(row)
+            # A session's None is a finding — it read and could not tell;
+            # the machine's None is a reading that could not be made.
             said = {True: "delivered", False: "not delivered", None: "unreadable"}[delivered]
+            if delivered is None and actor == Actor.SESSION:
+                said = "cannot tell"
             _audit(
                 session,
                 slug,
