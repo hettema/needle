@@ -10,12 +10,13 @@ itself, from commit `16a8023` (2026-09-04).
 `tests/ratchets/test_the_fixture_project_is_synthetic.py::test_no_real_card_title_is_in_the_tracked_tree`
 fails on `origin/develop`: eight of Hello Revenue's real card titles are in
 `docs/design/2026-09-04-the-colour-language/Card.dc.html`, `Main.dc.html` and
-`Triage.dc.html`, used as the comps' sample content — "a paid invoice reaches
-the ledger", "tell production which ad accounts are ours", "the pen writes on
-pictures", "the homepage walk through tells one campaign in three ad formats",
-"google keyword pools open the whole market", "brief written in the market's
-language", "the coordinator stops growing into the next campaign service", "a
-failed check repairs the line not the answer".
+`Triage.dc.html`, used as the comps' sample content. They are not repeated
+here: quoting them to describe the leak reproduces it, and this file turned
+the ratchet red on the trunk a second time for exactly that reason (#27's
+lane, fixing the comps, 2026-09-04). `uv run pytest -q
+tests/ratchets/test_the_fixture_project_is_synthetic.py` names them, locally,
+from a fingerprint list — which is the only place a real title should ever be
+readable.
 
 This is the leak that ratchet was written to stop: `tools/board_fixture.py`
 exists because a hand-written page fixture "carried a real project's card

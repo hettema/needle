@@ -7,7 +7,7 @@ what the lane band was saying.
 
 ## Observation
 
-Card #196 (`Google keyword pools open the whole market`) sits in **Executed**,
+Card #196 sits in **Executed**,
 archived, with `EVIDENCE HOLDS · CLOSE-LANDED`. Its lane band, in the red
 `--wrong` ground, says:
 
