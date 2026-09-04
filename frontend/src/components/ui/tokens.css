@@ -1,0 +1,144 @@
+/* Needle — the design system's tokens, copied once from the signed comp
+ * (docs/design/2026-09-03-the-board.html) and the single living source from
+ * then on. Every colour a Needle surface may use is a variable here; a raw
+ * colour anywhere else is refused by tests/ratchets/test_one_design_system.py.
+ *
+ * Four colours carry meaning and nothing else does:
+ *   accent  — structure, and the one action on a surface
+ *   attn    — your move
+ *   wrong   — not true: a write that failed, a citation to nothing
+ *   landed  — it shipped
+ * A card that is merely planned is neutral. 0.1 painted every alarm red and
+ * the red became wallpaper; this is the fix.
+ */
+
+@import "tailwindcss";
+
+:root {
+  color-scheme: light dark;
+
+  --paper: #E8ECEA;
+  --surface: #FFFFFF;
+  --surface-2: #F3F6F4;
+  --ink: #1D2326;
+  --ink-2: #56626A;
+  --ink-3: #8B959B;
+  --line: #D4DAD6;
+  --line-2: #BFC7C2;
+
+  --accent: #0E5E66;
+  --accent-2: #DCEAEB;
+  --attn: #8E5D0B;
+  --attn-2: #F6EEDB;
+  --wrong: #A2382F;
+  --wrong-2: #F6E3E1;
+  --landed: #37734C;
+  --landed-2: #E0ECE4;
+
+  --on-accent: #FFFFFF;
+
+  --shadow-1: 0 1px 2px rgba(29, 35, 38, .06);
+  --shadow-2: 0 10px 26px -8px rgba(29, 35, 38, .34), 0 2px 6px rgba(29, 35, 38, .12);
+
+  --r-card: 7px;
+  --r-chip: 3px;
+  --r-ctrl: 5px;
+
+  --col-w: 288px;
+  --col-w-open: 560px;
+  --rail-w: 46px;
+
+  --sans: Archivo, "Helvetica Neue", system-ui, sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, monospace;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --paper: #121618;
+    --surface: #1C2225;
+    --surface-2: #232A2D;
+    --ink: #E4E8E5;
+    --ink-2: #95A1A7;
+    --ink-3: #748086;
+    --line: #303941;
+    --line-2: #3F4A51;
+    --accent: #63B5BD;
+    --accent-2: #15302F;
+    --attn: #D6A04A;
+    --attn-2: #2F2611;
+    --wrong: #D57F78;
+    --wrong-2: #36201E;
+    --landed: #7FB893;
+    --landed-2: #1C2E23;
+    --on-accent: #121618;
+    --shadow-1: 0 1px 2px rgba(0, 0, 0, .4);
+    --shadow-2: 0 10px 26px -8px rgba(0, 0, 0, .7), 0 2px 6px rgba(0, 0, 0, .4);
+  }
+}
+
+:root[data-theme="dark"] {
+  --paper: #121618;
+  --surface: #1C2225;
+  --surface-2: #232A2D;
+  --ink: #E4E8E5;
+  --ink-2: #95A1A7;
+  --ink-3: #748086;
+  --line: #303941;
+  --line-2: #3F4A51;
+  --accent: #63B5BD;
+  --accent-2: #15302F;
+  --attn: #D6A04A;
+  --attn-2: #2F2611;
+  --wrong: #D57F78;
+  --wrong-2: #36201E;
+  --landed: #7FB893;
+  --landed-2: #1C2E23;
+  --on-accent: #121618;
+  --shadow-1: 0 1px 2px rgba(0, 0, 0, .4);
+  --shadow-2: 0 10px 26px -8px rgba(0, 0, 0, .7), 0 2px 6px rgba(0, 0, 0, .4);
+}
+
+/* Tailwind sees only the tokens: the default palette is wiped so a raw
+   palette class (`bg-red-500`) produces nothing. */
+@theme {
+  --color-*: initial;
+  --font-sans: var(--sans);
+  --font-mono: var(--mono);
+  --radius-card: var(--r-card);
+  --radius-chip: var(--r-chip);
+  --radius-ctrl: var(--r-ctrl);
+  --shadow-1: var(--shadow-1);
+  --shadow-2: var(--shadow-2);
+}
+
+@theme inline {
+  --color-paper: var(--paper);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-ink: var(--ink);
+  --color-ink-2: var(--ink-2);
+  --color-ink-3: var(--ink-3);
+  --color-line: var(--line);
+  --color-line-2: var(--line-2);
+  --color-accent: var(--accent);
+  --color-accent-2: var(--accent-2);
+  --color-attn: var(--attn);
+  --color-attn-2: var(--attn-2);
+  --color-wrong: var(--wrong);
+  --color-wrong-2: var(--wrong-2);
+  --color-landed: var(--landed);
+  --color-landed-2: var(--landed-2);
+  --color-on-accent: var(--on-accent);
+}
+
+* { box-sizing: border-box; }
+
+html, body { margin: 0; min-height: 100%; }
+
+body {
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--sans);
+  font-size: 14px;
+  -webkit-font-smoothing: antialiased;
+}

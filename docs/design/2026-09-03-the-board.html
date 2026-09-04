@@ -1,0 +1,1175 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Needle — the board (comp 1 of 2)</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Needle — the design system, as the comp defines it.
+ *
+ * This file is the comp's stylesheet and the source the built design system
+ * in `frontend/src/components/ui/` mirrors. Every colour a Needle surface may
+ * use is a token below; a raw colour anywhere else is refused by a ratchet.
+ *
+ * Four colours carry meaning and nothing else does:
+ *   accent  — structure, and the one action on a surface
+ *   attn    — your move
+ *   wrong   — not true: a write that failed, a citation to nothing
+ *   landed  — it shipped
+ * A card that is merely planned is neutral. 0.1 painted every alarm red and
+ * the red became wallpaper; this is the fix.
+ */
+
+:root {
+  color-scheme: light dark;
+
+  --paper:      #E8ECEA;
+  --surface:    #FFFFFF;
+  --surface-2:  #F3F6F4;
+  --ink:        #1D2326;
+  --ink-2:      #56626A;
+  --ink-3:      #8B959B;
+  --line:       #D4DAD6;
+  --line-2:     #BFC7C2;
+
+  --accent:     #0E5E66;
+  --accent-2:   #DCEAEB;
+  --attn:       #8E5D0B;
+  --attn-2:     #F6EEDB;
+  --wrong:      #A2382F;
+  --wrong-2:    #F6E3E1;
+  --landed:     #37734C;
+  --landed-2:   #E0ECE4;
+
+  --shadow-1: 0 1px 2px rgba(29,35,38,.06);
+  --shadow-2: 0 10px 26px -8px rgba(29,35,38,.34), 0 2px 6px rgba(29,35,38,.12);
+
+  --r-card: 7px;
+  --r-chip: 3px;
+  --r-ctrl: 5px;
+
+  --col-w: 288px;
+  --rail-w: 46px;
+
+  /* comp chrome — fixed in both themes, so "the comp is talking" never
+     looks like part of the product */
+  --chrome-bg: #1D2326;
+  --chrome-ink: #E8ECEA;
+
+  --sans: Archivo, "Helvetica Neue", system-ui, sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, monospace;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --paper:      #121618;
+    --surface:    #1C2225;
+    --surface-2:  #232A2D;
+    --ink:        #E4E8E5;
+    --ink-2:      #95A1A7;
+    --ink-3:      #748086;
+    --line:       #303941;
+    --line-2:     #3F4A51;
+    --accent:     #63B5BD;
+    --accent-2:   #15302F;
+    --attn:       #D6A04A;
+    --attn-2:     #2F2611;
+    --wrong:      #D57F78;
+    --wrong-2:    #36201E;
+    --landed:     #7FB893;
+    --landed-2:   #1C2E23;
+    --shadow-1: 0 1px 2px rgba(0,0,0,.4);
+    --shadow-2: 0 10px 26px -8px rgba(0,0,0,.7), 0 2px 6px rgba(0,0,0,.4);
+  }
+}
+
+:root[data-theme="dark"] {
+  --paper:      #121618;
+  --surface:    #1C2225;
+  --surface-2:  #232A2D;
+  --ink:        #E4E8E5;
+  --ink-2:      #95A1A7;
+  --ink-3:      #748086;
+  --line:       #303941;
+  --line-2:     #3F4A51;
+  --accent:     #63B5BD;
+  --accent-2:   #15302F;
+  --attn:       #D6A04A;
+  --attn-2:     #2F2611;
+  --wrong:      #D57F78;
+  --wrong-2:    #36201E;
+  --landed:     #7FB893;
+  --landed-2:   #1C2E23;
+  --shadow-1: 0 1px 2px rgba(0,0,0,.4);
+  --shadow-2: 0 10px 26px -8px rgba(0,0,0,.7), 0 2px 6px rgba(0,0,0,.4);
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--sans);
+  font-size: 14px;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ─────────────────────────────────────────────────────────────────
+   Comp chrome — everything below this line is the comp talking, not
+   the product. It is deliberately unlike the product so the two can
+   never be confused.
+   ───────────────────────────────────────────────────────────────── */
+
+.comp-bar {
+  display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
+  padding: 12px 22px;
+  background: var(--chrome-bg); color: var(--chrome-ink);
+  font-family: var(--mono); font-size: 11px; letter-spacing: .04em;
+}
+.comp-bar b { font-weight: 600; letter-spacing: .12em; text-transform: uppercase; }
+.comp-bar .sep { opacity: .4; }
+.comp-bar .grow { margin-left: auto; display: flex; gap: 8px; }
+.comp-bar button {
+  font-family: var(--mono); font-size: 10.5px; letter-spacing: .06em;
+  padding: 4px 10px; border-radius: var(--r-chip); cursor: pointer;
+  border: 1px solid rgba(255,255,255,.28); background: transparent; color: inherit;
+}
+.comp-bar button:hover { border-color: rgba(255,255,255,.7); }
+.comp-bar button.on { background: var(--chrome-ink); color: var(--chrome-bg); border-color: var(--chrome-ink); }
+
+.comp-lede {
+  padding: 18px 22px 4px; max-width: 86ch;
+  font-size: 13.5px; line-height: 1.6; color: var(--ink-2);
+}
+.comp-lede strong { color: var(--ink); font-weight: 600; }
+
+.screen {
+  margin: 16px 22px 0;
+  border: 1px solid var(--line-2);
+  border-radius: 10px;
+  background: var(--paper);
+  overflow: hidden;
+  position: relative;
+  box-shadow: var(--shadow-1);
+}
+
+/* ─────────────────────────────────────────────────────────────────
+   The product
+   ───────────────────────────────────────────────────────────────── */
+
+.app-head {
+  display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap;
+  padding: 13px 20px 12px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--line);
+}
+.wordmark { font-size: 16px; font-weight: 700; letter-spacing: -.015em; }
+.wordmark .n { color: var(--accent); }
+.project {
+  display: inline-flex; align-items: center; gap: 7px;
+  font-size: 13.5px; font-weight: 600;
+  padding: 3px 9px 3px 10px; border-radius: var(--r-ctrl);
+  border: 1px solid var(--line); background: var(--surface-2); cursor: default;
+}
+.project .caret { color: var(--ink-3); font-size: 9px; }
+.corpus { font-family: var(--mono); font-size: 10.5px; color: var(--ink-3); letter-spacing: .03em; }
+.corpus b { color: var(--ink-2); font-weight: 500; }
+.app-head .grow { margin-left: auto; display: flex; align-items: center; gap: 8px; }
+
+.lens {
+  display: inline-flex; align-items: stretch;
+  border: 1px solid var(--line); border-radius: var(--r-ctrl); overflow: hidden;
+  background: var(--surface-2);
+}
+.lens span {
+  font-family: var(--mono); font-size: 10px; letter-spacing: .06em; text-transform: uppercase;
+  padding: 5px 9px; color: var(--ink-3); cursor: default;
+}
+.lens span + span { border-left: 1px solid var(--line); }
+.lens span.on { background: var(--surface); color: var(--accent); font-weight: 500; }
+
+/* the attention line — "does anything need me?" in the first inch */
+.attn-line {
+  display: flex; align-items: center; gap: 7px; flex-wrap: wrap;
+  padding: 9px 20px; background: var(--surface-2);
+  border-bottom: 1px solid var(--line);
+}
+.att {
+  display: inline-flex; align-items: center; gap: 7px;
+  font-family: var(--mono); font-size: 10.5px; letter-spacing: .03em;
+  padding: 4px 10px; border-radius: 20px;
+  border: 1px solid var(--line); background: var(--surface); color: var(--ink-2);
+  cursor: default; white-space: nowrap;
+}
+.att b { font-weight: 600; color: var(--ink); font-size: 11px; }
+.att.you   { border-color: var(--attn);  background: var(--attn-2);  color: var(--attn); }
+.att.you b { color: var(--attn); }
+.att.bad   { border-color: var(--wrong); background: var(--wrong-2); color: var(--wrong); }
+.att.bad b { color: var(--wrong); }
+.attn-line .quiet { margin-left: auto; font-family: var(--mono); font-size: 10px; color: var(--ink-3); }
+
+/* the board */
+.board {
+  display: flex; align-items: flex-start; gap: 14px;
+  padding: 16px 20px 30px;
+  overflow-x: auto;
+  position: relative;
+}
+
+.col { flex: 0 0 var(--col-w); min-width: 0; }
+.col-head {
+  display: flex; align-items: baseline; gap: 8px;
+  padding: 6px 2px 7px;
+  position: relative;
+}
+.col-head h2 {
+  margin: 0; font-size: 11.5px; font-weight: 700;
+  text-transform: uppercase; letter-spacing: .1em;
+}
+.col-head .count { font-family: var(--mono); font-size: 11px; color: var(--ink-3); }
+.col-head .tools { margin-left: auto; display: flex; gap: 4px; align-items: center; }
+.col-head .tool {
+  font-family: var(--mono); font-size: 9.5px; letter-spacing: .05em;
+  color: var(--ink-3); border: 1px solid transparent; border-radius: var(--r-chip);
+  padding: 2px 5px; cursor: pointer; background: transparent;
+}
+.col-head .tool:hover { border-color: var(--line); color: var(--ink-2); }
+.col-head .tool.on { color: var(--accent); border-color: var(--line); background: var(--surface); }
+.col-note { padding: 0 2px 9px; font-size: 11.5px; line-height: 1.45; color: var(--ink-3); }
+
+/* the column definition — one hover away, never a click */
+.def {
+  position: absolute; top: 100%; left: -6px; width: 268px; z-index: 40;
+  background: var(--surface); border: 1px solid var(--line-2); border-radius: var(--r-card);
+  box-shadow: var(--shadow-2); padding: 11px 13px 12px;
+  opacity: 0; visibility: hidden; transform: translateY(-3px);
+  transition: opacity .12s ease, transform .12s ease, visibility .12s;
+}
+.col-head:hover .def, .col-head:focus-within .def, .col-head.def-open .def {
+  opacity: 1; visibility: visible; transform: translateY(0);
+}
+/* a head near the right edge opens its definition leftward */
+.def.to-left { left: auto; right: -6px; }
+.def .dk {
+  font-family: var(--mono); font-size: 9px; letter-spacing: .12em; text-transform: uppercase;
+  color: var(--ink-3); margin-bottom: 5px;
+}
+.def p { margin: 0; font-size: 12.5px; line-height: 1.55; color: var(--ink); }
+.def p + p { margin-top: 7px; color: var(--ink-2); font-size: 12px; }
+.def .who {
+  margin-top: 9px; padding-top: 8px; border-top: 1px solid var(--line);
+  font-family: var(--mono); font-size: 9.5px; letter-spacing: .05em; color: var(--ink-3);
+}
+.def .who b { color: var(--accent); font-weight: 500; }
+
+.stack { display: flex; flex-direction: column; gap: 7px; }
+.group-h {
+  font-family: var(--mono); font-size: 9.5px; letter-spacing: .11em; text-transform: uppercase;
+  color: var(--ink-3); padding: 11px 2px 3px; display: flex; align-items: center; gap: 8px;
+}
+.group-h::after { content: ""; flex: 1; height: 1px; background: var(--line); }
+.stack .group-h:first-child { padding-top: 2px; }
+
+.more-row {
+  margin-top: 8px; padding: 7px 2px; text-align: left;
+  font-family: var(--mono); font-size: 10px; letter-spacing: .05em;
+  color: var(--accent); background: none; border: none; cursor: pointer;
+}
+
+/* ── the card at rest ───────────────────────────────────────────── */
+
+.card {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--r-card);
+  padding: 9px 11px 9px;
+  box-shadow: var(--shadow-1);
+  cursor: grab;
+  position: relative;
+}
+.card:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+.card-top { display: flex; align-items: center; gap: 7px; min-height: 15px; }
+.rank {
+  font-family: var(--mono); font-size: 11px; font-weight: 500; color: var(--ink);
+  min-width: 13px;
+}
+.cid { font-family: var(--mono); font-size: 10px; color: var(--ink-3); }
+.card-top .grow { margin-left: auto; }
+
+.card-title {
+  margin: 5px 0 0; font-size: 13.5px; font-weight: 600; line-height: 1.32;
+  letter-spacing: -.003em;
+}
+.essence {
+  margin: 5px 0 0; font-size: 12px; line-height: 1.45; color: var(--ink-2);
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+}
+.card-foot {
+  display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
+  margin-top: 8px; padding-top: 7px; border-top: 1px solid var(--line);
+}
+.card-foot .grow { margin-left: auto; }
+.points { font-family: var(--mono); font-size: 9.5px; color: var(--ink-3); letter-spacing: .04em; }
+
+/* chips */
+.chip {
+  font-family: var(--mono); font-size: 9px; letter-spacing: .07em; text-transform: uppercase;
+  padding: 2.5px 6px; border-radius: var(--r-chip);
+  background: var(--surface-2); color: var(--ink-2); border: 1px solid var(--line);
+  white-space: nowrap;
+}
+.chip.gate { border-color: var(--accent); color: var(--accent); background: transparent; }
+.chip.tag  { background: var(--surface-2); color: var(--ink-3); border-color: transparent; }
+.chip.new { background: var(--accent-2); color: var(--accent); border-color: transparent;
+             font-weight: 500; }
+
+
+/* the document state — five, and the card always shows exactly one */
+.doc { font-family: var(--mono); font-size: 9px; letter-spacing: .07em; text-transform: uppercase;
+       padding: 2.5px 6px; border-radius: var(--r-chip); white-space: nowrap; }
+.doc.plan       { background: var(--accent-2); color: var(--accent); }
+.doc.suggestion { background: var(--surface-2); color: var(--ink-2); border: 1px solid var(--line); }
+.doc.archived   { background: var(--landed-2); color: var(--landed); }
+.doc.note       { background: transparent; color: var(--ink-3); border: 1px dashed var(--line-2); }
+.doc.broken     { background: var(--wrong-2); color: var(--wrong); }
+
+/* card states */
+.card.saving { border-color: var(--line-2); }
+.card.saving::after {
+  content: "SAVING"; position: absolute; top: 8px; right: 10px;
+  font-family: var(--mono); font-size: 8.5px; letter-spacing: .12em; color: var(--ink-3);
+}
+.card.failed { border-color: var(--wrong); box-shadow: 0 0 0 1px var(--wrong-2), var(--shadow-1); }
+.fail-note {
+  margin: 8px -11px -9px; padding: 8px 11px;
+  background: var(--wrong-2); color: var(--wrong);
+  border-top: 1px solid var(--wrong);
+  border-radius: 0 0 var(--r-card) var(--r-card);
+  font-size: 11.5px; line-height: 1.45;
+  display: flex; align-items: flex-start; gap: 9px;
+}
+.fail-note b { font-weight: 600; }
+.fail-note .retry {
+  margin-left: auto; flex: none; align-self: center;
+  font-family: var(--mono); font-size: 9.5px; letter-spacing: .06em;
+  border: 1px solid var(--wrong); background: transparent; color: var(--wrong);
+  border-radius: var(--r-chip); padding: 3px 8px; cursor: pointer;
+}
+.card.ghost { opacity: .38; box-shadow: none; border-style: dashed; background: transparent; }
+
+/* the decision column reads as your move without shouting */
+.col.yours .card { border-left: 3px solid var(--attn); }
+.col.yours .col-head h2 { color: var(--attn); }
+
+/* ── drag and drop ─────────────────────────────────────────────── */
+
+.drop-gap {
+  height: 62px; border-radius: var(--r-card);
+  border: 1px dashed var(--accent); background: var(--accent-2);
+  position: relative;
+}
+.drop-gap::before {
+  content: ""; position: absolute; left: 8px; right: 8px; top: -4px; height: 2px;
+  border-radius: 2px; background: var(--accent);
+}
+.drop-gap .lands {
+  position: absolute; left: 10px; bottom: 8px;
+  font-family: var(--mono); font-size: 9.5px; letter-spacing: .06em;
+  color: var(--accent);
+}
+
+.lift {
+  position: absolute; width: calc(var(--col-w) - 6px); z-index: 60;
+  transform: rotate(-1.1deg) scale(1.015);
+  box-shadow: var(--shadow-2);
+  border-color: var(--line-2);
+  cursor: grabbing;
+  pointer-events: none;
+}
+
+.kbd-hint {
+  display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+  margin-top: 7px; padding: 6px 9px;
+  border-radius: var(--r-ctrl); background: var(--surface-2); border: 1px solid var(--line);
+  font-family: var(--mono); font-size: 9.5px; letter-spacing: .04em; color: var(--ink-3);
+}
+.kbd-hint kbd {
+  font-family: var(--mono); font-size: 9.5px;
+  border: 1px solid var(--line-2); border-bottom-width: 2px; border-radius: 3px;
+  padding: 1px 5px; color: var(--ink-2); background: var(--surface);
+}
+
+/* ── the furled column ─────────────────────────────────────────── */
+
+.rail {
+  flex: 0 0 var(--rail-w); align-self: stretch; min-height: 340px;
+  border: 1px solid var(--line); border-radius: var(--r-card);
+  background: var(--surface-2);
+  display: flex; flex-direction: column; align-items: center; gap: 10px;
+  padding: 10px 0 12px; cursor: pointer;
+}
+.rail:hover { border-color: var(--line-2); background: var(--surface); }
+.rail .rname {
+  writing-mode: vertical-rl; text-orientation: mixed;
+  font-size: 10.5px; font-weight: 700; letter-spacing: .13em; text-transform: uppercase;
+  color: var(--ink-2); margin-top: 4px;
+}
+.rail .rcount {
+  font-family: var(--mono); font-size: 11px; color: var(--ink);
+  border: 1px solid var(--line); border-radius: 20px; padding: 2px 6px; background: var(--surface);
+}
+.rail .runfurl { font-family: var(--mono); font-size: 9px; color: var(--ink-3); margin-top: auto; }
+
+/* ── the expanded card ─────────────────────────────────────────── */
+
+.card.open {
+  cursor: default;
+  border-color: var(--line-2);
+  box-shadow: var(--shadow-2);
+  padding-bottom: 0;
+}
+.open-body { margin: 10px -11px 0; border-top: 1px solid var(--line); }
+
+.sec { padding: 12px 11px 13px; border-bottom: 1px solid var(--line); }
+.sec:last-child { border-bottom: none; }
+.sec-h {
+  font-family: var(--mono); font-size: 9px; letter-spacing: .13em; text-transform: uppercase;
+  color: var(--ink-3); margin-bottom: 8px;
+  display: flex; align-items: center; gap: 8px;
+}
+.sec-h .from { margin-left: auto; color: var(--ink-3); opacity: .8; letter-spacing: .04em; text-transform: none; }
+.sec p { margin: 0 0 8px; font-size: 12.8px; line-height: 1.58; color: var(--ink); }
+.sec p:last-child { margin-bottom: 0; }
+.sec p.q { color: var(--ink-2); }
+
+.row { display: flex; gap: 10px; align-items: flex-start; padding: 5px 0; }
+.row + .row { border-top: 1px dotted var(--line); }
+.row .lbl {
+  flex: 0 0 62px; font-family: var(--mono); font-size: 9px; letter-spacing: .08em;
+  color: var(--ink-3); padding-top: 3px;
+}
+.row .val { font-size: 12.5px; line-height: 1.55; color: var(--ink-2); min-width: 0; }
+.row.lead .lbl { color: var(--accent); }
+.row.lead .val { color: var(--ink); }
+.row.land .lbl { color: var(--landed); }
+.row.ask  .lbl { color: var(--attn); }
+.row .val code { font-family: var(--mono); font-size: 11px; color: var(--accent);
+                 overflow-wrap: break-word; }
+.path { font-family: var(--mono); font-size: 11px; color: var(--accent); word-break: break-all; }
+/* a caret has to come from the text font — the mono fallback has no glyph for it */
+.caret-g { font-family: var(--sans); font-size: 8px; }
+
+.docblock {
+  display: flex; align-items: center; gap: 9px; flex-wrap: wrap;
+  padding: 9px 10px; border-radius: var(--r-ctrl);
+  background: var(--surface-2); border: 1px solid var(--line);
+}
+.docblock .path { flex: 1 1 240px; }
+.docmeta { font-family: var(--mono); font-size: 10px; color: var(--ink-3); letter-spacing: .03em; }
+.docmeta b { color: var(--ink-2); font-weight: 500; }
+
+.hist { display: flex; flex-direction: column; }
+.hist .h {
+  display: flex; gap: 10px; align-items: baseline; padding: 5px 0;
+  font-size: 12px; color: var(--ink-2);
+}
+.hist .h + .h { border-top: 1px dotted var(--line); }
+.hist .when { flex: 0 0 92px; font-family: var(--mono); font-size: 10px; color: var(--ink-3); }
+.hist .what { flex: 1; }
+.hist .what b { color: var(--ink); font-weight: 600; }
+.hist .who {
+  font-family: var(--mono); font-size: 9px; letter-spacing: .06em; text-transform: uppercase;
+  padding: 2px 6px; border-radius: var(--r-chip); background: var(--surface-2);
+  color: var(--ink-3); border: 1px solid var(--line); flex: none;
+}
+.hist .who.owner { color: var(--accent); border-color: var(--accent); background: transparent; }
+
+.acts {
+  display: flex; align-items: center; gap: 7px; flex-wrap: wrap;
+  padding: 11px; background: var(--surface-2);
+  border-radius: 0 0 var(--r-card) var(--r-card);
+}
+.btn {
+  font-family: var(--sans); font-size: 12px; font-weight: 600;
+  padding: 6px 13px; border-radius: var(--r-ctrl); cursor: pointer;
+  border: 1px solid transparent; background: var(--accent); color: var(--surface);
+}
+.btn.ghost { background: var(--surface); border-color: var(--line); color: var(--ink-2); font-weight: 500; }
+.acts .moveto { margin-left: auto; display: flex; align-items: center; gap: 5px; }
+.acts .moveto .lbl {
+  font-family: var(--mono); font-size: 9px; letter-spacing: .08em; color: var(--ink-3);
+}
+.acts .moveto select {
+  font-family: var(--mono); font-size: 10px; padding: 4px 6px;
+  border: 1px solid var(--line); border-radius: var(--r-chip);
+  background: var(--surface); color: var(--ink-2);
+}
+
+/* ── annotation pins ───────────────────────────────────────────── */
+
+.pin {
+  position: absolute; z-index: 80;
+  width: 19px; height: 19px; border-radius: 50%;
+  background: var(--attn); color: #FFF;
+  font-family: var(--mono); font-size: 10px; font-weight: 500;
+  display: none; align-items: center; justify-content: center;
+  box-shadow: 0 0 0 2px var(--paper), var(--shadow-1);
+}
+body.notes .pin { display: flex; }
+body.notes .pin.flash { animation: pinflash 1.1s ease-out 2; }
+@keyframes pinflash {
+  0%, 100% { box-shadow: 0 0 0 2px var(--paper), var(--shadow-1); }
+  50%      { box-shadow: 0 0 0 6px var(--attn-2), var(--shadow-1); }
+}
+
+.judge { margin: 26px 22px 46px; max-width: 92ch; }
+.judge h2 {
+  font-size: 12px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase;
+  color: var(--ink-3); margin: 0 0 4px;
+}
+.judge .sub { font-size: 13px; line-height: 1.6; color: var(--ink-2); margin: 0 0 16px; }
+.judge ol { margin: 0; padding: 0; list-style: none; counter-reset: j; }
+.judge li {
+  counter-increment: j; position: relative;
+  padding: 12px 0 12px 34px; border-top: 1px solid var(--line);
+  font-size: 13.5px; line-height: 1.6; color: var(--ink);
+}
+.judge li::before {
+  content: counter(j); position: absolute; left: 0; top: 13px;
+  width: 20px; height: 20px; border-radius: 50%;
+  background: var(--attn); color: #FFF;
+  font-family: var(--mono); font-size: 10.5px;
+  display: flex; align-items: center; justify-content: center;
+}
+.judge li b { font-weight: 600; }
+.judge li .why { display: block; margin-top: 5px; color: var(--ink-2); font-size: 12.8px; }
+.judge li .ask {
+  display: block; margin-top: 7px; padding-left: 11px;
+  border-left: 2px solid var(--attn); color: var(--attn); font-size: 12.8px;
+}
+.judge li .settled {
+  display: block; margin-top: 7px; padding-left: 11px;
+  border-left: 2px solid var(--line-2); color: var(--ink-3); font-size: 12.5px;
+}
+
+.foot {
+  margin: 0 22px 40px; padding-top: 16px; border-top: 1px solid var(--line);
+  max-width: 92ch; font-size: 12.5px; line-height: 1.65; color: var(--ink-3);
+}
+.foot b { color: var(--ink-2); font-weight: 600; }
+.foot code { font-family: var(--mono); font-size: 11.5px; color: var(--accent); }
+
+.comp-lede code { font-family: var(--mono); font-size: 12px; color: var(--accent); }
+</style>
+</head>
+<body>
+
+<div class="comp-bar">
+  <b>Comp 1 of 2 · the board</b>
+  <span class="sep">·</span>
+  <span>Needle slice 01 — the map</span>
+  <span class="sep">·</span>
+  <span>2026-09-03 · <b style="color:#7FB893;letter-spacing:.06em">SIGNED</b> by the owner, 2026-09-03: "I'm going with your recs across the board"</span>
+  <span class="sep">·</span>
+  <span>re-seated 2026-09-04 on Harbourmaster, the synthetic project under <code>tests/fixtures/</code>; design unchanged (plan 01b, item 4)</span>
+  <span class="grow">
+    <button id="b-notes">Notes</button>
+    <button id="b-theme">Dark</button>
+    <a class="comp-link" href="2026-09-03-the-card.html" style="text-decoration:none">
+      <button>Comp 2 → the card</button>
+    </a>
+  </span>
+</div>
+
+<p class="comp-lede">
+  This is a <strong>comp</strong>. Nothing is wired to anything. The cards, columns, groups and
+  counts are a read of Harbourmaster's board — a berth booking and billing product for small
+  marinas, the synthetic project the fixtures and the page's tests share: 27 cards, 11 live plans,
+  8 live suggestions — so you are judging a board in the shape of your own, not a lorem-ipsum one.
+  Five states are <strong>staged</strong> so they can be judged before they are built: a card in
+  flight under the cursor, a definition open on a column head, a write the store refused,
+  a card whose document is nowhere, and a card that arrived on its own. That
+  document-is-nowhere count is not invented: two citations on this board point at files that do
+  not exist — #120's, two file names run into one, and #201's plan, archived nowhere the board
+  reads. Nothing on a board without that count would ever say so.
+  <strong>Nothing runs in this slice</strong> — no Start, no sessions, no windows. Every move on this
+  page is yours.
+</p>
+
+<div class="screen" id="screen">
+
+  <div class="app-head">
+    <span class="wordmark"><span class="n">Needle</span></span>
+    <span class="project">Harbourmaster <span class="caret">▾</span></span>
+    <span class="corpus">
+      <b>11</b> live plans · <b>8</b> suggestions · <b>8</b> archived · <b>watching</b>
+    </span>
+    <span class="grow">
+      <span class="lens" title="A lens, never a write: sorting changes what you see, never the rank.">
+        <span class="on">Rank</span><span>Age</span><span>Gate</span>
+      </span>
+    </span>
+    <div class="pin" data-pin="8" style="right:14px;top:44px">8</div>
+  </div>
+
+  <div class="attn-line">
+    <span class="att you"><b>4</b> asking you</span>
+    <span class="att"><b>2</b> in flight</span>
+    <span class="att"><b>1</b> arrived today</span>
+    <span class="att bad"><b>2</b> cards cite documents that are nowhere</span>
+    <span class="att bad"><b>1</b> write failed</span>
+    <span class="quiet">nothing runs in this slice · the board is a reader</span>
+    <div class="pin" data-pin="1" style="left:8px;top:-9px">1</div>
+  </div>
+
+  <div class="board" id="board">
+
+    <!-- ── BACKLOG ─────────────────────────────────────────────── -->
+    <section class="col">
+      <header class="col-head" tabindex="0">
+        <h2>Backlog</h2><span class="count">9</span>
+        <span class="tools"><button class="tool">furl</button></span>
+        <div class="def">
+          <div class="dk">Backlog</div>
+          <p>Written ideas. A suggestion exists on disk; nobody has planned it yet.</p>
+          <p>Planning one is what promotes it — the column is the stage of the writing, never a
+             label somebody applied.</p>
+          <div class="who">Moved by <b>you</b>, or by a plan appearing</div>
+        </div>
+      </header>
+      <p class="col-note">Ideas written up as suggestions, ranked below the line. Planning one is what promotes it.</p>
+
+      <div class="stack">
+        <div class="group-h">Next to plan</div>
+
+        <article class="card" tabindex="0">
+          <div class="card-top"><span class="cid">#252</span><span class="grow"></span></div>
+          <h3 class="card-title">The quay display polls the office all night</h3>
+          <p class="essence">The office costs nothing while nothing happens — but only because the
+            quay display is not installed. Installing it as it stands quietly breaks that.</p>
+          <div class="card-foot">
+            <span class="doc suggestion">Suggestion</span>
+            <span class="grow"></span><span class="points">2 points</span>
+          </div>
+        </article>
+
+        <article class="card failed" tabindex="0">
+          <div class="card-top"><span class="cid">#242</span><span class="grow"></span></div>
+          <h3 class="card-title">The welcome board shows one boat's whole stay</h3>
+          <p class="essence">A skipper walking up the pontoon sees berth, gate code and departure on
+            one board. Today they are three screens and the departure is on none of them.</p>
+          <div class="card-foot">
+            <span class="doc suggestion">Suggestion</span>
+            <span class="grow"></span><span class="points">2 points</span>
+          </div>
+          <div class="fail-note">
+            <span><b>Not moved.</b> The store refused: database is locked. The card is where it was.</span>
+            <button class="retry">Retry</button>
+          </div>
+          <div class="pin" data-pin="7" style="right:-9px;bottom:14px">7</div>
+        </article>
+
+        <article class="card" tabindex="0">
+          <div class="card-top"><span class="cid">#232</span><span class="grow"></span></div>
+          <h3 class="card-title">The night audit re-reads the whole harbour log</h3>
+          <p class="essence">The night audit reads only what changed since the last one. Today it
+            reads all 14,000 log lines every night, and the log grows by the season.</p>
+          <div class="card-foot">
+            <span class="doc suggestion">Suggestion</span>
+            <span class="grow"></span><span class="points">2 points</span>
+          </div>
+        </article>
+
+        <article class="card" tabindex="0">
+          <div class="card-top"><span class="cid">#120</span><span class="grow"></span></div>
+          <h3 class="card-title">Two small office-screen fixes</h3>
+          <p class="essence">Screens refresh.</p>
+          <div class="card-foot">
+            <span class="doc broken">Document gone</span>
+            <span class="grow"></span><span class="points">0 points</span>
+          </div>
+          <div class="pin" data-pin="4" style="left:-9px;bottom:12px">4</div>
+        </article>
+
+        <div class="group-h">Skipper-facing quality</div>
+
+        <article class="card" tabindex="0">
+          <div class="card-top"><span class="cid">#105</span><span class="grow"></span>
+            <span class="chip tag">Keep winning</span></div>
+          <h3 class="card-title">The skipper's yes or no: wrong states, slow loads</h3>
+          <p class="essence">Saying yes to a berth takes one tap.</p>
+          <div class="card-foot">
+            <span class="doc note">Note — nothing written yet</span>
+            <span class="grow"></span><span class="points">0 points</span>
+          </div>
+        </article>
+
+        <button class="more-row">+ 4 more in Backlog</button>
+      </div>
+    </section>
+
+    <!-- ── PLANNED ─────────────────────────────────────────────── -->
+    <section class="col">
+      <header class="col-head" tabindex="0">
+        <h2>Planned</h2><span class="count">5</span>
+        <span class="tools"><button class="tool">furl</button></span>
+        <div class="def">
+          <div class="dk">Planned</div>
+          <p>The thinking is done and written. A plan exists, waiting its turn for the queue.</p>
+          <p>A card here without a live plan is a card in the wrong column, and the board says so.</p>
+          <div class="who">Moved by <b>you</b></div>
+        </div>
+      </header>
+      <p class="col-note">The thinking is done and written — a plan exists, waiting its turn for the queue.</p>
+
+      <div class="stack">
+        <div class="group-h">Season opening</div>
+
+        <article class="card ghost" tabindex="0">
+          <div class="card-top"><span class="cid">#196</span><span class="grow"></span>
+            <span class="chip tag">Live sooner</span><span class="chip gate">High</span></div>
+          <h3 class="card-title">The waiting list offers every berth that fits</h3>
+          <p class="essence">A boat on the waiting list is offered every berth it fits, not only the
+            one it asked for.</p>
+          <div class="card-foot">
+            <span class="doc plan">Plan</span>
+            <span class="grow"></span><span class="points">2 points</span>
+          </div>
+        </article>
+
+        <div class="group-h">Skipper-facing quality</div>
+
+        <article class="card" tabindex="0">
+          <div class="card-top"><span class="cid">#109</span><span class="grow"></span>
+            <span class="chip tag">Keep winning</span><span class="chip gate">High</span></div>
+          <h3 class="card-title">The skipper sees the price before the berth</h3>
+          <p class="essence">A skipper knows what a night costs before choosing where to lie. Today
+            the price appears on the confirmation.</p>
+          <div class="card-foot">
+            <span class="doc plan">Plan</span>
+            <span class="grow"></span><span class="points">1 point</span>
+          </div>
+        </article>
+
+        <div class="group-h">Trust — from the winter review</div>
+
+        <article class="card" tabindex="0">
+          <div class="card-top"><span class="cid">#172</span><span class="grow"></span>
+            <span class="chip tag">Trust</span><span class="chip gate">High</span></div>
+          <h3 class="card-title">A screen nobody opens is removed</h3>
+          <p class="essence">Every future session reading the office's code sees only screens that
+            are actually opened — nothing dead to extend, fix or learn from.</p>
+          <div class="card-foot">
+            <span class="doc plan">Plan</span>
+            <span class="grow"></span><span class="points">2 points</span>
+          </div>
+        </article>
+
+        <article class="card" tabindex="0">
+          <div class="card-top"><span class="cid">#267</span><span class="chip new">New</span>
+            <span class="grow"></span><span class="chip gate">High</span></div>
+          <h3 class="card-title">A storm warning reaches every skipper in the harbour</h3>
+          <p class="essence">Every boat in the harbour hears a gale warning the moment the office
+            does. Last night the office phoned eleven skippers one by one and reached six.</p>
+          <div class="card-foot">
+            <span class="doc plan">Plan</span>
+            <span class="grow"></span><span class="points">0 points</span>
+          </div>
+        </article>
+
+        <button class="more-row">+ 1 more in Planned</button>
+      </div>
+    </section>
+
+    <!-- ── UP NEXT ─────────────────────────────────────────────── -->
+    <section class="col" id="col-upnext">
+      <header class="col-head" tabindex="0">
+        <h2>Up next</h2><span class="count">5</span>
+        <span class="tools"><button class="tool on">rank</button><button class="tool">furl</button></span>
+        <div class="def">
+          <div class="dk">Up next</div>
+          <p>What we should do next, ranked. <b>Position is priority</b> and it is true — nothing
+             re-sorts behind your back.</p>
+          <p>The ranking rule proposes an order; you override it by moving a card, and repeated
+             overrides are evidence the rule is misnamed, not noise.</p>
+          <div class="who">Moved by <b>you</b> — the one gate that is yours alone</div>
+        </div>
+      </header>
+      <p class="col-note">Ranked by distance to the season opening: no boat turned away at the
+        pontoon, no invoice that understates. Position is rank — my proposed order, yours to
+        override by moving.</p>
+
+      <div class="stack" style="position:relative">
+
+        <article class="card" tabindex="0">
+          <div class="card-top"><span class="rank">1</span><span class="cid">#253</span>
+            <span class="grow"></span><span class="chip gate">Medium</span></div>
+          <h3 class="card-title">Every metered kilowatt is billed</h3>
+          <p class="essence">Power truth. Every kilowatt a boat draws lands on its invoice. Today the
+            office has dropped every meter reading since 5 July.</p>
+          <div class="card-foot">
+            <span class="doc plan">Plan</span>
+            <span class="grow"></span><span class="points">3 points</span>
+          </div>
+          <div class="pin" data-pin="3" style="left:-9px;top:12px">3</div>
+        </article>
+
+        <div class="drop-gap"><span class="lands">#196 lands here — rank 2</span>
+          <div class="pin" data-pin="5" style="right:-9px;top:-9px">5</div>
+        </div>
+
+        <article class="card" tabindex="0">
+          <div class="card-top"><span class="rank">3</span><span class="cid">#241</span>
+            <span class="grow"></span><span class="chip gate">Medium</span></div>
+          <h3 class="card-title">A gate code arrives before the boat does</h3>
+          <p class="essence">A skipper who booked from sea finds the gate code waiting when the boat
+            is tied up. Today the code goes out when the office opens the next morning.</p>
+          <div class="card-foot">
+            <span class="doc plan">Plan</span>
+            <span class="grow"></span><span class="points">4 points</span>
+          </div>
+        </article>
+
+        <article class="card" tabindex="0" style="outline:2px solid var(--accent);outline-offset:2px">
+          <div class="card-top"><span class="rank">4</span><span class="cid">#228</span>
+            <span class="grow"></span><span class="chip gate">High</span></div>
+          <h3 class="card-title">The skipper is told what the office decided</h3>
+          <p class="essence">When a skipper asks why a berth was refused, the answer is the reason
+            the office wrote down — never a reconstruction, never only no.</p>
+          <div class="card-foot">
+            <span class="doc note">Note — nothing written yet</span>
+            <span class="grow"></span><span class="points">3 points</span>
+          </div>
+        </article>
+
+        <div class="kbd-hint">
+          <kbd>space</kbd> lift <kbd>↑</kbd><kbd>↓</kbd> move <kbd>←</kbd><kbd>→</kbd> column
+          <kbd>space</kbd> drop <kbd>esc</kbd> cancel
+          <div class="pin" data-pin="6" style="right:-9px;top:-9px">6</div>
+        </div>
+
+        <article class="card" tabindex="0">
+          <div class="card-top"><span class="rank">5</span><span class="cid">#237</span>
+            <span class="grow"></span><span class="chip gate">Xhigh</span></div>
+          <h3 class="card-title">A berth is never let twice</h3>
+          <p class="essence">Two boats never hold the same berth for the same night. A double-let is
+            a boat turned away at the pontoon at dusk.</p>
+          <div class="card-foot">
+            <span class="doc plan">Plan</span>
+            <span class="grow"></span><span class="points">3 points</span>
+          </div>
+        </article>
+
+        <article class="card" tabindex="0">
+          <div class="card-top"><span class="rank">6</span><span class="cid">#174</span>
+            <span class="grow"></span><span class="chip tag">Trust</span><span class="chip gate">Xhigh</span></div>
+          <h3 class="card-title">The booking office stops growing into one file</h3>
+          <p class="essence">The file that applies every booking is a set of readable, single-concern
+            modules — not a 4,100-line catch-all like the one that killed the old office.</p>
+          <div class="card-foot">
+            <span class="doc plan">Plan</span>
+            <span class="grow"></span><span class="points">2 points</span>
+          </div>
+        </article>
+
+        <!-- the card under the cursor -->
+        <article class="card lift" style="top:30px;left:-282px">
+          <div class="card-top"><span class="cid">#196</span><span class="grow"></span>
+            <span class="chip tag">Live sooner</span><span class="chip gate">High</span></div>
+          <h3 class="card-title">The waiting list offers every berth that fits</h3>
+          <p class="essence">A boat on the waiting list is offered every berth it fits, not only the
+            one it asked for.</p>
+          <div class="card-foot">
+            <span class="doc plan">Plan</span>
+            <span class="grow"></span><span class="points">2 points</span>
+          </div>
+        </article>
+      </div>
+    </section>
+
+    <!-- ── EXECUTING ───────────────────────────────────────────── -->
+    <section class="col">
+      <header class="col-head def-open" tabindex="0">
+        <h2>Executing</h2><span class="count">2</span>
+        <span class="tools"><button class="tool">furl</button></span>
+        <div class="pin" data-pin="2" style="right:-9px;top:2px">2</div>
+        <div class="def">
+          <div class="dk">Executing</div>
+          <p>Hands are on it.</p>
+          <p>From slice 02 this column is a <b>machine fact</b>: the board moves a card in the moment a
+             live session has hands on it, and out again to wherever the work says. In this slice
+             nothing runs, so it is yours to move.</p>
+          <div class="who">Moved by <b>the machine</b>, from slice 02</div>
+        </div>
+      </header>
+      <p class="col-note">In flight now.</p>
+
+      <div class="stack">
+        <article class="card" tabindex="0">
+          <div class="card-top"><span class="cid">#259</span><span class="grow"></span>
+            <span class="chip gate">High</span></div>
+          <h3 class="card-title">The fuel pontoon takes cards, live</h3>
+          <p class="essence">A skipper pays for fuel at the pump with a card and the litres land on
+            the same invoice as the berth. Today it is cash and a paper slip.</p>
+          <div class="card-foot">
+            <span class="doc archived">Archived</span>
+            <span class="grow"></span><span class="points">4 points</span>
+          </div>
+        </article>
+
+        <article class="card" tabindex="0">
+          <div class="card-top"><span class="cid">#223</span><span class="grow"></span>
+            <span class="chip gate">Xhigh</span></div>
+          <h3 class="card-title">The gate code goes out in plain text</h3>
+          <p class="essence">A gate code reaches only the skipper it was issued to. Today it is in
+            the subject line of the confirmation email.</p>
+          <div class="card-foot">
+            <span class="doc suggestion">Suggestion</span>
+            <span class="grow"></span><span class="points">3 points</span>
+          </div>
+        </article>
+      </div>
+    </section>
+
+    <!-- ── DECISION MOMENT ─────────────────────────────────────── -->
+    <section class="col yours">
+      <header class="col-head" tabindex="0">
+        <h2>Decision moment</h2><span class="count">4</span>
+        <span class="tools"><button class="tool">furl</button></span>
+        <div class="def">
+          <div class="dk">Decision moment</div>
+          <p>Your move. Nothing here proceeds without a word from you.</p>
+          <p>Two groups: what unblocks a build lane, and what is an action or a sign-off somewhere
+             else. Work whose completion still needs your verification sits here, never in a
+             shipped column.</p>
+          <div class="who">Moved by <b>you</b>, or by the machine when work finished with nothing said</div>
+        </div>
+      </header>
+      <p class="col-note">Your move. Top group unblocks build lanes; bottom group is actions and sign-offs elsewhere.</p>
+
+      <div class="stack">
+        <article class="card" tabindex="0">
+          <div class="card-top"><span class="cid">#219</span><span class="grow"></span>
+            <span class="chip tag">Keep winning</span><span class="chip gate">Xhigh</span></div>
+          <h3 class="card-title">The pricing rule, judged against a real season</h3>
+          <p class="essence">A season's real bookings say whether length-based or berth-based
+            pricing fills the harbour.</p>
+          <div class="card-foot">
+            <span class="doc plan">Plan</span>
+            <span class="grow"></span><span class="points">5 points</span>
+          </div>
+        </article>
+
+        <article class="card" tabindex="0">
+          <div class="card-top"><span class="cid">#147</span><span class="grow"></span>
+            <span class="chip tag">Action</span><span class="chip tag">Ruling</span></div>
+          <h3 class="card-title">Tell the bank which account takes the deposits</h3>
+          <p class="essence">Deposits from the new terminal go to the old account. The season's
+            deposits sit in the wrong ledger until you say which.</p>
+          <div class="card-foot">
+            <span class="doc note">Note — nothing written yet</span>
+            <span class="grow"></span><span class="points">3 points</span>
+          </div>
+        </article>
+
+        <div class="group-h">Rulings that unblock lanes</div>
+
+        <article class="card" tabindex="0">
+          <div class="card-top"><span class="cid">#139</span><span class="grow"></span>
+            <span class="chip tag">Ruling</span><span class="chip gate">Xhigh</span></div>
+          <h3 class="card-title">Berth-first booking — 4 rulings</h3>
+          <p class="essence">May a booking page open with the harbour map itself, instead of a form?
+            A skipper who wants a berth picks one in one motion.</p>
+          <div class="card-foot">
+            <span class="doc plan">Plan</span>
+            <span class="grow"></span><span class="points">3 points</span>
+          </div>
+        </article>
+
+        <div class="group-h">Actions &amp; sign-offs elsewhere</div>
+
+        <article class="card" tabindex="0">
+          <div class="card-top"><span class="cid">#149</span><span class="grow"></span>
+            <span class="chip tag">Action</span></div>
+          <h3 class="card-title">Harbour council read-through</h3>
+          <p class="essence">Read the season report before Thursday's council. The report is built.</p>
+          <div class="card-foot">
+            <span class="doc note">Note — nothing written yet</span>
+            <span class="grow"></span><span class="points">3 points</span>
+          </div>
+        </article>
+      </div>
+    </section>
+
+    <!-- ── the furled archive ──────────────────────────────────── -->
+    <aside class="rail" title="Executed — click to unfurl">
+      <span class="rcount">1</span><span class="rname">Executed</span><span class="runfurl">⟩</span>
+      <div class="pin" data-pin="9" style="left:-9px;top:-9px">9</div>
+    </aside>
+    <aside class="rail" title="Done — click to unfurl">
+      <span class="rcount">0</span><span class="rname">Done</span><span class="runfurl">⟩</span>
+    </aside>
+    <aside class="rail" title="Not now — click to unfurl">
+      <span class="rcount">1</span><span class="rname">Not now</span><span class="runfurl">⟩</span>
+    </aside>
+
+  </div>
+</div>
+
+<section class="judge">
+  <h2>What I want you to judge</h2>
+  <p class="sub">
+    Nine calls. Six are mine and I have made them — they are here so you can veto, not so you can
+    choose. Three are yours: they change what the board <em>is</em>, not how it looks.
+    Hover a number on the page (turn <b>Notes</b> on) to see where each lives.
+  </p>
+  <ol>
+    <li data-pin="1"><b>The first inch answers "does anything need me?"</b>
+      Four counts, and only four colours ever appear: amber is your move, red is
+      <em>the board is not true right now</em>, teal is structure, green is landed. Everything else
+      is grey.
+      <span class="why">0.1 painted every alarm red and the red became wallpaper. One red means one
+        thing: a fact on this page is wrong. In this slice only two things can be wrong — a card
+        citing a document that is nowhere, and a write that failed.</span>
+      <span class="why"><b>Arrivals are counted here too.</b> Your ruling of tonight makes the corpus
+        the only way in: a plan any session writes anywhere becomes a card the second the file lands,
+        with no click. So cards appear while you are looking at the board, and a card that appeared
+        silently is a card you never read. It carries a NEW mark for its first day, and the count
+        says how many. The header now says <em>watching</em> rather than when it last read, because
+        an idle watching board and a frozen one look identical otherwise — that one cost 0.1 a day.</span>
+      <span class="settled">Mine. NEW ages out after a day, which needs nothing remembered about you.
+        If you would rather it read <em>new since you last looked</em>, that is one stored timestamp
+        and I will build it instead — say which.</span>
+    </li>
+
+    <li data-pin="2"><b>The column definition is one hover away, and it names who moves the card.</b>
+      Hovering a column head opens its ruling — what the column means, plus a line saying whose move
+      it is: yours, or the machine's from slice 02.
+      <span class="why">The grammar is the thing a new session and a returning owner both get wrong.
+        Putting "moved by you / moved by the machine" in the definition is what makes lesson 2 —
+        <em>true without anyone remembering</em> — readable rather than remembered.</span>
+      <span class="settled">Mine. The wording of all eight definitions is in the comp; read them and
+        correct any that are not your ruling.</span>
+    </li>
+
+    <li data-pin="3"><b>A card at rest is number, title, one line of essence, gate.</b>
+      Not chips-only as in 0.1. The essence is the plan's own first sentence of intent, clamped to
+      two lines.
+      <span class="why">0.1 hid SERVES behind an expand, so scanning a column meant reading titles
+        alone and titles are not enough to rank by. This is the single biggest change to how the
+        board reads.</span>
+      <span class="ask">Yours: is two lines of essence right, or do you want one, or three? It sets
+        how many cards fit a screen — about 6 per column at two lines, 8 at one.</span>
+    </li>
+
+    <li data-pin="4"><b>Every card says what is written behind it — five states, always one.</b>
+      <em>Plan</em> · <em>Suggestion</em> · <em>Archived</em> · <em>Note — nothing written yet</em> ·
+      <em>Document gone</em> (red).
+      <span class="why">Your intent says a card with no plan or written suggestion behind it is a
+        note and the board must say so. That makes "note" a first-class kind rather than a defect —
+        your own decision queue lives there legitimately. <em>Document gone</em> is the only one that
+        is an error, and it is the red.</span>
+      <span class="ask">Yours: is <em>Note</em> the right word for a card carrying no document?
+        Alternatives: <em>Unwritten</em>, <em>Ask</em>, or nothing at all.</span>
+    </li>
+
+    <li data-pin="5"><b>The drop preview is a real gap, and it says where the card lands.</b>
+      The card lifts under the cursor; a gap opens at the insertion point with the accent line above
+      it and the words "#196 lands here — rank 2". Ranks below renumber live.
+      <span class="why">"A dropped card lands where the preview said" is in the plan as a done-means.
+        A gap that shows the rank makes that checkable by eye instead of by trust.</span>
+      <span class="settled">Mine. A drop into a grouped column lands inside the group it falls in —
+        never a phantom group at the top. That was 0.1's review finding 8 and it carries over as a
+        test.</span>
+    </li>
+
+    <li data-pin="6"><b>Keyboard reordering is a first-class door, not an accessibility footnote.</b>
+      Focus a card, space to lift, arrows to move within and across columns, space to drop, escape to
+      cancel. The hint appears on the focused card only.
+      <span class="settled">Mine. It is also the only way to reorder precisely on a trackpad, which
+        is why it is on the card rather than in a help page.</span>
+    </li>
+
+    <li data-pin="7"><b>A write that fails is shown as failed, on the card, with the reason.</b>
+      The card stays exactly where it was — it never appears in the new place and then snaps back —
+      and carries the store's own words plus a Retry.
+      <span class="why">The page never shows a state the store does not hold. 0.1's deepest trap was
+        a toast saying "saved" over a write that had eaten the owner's typed idea. There is no
+        optimistic rendering anywhere in Needle; the store is local and a move is a few
+        milliseconds, so honesty costs nothing visible.</span>
+      <span class="settled">Mine, and it is a ratchet, not a convention.</span>
+    </li>
+
+    <li data-pin="8"><b>Sorting is a lens; only dragging writes.</b>
+      Rank · Age · Gate at the top right. Choosing Age changes what you see and never the stored
+      order; the column head keeps saying <em>rank</em> so you always know whether what you are
+      looking at is the priority.
+      <span class="settled">Mine. A sort that wrote would destroy the ranking you built, silently,
+        the first time you looked at the board by age.</span>
+    </li>
+
+    <li data-pin="9"><b>Executed, Done and Not now start furled on a laptop.</b>
+      They open to full columns on a click and stay open. On a wide screen all eight start open.
+      <span class="why">Eight columns is 2,400 pixels. On your laptop the five working columns fit
+        together only if the archived cards give up their width. The rails keep the count visible
+        so nothing is hidden, only narrow.</span>
+      <span class="ask">Yours: this is the one place I trade "everything on the plate, at once"
+        against fitting the screen. If you want all eight always open and to scroll instead, say so —
+        it is a one-line change and I will not argue.</span>
+    </li>
+  </ol>
+</section>
+
+<p class="foot">
+  <b>What is not here, on purpose.</b> No Start, no Discuss, no Answer, no Watch; no lanes strip, no
+  bands, no run-out banner, no toasts. Those are the runtime, and they arrive in slices 02 and 03.
+  Judging the surface with none of them present is the point of doing this slice first: if the board
+  is not already better than 0.1 for reading and planning with nothing running behind it, the
+  sequence stops here and the plan is amended.
+  <br><br>
+  <b>The design system.</b> Every colour, size and radius on this page is a token in this file's own
+  stylesheet, and the build copies that token set into <code>frontend/src/components/ui/</code> once.
+  From then on the folder is the single living source and a raw colour outside it is refused by a
+  test — this page stays exactly as you signed it, a record of the sitting rather than a second
+  stylesheet quietly restyling itself behind you.
+</p>
+
+<script>
+  const body = document.body;
+  const bNotes = document.getElementById('b-notes');
+  const bTheme = document.getElementById('b-theme');
+
+  bNotes.addEventListener('click', () => {
+    body.classList.toggle('notes');
+    bNotes.classList.toggle('on', body.classList.contains('notes'));
+  });
+
+  bTheme.addEventListener('click', () => {
+    const root = document.documentElement;
+    const now = root.getAttribute('data-theme');
+    const next = now === 'dark' ? 'light' : 'dark';
+    root.setAttribute('data-theme', next);
+    bTheme.textContent = next === 'dark' ? 'Light' : 'Dark';
+  });
+
+  // clicking a numbered item in the judging list flashes its pin on the page
+  document.querySelectorAll('.judge li').forEach(li => {
+    li.style.cursor = 'pointer';
+    li.addEventListener('click', () => {
+      body.classList.add('notes');
+      bNotes.classList.add('on');
+      const pin = document.querySelector('.pin[data-pin="' + li.dataset.pin + '"]');
+      if (!pin) return;
+      pin.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      pin.classList.remove('flash');
+      void pin.offsetWidth;
+      pin.classList.add('flash');
+    });
+  });
+</script>
+
+</body>
+</html>

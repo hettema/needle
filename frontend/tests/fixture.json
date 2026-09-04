@@ -1,0 +1,3881 @@
+{
+  "board": {
+    "project": {
+      "slug": "harbourmaster",
+      "name": "Harbourmaster",
+      "path": "/srv/harbourmaster",
+      "registered_at": "2026-09-04T08:30:00Z"
+    },
+    "version": 1,
+    "generated_at": "2026-09-04T08:30:00Z",
+    "corpus": {
+      "live_plans": 11,
+      "live_suggestions": 8,
+      "archived": 8,
+      "watching": true,
+      "watch_note": null,
+      "read_at": "2026-09-04T08:30:00Z"
+    },
+    "attention": {
+      "asking_you": 4,
+      "in_flight": 2,
+      "arrived_today": 1,
+      "documents_gone": 2,
+      "documents_without_card": 0
+    },
+    "columns": [
+      {
+        "definition": {
+          "column": "Backlog",
+          "note": "Ideas written up as suggestions, ranked below the line. Planning one is what promotes it.",
+          "definition": [
+            "Written ideas. A suggestion exists on disk; nobody has planned it yet.",
+            "Planning one is what promotes it — the column is the stage of the writing, never a label somebody applied."
+          ],
+          "moved_by": "you, or by a plan appearing",
+          "ranked": false,
+          "yours": false,
+          "furled_on_laptop": false
+        },
+        "groups": [
+          {
+            "name": "Next to plan",
+            "cards": [
+              {
+                "number": 252,
+                "title": "The quay display polls the office all night",
+                "essence": "The office costs nothing while nothing happens.",
+                "essence_source": "card",
+                "gate": null,
+                "tags": [],
+                "document_state": "suggestion",
+                "document_path": "docs/slice-suggestions/2026-09-03-the-quay-display-polls-the-office-all-night.md",
+                "points": 2,
+                "is_new": false,
+                "age_date": "2026-09-03",
+                "place": {
+                  "column": "Backlog",
+                  "group": "Next to plan",
+                  "position": 0
+                }
+              },
+              {
+                "number": 242,
+                "title": "The welcome board shows one boat's whole stay",
+                "essence": "A skipper walking up the pontoon sees berth, gate code and departure on one board.",
+                "essence_source": "card",
+                "gate": null,
+                "tags": [],
+                "document_state": "suggestion",
+                "document_path": "docs/slice-suggestions/2026-09-02-the-welcome-board-shows-one-boats-whole-stay.md",
+                "points": 2,
+                "is_new": false,
+                "age_date": "2026-09-02",
+                "place": {
+                  "column": "Backlog",
+                  "group": "Next to plan",
+                  "position": 1
+                }
+              },
+              {
+                "number": 232,
+                "title": "The night audit re-reads the whole harbour log",
+                "essence": "The night audit reads only what changed since the last one.",
+                "essence_source": "card",
+                "gate": null,
+                "tags": [],
+                "document_state": "suggestion",
+                "document_path": "docs/slice-suggestions/2026-09-01-the-night-audit-re-reads-the-whole-harbour-log.md",
+                "points": 2,
+                "is_new": false,
+                "age_date": "2026-09-01",
+                "place": {
+                  "column": "Backlog",
+                  "group": "Next to plan",
+                  "position": 2
+                }
+              },
+              {
+                "number": 120,
+                "title": "Two small office-screen fixes",
+                "essence": "Screens refresh.",
+                "essence_source": "card",
+                "gate": null,
+                "tags": [],
+                "document_state": "gone",
+                "document_path": "docs/slice-suggestions/2026-07-12-berth-list-keys.md · 2026-08-19-office-screen-refresh.md",
+                "points": 0,
+                "is_new": false,
+                "age_date": "2026-09-04",
+                "place": {
+                  "column": "Backlog",
+                  "group": "Next to plan",
+                  "position": 3
+                }
+              }
+            ]
+          },
+          {
+            "name": "Season opening",
+            "cards": []
+          },
+          {
+            "name": "Skipper-facing quality",
+            "cards": [
+              {
+                "number": 105,
+                "title": "The skipper's yes or no: wrong states, slow loads",
+                "essence": "Saying yes to a berth takes one tap.",
+                "essence_source": "card",
+                "gate": null,
+                "tags": [
+                  "Keep winning"
+                ],
+                "document_state": "note",
+                "document_path": null,
+                "points": 0,
+                "is_new": false,
+                "age_date": "2026-09-04",
+                "place": {
+                  "column": "Backlog",
+                  "group": "Skipper-facing quality",
+                  "position": 0
+                }
+              }
+            ]
+          },
+          {
+            "name": null,
+            "cards": [
+              {
+                "number": 263,
+                "title": "Two meters on one pontoon disagree",
+                "essence": "Pontoon C's two meters report a total that is 11% more than the shore meter for the same week.",
+                "essence_source": "document",
+                "gate": null,
+                "tags": [],
+                "document_state": "suggestion",
+                "document_path": "docs/slice-suggestions/2026-08-29-two-meters-on-one-pontoon-disagree.md",
+                "points": 0,
+                "is_new": false,
+                "age_date": "2026-08-29",
+                "place": {
+                  "column": "Backlog",
+                  "group": null,
+                  "position": 0
+                }
+              },
+              {
+                "number": 264,
+                "title": "The same slip is mailed twice",
+                "essence": "A skipper who books and then changes the departure gets the confirmation slip twice, with the same number.",
+                "essence_source": "document",
+                "gate": null,
+                "tags": [],
+                "document_state": "suggestion",
+                "document_path": "docs/slice-suggestions/2026-08-31-the-same-slip-is-mailed-twice.md",
+                "points": 0,
+                "is_new": false,
+                "age_date": "2026-08-31",
+                "place": {
+                  "column": "Backlog",
+                  "group": null,
+                  "position": 1
+                }
+              },
+              {
+                "number": 265,
+                "title": "The waiting list forgets who asked first",
+                "essence": "Two boats waiting for the same berth are offered it in the order the list was last edited, not the order they asked.",
+                "essence_source": "document",
+                "gate": null,
+                "tags": [],
+                "document_state": "suggestion",
+                "document_path": "docs/slice-suggestions/2026-09-01-the-waiting-list-forgets-who-asked-first.md",
+                "points": 0,
+                "is_new": false,
+                "age_date": "2026-09-01",
+                "place": {
+                  "column": "Backlog",
+                  "group": null,
+                  "position": 2
+                }
+              },
+              {
+                "number": 266,
+                "title": "A boat longer than its berth is accepted",
+                "essence": "A 12-metre boat booked a 10-metre berth and the office said yes.",
+                "essence_source": "document",
+                "gate": null,
+                "tags": [],
+                "document_state": "suggestion",
+                "document_path": "docs/slice-suggestions/2026-09-04-a-boat-longer-than-its-berth-is-accepted.md",
+                "points": 0,
+                "is_new": false,
+                "age_date": "2026-09-04",
+                "place": {
+                  "column": "Backlog",
+                  "group": null,
+                  "position": 3
+                }
+              }
+            ]
+          }
+        ],
+        "count": 9
+      },
+      {
+        "definition": {
+          "column": "Planned",
+          "note": "The thinking is done and written — a plan exists, waiting its turn for the queue.",
+          "definition": [
+            "The thinking is done and written. A plan exists, waiting its turn for the queue.",
+            "A card here without a live plan is a card in the wrong column, and the board says so."
+          ],
+          "moved_by": "you",
+          "ranked": false,
+          "yours": false,
+          "furled_on_laptop": false
+        },
+        "groups": [
+          {
+            "name": "Season opening",
+            "cards": [
+              {
+                "number": 196,
+                "title": "The waiting list offers every berth that fits",
+                "essence": "A boat on the waiting list is offered every berth it fits, not only the one it asked for.",
+                "essence_source": "card",
+                "gate": "high",
+                "tags": [
+                  "Live sooner"
+                ],
+                "document_state": "plan",
+                "document_path": "docs/plans/2026-09-01-the-waiting-list-offers-every-berth-that-fits.md",
+                "points": 2,
+                "is_new": false,
+                "age_date": "2026-09-01",
+                "place": {
+                  "column": "Planned",
+                  "group": "Season opening",
+                  "position": 0
+                }
+              }
+            ]
+          },
+          {
+            "name": "Skipper-facing quality",
+            "cards": [
+              {
+                "number": 109,
+                "title": "The skipper sees the price before the berth",
+                "essence": "A skipper knows what a night costs before choosing where to lie.",
+                "essence_source": "card",
+                "gate": "high",
+                "tags": [
+                  "Keep winning"
+                ],
+                "document_state": "plan",
+                "document_path": "docs/plans/2026-09-02-the-skipper-sees-the-price-before-the-berth.md",
+                "points": 1,
+                "is_new": false,
+                "age_date": "2026-09-02",
+                "place": {
+                  "column": "Planned",
+                  "group": "Skipper-facing quality",
+                  "position": 0
+                }
+              }
+            ]
+          },
+          {
+            "name": "Trust — from the winter review",
+            "cards": [
+              {
+                "number": 172,
+                "title": "A screen nobody opens is removed",
+                "essence": "Every future session reading the office's code sees only screens that are actually opened.",
+                "essence_source": "card",
+                "gate": "high",
+                "tags": [
+                  "Trust"
+                ],
+                "document_state": "plan",
+                "document_path": "docs/plans/2026-08-26-a-screen-nobody-opens-is-removed.md",
+                "points": 2,
+                "is_new": false,
+                "age_date": "2026-08-26",
+                "place": {
+                  "column": "Planned",
+                  "group": "Trust — from the winter review",
+                  "position": 0
+                }
+              }
+            ]
+          },
+          {
+            "name": null,
+            "cards": [
+              {
+                "number": 262,
+                "title": "The tide table is the harbour's own",
+                "essence": "The tide the office plans by is the one measured at the harbour mouth, not the one published for the estuary twenty miles up.",
+                "essence_source": "document",
+                "gate": "medium",
+                "tags": [],
+                "document_state": "plan",
+                "document_path": "docs/plans/2026-09-04-the-tide-table-is-the-harbours-own.md",
+                "points": 0,
+                "is_new": false,
+                "age_date": "2026-09-04",
+                "place": {
+                  "column": "Planned",
+                  "group": null,
+                  "position": 0
+                }
+              },
+              {
+                "number": 267,
+                "title": "A storm warning reaches every skipper in the harbour",
+                "essence": "Every boat in the harbour hears a gale warning the moment the office does.",
+                "essence_source": "document",
+                "gate": "high",
+                "tags": [],
+                "document_state": "plan",
+                "document_path": "docs/plans/2026-09-04-a-storm-warning-reaches-every-skipper.md",
+                "points": 0,
+                "is_new": true,
+                "age_date": "2026-09-04",
+                "place": {
+                  "column": "Planned",
+                  "group": null,
+                  "position": 1
+                }
+              }
+            ]
+          }
+        ],
+        "count": 5
+      },
+      {
+        "definition": {
+          "column": "Up next",
+          "note": "What we should do next, ranked. Position is rank — the proposed order, yours to override by moving.",
+          "definition": [
+            "What we should do next, ranked. Position is priority and it is true — nothing re-sorts behind your back.",
+            "The ranking rule proposes an order; you override it by moving a card, and repeated overrides are evidence the rule is misnamed, not noise."
+          ],
+          "moved_by": "you — the one gate that is yours alone",
+          "ranked": true,
+          "yours": false,
+          "furled_on_laptop": false
+        },
+        "groups": [
+          {
+            "name": null,
+            "cards": [
+              {
+                "number": 253,
+                "title": "Every metered kilowatt is billed",
+                "essence": "Power truth. Every kilowatt a boat draws lands on its invoice.",
+                "essence_source": "card",
+                "gate": "medium",
+                "tags": [],
+                "document_state": "plan",
+                "document_path": "docs/plans/2026-09-03-every-metered-kilowatt-is-billed.md",
+                "points": 3,
+                "is_new": false,
+                "age_date": "2026-09-03",
+                "place": {
+                  "column": "Up next",
+                  "group": null,
+                  "position": 0
+                }
+              },
+              {
+                "number": 241,
+                "title": "A gate code arrives before the boat does",
+                "essence": "A skipper who booked from sea finds the gate code waiting when the boat is tied up.",
+                "essence_source": "card",
+                "gate": "medium",
+                "tags": [],
+                "document_state": "plan",
+                "document_path": "docs/plans/2026-09-02-a-gate-code-arrives-before-the-boat-does.md",
+                "points": 4,
+                "is_new": false,
+                "age_date": "2026-09-02",
+                "place": {
+                  "column": "Up next",
+                  "group": null,
+                  "position": 1
+                }
+              },
+              {
+                "number": 228,
+                "title": "The skipper is told what the office decided",
+                "essence": "When a skipper asks why a berth was refused, the answer is the reason the office wrote down.",
+                "essence_source": "card",
+                "gate": "high",
+                "tags": [],
+                "document_state": "note",
+                "document_path": null,
+                "points": 3,
+                "is_new": false,
+                "age_date": "2026-09-04",
+                "place": {
+                  "column": "Up next",
+                  "group": null,
+                  "position": 2
+                }
+              },
+              {
+                "number": 237,
+                "title": "A berth is never let twice",
+                "essence": "Two boats never hold the same berth for the same night.",
+                "essence_source": "card",
+                "gate": "xhigh",
+                "tags": [],
+                "document_state": "plan",
+                "document_path": "docs/plans/2026-08-28-a-berth-is-never-let-twice.md",
+                "points": 3,
+                "is_new": false,
+                "age_date": "2026-08-28",
+                "place": {
+                  "column": "Up next",
+                  "group": null,
+                  "position": 3
+                }
+              },
+              {
+                "number": 174,
+                "title": "The booking office stops growing into one file",
+                "essence": "The file that applies every booking is a set of readable, single-concern modules.",
+                "essence_source": "card",
+                "gate": "xhigh",
+                "tags": [
+                  "Trust"
+                ],
+                "document_state": "plan",
+                "document_path": "docs/plans/2026-08-30-the-booking-office-stops-growing-into-one-file.md",
+                "points": 2,
+                "is_new": false,
+                "age_date": "2026-08-30",
+                "place": {
+                  "column": "Up next",
+                  "group": null,
+                  "position": 4
+                }
+              }
+            ]
+          }
+        ],
+        "count": 5
+      },
+      {
+        "definition": {
+          "column": "Executing",
+          "note": "In flight now.",
+          "definition": [
+            "Hands are on it.",
+            "From slice 02 this column is a machine fact: the board moves a card in the moment a live session has hands on it, and out again to wherever the work says. In this slice nothing runs, so it is yours to move."
+          ],
+          "moved_by": "the machine, from slice 02",
+          "ranked": false,
+          "yours": false,
+          "furled_on_laptop": false
+        },
+        "groups": [
+          {
+            "name": null,
+            "cards": [
+              {
+                "number": 259,
+                "title": "The fuel pontoon takes cards, live",
+                "essence": "A skipper pays for fuel at the pump with a card and the litres land on the same invoice.",
+                "essence_source": "card",
+                "gate": "high",
+                "tags": [],
+                "document_state": "archived",
+                "document_path": "docs/plans/done/2026-08-25-the-fuel-pontoon-takes-cards.md",
+                "points": 4,
+                "is_new": false,
+                "age_date": "2026-08-25",
+                "place": {
+                  "column": "Executing",
+                  "group": null,
+                  "position": 0
+                }
+              },
+              {
+                "number": 223,
+                "title": "The gate code goes out in plain text",
+                "essence": "A gate code reaches only the skipper it was issued to.",
+                "essence_source": "card",
+                "gate": "xhigh",
+                "tags": [],
+                "document_state": "suggestion",
+                "document_path": "docs/slice-suggestions/2026-08-20-the-gate-code-goes-out-in-plain-text.md",
+                "points": 3,
+                "is_new": false,
+                "age_date": "2026-08-20",
+                "place": {
+                  "column": "Executing",
+                  "group": null,
+                  "position": 1
+                }
+              }
+            ]
+          }
+        ],
+        "count": 2
+      },
+      {
+        "definition": {
+          "column": "Decision moment",
+          "note": "Your move. Top group unblocks build lanes; bottom group is actions and sign-offs elsewhere.",
+          "definition": [
+            "Your move. Nothing here proceeds without a word from you.",
+            "Two groups: what unblocks a build lane, and what is an action or a sign-off somewhere else. Work whose completion still needs your verification sits here, never in a shipped column."
+          ],
+          "moved_by": "you, or by the machine when work finished with nothing said",
+          "ranked": false,
+          "yours": true,
+          "furled_on_laptop": false
+        },
+        "groups": [
+          {
+            "name": null,
+            "cards": [
+              {
+                "number": 219,
+                "title": "The pricing rule, judged against a real season",
+                "essence": "A season's real bookings say whether length-based or berth-based pricing fills the harbour.",
+                "essence_source": "card",
+                "gate": "xhigh",
+                "tags": [
+                  "Keep winning"
+                ],
+                "document_state": "plan",
+                "document_path": "docs/plans/2026-09-02-the-pricing-rule-judged-against-a-real-season.md",
+                "points": 5,
+                "is_new": false,
+                "age_date": "2026-09-02",
+                "place": {
+                  "column": "Decision moment",
+                  "group": null,
+                  "position": 0
+                }
+              },
+              {
+                "number": 147,
+                "title": "Tell the bank which account takes the deposits",
+                "essence": null,
+                "essence_source": null,
+                "gate": null,
+                "tags": [
+                  "Action",
+                  "Ruling"
+                ],
+                "document_state": "note",
+                "document_path": null,
+                "points": 3,
+                "is_new": false,
+                "age_date": "2026-09-04",
+                "place": {
+                  "column": "Decision moment",
+                  "group": null,
+                  "position": 1
+                }
+              }
+            ]
+          },
+          {
+            "name": "Rulings that unblock lanes",
+            "cards": [
+              {
+                "number": 139,
+                "title": "Berth-first booking — 4 rulings",
+                "essence": "May a booking page open with the harbour map itself, instead of a form?",
+                "essence_source": "card",
+                "gate": "xhigh",
+                "tags": [
+                  "Ruling"
+                ],
+                "document_state": "plan",
+                "document_path": "docs/plans/2026-08-18-berth-first-booking.md",
+                "points": 3,
+                "is_new": false,
+                "age_date": "2026-08-18",
+                "place": {
+                  "column": "Decision moment",
+                  "group": "Rulings that unblock lanes",
+                  "position": 0
+                }
+              }
+            ]
+          },
+          {
+            "name": "Actions & sign-offs elsewhere",
+            "cards": [
+              {
+                "number": 149,
+                "title": "Harbour council read-through",
+                "essence": null,
+                "essence_source": null,
+                "gate": null,
+                "tags": [
+                  "Action"
+                ],
+                "document_state": "note",
+                "document_path": null,
+                "points": 3,
+                "is_new": false,
+                "age_date": "2026-09-04",
+                "place": {
+                  "column": "Decision moment",
+                  "group": "Actions & sign-offs elsewhere",
+                  "position": 0
+                }
+              }
+            ]
+          }
+        ],
+        "count": 4
+      },
+      {
+        "definition": {
+          "column": "Executed",
+          "note": "Built and archived; waiting for the signal that says it delivered.",
+          "definition": [
+            "Built work, its plan archived, waiting for the signal that says it delivered.",
+            "A card enters here with its WATCH row naming that signal. Done is a closed loop, not a claim: this is never where cards go to be forgotten."
+          ],
+          "moved_by": "you, in this slice; the close of a session's work, from slice 03",
+          "ranked": false,
+          "yours": false,
+          "furled_on_laptop": true
+        },
+        "groups": [
+          {
+            "name": null,
+            "cards": [
+              {
+                "number": 134,
+                "title": "The office runs its own checks, nightly",
+                "essence": "The suite runs every night on the office machine.",
+                "essence_source": "card",
+                "gate": "high",
+                "tags": [
+                  "Watch"
+                ],
+                "document_state": "archived",
+                "document_path": "docs/plans/done/2026-08-30-the-office-runs-its-own-checks.md",
+                "points": 2,
+                "is_new": false,
+                "age_date": "2026-08-30",
+                "place": {
+                  "column": "Executed",
+                  "group": null,
+                  "position": 0
+                }
+              }
+            ]
+          }
+        ],
+        "count": 1
+      },
+      {
+        "definition": {
+          "column": "Done",
+          "note": "The signal arrived.",
+          "definition": [
+            "The signal named on the card arrived and somebody read it.",
+            "From slice 03 the board or a session reads the signal and moves the card here itself."
+          ],
+          "moved_by": "you, in this slice; the board or a session, from slice 03",
+          "ranked": false,
+          "yours": false,
+          "furled_on_laptop": true
+        },
+        "groups": [
+          {
+            "name": null,
+            "cards": []
+          }
+        ],
+        "count": 0
+      },
+      {
+        "definition": {
+          "column": "Not now",
+          "note": "Parked in writing, with a wake trigger.",
+          "definition": [
+            "Deliberately not on the plate. The idea waits in writing, with what would wake it.",
+            "A card here is a ruling, not a forgetting: it says why not, and when again."
+          ],
+          "moved_by": "you",
+          "ranked": false,
+          "yours": false,
+          "furled_on_laptop": true
+        },
+        "groups": [
+          {
+            "name": null,
+            "cards": [
+              {
+                "number": 201,
+                "title": "A confirmed booking waits for the tide",
+                "essence": "A confirmed booking is held until the tide allows the boat in.",
+                "essence_source": "card",
+                "gate": "high",
+                "tags": [],
+                "document_state": "gone",
+                "document_path": "docs/plans/done/2026-09-01-a-confirmed-booking-waits-for-the-tide.md",
+                "points": 1,
+                "is_new": false,
+                "age_date": "2026-09-04",
+                "place": {
+                  "column": "Not now",
+                  "group": null,
+                  "position": 0
+                }
+              }
+            ]
+          }
+        ],
+        "count": 1
+      }
+    ],
+    "documents_without_card": []
+  },
+  "details": {
+    "252": {
+      "card": {
+        "number": 252,
+        "project": "harbourmaster",
+        "place": {
+          "column": "Backlog",
+          "group": "Next to plan",
+          "position": 0
+        },
+        "title": "The quay display polls the office all night",
+        "gate": null,
+        "tags": [],
+        "deep": "Carried out of #249's close.",
+        "citations": [
+          "docs/slice-suggestions/2026-09-03-the-quay-display-polls-the-office-all-night.md"
+        ],
+        "link": {
+          "kind": "suggestion",
+          "stem": "2026-09-03-the-quay-display-polls-the-office-all-night",
+          "title": "The quay display polls the office all night",
+          "archived": false
+        },
+        "origin": "imported",
+        "born_at": "2026-09-04T08:30:00Z",
+        "rows": [
+          {
+            "kind": "SERVES",
+            "text": "The office costs nothing while nothing happens."
+          },
+          {
+            "kind": "TODAY",
+            "text": "It asks every **eight** seconds via `/api/quay`."
+          },
+          {
+            "kind": "COST",
+            "text": "Small."
+          }
+        ]
+      },
+      "summary": {
+        "number": 252,
+        "title": "The quay display polls the office all night",
+        "essence": "The office costs nothing while nothing happens.",
+        "essence_source": "card",
+        "gate": null,
+        "tags": [],
+        "document_state": "suggestion",
+        "document_path": "docs/slice-suggestions/2026-09-03-the-quay-display-polls-the-office-all-night.md",
+        "points": 2,
+        "is_new": false,
+        "age_date": "2026-09-03",
+        "place": {
+          "column": "Backlog",
+          "group": "Next to plan",
+          "position": 0
+        }
+      },
+      "brief": [
+        {
+          "kind": "TODAY",
+          "text": "It asks every **eight** seconds via `/api/quay`."
+        },
+        {
+          "kind": "COST",
+          "text": "Small."
+        }
+      ],
+      "record": [],
+      "document": {
+        "kind": "suggestion",
+        "stem": "2026-09-03-the-quay-display-polls-the-office-all-night",
+        "path": "docs/slice-suggestions/2026-09-03-the-quay-display-polls-the-office-all-night.md",
+        "archived": false,
+        "title": "The quay display polls the office all night",
+        "date": "2026-09-03",
+        "status": null,
+        "status_word": null,
+        "gate": null,
+        "gate_why": null,
+        "sequencing": null,
+        "found_by": "the close of card #249, carried out.",
+        "card_ref": null,
+        "head_fields": [
+          {
+            "key": "Found by",
+            "value": "the close of card #249, carried out."
+          }
+        ],
+        "intent_heading": "Observation",
+        "intent": "The office costs nothing while nothing happens — but only because the quay display is not installed. It asks the office for the berth list every eight seconds via `/api/quay`, all night, and installing it as it stands quietly breaks that.",
+        "essence": "The office costs nothing while nothing happens — but only because the quay display is not installed.",
+        "read_at": "2026-09-04T08:30:00Z"
+      },
+      "other_citations": [],
+      "history": [
+        {
+          "id": 2,
+          "at": "2026-09-04T08:30:00Z",
+          "actor": "import",
+          "kind": "linked",
+          "card_number": 252,
+          "from_place": null,
+          "to_place": null,
+          "detail": "Linked to docs/slice-suggestions/2026-09-03-the-quay-display-polls-the-office-all-night.md, cited on the 0.1 card."
+        },
+        {
+          "id": 1,
+          "at": "2026-09-04T08:30:00Z",
+          "actor": "import",
+          "kind": "born",
+          "card_number": 252,
+          "from_place": null,
+          "to_place": {
+            "column": "Backlog",
+            "group": "Next to plan",
+            "position": 0
+          },
+          "detail": "Born from Needle 0.1's card file — column, position and 3 rows."
+        }
+      ]
+    },
+    "242": {
+      "card": {
+        "number": 242,
+        "project": "harbourmaster",
+        "place": {
+          "column": "Backlog",
+          "group": "Next to plan",
+          "position": 1
+        },
+        "title": "The welcome board shows one boat's whole stay",
+        "gate": null,
+        "tags": [],
+        "deep": "",
+        "citations": [
+          "docs/slice-suggestions/2026-09-02-the-welcome-board-shows-one-boats-whole-stay.md"
+        ],
+        "link": {
+          "kind": "suggestion",
+          "stem": "2026-09-02-the-welcome-board-shows-one-boats-whole-stay",
+          "title": "The welcome board shows one boat's whole stay",
+          "archived": false
+        },
+        "origin": "imported",
+        "born_at": "2026-09-04T08:30:00Z",
+        "rows": [
+          {
+            "kind": "SERVES",
+            "text": "A skipper walking up the pontoon sees berth, gate code and departure on one board."
+          },
+          {
+            "kind": "TODAY",
+            "text": "Three screens, and the departure is on none of them."
+          },
+          {
+            "kind": "COST",
+            "text": "A day."
+          }
+        ]
+      },
+      "summary": {
+        "number": 242,
+        "title": "The welcome board shows one boat's whole stay",
+        "essence": "A skipper walking up the pontoon sees berth, gate code and departure on one board.",
+        "essence_source": "card",
+        "gate": null,
+        "tags": [],
+        "document_state": "suggestion",
+        "document_path": "docs/slice-suggestions/2026-09-02-the-welcome-board-shows-one-boats-whole-stay.md",
+        "points": 2,
+        "is_new": false,
+        "age_date": "2026-09-02",
+        "place": {
+          "column": "Backlog",
+          "group": "Next to plan",
+          "position": 1
+        }
+      },
+      "brief": [
+        {
+          "kind": "TODAY",
+          "text": "Three screens, and the departure is on none of them."
+        },
+        {
+          "kind": "COST",
+          "text": "A day."
+        }
+      ],
+      "record": [],
+      "document": {
+        "kind": "suggestion",
+        "stem": "2026-09-02-the-welcome-board-shows-one-boats-whole-stay",
+        "path": "docs/slice-suggestions/2026-09-02-the-welcome-board-shows-one-boats-whole-stay.md",
+        "archived": false,
+        "title": "The welcome board shows one boat's whole stay",
+        "date": "2026-09-02",
+        "status": null,
+        "status_word": null,
+        "gate": null,
+        "gate_why": null,
+        "sequencing": null,
+        "found_by": "the owner, walking the pontoon on 2026-09-02.",
+        "card_ref": null,
+        "head_fields": [
+          {
+            "key": "Found by",
+            "value": "the owner, walking the pontoon on 2026-09-02."
+          }
+        ],
+        "intent_heading": "Observation",
+        "intent": "A skipper walking up the pontoon sees berth, gate code and departure on one board. Today they are three screens and the departure is on none of them.",
+        "essence": "A skipper walking up the pontoon sees berth, gate code and departure on one board.",
+        "read_at": "2026-09-04T08:30:00Z"
+      },
+      "other_citations": [],
+      "history": [
+        {
+          "id": 4,
+          "at": "2026-09-04T08:30:00Z",
+          "actor": "import",
+          "kind": "linked",
+          "card_number": 242,
+          "from_place": null,
+          "to_place": null,
+          "detail": "Linked to docs/slice-suggestions/2026-09-02-the-welcome-board-shows-one-boats-whole-stay.md, cited on the 0.1 card."
+        },
+        {
+          "id": 3,
+          "at": "2026-09-04T08:30:00Z",
+          "actor": "import",
+          "kind": "born",
+          "card_number": 242,
+          "from_place": null,
+          "to_place": {
+            "column": "Backlog",
+            "group": "Next to plan",
+            "position": 1
+          },
+          "detail": "Born from Needle 0.1's card file — column, position and 3 rows."
+        }
+      ]
+    },
+    "232": {
+      "card": {
+        "number": 232,
+        "project": "harbourmaster",
+        "place": {
+          "column": "Backlog",
+          "group": "Next to plan",
+          "position": 2
+        },
+        "title": "The night audit re-reads the whole harbour log",
+        "gate": null,
+        "tags": [],
+        "deep": "",
+        "citations": [
+          "docs/slice-suggestions/2026-09-01-the-night-audit-re-reads-the-whole-harbour-log.md"
+        ],
+        "link": {
+          "kind": "suggestion",
+          "stem": "2026-09-01-the-night-audit-re-reads-the-whole-harbour-log",
+          "title": "The night audit re-reads the whole harbour log",
+          "archived": false
+        },
+        "origin": "imported",
+        "born_at": "2026-09-04T08:30:00Z",
+        "rows": [
+          {
+            "kind": "SERVES",
+            "text": "The night audit reads only what changed since the last one."
+          },
+          {
+            "kind": "TODAY",
+            "text": "It reads all 14,000 log lines every night."
+          },
+          {
+            "kind": "COST",
+            "text": "Half a day."
+          }
+        ]
+      },
+      "summary": {
+        "number": 232,
+        "title": "The night audit re-reads the whole harbour log",
+        "essence": "The night audit reads only what changed since the last one.",
+        "essence_source": "card",
+        "gate": null,
+        "tags": [],
+        "document_state": "suggestion",
+        "document_path": "docs/slice-suggestions/2026-09-01-the-night-audit-re-reads-the-whole-harbour-log.md",
+        "points": 2,
+        "is_new": false,
+        "age_date": "2026-09-01",
+        "place": {
+          "column": "Backlog",
+          "group": "Next to plan",
+          "position": 2
+        }
+      },
+      "brief": [
+        {
+          "kind": "TODAY",
+          "text": "It reads all 14,000 log lines every night."
+        },
+        {
+          "kind": "COST",
+          "text": "Half a day."
+        }
+      ],
+      "record": [],
+      "document": {
+        "kind": "suggestion",
+        "stem": "2026-09-01-the-night-audit-re-reads-the-whole-harbour-log",
+        "path": "docs/slice-suggestions/2026-09-01-the-night-audit-re-reads-the-whole-harbour-log.md",
+        "archived": false,
+        "title": "The night audit re-reads the whole harbour log",
+        "date": "2026-09-01",
+        "status": null,
+        "status_word": null,
+        "gate": null,
+        "gate_why": null,
+        "sequencing": null,
+        "found_by": "the cost review of 2026-09-01.",
+        "card_ref": null,
+        "head_fields": [
+          {
+            "key": "Found by",
+            "value": "the cost review of 2026-09-01."
+          }
+        ],
+        "intent_heading": "Observation",
+        "intent": "The night audit reads only what changed since the last one. Today it reads all 14,000 log lines every night, and the log grows by the season.",
+        "essence": "The night audit reads only what changed since the last one.",
+        "read_at": "2026-09-04T08:30:00Z"
+      },
+      "other_citations": [],
+      "history": [
+        {
+          "id": 6,
+          "at": "2026-09-04T08:30:00Z",
+          "actor": "import",
+          "kind": "linked",
+          "card_number": 232,
+          "from_place": null,
+          "to_place": null,
+          "detail": "Linked to docs/slice-suggestions/2026-09-01-the-night-audit-re-reads-the-whole-harbour-log.md, cited on the 0.1 card."
+        },
+        {
+          "id": 5,
+          "at": "2026-09-04T08:30:00Z",
+          "actor": "import",
+          "kind": "born",
+          "card_number": 232,
+          "from_place": null,
+          "to_place": {
+            "column": "Backlog",
+            "group": "Next to plan",
+            "position": 2
+          },
+          "detail": "Born from Needle 0.1's card file — column, position and 3 rows."
+        }
+      ]
+    },
+    "120": {
+      "card": {
+        "number": 120,
+        "project": "harbourmaster",
+        "place": {
+          "column": "Backlog",
+          "group": "Next to plan",
+          "position": 3
+        },
+        "title": "Two small office-screen fixes",
+        "gate": null,
+        "tags": [],
+        "deep": "",
+        "citations": [
+          "docs/slice-suggestions/2026-07-12-berth-list-keys.md · 2026-08-19-office-screen-refresh.md"
+        ],
+        "link": {
+          "kind": "suggestion",
+          "stem": "2026-07-12-berth-list-keys.md · 2026-08-19-office-screen-refresh",
+          "title": "",
+          "archived": false
+        },
+        "origin": "imported",
+        "born_at": "2026-09-04T08:30:00Z",
+        "rows": [
+          {
+            "kind": "SERVES",
+            "text": "Screens refresh."
+          }
+        ]
+      },
+      "summary": {
+        "number": 120,
+        "title": "Two small office-screen fixes",
+        "essence": "Screens refresh.",
+        "essence_source": "card",
+        "gate": null,
+        "tags": [],
+        "document_state": "gone",
+        "document_path": "docs/slice-suggestions/2026-07-12-berth-list-keys.md · 2026-08-19-office-screen-refresh.md",
+        "points": 0,
+        "is_new": false,
+        "age_date": "2026-09-04",
+        "place": {
+          "column": "Backlog",
+          "group": "Next to plan",
+          "position": 3
+        }
+      },
+      "brief": [],
+      "record": [],
+      "document": null,
+      "other_citations": [],
+      "history": [
+        {
+          "id": 8,
+          "at": "2026-09-04T08:30:00Z",
+          "actor": "import",
+          "kind": "linked",
+          "card_number": 120,
+          "from_place": null,
+          "to_place": null,
+          "detail": "Linked to docs/slice-suggestions/2026-07-12-berth-list-keys.md · 2026-08-19-office-screen-refresh.md, cited on the 0.1 card."
+        },
+        {
+          "id": 7,
+          "at": "2026-09-04T08:30:00Z",
+          "actor": "import",
+          "kind": "born",
+          "card_number": 120,
+          "from_place": null,
+          "to_place": {
+            "column": "Backlog",
+            "group": "Next to plan",
+            "position": 3
+          },
+          "detail": "Born from Needle 0.1's card file — column, position and 1 row."
+        }
+      ]
+    },
+    "105": {
+      "card": {
+        "number": 105,
+        "project": "harbourmaster",
+        "place": {
+          "column": "Backlog",
+          "group": "Skipper-facing quality",
+          "position": 0
+        },
+        "title": "The skipper's yes or no: wrong states, slow loads",
+        "gate": null,
+        "tags": [
+          "Keep winning"
+        ],
+        "deep": "",
+        "citations": [],
+        "link": null,
+        "origin": "imported",
+        "born_at": "2026-09-04T08:30:00Z",
+        "rows": [
+          {
+            "kind": "SERVES",
+            "text": "Saying yes to a berth takes one tap."
+          }
+        ]
+      },
+      "summary": {
+        "number": 105,
+        "title": "The skipper's yes or no: wrong states, slow loads",
+        "essence": "Saying yes to a berth takes one tap.",
+        "essence_source": "card",
+        "gate": null,
+        "tags": [
+          "Keep winning"
+        ],
+        "document_state": "note",
+        "document_path": null,
+        "points": 0,
+        "is_new": false,
+        "age_date": "2026-09-04",
+        "place": {
+          "column": "Backlog",
+          "group": "Skipper-facing quality",
+          "position": 0
+        }
+      },
+      "brief": [],
+      "record": [],
+      "document": null,
+      "other_citations": [],
+      "history": [
+        {
+          "id": 9,
+          "at": "2026-09-04T08:30:00Z",
+          "actor": "import",
+          "kind": "born",
+          "card_number": 105,
+          "from_place": null,
+          "to_place": {
+            "column": "Backlog",
+            "group": "Skipper-facing quality",
+            "position": 0
+          },
+          "detail": "Born from Needle 0.1's card file — column, position and 1 row."
+        }
+      ]
+    },
+    "263": {
+      "card": {
+        "number": 263,
+        "project": "harbourmaster",
+        "place": {
+          "column": "Backlog",
+          "group": null,
+          "position": 0
+        },
+        "title": "Two meters on one pontoon disagree",
+        "gate": null,
+        "tags": [],
+        "deep": "",
+        "citations": [
+          "docs/slice-suggestions/2026-08-29-two-meters-on-one-pontoon-disagree.md"
+        ],
+        "link": {
+          "kind": "suggestion",
+          "stem": "2026-08-29-two-meters-on-one-pontoon-disagree",
+          "title": "Two meters on one pontoon disagree",
+          "archived": false
+        },
+        "origin": "founding",
+        "born_at": "2026-09-04T08:30:00Z",
+        "rows": []
+      },
+      "summary": {
+        "number": 263,
+        "title": "Two meters on one pontoon disagree",
+        "essence": "Pontoon C's two meters report a total that is 11% more than the shore meter for the same week.",
+        "essence_source": "document",
+        "gate": null,
+        "tags": [],
+        "document_state": "suggestion",
+        "document_path": "docs/slice-suggestions/2026-08-29-two-meters-on-one-pontoon-disagree.md",
+        "points": 0,
+        "is_new": false,
+        "age_date": "2026-08-29",
+        "place": {
+          "column": "Backlog",
+          "group": null,
+          "position": 0
+        }
+      },
+      "brief": [],
+      "record": [],
+      "document": {
+        "kind": "suggestion",
+        "stem": "2026-08-29-two-meters-on-one-pontoon-disagree",
+        "path": "docs/slice-suggestions/2026-08-29-two-meters-on-one-pontoon-disagree.md",
+        "archived": false,
+        "title": "Two meters on one pontoon disagree",
+        "date": "2026-08-29",
+        "status": null,
+        "status_word": null,
+        "gate": null,
+        "gate_why": null,
+        "sequencing": null,
+        "found_by": "the meter reconcile of 2026-08-29.",
+        "card_ref": null,
+        "head_fields": [
+          {
+            "key": "Found by",
+            "value": "the meter reconcile of 2026-08-29."
+          }
+        ],
+        "intent_heading": "Observation",
+        "intent": "Pontoon C's two meters report a total that is 11% more than the shore meter for the same week. One of them is wrong and the office cannot say which.",
+        "essence": "Pontoon C's two meters report a total that is 11% more than the shore meter for the same week.",
+        "read_at": "2026-09-04T08:30:00Z"
+      },
+      "other_citations": [],
+      "history": [
+        {
+          "id": 42,
+          "at": "2026-09-04T08:30:00Z",
+          "actor": "corpus",
+          "kind": "born",
+          "card_number": 263,
+          "from_place": null,
+          "to_place": {
+            "column": "Backlog",
+            "group": null,
+            "position": 0
+          },
+          "detail": "Born from docs/slice-suggestions/2026-08-29-two-meters-on-one-pontoon-disagree.md, at registration."
+        }
+      ]
+    },
+    "264": {
+      "card": {
+        "number": 264,
+        "project": "harbourmaster",
+        "place": {
+          "column": "Backlog",
+          "group": null,
+          "position": 1
+        },
+        "title": "The same slip is mailed twice",
+        "gate": null,
+        "tags": [],
+        "deep": "",
+        "citations": [
+          "docs/slice-suggestions/2026-08-31-the-same-slip-is-mailed-twice.md"
+        ],
+        "link": {
+          "kind": "suggestion",
+          "stem": "2026-08-31-the-same-slip-is-mailed-twice",
+          "title": "The same slip is mailed twice",
+          "archived": false
+        },
+        "origin": "founding",
+        "born_at": "2026-09-04T08:30:00Z",
+        "rows": []
+      },
+      "summary": {
+        "number": 264,
+        "title": "The same slip is mailed twice",
+        "essence": "A skipper who books and then changes the departure gets the confirmation slip twice, with the same number.",
+        "essence_source": "document",
+        "gate": null,
+        "tags": [],
+        "document_state": "suggestion",
+        "document_path": "docs/slice-suggestions/2026-08-31-the-same-slip-is-mailed-twice.md",
+        "points": 0,
+        "is_new": false,
+        "age_date": "2026-08-31",
+        "place": {
+          "column": "Backlog",
+          "group": null,
+          "position": 1
+        }
+      },
+      "brief": [],
+      "record": [],
+      "document": {
+        "kind": "suggestion",
+        "stem": "2026-08-31-the-same-slip-is-mailed-twice",
+        "path": "docs/slice-suggestions/2026-08-31-the-same-slip-is-mailed-twice.md",
+        "archived": false,
+        "title": "The same slip is mailed twice",
+        "date": "2026-08-31",
+        "status": null,
+        "status_word": null,
+        "gate": null,
+        "gate_why": null,
+        "sequencing": null,
+        "found_by": "a skipper's reply, 2026-08-31.",
+        "card_ref": null,
+        "head_fields": [
+          {
+            "key": "Found by",
+            "value": "a skipper's reply, 2026-08-31."
+          }
+        ],
+        "intent_heading": "Observation",
+        "intent": "A skipper who books and then changes the departure gets the confirmation slip twice, with the same number. The second mail says nothing about what changed.",
+        "essence": "A skipper who books and then changes the departure gets the confirmation slip twice, with the same number.",
+        "read_at": "2026-09-04T08:30:00Z"
+      },
+      "other_citations": [],
+      "history": [
+        {
+          "id": 43,
+          "at": "2026-09-04T08:30:00Z",
+          "actor": "corpus",
+          "kind": "born",
+          "card_number": 264,
+          "from_place": null,
+          "to_place": {
+            "column": "Backlog",
+            "group": null,
+            "position": 1
+          },
+          "detail": "Born from docs/slice-suggestions/2026-08-31-the-same-slip-is-mailed-twice.md, at registration."
+        }
+      ]
+    },
+    "265": {
+      "card": {
+        "number": 265,
+        "project": "harbourmaster",
+        "place": {
+          "column": "Backlog",
+          "group": null,
+          "position": 2
+        },
+        "title": "The waiting list forgets who asked first",
+        "gate": null,
+        "tags": [],
+        "deep": "",
+        "citations": [
+          "docs/slice-suggestions/2026-09-01-the-waiting-list-forgets-who-asked-first.md"
+        ],
+        "link": {
+          "kind": "suggestion",
+          "stem": "2026-09-01-the-waiting-list-forgets-who-asked-first",
+          "title": "The waiting list forgets who asked first",
+          "archived": false
+        },
+        "origin": "founding",
+        "born_at": "2026-09-04T08:30:00Z",
+        "rows": []
+      },
+      "summary": {
+        "number": 265,
+        "title": "The waiting list forgets who asked first",
+        "essence": "Two boats waiting for the same berth are offered it in the order the list was last edited, not the order they asked.",
+        "essence_source": "document",
+        "gate": null,
+        "tags": [],
+        "document_state": "suggestion",
+        "document_path": "docs/slice-suggestions/2026-09-01-the-waiting-list-forgets-who-asked-first.md",
+        "points": 0,
+        "is_new": false,
+        "age_date": "2026-09-01",
+        "place": {
+          "column": "Backlog",
+          "group": null,
+          "position": 2
+        }
+      },
+      "brief": [],
+      "record": [],
+      "document": {
+        "kind": "suggestion",
+        "stem": "2026-09-01-the-waiting-list-forgets-who-asked-first",
+        "path": "docs/slice-suggestions/2026-09-01-the-waiting-list-forgets-who-asked-first.md",
+        "archived": false,
+        "title": "The waiting list forgets who asked first",
+        "date": "2026-09-01",
+        "status": null,
+        "status_word": null,
+        "gate": null,
+        "gate_why": null,
+        "sequencing": null,
+        "found_by": "the owner, 2026-09-01.",
+        "card_ref": null,
+        "head_fields": [
+          {
+            "key": "Found by",
+            "value": "the owner, 2026-09-01."
+          }
+        ],
+        "intent_heading": "Observation",
+        "intent": "Two boats waiting for the same berth are offered it in the order the list was last edited, not the order they asked. The first to ask is the one who complains.",
+        "essence": "Two boats waiting for the same berth are offered it in the order the list was last edited, not the order they asked.",
+        "read_at": "2026-09-04T08:30:00Z"
+      },
+      "other_citations": [],
+      "history": [
+        {
+          "id": 44,
+          "at": "2026-09-04T08:30:00Z",
+          "actor": "corpus",
+          "kind": "born",
+          "card_number": 265,
+          "from_place": null,
+          "to_place": {
+            "column": "Backlog",
+            "group": null,
+            "position": 2
+          },
+          "detail": "Born from docs/slice-suggestions/2026-09-01-the-waiting-list-forgets-who-asked-first.md, at registration."
+        }
+      ]
+    },
+    "266": {
+      "card": {
+        "number": 266,
+        "project": "harbourmaster",
+        "place": {
+          "column": "Backlog",
+          "group": null,
+          "position": 3
+        },
+        "title": "A boat longer than its berth is accepted",
+        "gate": null,
+        "tags": [],
+        "deep": "",
+        "citations": [
+          "docs/slice-suggestions/2026-09-04-a-boat-longer-than-its-berth-is-accepted.md"
+        ],
+        "link": {
+          "kind": "suggestion",
+          "stem": "2026-09-04-a-boat-longer-than-its-berth-is-accepted",
+          "title": "A boat longer than its berth is accepted",
+          "archived": false
+        },
+        "origin": "founding",
+        "born_at": "2026-09-04T08:30:00Z",
+        "rows": []
+      },
+      "summary": {
+        "number": 266,
+        "title": "A boat longer than its berth is accepted",
+        "essence": "A 12-metre boat booked a 10-metre berth and the office said yes.",
+        "essence_source": "document",
+        "gate": null,
+        "tags": [],
+        "document_state": "suggestion",
+        "document_path": "docs/slice-suggestions/2026-09-04-a-boat-longer-than-its-berth-is-accepted.md",
+        "points": 0,
+        "is_new": false,
+        "age_date": "2026-09-04",
+        "place": {
+          "column": "Backlog",
+          "group": null,
+          "position": 3
+        }
+      },
+      "brief": [],
+      "record": [],
+      "document": {
+        "kind": "suggestion",
+        "stem": "2026-09-04-a-boat-longer-than-its-berth-is-accepted",
+        "path": "docs/slice-suggestions/2026-09-04-a-boat-longer-than-its-berth-is-accepted.md",
+        "archived": false,
+        "title": "A boat longer than its berth is accepted",
+        "date": "2026-09-04",
+        "status": null,
+        "status_word": null,
+        "gate": null,
+        "gate_why": null,
+        "sequencing": null,
+        "found_by": "the harbourmaster, 2026-09-04.",
+        "card_ref": null,
+        "head_fields": [
+          {
+            "key": "Found by",
+            "value": "the harbourmaster, 2026-09-04."
+          }
+        ],
+        "intent_heading": "Observation",
+        "intent": "A 12-metre boat booked a 10-metre berth and the office said yes. The form knows the boat's length and the berth's; it compares neither.",
+        "essence": "A 12-metre boat booked a 10-metre berth and the office said yes.",
+        "read_at": "2026-09-04T08:30:00Z"
+      },
+      "other_citations": [],
+      "history": [
+        {
+          "id": 45,
+          "at": "2026-09-04T08:30:00Z",
+          "actor": "corpus",
+          "kind": "born",
+          "card_number": 266,
+          "from_place": null,
+          "to_place": {
+            "column": "Backlog",
+            "group": null,
+            "position": 3
+          },
+          "detail": "Born from docs/slice-suggestions/2026-09-04-a-boat-longer-than-its-berth-is-accepted.md, at registration."
+        }
+      ]
+    },
+    "196": {
+      "card": {
+        "number": 196,
+        "project": "harbourmaster",
+        "place": {
+          "column": "Planned",
+          "group": "Season opening",
+          "position": 0
+        },
+        "title": "The waiting list offers every berth that fits",
+        "gate": "high",
+        "tags": [
+          "Live sooner"
+        ],
+        "deep": "Split 2026-09-01 out of the shipped plan.",
+        "citations": [
+          "docs/plans/2026-09-01-the-waiting-list-offers-every-berth-that-fits.md"
+        ],
+        "link": {
+          "kind": "plan",
+          "stem": "2026-09-01-the-waiting-list-offers-every-berth-that-fits",
+          "title": "The waiting list offers every berth that fits",
+          "archived": false
+        },
+        "origin": "imported",
+        "born_at": "2026-09-04T08:30:00Z",
+        "rows": [
+          {
+            "kind": "SERVES",
+            "text": "A boat on the waiting list is offered every berth it fits, not only the one it asked for."
+          },
+          {
+            "kind": "TODAY",
+            "text": "The list matches on the berth number alone."
+          },
+          {
+            "kind": "WAITS",
+            "text": "#139 — the four berth-first rulings."
+          }
+        ]
+      },
+      "summary": {
+        "number": 196,
+        "title": "The waiting list offers every berth that fits",
+        "essence": "A boat on the waiting list is offered every berth it fits, not only the one it asked for.",
+        "essence_source": "card",
+        "gate": "high",
+        "tags": [
+          "Live sooner"
+        ],
+        "document_state": "plan",
+        "document_path": "docs/plans/2026-09-01-the-waiting-list-offers-every-berth-that-fits.md",
+        "points": 2,
+        "is_new": false,
+        "age_date": "2026-09-01",
+        "place": {
+          "column": "Planned",
+          "group": "Season opening",
+          "position": 0
+        }
+      },
+      "brief": [
+        {
+          "kind": "TODAY",
+          "text": "The list matches on the berth number alone."
+        },
+        {
+          "kind": "WAITS",
+          "text": "#139 — the four berth-first rulings."
+        }
+      ],
+      "record": [],
+      "document": {
+        "kind": "plan",
+        "stem": "2026-09-01-the-waiting-list-offers-every-berth-that-fits",
+        "path": "docs/plans/2026-09-01-the-waiting-list-offers-every-berth-that-fits.md",
+        "archived": false,
+        "title": "The waiting list offers every berth that fits",
+        "date": "2026-09-01",
+        "status": "PENDING — split 2026-09-01 out of the shipped berth-first plan.",
+        "status_word": "PENDING",
+        "gate": "high",
+        "gate_why": "the matching rule is specified; the one judgment is what counts as a fit for a catamaran.",
+        "sequencing": "after #139, the four berth-first rulings.",
+        "found_by": null,
+        "card_ref": null,
+        "head_fields": [
+          {
+            "key": "Status",
+            "value": "PENDING — split 2026-09-01 out of the shipped berth-first plan."
+          },
+          {
+            "key": "Written",
+            "value": "2026-09-01"
+          },
+          {
+            "key": "Effort gate",
+            "value": "high — the matching rule is specified; the one judgment is what counts as a fit for a catamaran."
+          },
+          {
+            "key": "Sequencing",
+            "value": "after #139, the four berth-first rulings."
+          }
+        ],
+        "intent_heading": "Intent",
+        "intent": "A boat on the waiting list is offered every berth it fits, not only the one it asked for. Today the list matches on the berth number the skipper typed, so a 9-metre boat waiting for C14 is never told that C11 came free on Tuesday, and C11 stays empty while the skipper anchors outside.",
+        "essence": "A boat on the waiting list is offered every berth it fits, not only the one it asked for.",
+        "read_at": "2026-09-04T08:30:00Z"
+      },
+      "other_citations": [],
+      "history": [
+        {
+          "id": 11,
+          "at": "2026-09-04T08:30:00Z",
+          "actor": "import",
+          "kind": "linked",
+          "card_number": 196,
+          "from_place": null,
+          "to_place": null,
+          "detail": "Linked to docs/plans/2026-09-01-the-waiting-list-offers-every-berth-that-fits.md, cited on the 0.1 card."
+        },
+        {
+          "id": 10,
+          "at": "2026-09-04T08:30:00Z",
+          "actor": "import",
+          "kind": "born",
+          "card_number": 196,
+          "from_place": null,
+          "to_place": {
+            "column": "Planned",
+            "group": "Season opening",
+            "position": 0
+          },
+          "detail": "Born from Needle 0.1's card file — column, position and 3 rows."
+        }
+      ]
+    },
+    "109": {
+      "card": {
+        "number": 109,
+        "project": "harbourmaster",
+        "place": {
+          "column": "Planned",
+          "group": "Skipper-facing quality",
+          "position": 0
+        },
+        "title": "The skipper sees the price before the berth",
+        "gate": "high",
+        "tags": [
+          "Keep winning"
+        ],
+        "deep": "",
+        "citations": [
+          "docs/plans/2026-09-02-the-skipper-sees-the-price-before-the-berth.md"
+        ],
+        "link": {
+          "kind": "plan",
+          "stem": "2026-09-02-the-skipper-sees-the-price-before-the-berth",
+          "title": "The skipper sees the price before the berth",
+          "archived": false
+        },
+        "origin": "imported",
+        "born_at": "2026-09-04T08:30:00Z",
+        "rows": [
+          {
+            "kind": "SERVES",
+            "text": "A skipper knows what a night costs before choosing where to lie."
+          },
+          {
+            "kind": "TODAY",
+            "text": "The price appears on the confirmation."
+          }
+        ]
+      },
+      "summary": {
+        "number": 109,
+        "title": "The skipper sees the price before the berth",
+        "essence": "A skipper knows what a night costs before choosing where to lie.",
+        "essence_source": "card",
+        "gate": "high",
+        "tags": [
+          "Keep winning"
+        ],
+        "document_state": "plan",
+        "document_path": "docs/plans/2026-09-02-the-skipper-sees-the-price-before-the-berth.md",
+        "points": 1,
+        "is_new": false,
+        "age_date": "2026-09-02",
+        "place": {
+          "column": "Planned",
+          "group": "Skipper-facing quality",
+          "position": 0
+        }
+      },
+      "brief": [
+        {
+          "kind": "TODAY",
+          "text": "The price appears on the confirmation."
+        }
+      ],
+      "record": [],
+      "document": {
+        "kind": "plan",
+        "stem": "2026-09-02-the-skipper-sees-the-price-before-the-berth",
+        "path": "docs/plans/2026-09-02-the-skipper-sees-the-price-before-the-berth.md",
+        "archived": false,
+        "title": "The skipper sees the price before the berth",
+        "date": "2026-09-02",
+        "status": "PENDING",
+        "status_word": "PENDING",
+        "gate": "high",
+        "gate_why": "the price rule has three inputs and the form shows none of them until the end.",
+        "sequencing": "independent of every open card.",
+        "found_by": null,
+        "card_ref": null,
+        "head_fields": [
+          {
+            "key": "Status",
+            "value": "PENDING"
+          },
+          {
+            "key": "Written",
+            "value": "2026-09-02"
+          },
+          {
+            "key": "Effort gate",
+            "value": "high — the price rule has three inputs and the form shows none of them until the end."
+          },
+          {
+            "key": "Sequencing",
+            "value": "independent of every open card."
+          }
+        ],
+        "intent_heading": "Intent",
+        "intent": "A skipper knows what a night costs before choosing where to lie. Today the price appears on the confirmation, after the berth is chosen.",
+        "essence": "A skipper knows what a night costs before choosing where to lie.",
+        "read_at": "2026-09-04T08:30:00Z"
+      },
+      "other_citations": [],
+      "history": [
+        {
+          "id": 13,
+          "at": "2026-09-04T08:30:00Z",
+          "actor": "import",
+          "kind": "linked",
+          "card_number": 109,
+          "from_place": null,
+          "to_place": null,
+          "detail": "Linked to docs/plans/2026-09-02-the-skipper-sees-the-price-before-the-berth.md, cited on the 0.1 card."
+        },
+        {
+          "id": 12,
+          "at": "2026-09-04T08:30:00Z",
+          "actor": "import",
+          "kind": "born",
+          "card_number": 109,
+          "from_place": null,
+          "to_place": {
+            "column": "Planned",
+            "group": "Skipper-facing quality",
+            "position": 0
+          },
+          "detail": "Born from Needle 0.1's card file — column, position and 2 rows."
+        }
+      ]
+    },
+    "172": {
+      "card": {
+        "number": 172,
+        "project": "harbourmaster",
+        "place": {
+          "column": "Planned",
+          "group": "Trust — from the winter review",
+          "position": 0
+        },
+        "title": "A screen nobody opens is removed",
+        "gate": "high",
+        "tags": [
+          "Trust"
+        ],
+        "deep": "",
+        "citations": [
+          "docs/plans/2026-08-26-a-screen-nobody-opens-is-removed.md"
+        ],
+        "link": {
+          "kind": "plan",
+          "stem": "2026-08-26-a-screen-nobody-opens-is-removed",
+          "title": "A screen nobody opens is removed",
+          "archived": false
+        },
+        "origin": "imported",
+        "born_at": "2026-09-04T08:30:00Z",
+        "rows": [
+          {
+            "kind": "SERVES",
+            "text": "Every future session reading the office's code sees only screens that are actually opened."
+          },
+          {
+            "kind": "TODAY",
+            "text": "Four screens have had no visit since June."
+          },
+          {
+            "kind": "COST",
+            "text": "A day."
+          }
+        ]
+      },
+      "summary": {
+        "number": 172,
+        "title": "A screen nobody opens is removed",
+        "essence": "Every future session reading the office's code sees only screens that are actually opened.",
+        "essence_source": "card",
+        "gate": "high",
+        "tags": [
+          "Trust"
+        ],
+        "document_state": "plan",
+        "document_path": "docs/plans/2026-08-26-a-screen-nobody-opens-is-removed.md",
+        "points": 2,
+        "is_new": false,
+        "age_date": "2026-08-26",
+        "place": {
+          "column": "Planned",
+          "group": "Trust — from the winter review",
+          "position": 0
+        }
+      },
+      "brief": [
+        {
+          "kind": "TODAY",
+          "text": "Four screens have had no visit since June."
+        },
+        {
+          "kind": "COST",
+          "text": "A day."
+        }
+      ],
+      "record": [],
+      "document": {
+        "kind": "plan",
+        "stem": "2026-08-26-a-screen-nobody-opens-is-removed",
+        "path": "docs/plans/2026-08-26-a-screen-nobody-opens-is-removed.md",
+        "archived": false,
+        "title": "A screen nobody opens is removed",
+        "date": "2026-08-26",
+        "status": "PENDING — from the winter review.",
+        "status_word": "PENDING",
+        "gate": "high",
+        "gate_why": "four screens have had no visit since June; removing them is deletion, not design.",
+        "sequencing": "independent of every open card.",
+        "found_by": null,
+        "card_ref": null,
+        "head_fields": [
+          {
+            "key": "Status",
+            "value": "PENDING — from the winter review."
+          },
+          {
+            "key": "Written",
+            "value": "2026-08-26"
+          },
+          {
+            "key": "Effort gate",
+            "value": "high — four screens have had no visit since June; removing them is deletion, not design."
+          },
+          {
+            "key": "Sequencing",
+            "value": "independent of every open card."
+          }
+        ],
+        "intent_heading": "Intent",
+        "intent": "Every future session reading the office's code sees only screens that are actually opened — nothing dead to extend, fix or learn from.",
+        "essence": "Every future session reading the office's code sees only screens that are actually opened — nothing dead to extend, fix or learn from.",
+        "read_at": "2026-09-04T08:30:00Z"
+      },
+      "other_citations": [],
+      "history": [
+        {
+          "id": 15,
+          "at": "2026-09-04T08:30:00Z",
+          "actor": "import",
+          "kind": "linked",
+          "card_number": 172,
+          "from_place": null,
+          "to_place": null,
+          "detail": "Linked to docs/plans/2026-08-26-a-screen-nobody-opens-is-removed.md, cited on the 0.1 card."
+        },
+        {
+          "id": 14,
+          "at": "2026-09-04T08:30:00Z",
+          "actor": "import",
+          "kind": "born",
+          "card_number": 172,
+          "from_place": null,
+          "to_place": {
+            "column": "Planned",
+            "group": "Trust — from the winter review",
+            "position": 0
+          },
+          "detail": "Born from Needle 0.1's card file — column, position and 3 rows."
+        }
+      ]
+    },
+    "262": {
+      "card": {
+        "number": 262,
+        "project": "harbourmaster",
+        "place": {
+          "column": "Planned",
+          "group": null,
+          "position": 0
+        },
+        "title": "The tide table is the harbour's own",
+        "gate": null,
+        "tags": [],
+        "deep": "",
+        "citations": [
+          "docs/plans/2026-09-04-the-tide-table-is-the-harbours-own.md"
+        ],
+        "link": {
+          "kind": "plan",
+          "stem": "2026-09-04-the-tide-table-is-the-harbours-own",
+          "title": "The tide table is the harbour's own",
+          "archived": false
+        },
+        "origin": "founding",
+        "born_at": "2026-09-04T08:30:00Z",
+        "rows": []
+      },
+      "summary": {
+        "number": 262,
+        "title": "The tide table is the harbour's own",
+        "essence": "The tide the office plans by is the one measured at the harbour mouth, not the one published for the estuary twenty miles up.",
+        "essence_source": "document",
+        "gate": "medium",
+        "tags": [],
+        "document_state": "plan",
+        "document_path": "docs/plans/2026-09-04-the-tide-table-is-the-harbours-own.md",
+        "points": 0,
+        "is_new": false,
+        "age_date": "2026-09-04",
+        "place": {
+          "column": "Planned",
+          "group": null,
+          "position": 0
+        }
+      },
+      "brief": [],
+      "record": [],
+      "document": {
+        "kind": "plan",
+        "stem": "2026-09-04-the-tide-table-is-the-harbours-own",
+        "path": "docs/plans/2026-09-04-the-tide-table-is-the-harbours-own.md",
+        "archived": false,
+        "title": "The tide table is the harbour's own",
+        "date": "2026-09-04",
+        "status": "PENDING",
+        "status_word": "PENDING",
+        "gate": "medium",
+        "gate_why": "one data source replaces another; the shape is the same.",
+        "sequencing": "independent of every open card.",
+        "found_by": null,
+        "card_ref": null,
+        "head_fields": [
+          {
+            "key": "Status",
+            "value": "PENDING"
+          },
+          {
+            "key": "Written",
+            "value": "2026-09-04"
+          },
+          {
+            "key": "Effort gate",
+            "value": "medium — one data source replaces another; the shape is the same."
+          },
+          {
+            "key": "Sequencing",
+            "value": "independent of every open card."
+          }
+        ],
+        "intent_heading": "Intent",
+        "intent": "The tide the office plans by is the one measured at the harbour mouth, not the one published for the estuary twenty miles up. A boat drawing two metres is told when it can actually come in.",
+        "essence": "The tide the office plans by is the one measured at the harbour mouth, not the one published for the estuary twenty miles up.",
+        "read_at": "2026-09-04T08:30:00Z"
+      },
+      "other_citations": [],
+      "history": [
+        {
+          "id": 41,
+          "at": "2026-09-04T08:30:00Z",
+          "actor": "corpus",
+          "kind": "born",
+          "card_number": 262,
+          "from_place": null,
+          "to_place": {
+            "column": "Planned",
+            "group": null,
+            "position": 0
+          },
+          "detail": "Born from docs/plans/2026-09-04-the-tide-table-is-the-harbours-own.md, at registration."
+        }
+      ]
+    },
+    "267": {
+      "card": {
+        "number": 267,
+        "project": "harbourmaster",
+        "place": {
+          "column": "Planned",
+          "group": null,
+          "position": 1
+        },
+        "title": "A storm warning reaches every skipper in the harbour",
+        "gate": null,
+        "tags": [],
+        "deep": "",
+        "citations": [
+          "docs/plans/2026-09-04-a-storm-warning-reaches-every-skipper.md"
+        ],
+        "link": {
+          "kind": "plan",
+          "stem": "2026-09-04-a-storm-warning-reaches-every-skipper",
+          "title": "A storm warning reaches every skipper in the harbour",
+          "archived": false
+        },
+        "origin": "arrived",
+        "born_at": "2026-09-04T08:30:00Z",
+        "rows": []
+      },
+      "summary": {
+        "number": 267,
+        "title": "A storm warning reaches every skipper in the harbour",
+        "essence": "Every boat in the harbour hears a gale warning the moment the office does.",
+        "essence_source": "document",
+        "gate": "high",
+        "tags": [],
+        "document_state": "plan",
+        "document_path": "docs/plans/2026-09-04-a-storm-warning-reaches-every-skipper.md",
+        "points": 0,
+        "is_new": true,
+        "age_date": "2026-09-04",
+        "place": {
+          "column": "Planned",
+          "group": null,
+          "position": 1
+        }
+      },
+      "brief": [],
+      "record": [],
+      "document": {
+        "kind": "plan",
+        "stem": "2026-09-04-a-storm-warning-reaches-every-skipper",
+        "path": "docs/plans/2026-09-04-a-storm-warning-reaches-every-skipper.md",
+        "archived": false,
+        "title": "A storm warning reaches every skipper in the harbour",
+        "date": "2026-09-04",
+        "status": "PENDING — written 2026-09-04, the morning after the gale.",
+        "status_word": "PENDING",
+        "gate": "high",
+        "gate_why": "one message to a list the office already holds; the judgment is what counts as a boat in the harbour tonight.",
+        "sequencing": "independent of every open card.",
+        "found_by": null,
+        "card_ref": null,
+        "head_fields": [
+          {
+            "key": "Status",
+            "value": "PENDING — written 2026-09-04, the morning after the gale."
+          },
+          {
+            "key": "Written",
+            "value": "2026-09-04"
+          },
+          {
+            "key": "Effort gate",
+            "value": "high — one message to a list the office already holds; the judgment is what counts as a boat in the harbour tonight."
+          },
+          {
+            "key": "Sequencing",
+            "value": "independent of every open card."
+          }
+        ],
+        "intent_heading": "Intent",
+        "intent": "Every boat in the harbour hears a gale warning the moment the office does. Last night the office phoned eleven skippers one by one and reached six; the five it did not reach found out from the wind.",
+        "essence": "Every boat in the harbour hears a gale warning the moment the office does.",
+        "read_at": "2026-09-04T08:30:00Z"
+      },
+      "other_citations": [],
+      "history": [
+        {
+          "id": 46,
+          "at": "2026-09-04T08:30:00Z",
+          "actor": "corpus",
+          "kind": "born",
+          "card_number": 267,
+          "from_place": null,
+          "to_place": {
+            "column": "Planned",
+            "group": null,
+            "position": 1
+          },
+          "detail": "Born from docs/plans/2026-09-04-a-storm-warning-reaches-every-skipper.md, after registration."
+        }
+      ]
+    },
+    "253": {
+      "card": {
+        "number": 253,
+        "project": "harbourmaster",
+        "place": {
+          "column": "Up next",
+          "group": null,
+          "position": 0
+        },
+        "title": "Every metered kilowatt is billed",
+        "gate": "medium",
+        "tags": [],
+        "deep": "Every meter reading since 5 July has been dropped.",
+        "citations": [
+          "docs/plans/2026-09-03-every-metered-kilowatt-is-billed.md"
+        ],
+        "link": {
+          "kind": "plan",
+          "stem": "2026-09-03-every-metered-kilowatt-is-billed",
+          "title": "Every metered kilowatt is billed",
+          "archived": false
+        },
+        "origin": "imported",
+        "born_at": "2026-09-04T08:30:00Z",
+        "rows": [
+          {
+            "kind": "SERVES",
+            "text": "Power truth. Every kilowatt a boat draws lands on its invoice."
+          },
+          {
+            "kind": "TODAY",
+            "text": "The handler reads the reading as a number; the meters send a string."
+          },
+          {
+            "kind": "COST",
+            "text": "Under an hour."
+          },
+          {
+            "kind": "PLAN",
+            "text": "Written 3 Sep."
+          }
+        ]
+      },
+      "summary": {
+        "number": 253,
+        "title": "Every metered kilowatt is billed",
+        "essence": "Power truth. Every kilowatt a boat draws lands on its invoice.",
+        "essence_source": "card",
+        "gate": "medium",
+        "tags": [],
+        "document_state": "plan",
+        "document_path": "docs/plans/2026-09-03-every-metered-kilowatt-is-billed.md",
+        "points": 3,
+        "is_new": false,
+        "age_date": "2026-09-03",
+        "place": {
+          "column": "Up next",
+          "group": null,
+          "position": 0
+        }
+      },
+      "brief": [
+        {
+          "kind": "TODAY",
+          "text": "The handler reads the reading as a number; the meters send a string."
+        },
+        {
+          "kind": "COST",
+          "text": "Under an hour."
+        },
+        {
+          "kind": "PLAN",
+          "text": "Written 3 Sep."
+        }
+      ],
+      "record": [],
+      "document": {
+        "kind": "plan",
+        "stem": "2026-09-03-every-metered-kilowatt-is-billed",
+        "path": "docs/plans/2026-09-03-every-metered-kilowatt-is-billed.md",
+        "archived": false,
+        "title": "Every metered kilowatt is billed",
+        "date": "2026-09-03",
+        "status": "PENDING — written 2026-09-03 from the owner's read of the meter alerts.",
+        "status_word": "PENDING",
+        "gate": "medium",
+        "gate_why": "the fix is one parser and two call sites, fully specified; the failure mode is caught by the tests this plan adds and held by a ratchet.",
+        "sequencing": "independent of every open card.",
+        "found_by": null,
+        "card_ref": 253,
+        "head_fields": [
+          {
+            "key": "Status",
+            "value": "PENDING — written 2026-09-03 from the owner's read of the meter alerts."
+          },
+          {
+            "key": "Written",
+            "value": "2026-09-03"
+          },
+          {
+            "key": "Effort gate",
+            "value": "medium — the fix is one parser and two call sites, fully specified; the failure mode is caught by the tests this plan adds and held by a ratchet."
+          },
+          {
+            "key": "Sequencing",
+            "value": "independent of every open card."
+          },
+          {
+            "key": "Card",
+            "value": "#253 (Up next)"
+          }
+        ],
+        "intent_heading": "Intent",
+        "intent": "Power truth. Every kilowatt a boat draws on the pontoon lands on that boat's invoice the moment the meter reports it, so the season invoice stops understating every boat that plugged in. Today the office has dropped every meter reading since 5 July: the handler reads the reading as a number and the meters send a string.",
+        "essence": "Power truth.",
+        "read_at": "2026-09-04T08:30:00Z"
+      },
+      "other_citations": [],
+      "history": [
+        {
+          "id": 17,
+          "at": "2026-09-04T08:30:00Z",
+          "actor": "import",
+          "kind": "linked",
+          "card_number": 253,
+          "from_place": null,
+          "to_place": null,
+          "detail": "Linked to docs/plans/2026-09-03-every-metered-kilowatt-is-billed.md, cited on the 0.1 card."
+        },
+        {
+          "id": 16,
+          "at": "2026-09-04T08:30:00Z",
+          "actor": "import",
+          "kind": "born",
+          "card_number": 253,
+          "from_place": null,
+          "to_place": {
+            "column": "Up next",
+            "group": null,
+            "position": 0
+          },
+          "detail": "Born from Needle 0.1's card file — column, position and 4 rows."
+        }
+      ]
+    },
+    "241": {
+      "card": {
+        "number": 241,
+        "project": "harbourmaster",
+        "place": {
+          "column": "Up next",
+          "group": null,
+          "position": 1
+        },
+        "title": "A gate code arrives before the boat does",
+        "gate": "medium",
+        "tags": [],
+        "deep": "",
+        "citations": [
+          "docs/plans/2026-09-02-a-gate-code-arrives-before-the-boat-does.md"
+        ],
+        "link": {
+          "kind": "plan",
+          "stem": "2026-09-02-a-gate-code-arrives-before-the-boat-does",
+          "title": "A gate code arrives before the boat does",
+          "archived": false
+        },
+        "origin": "imported",
+        "born_at": "2026-09-04T08:30:00Z",
+        "rows": [
+          {
+            "kind": "SERVES",
+            "text": "A skipper who booked from sea finds the gate code waiting when the boat is tied up."
+          },
+          {
+            "kind": "TODAY",
+            "text": "The code is sent when the office opens the next morning."
+          },
+          {
+            "kind": "COST",
+            "text": "Two hours."
+          },
+          {
+            "kind": "YOUR TIME",
+            "text": "Try one arrival from the phone."
+          },
+          {
+            "kind": "PLAN",
+            "text": "Written 2 Sep."
+          }
+        ]
+      },
+      "summary": {
+        "number": 241,
+        "title": "A gate code arrives before the boat does",
+        "essence": "A skipper who booked from sea finds the gate code waiting when the boat is tied up.",
+        "essence_source": "card",
+        "gate": "medium",
+        "tags": [],
+        "document_state": "plan",
+        "document_path": "docs/plans/2026-09-02-a-gate-code-arrives-before-the-boat-does.md",
+        "points": 4,
+        "is_new": false,
+        "age_date": "2026-09-02",
+        "place": {
+          "column": "Up next",
+          "group": null,
+          "position": 1
+        }
+      },
+      "brief": [
+        {
+          "kind": "TODAY",
+          "text": "The code is sent when the office opens the next morning."
+        },
+        {
+          "kind": "COST",
+          "text": "Two hours."
+        },
+        {
+          "kind": "YOUR TIME",
+          "text": "Try one arrival from the phone."
+        },
+        {
+          "kind": "PLAN",
+          "text": "Written 2 Sep."
+        }
+      ],
+      "record": [],
+      "document": {
+        "kind": "plan",
+        "stem": "2026-09-02-a-gate-code-arrives-before-the-boat-does",
+        "path": "docs/plans/2026-09-02-a-gate-code-arrives-before-the-boat-does.md",
+        "archived": false,
+        "title": "A gate code arrives before the boat does",
+        "date": "2026-09-02",
+        "status": "PENDING — written 2026-09-02.",
+        "status_word": "PENDING",
+        "gate": "medium",
+        "gate_why": "the code already exists at booking time; the plan moves when it is sent.",
+        "sequencing": "independent of every open card.",
+        "found_by": null,
+        "card_ref": 241,
+        "head_fields": [
+          {
+            "key": "Status",
+            "value": "PENDING — written 2026-09-02."
+          },
+          {
+            "key": "Written",
+            "value": "2026-09-02"
+          },
+          {
+            "key": "Effort gate",
+            "value": "medium — the code already exists at booking time; the plan moves when it is sent."
+          },
+          {
+            "key": "Sequencing",
+            "value": "independent of every open card."
+          },
+          {
+            "key": "Card",
+            "value": "#241"
+          }
+        ],
+        "intent_heading": "Intent",
+        "intent": "A skipper who booked from sea finds the gate code waiting on the phone when the boat is tied up. Today the code goes out when the office opens the next morning, so a boat arriving at 21:00 is locked out of the showers until 08:30.",
+        "essence": "A skipper who booked from sea finds the gate code waiting on the phone when the boat is tied up.",
+        "read_at": "2026-09-04T08:30:00Z"
+      },
+      "other_citations": [],
+      "history": [
+        {
+          "id": 19,
+          "at": "2026-09-04T08:30:00Z",
+          "actor": "import",
+          "kind": "linked",
+          "card_number": 241,
+          "from_place": null,
+          "to_place": null,
+          "detail": "Linked to docs/plans/2026-09-02-a-gate-code-arrives-before-the-boat-does.md, cited on the 0.1 card."
+        },
+        {
+          "id": 18,
+          "at": "2026-09-04T08:30:00Z",
+          "actor": "import",
+          "kind": "born",
+          "card_number": 241,
+          "from_place": null,
+          "to_place": {
+            "column": "Up next",
+            "group": null,
+            "position": 1
+          },
+          "detail": "Born from Needle 0.1's card file — column, position and 5 rows."
+        }
+      ]
+    },
+    "228": {
+      "card": {
+        "number": 228,
+        "project": "harbourmaster",
+        "place": {
+          "column": "Up next",
+          "group": null,
+          "position": 2
+        },
+        "title": "The skipper is told what the office decided",
+        "gate": "high",
+        "tags": [],
+        "deep": "",
+        "citations": [],
+        "link": null,
+        "origin": "imported",
+        "born_at": "2026-09-04T08:30:00Z",
+        "rows": [
+          {
+            "kind": "SERVES",
+            "text": "When a skipper asks why a berth was refused, the answer is the reason the office wrote down."
+          },
+          {
+            "kind": "TODAY",
+            "text": "The refusal says only no."
+          },
+          {
+            "kind": "COST",
+            "text": "A day."
+          },
+          {
+            "kind": "WAITS",
+            "text": "A plan."
+          }
+        ]
+      },
+      "summary": {
+        "number": 228,
+        "title": "The skipper is told what the office decided",
+        "essence": "When a skipper asks why a berth was refused, the answer is the reason the office wrote down.",
+        "essence_source": "card",
+        "gate": "high",
+        "tags": [],
+        "document_state": "note",
+        "document_path": null,
+        "points": 3,
+        "is_new": false,
+        "age_date": "2026-09-04",
+        "place": {
+          "column": "Up next",
+          "group": null,
+          "position": 2
+        }
+      },
+      "brief": [
+        {
+          "kind": "TODAY",
+          "text": "The refusal says only no."
+        },
+        {
+          "kind": "COST",
+          "text": "A day."
+        },
+        {
+          "kind": "WAITS",
+          "text": "A plan."
+        }
+      ],
+      "record": [],
+      "document": null,
+      "other_citations": [],
+      "history": [
+        {
+          "id": 20,
+          "at": "2026-09-04T08:30:00Z",
+          "actor": "import",
+          "kind": "born",
+          "card_number": 228,
+          "from_place": null,
+          "to_place": {
+            "column": "Up next",
+            "group": null,
+            "position": 2
+          },
+          "detail": "Born from Needle 0.1's card file — column, position and 4 rows."
+        }
+      ]
+    },
+    "237": {
+      "card": {
+        "number": 237,
+        "project": "harbourmaster",
+        "place": {
+          "column": "Up next",
+          "group": null,
+          "position": 3
+        },
+        "title": "A berth is never let twice",
+        "gate": "xhigh",
+        "tags": [],
+        "deep": "",
+        "citations": [
+          "docs/plans/2026-08-28-a-berth-is-never-let-twice.md"
+        ],
+        "link": {
+          "kind": "plan",
+          "stem": "2026-08-28-a-berth-is-never-let-twice",
+          "title": "A berth is never let twice",
+          "archived": false
+        },
+        "origin": "imported",
+        "born_at": "2026-09-04T08:30:00Z",
+        "rows": [
+          {
+            "kind": "SERVES",
+            "text": "Two boats never hold the same berth for the same night."
+          },
+          {
+            "kind": "TODAY",
+            "text": "Two bookings a minute apart both succeed."
+          },
+          {
+            "kind": "COST",
+            "text": "Three days."
+          },
+          {
+            "kind": "STAKES",
+            "text": "A double-let is a boat turned away at the pontoon at dusk."
+          }
+        ]
+      },
+      "summary": {
+        "number": 237,
+        "title": "A berth is never let twice",
+        "essence": "Two boats never hold the same berth for the same night.",
+        "essence_source": "card",
+        "gate": "xhigh",
+        "tags": [],
+        "document_state": "plan",
+        "document_path": "docs/plans/2026-08-28-a-berth-is-never-let-twice.md",
+        "points": 3,
+        "is_new": false,
+        "age_date": "2026-08-28",
+        "place": {
+          "column": "Up next",
+          "group": null,
+          "position": 3
+        }
+      },
+      "brief": [
+        {
+          "kind": "TODAY",
+          "text": "Two bookings a minute apart both succeed."
+        },
+        {
+          "kind": "COST",
+          "text": "Three days."
+        },
+        {
+          "kind": "STAKES",
+          "text": "A double-let is a boat turned away at the pontoon at dusk."
+        }
+      ],
+      "record": [],
+      "document": {
+        "kind": "plan",
+        "stem": "2026-08-28-a-berth-is-never-let-twice",
+        "path": "docs/plans/2026-08-28-a-berth-is-never-let-twice.md",
+        "archived": false,
+        "title": "A berth is never let twice",
+        "date": "2026-08-28",
+        "status": "PENDING",
+        "status_word": "PENDING",
+        "gate": "xhigh",
+        "gate_why": "two bookings a minute apart both succeed today and the fix is a write path with a real invariant, not a check.",
+        "sequencing": "independent of every open card.",
+        "found_by": null,
+        "card_ref": null,
+        "head_fields": [
+          {
+            "key": "Status",
+            "value": "PENDING"
+          },
+          {
+            "key": "Written",
+            "value": "2026-08-28"
+          },
+          {
+            "key": "Effort gate",
+            "value": "xhigh — two bookings a minute apart both succeed today and the fix is a write path with a real invariant, not a check."
+          },
+          {
+            "key": "Sequencing",
+            "value": "independent of every open card."
+          }
+        ],
+        "intent_heading": "Intent",
+        "intent": "Two boats never hold the same berth for the same night. A double-let is a boat turned away at the pontoon at dusk, and the office learns of it from the skipper.",
+        "essence": "Two boats never hold the same berth for the same night.",
+        "read_at": "2026-09-04T08:30:00Z"
+      },
+      "other_citations": [],
+      "history": [
+        {
+          "id": 22,
+          "at": "2026-09-04T08:30:00Z",
+          "actor": "import",
+          "kind": "linked",
+          "card_number": 237,
+          "from_place": null,
+          "to_place": null,
+          "detail": "Linked to docs/plans/2026-08-28-a-berth-is-never-let-twice.md, cited on the 0.1 card."
+        },
+        {
+          "id": 21,
+          "at": "2026-09-04T08:30:00Z",
+          "actor": "import",
+          "kind": "born",
+          "card_number": 237,
+          "from_place": null,
+          "to_place": {
+            "column": "Up next",
+            "group": null,
+            "position": 3
+          },
+          "detail": "Born from Needle 0.1's card file — column, position and 4 rows."
+        }
+      ]
+    },
+    "174": {
+      "card": {
+        "number": 174,
+        "project": "harbourmaster",
+        "place": {
+          "column": "Up next",
+          "group": null,
+          "position": 4
+        },
+        "title": "The booking office stops growing into one file",
+        "gate": "xhigh",
+        "tags": [
+          "Trust"
+        ],
+        "deep": "",
+        "citations": [
+          "docs/plans/2026-08-30-the-booking-office-stops-growing-into-one-file.md"
+        ],
+        "link": {
+          "kind": "plan",
+          "stem": "2026-08-30-the-booking-office-stops-growing-into-one-file",
+          "title": "The booking office stops growing into one file",
+          "archived": false
+        },
+        "origin": "imported",
+        "born_at": "2026-09-04T08:30:00Z",
+        "rows": [
+          {
+            "kind": "SERVES",
+            "text": "The file that applies every booking is a set of readable, single-concern modules."
+          },
+          {
+            "kind": "TODAY",
+            "text": "It is 4,100 lines."
+          },
+          {
+            "kind": "COST",
+            "text": "A week."
+          }
+        ]
+      },
+      "summary": {
+        "number": 174,
+        "title": "The booking office stops growing into one file",
+        "essence": "The file that applies every booking is a set of readable, single-concern modules.",
+        "essence_source": "card",
+        "gate": "xhigh",
+        "tags": [
+          "Trust"
+        ],
+        "document_state": "plan",
+        "document_path": "docs/plans/2026-08-30-the-booking-office-stops-growing-into-one-file.md",
+        "points": 2,
+        "is_new": false,
+        "age_date": "2026-08-30",
+        "place": {
+          "column": "Up next",
+          "group": null,
+          "position": 4
+        }
+      },
+      "brief": [
+        {
+          "kind": "TODAY",
+          "text": "It is 4,100 lines."
+        },
+        {
+          "kind": "COST",
+          "text": "A week."
+        }
+      ],
+      "record": [],
+      "document": {
+        "kind": "plan",
+        "stem": "2026-08-30-the-booking-office-stops-growing-into-one-file",
+        "path": "docs/plans/2026-08-30-the-booking-office-stops-growing-into-one-file.md",
+        "archived": false,
+        "title": "The booking office stops growing into one file",
+        "date": "2026-08-30",
+        "status": "PENDING",
+        "status_word": "PENDING",
+        "gate": "xhigh",
+        "gate_why": "a 4,100-line file is split along seams nobody has named yet.",
+        "sequencing": "independent of every open card.",
+        "found_by": null,
+        "card_ref": null,
+        "head_fields": [
+          {
+            "key": "Status",
+            "value": "PENDING"
+          },
+          {
+            "key": "Written",
+            "value": "2026-08-30"
+          },
+          {
+            "key": "Effort gate",
+            "value": "xhigh — a 4,100-line file is split along seams nobody has named yet."
+          },
+          {
+            "key": "Sequencing",
+            "value": "independent of every open card."
+          }
+        ],
+        "intent_heading": "Intent",
+        "intent": "The file that applies every booking is a set of readable, single-concern modules — not a 4,100-line catch-all like the one that killed the old office.",
+        "essence": "The file that applies every booking is a set of readable, single-concern modules — not a 4,100-line catch-all like the one that killed the old office.",
+        "read_at": "2026-09-04T08:30:00Z"
+      },
+      "other_citations": [],
+      "history": [
+        {
+          "id": 24,
+          "at": "2026-09-04T08:30:00Z",
+          "actor": "import",
+          "kind": "linked",
+          "card_number": 174,
+          "from_place": null,
+          "to_place": null,
+          "detail": "Linked to docs/plans/2026-08-30-the-booking-office-stops-growing-into-one-file.md, cited on the 0.1 card."
+        },
+        {
+          "id": 23,
+          "at": "2026-09-04T08:30:00Z",
+          "actor": "import",
+          "kind": "born",
+          "card_number": 174,
+          "from_place": null,
+          "to_place": {
+            "column": "Up next",
+            "group": null,
+            "position": 4
+          },
+          "detail": "Born from Needle 0.1's card file — column, position and 3 rows."
+        }
+      ]
+    },
+    "259": {
+      "card": {
+        "number": 259,
+        "project": "harbourmaster",
+        "place": {
+          "column": "Executing",
+          "group": null,
+          "position": 0
+        },
+        "title": "The fuel pontoon takes cards, live",
+        "gate": "high",
+        "tags": [],
+        "deep": "",
+        "citations": [
+          "docs/plans/done/2026-08-25-the-fuel-pontoon-takes-cards.md"
+        ],
+        "link": {
+          "kind": "plan",
+          "stem": "2026-08-25-the-fuel-pontoon-takes-cards",
+          "title": "The fuel pontoon takes cards",
+          "archived": true
+        },
+        "origin": "imported",
+        "born_at": "2026-09-04T08:30:00Z",
+        "rows": [
+          {
+            "kind": "SERVES",
+            "text": "A skipper pays for fuel at the pump with a card and the litres land on the same invoice."
+          },
+          {
+            "kind": "TODAY",
+            "text": "Cash and a paper slip."
+          },
+          {
+            "kind": "COST",
+            "text": "Two days."
+          },
+          {
+            "kind": "DELIVERED",
+            "text": "The terminal is mounted."
+          },
+          {
+            "kind": "WATCH",
+            "text": "The first card payment."
+          }
+        ]
+      },
+      "summary": {
+        "number": 259,
+        "title": "The fuel pontoon takes cards, live",
+        "essence": "A skipper pays for fuel at the pump with a card and the litres land on the same invoice.",
+        "essence_source": "card",
+        "gate": "high",
+        "tags": [],
+        "document_state": "archived",
+        "document_path": "docs/plans/done/2026-08-25-the-fuel-pontoon-takes-cards.md",
+        "points": 4,
+        "is_new": false,
+        "age_date": "2026-08-25",
+        "place": {
+          "column": "Executing",
+          "group": null,
+          "position": 0
+        }
+      },
+      "brief": [
+        {
+          "kind": "TODAY",
+          "text": "Cash and a paper slip."
+        },
+        {
+          "kind": "COST",
+          "text": "Two days."
+        }
+      ],
+      "record": [
+        {
+          "kind": "DELIVERED",
+          "text": "The terminal is mounted."
+        },
+        {
+          "kind": "WATCH",
+          "text": "The first card payment."
+        }
+      ],
+      "document": {
+        "kind": "plan",
+        "stem": "2026-08-25-the-fuel-pontoon-takes-cards",
+        "path": "docs/plans/done/2026-08-25-the-fuel-pontoon-takes-cards.md",
+        "archived": true,
+        "title": "The fuel pontoon takes cards",
+        "date": "2026-08-25",
+        "status": "SHIPPED — 2026-09-01; the first card payment is the signal.",
+        "status_word": "SHIPPED",
+        "gate": "high",
+        "gate_why": "a terminal and one new invoice line.",
+        "sequencing": "independent of every open card.",
+        "found_by": null,
+        "card_ref": null,
+        "head_fields": [
+          {
+            "key": "Status",
+            "value": "SHIPPED — 2026-09-01; the first card payment is the signal."
+          },
+          {
+            "key": "Written",
+            "value": "2026-08-25"
+          },
+          {
+            "key": "Effort gate",
+            "value": "high — a terminal and one new invoice line."
+          },
+          {
+            "key": "Sequencing",
+            "value": "independent of every open card."
+          }
+        ],
+        "intent_heading": "Intent",
+        "intent": "A skipper pays for fuel at the pump with a card and the litres land on the same invoice as the berth. Today it is cash and a paper slip.",
+        "essence": "A skipper pays for fuel at the pump with a card and the litres land on the same invoice as the berth.",
+        "read_at": "2026-09-04T08:30:00Z"
+      },
+      "other_citations": [],
+      "history": [
+        {
+          "id": 26,
+          "at": "2026-09-04T08:30:00Z",
+          "actor": "import",
+          "kind": "linked",
+          "card_number": 259,
+          "from_place": null,
+          "to_place": null,
+          "detail": "Linked to docs/plans/done/2026-08-25-the-fuel-pontoon-takes-cards.md, cited on the 0.1 card."
+        },
+        {
+          "id": 25,
+          "at": "2026-09-04T08:30:00Z",
+          "actor": "import",
+          "kind": "born",
+          "card_number": 259,
+          "from_place": null,
+          "to_place": {
+            "column": "Executing",
+            "group": null,
+            "position": 0
+          },
+          "detail": "Born from Needle 0.1's card file — column, position and 5 rows."
+        }
+      ]
+    },
+    "223": {
+      "card": {
+        "number": 223,
+        "project": "harbourmaster",
+        "place": {
+          "column": "Executing",
+          "group": null,
+          "position": 1
+        },
+        "title": "The gate code goes out in plain text",
+        "gate": "xhigh",
+        "tags": [],
+        "deep": "",
+        "citations": [
+          "docs/slice-suggestions/2026-08-20-the-gate-code-goes-out-in-plain-text.md"
+        ],
+        "link": {
+          "kind": "suggestion",
+          "stem": "2026-08-20-the-gate-code-goes-out-in-plain-text",
+          "title": "The gate code goes out in plain text",
+          "archived": false
+        },
+        "origin": "imported",
+        "born_at": "2026-09-04T08:30:00Z",
+        "rows": [
+          {
+            "kind": "SERVES",
+            "text": "A gate code reaches only the skipper it was issued to."
+          },
+          {
+            "kind": "TODAY",
+            "text": "It is in the subject line of the confirmation email."
+          },
+          {
+            "kind": "COST",
+            "text": "A day."
+          },
+          {
+            "kind": "STAKES",
+            "text": "Anyone with the email opens the gate."
+          }
+        ]
+      },
+      "summary": {
+        "number": 223,
+        "title": "The gate code goes out in plain text",
+        "essence": "A gate code reaches only the skipper it was issued to.",
+        "essence_source": "card",
+        "gate": "xhigh",
+        "tags": [],
+        "document_state": "suggestion",
+        "document_path": "docs/slice-suggestions/2026-08-20-the-gate-code-goes-out-in-plain-text.md",
+        "points": 3,
+        "is_new": false,
+        "age_date": "2026-08-20",
+        "place": {
+          "column": "Executing",
+          "group": null,
+          "position": 1
+        }
+      },
+      "brief": [
+        {
+          "kind": "TODAY",
+          "text": "It is in the subject line of the confirmation email."
+        },
+        {
+          "kind": "COST",
+          "text": "A day."
+        },
+        {
+          "kind": "STAKES",
+          "text": "Anyone with the email opens the gate."
+        }
+      ],
+      "record": [],
+      "document": {
+        "kind": "suggestion",
+        "stem": "2026-08-20-the-gate-code-goes-out-in-plain-text",
+        "path": "docs/slice-suggestions/2026-08-20-the-gate-code-goes-out-in-plain-text.md",
+        "archived": false,
+        "title": "The gate code goes out in plain text",
+        "date": "2026-08-20",
+        "status": null,
+        "status_word": null,
+        "gate": null,
+        "gate_why": null,
+        "sequencing": null,
+        "found_by": "the security read of 2026-08-20.",
+        "card_ref": null,
+        "head_fields": [
+          {
+            "key": "Found by",
+            "value": "the security read of 2026-08-20."
+          }
+        ],
+        "intent_heading": "Observation",
+        "intent": "A gate code reaches only the skipper it was issued to. Today it is in the subject line of the confirmation email, so anyone with the email opens the gate.",
+        "essence": "A gate code reaches only the skipper it was issued to.",
+        "read_at": "2026-09-04T08:30:00Z"
+      },
+      "other_citations": [],
+      "history": [
+        {
+          "id": 28,
+          "at": "2026-09-04T08:30:00Z",
+          "actor": "import",
+          "kind": "linked",
+          "card_number": 223,
+          "from_place": null,
+          "to_place": null,
+          "detail": "Linked to docs/slice-suggestions/2026-08-20-the-gate-code-goes-out-in-plain-text.md, cited on the 0.1 card."
+        },
+        {
+          "id": 27,
+          "at": "2026-09-04T08:30:00Z",
+          "actor": "import",
+          "kind": "born",
+          "card_number": 223,
+          "from_place": null,
+          "to_place": {
+            "column": "Executing",
+            "group": null,
+            "position": 1
+          },
+          "detail": "Born from Needle 0.1's card file — column, position and 4 rows."
+        }
+      ]
+    },
+    "219": {
+      "card": {
+        "number": 219,
+        "project": "harbourmaster",
+        "place": {
+          "column": "Decision moment",
+          "group": null,
+          "position": 0
+        },
+        "title": "The pricing rule, judged against a real season",
+        "gate": "xhigh",
+        "tags": [
+          "Keep winning"
+        ],
+        "deep": "",
+        "citations": [
+          "docs/plans/2026-09-02-the-pricing-rule-judged-against-a-real-season.md"
+        ],
+        "link": {
+          "kind": "plan",
+          "stem": "2026-09-02-the-pricing-rule-judged-against-a-real-season",
+          "title": "The pricing rule, judged against a real season",
+          "archived": false
+        },
+        "origin": "imported",
+        "born_at": "2026-09-04T08:30:00Z",
+        "rows": [
+          {
+            "kind": "SERVES",
+            "text": "A season's real bookings say whether length-based or berth-based pricing fills the harbour."
+          },
+          {
+            "kind": "TODAY",
+            "text": "Both rules exist; neither has been run against a season."
+          },
+          {
+            "kind": "YOUR TIME",
+            "text": "Two sittings: one to read the packs, one to rule."
+          },
+          {
+            "kind": "DELIVERED",
+            "text": "The read-out, with the two seasons side by side."
+          },
+          {
+            "kind": "WATCH",
+            "text": "Your ruling on the five forks."
+          },
+          {
+            "kind": "REVIEW",
+            "text": "`docs/reviews/2026-09-02-the-pricing-rule-judged.md`"
+          }
+        ]
+      },
+      "summary": {
+        "number": 219,
+        "title": "The pricing rule, judged against a real season",
+        "essence": "A season's real bookings say whether length-based or berth-based pricing fills the harbour.",
+        "essence_source": "card",
+        "gate": "xhigh",
+        "tags": [
+          "Keep winning"
+        ],
+        "document_state": "plan",
+        "document_path": "docs/plans/2026-09-02-the-pricing-rule-judged-against-a-real-season.md",
+        "points": 5,
+        "is_new": false,
+        "age_date": "2026-09-02",
+        "place": {
+          "column": "Decision moment",
+          "group": null,
+          "position": 0
+        }
+      },
+      "brief": [
+        {
+          "kind": "TODAY",
+          "text": "Both rules exist; neither has been run against a season."
+        },
+        {
+          "kind": "YOUR TIME",
+          "text": "Two sittings: one to read the packs, one to rule."
+        }
+      ],
+      "record": [
+        {
+          "kind": "DELIVERED",
+          "text": "The read-out, with the two seasons side by side."
+        },
+        {
+          "kind": "WATCH",
+          "text": "Your ruling on the five forks."
+        },
+        {
+          "kind": "REVIEW",
+          "text": "`docs/reviews/2026-09-02-the-pricing-rule-judged.md`"
+        }
+      ],
+      "document": {
+        "kind": "plan",
+        "stem": "2026-09-02-the-pricing-rule-judged-against-a-real-season",
+        "path": "docs/plans/2026-09-02-the-pricing-rule-judged-against-a-real-season.md",
+        "archived": false,
+        "title": "The pricing rule, judged against a real season",
+        "date": "2026-09-02",
+        "status": "DONE — 2026-09-02, the read-out is written; the five forks wait on the owner.",
+        "status_word": "DONE",
+        "gate": "xhigh",
+        "gate_why": "research, not code: two pricing rules replayed over the 2025 season.",
+        "sequencing": "independent of every open card.",
+        "found_by": null,
+        "card_ref": null,
+        "head_fields": [
+          {
+            "key": "Status",
+            "value": "DONE — 2026-09-02, the read-out is written; the five forks wait on the owner."
+          },
+          {
+            "key": "Written",
+            "value": "2026-09-02"
+          },
+          {
+            "key": "Effort gate",
+            "value": "xhigh — research, not code: two pricing rules replayed over the 2025 season."
+          },
+          {
+            "key": "Sequencing",
+            "value": "independent of every open card."
+          }
+        ],
+        "intent_heading": "Intent",
+        "intent": "A season's real bookings say whether length-based pricing or berth-based pricing fills the harbour, and the answer is written down with its evidence so it can be repeated.",
+        "essence": "A season's real bookings say whether length-based pricing or berth-based pricing fills the harbour, and the answer is written down with its evidence so it can be repeated.",
+        "read_at": "2026-09-04T08:30:00Z"
+      },
+      "other_citations": [],
+      "history": [
+        {
+          "id": 30,
+          "at": "2026-09-04T08:30:00Z",
+          "actor": "import",
+          "kind": "linked",
+          "card_number": 219,
+          "from_place": null,
+          "to_place": null,
+          "detail": "Linked to docs/plans/2026-09-02-the-pricing-rule-judged-against-a-real-season.md, cited on the 0.1 card."
+        },
+        {
+          "id": 29,
+          "at": "2026-09-04T08:30:00Z",
+          "actor": "import",
+          "kind": "born",
+          "card_number": 219,
+          "from_place": null,
+          "to_place": {
+            "column": "Decision moment",
+            "group": null,
+            "position": 0
+          },
+          "detail": "Born from Needle 0.1's card file — column, position and 6 rows."
+        }
+      ]
+    },
+    "147": {
+      "card": {
+        "number": 147,
+        "project": "harbourmaster",
+        "place": {
+          "column": "Decision moment",
+          "group": null,
+          "position": 1
+        },
+        "title": "Tell the bank which account takes the deposits",
+        "gate": null,
+        "tags": [
+          "Action",
+          "Ruling"
+        ],
+        "deep": "",
+        "citations": [],
+        "link": null,
+        "origin": "imported",
+        "born_at": "2026-09-04T08:30:00Z",
+        "rows": [
+          {
+            "kind": "ASK",
+            "text": "Which account?"
+          },
+          {
+            "kind": "TODAY",
+            "text": "Deposits from the new terminal go to the old account."
+          },
+          {
+            "kind": "STAKES",
+            "text": "The season's deposits sit in the wrong ledger."
+          }
+        ]
+      },
+      "summary": {
+        "number": 147,
+        "title": "Tell the bank which account takes the deposits",
+        "essence": null,
+        "essence_source": null,
+        "gate": null,
+        "tags": [
+          "Action",
+          "Ruling"
+        ],
+        "document_state": "note",
+        "document_path": null,
+        "points": 3,
+        "is_new": false,
+        "age_date": "2026-09-04",
+        "place": {
+          "column": "Decision moment",
+          "group": null,
+          "position": 1
+        }
+      },
+      "brief": [
+        {
+          "kind": "ASK",
+          "text": "Which account?"
+        },
+        {
+          "kind": "TODAY",
+          "text": "Deposits from the new terminal go to the old account."
+        },
+        {
+          "kind": "STAKES",
+          "text": "The season's deposits sit in the wrong ledger."
+        }
+      ],
+      "record": [],
+      "document": null,
+      "other_citations": [],
+      "history": [
+        {
+          "id": 31,
+          "at": "2026-09-04T08:30:00Z",
+          "actor": "import",
+          "kind": "born",
+          "card_number": 147,
+          "from_place": null,
+          "to_place": {
+            "column": "Decision moment",
+            "group": null,
+            "position": 1
+          },
+          "detail": "Born from Needle 0.1's card file — column, position and 3 rows."
+        }
+      ]
+    },
+    "139": {
+      "card": {
+        "number": 139,
+        "project": "harbourmaster",
+        "place": {
+          "column": "Decision moment",
+          "group": "Rulings that unblock lanes",
+          "position": 0
+        },
+        "title": "Berth-first booking — 4 rulings",
+        "gate": "xhigh",
+        "tags": [
+          "Ruling"
+        ],
+        "deep": "",
+        "citations": [
+          "docs/plans/2026-08-18-berth-first-booking.md"
+        ],
+        "link": {
+          "kind": "plan",
+          "stem": "2026-08-18-berth-first-booking",
+          "title": "Berth-first booking",
+          "archived": false
+        },
+        "origin": "imported",
+        "born_at": "2026-09-04T08:30:00Z",
+        "rows": [
+          {
+            "kind": "SERVES",
+            "text": "May a booking page open with the harbour map itself, instead of a form?"
+          },
+          {
+            "kind": "ASK",
+            "text": "Four rulings, one sitting."
+          },
+          {
+            "kind": "WAITS",
+            "text": "You."
+          },
+          {
+            "kind": "PLAN",
+            "text": "Written 18 Aug."
+          }
+        ]
+      },
+      "summary": {
+        "number": 139,
+        "title": "Berth-first booking — 4 rulings",
+        "essence": "May a booking page open with the harbour map itself, instead of a form?",
+        "essence_source": "card",
+        "gate": "xhigh",
+        "tags": [
+          "Ruling"
+        ],
+        "document_state": "plan",
+        "document_path": "docs/plans/2026-08-18-berth-first-booking.md",
+        "points": 3,
+        "is_new": false,
+        "age_date": "2026-08-18",
+        "place": {
+          "column": "Decision moment",
+          "group": "Rulings that unblock lanes",
+          "position": 0
+        }
+      },
+      "brief": [
+        {
+          "kind": "ASK",
+          "text": "Four rulings, one sitting."
+        },
+        {
+          "kind": "WAITS",
+          "text": "You."
+        },
+        {
+          "kind": "PLAN",
+          "text": "Written 18 Aug."
+        }
+      ],
+      "record": [],
+      "document": {
+        "kind": "plan",
+        "stem": "2026-08-18-berth-first-booking",
+        "path": "docs/plans/2026-08-18-berth-first-booking.md",
+        "archived": false,
+        "title": "Berth-first booking",
+        "date": "2026-08-18",
+        "status": "PENDING — four rulings wait on the owner.",
+        "status_word": "PENDING",
+        "gate": "xhigh",
+        "gate_why": "the page's shape is the product's shape; the four rulings decide it.",
+        "sequencing": "independent of every open card.",
+        "found_by": null,
+        "card_ref": null,
+        "head_fields": [
+          {
+            "key": "Status",
+            "value": "PENDING — four rulings wait on the owner."
+          },
+          {
+            "key": "Written",
+            "value": "2026-08-18"
+          },
+          {
+            "key": "Effort gate",
+            "value": "xhigh — the page's shape is the product's shape; the four rulings decide it."
+          },
+          {
+            "key": "Sequencing",
+            "value": "independent of every open card."
+          }
+        ],
+        "intent_heading": "Intent",
+        "intent": "May a booking page open with the harbour map itself, instead of a form? A skipper who wants a berth picks one in one motion.",
+        "essence": "May a booking page open with the harbour map itself, instead of a form?",
+        "read_at": "2026-09-04T08:30:00Z"
+      },
+      "other_citations": [],
+      "history": [
+        {
+          "id": 33,
+          "at": "2026-09-04T08:30:00Z",
+          "actor": "import",
+          "kind": "linked",
+          "card_number": 139,
+          "from_place": null,
+          "to_place": null,
+          "detail": "Linked to docs/plans/2026-08-18-berth-first-booking.md, cited on the 0.1 card."
+        },
+        {
+          "id": 32,
+          "at": "2026-09-04T08:30:00Z",
+          "actor": "import",
+          "kind": "born",
+          "card_number": 139,
+          "from_place": null,
+          "to_place": {
+            "column": "Decision moment",
+            "group": "Rulings that unblock lanes",
+            "position": 0
+          },
+          "detail": "Born from Needle 0.1's card file — column, position and 4 rows."
+        }
+      ]
+    },
+    "149": {
+      "card": {
+        "number": 149,
+        "project": "harbourmaster",
+        "place": {
+          "column": "Decision moment",
+          "group": "Actions & sign-offs elsewhere",
+          "position": 0
+        },
+        "title": "Harbour council read-through",
+        "gate": null,
+        "tags": [
+          "Action"
+        ],
+        "deep": "",
+        "citations": [],
+        "link": null,
+        "origin": "imported",
+        "born_at": "2026-09-04T08:30:00Z",
+        "rows": [
+          {
+            "kind": "ASK",
+            "text": "Read the season report before Thursday's council."
+          },
+          {
+            "kind": "TODAY",
+            "text": "The report is built."
+          },
+          {
+            "kind": "COST",
+            "text": "An hour of yours."
+          }
+        ]
+      },
+      "summary": {
+        "number": 149,
+        "title": "Harbour council read-through",
+        "essence": null,
+        "essence_source": null,
+        "gate": null,
+        "tags": [
+          "Action"
+        ],
+        "document_state": "note",
+        "document_path": null,
+        "points": 3,
+        "is_new": false,
+        "age_date": "2026-09-04",
+        "place": {
+          "column": "Decision moment",
+          "group": "Actions & sign-offs elsewhere",
+          "position": 0
+        }
+      },
+      "brief": [
+        {
+          "kind": "ASK",
+          "text": "Read the season report before Thursday's council."
+        },
+        {
+          "kind": "TODAY",
+          "text": "The report is built."
+        },
+        {
+          "kind": "COST",
+          "text": "An hour of yours."
+        }
+      ],
+      "record": [],
+      "document": null,
+      "other_citations": [],
+      "history": [
+        {
+          "id": 34,
+          "at": "2026-09-04T08:30:00Z",
+          "actor": "import",
+          "kind": "born",
+          "card_number": 149,
+          "from_place": null,
+          "to_place": {
+            "column": "Decision moment",
+            "group": "Actions & sign-offs elsewhere",
+            "position": 0
+          },
+          "detail": "Born from Needle 0.1's card file — column, position and 3 rows."
+        }
+      ]
+    },
+    "134": {
+      "card": {
+        "number": 134,
+        "project": "harbourmaster",
+        "place": {
+          "column": "Executed",
+          "group": null,
+          "position": 0
+        },
+        "title": "The office runs its own checks, nightly",
+        "gate": "high",
+        "tags": [
+          "Watch"
+        ],
+        "deep": "All seven items built.",
+        "citations": [
+          "docs/plans/done/2026-08-30-the-office-runs-its-own-checks.md",
+          "docs/audits/2026-08-30-full-office-review.md"
+        ],
+        "link": {
+          "kind": "plan",
+          "stem": "2026-08-30-the-office-runs-its-own-checks",
+          "title": "The office runs its own checks",
+          "archived": true
+        },
+        "origin": "imported",
+        "born_at": "2026-09-04T08:30:00Z",
+        "rows": [
+          {
+            "kind": "SERVES",
+            "text": "The suite runs every night on the office machine."
+          },
+          {
+            "kind": "DELIVERED",
+            "text": "Seven items."
+          },
+          {
+            "kind": "WATCH",
+            "text": "The first overdue review runs by itself."
+          }
+        ]
+      },
+      "summary": {
+        "number": 134,
+        "title": "The office runs its own checks, nightly",
+        "essence": "The suite runs every night on the office machine.",
+        "essence_source": "card",
+        "gate": "high",
+        "tags": [
+          "Watch"
+        ],
+        "document_state": "archived",
+        "document_path": "docs/plans/done/2026-08-30-the-office-runs-its-own-checks.md",
+        "points": 2,
+        "is_new": false,
+        "age_date": "2026-08-30",
+        "place": {
+          "column": "Executed",
+          "group": null,
+          "position": 0
+        }
+      },
+      "brief": [],
+      "record": [
+        {
+          "kind": "DELIVERED",
+          "text": "Seven items."
+        },
+        {
+          "kind": "WATCH",
+          "text": "The first overdue review runs by itself."
+        }
+      ],
+      "document": {
+        "kind": "plan",
+        "stem": "2026-08-30-the-office-runs-its-own-checks",
+        "path": "docs/plans/done/2026-08-30-the-office-runs-its-own-checks.md",
+        "archived": true,
+        "title": "The office runs its own checks",
+        "date": "2026-08-30",
+        "status": "SHIPPED — 2026-08-30.",
+        "status_word": "SHIPPED",
+        "gate": "high",
+        "gate_why": "seven well-known items.",
+        "sequencing": "independent of every open card.",
+        "found_by": null,
+        "card_ref": null,
+        "head_fields": [
+          {
+            "key": "Status",
+            "value": "SHIPPED — 2026-08-30."
+          },
+          {
+            "key": "Written",
+            "value": "2026-08-29"
+          },
+          {
+            "key": "Effort gate",
+            "value": "high — seven well-known items."
+          },
+          {
+            "key": "Sequencing",
+            "value": "independent of every open card."
+          }
+        ],
+        "intent_heading": "Intent",
+        "intent": "The suite runs every night on the office machine and the morning report says what broke.",
+        "essence": "The suite runs every night on the office machine and the morning report says what broke.",
+        "read_at": "2026-09-04T08:30:00Z"
+      },
+      "other_citations": [
+        "docs/audits/2026-08-30-full-office-review.md"
+      ],
+      "history": [
+        {
+          "id": 36,
+          "at": "2026-09-04T08:30:00Z",
+          "actor": "import",
+          "kind": "linked",
+          "card_number": 134,
+          "from_place": null,
+          "to_place": null,
+          "detail": "Linked to docs/plans/done/2026-08-30-the-office-runs-its-own-checks.md, cited on the 0.1 card."
+        },
+        {
+          "id": 35,
+          "at": "2026-09-04T08:30:00Z",
+          "actor": "import",
+          "kind": "born",
+          "card_number": 134,
+          "from_place": null,
+          "to_place": {
+            "column": "Executed",
+            "group": null,
+            "position": 0
+          },
+          "detail": "Born from Needle 0.1's card file — column, position and 3 rows."
+        }
+      ]
+    },
+    "201": {
+      "card": {
+        "number": 201,
+        "project": "harbourmaster",
+        "place": {
+          "column": "Not now",
+          "group": null,
+          "position": 0
+        },
+        "title": "A confirmed booking waits for the tide",
+        "gate": "high",
+        "tags": [],
+        "deep": "",
+        "citations": [
+          "docs/plans/done/2026-09-01-a-confirmed-booking-waits-for-the-tide.md"
+        ],
+        "link": {
+          "kind": "plan",
+          "stem": "2026-09-01-a-confirmed-booking-waits-for-the-tide",
+          "title": "",
+          "archived": true
+        },
+        "origin": "imported",
+        "born_at": "2026-09-04T08:30:00Z",
+        "rows": [
+          {
+            "kind": "SERVES",
+            "text": "A confirmed booking is held until the tide allows the boat in."
+          },
+          {
+            "kind": "RULED",
+            "text": "Parked 2026-09-02."
+          }
+        ]
+      },
+      "summary": {
+        "number": 201,
+        "title": "A confirmed booking waits for the tide",
+        "essence": "A confirmed booking is held until the tide allows the boat in.",
+        "essence_source": "card",
+        "gate": "high",
+        "tags": [],
+        "document_state": "gone",
+        "document_path": "docs/plans/done/2026-09-01-a-confirmed-booking-waits-for-the-tide.md",
+        "points": 1,
+        "is_new": false,
+        "age_date": "2026-09-04",
+        "place": {
+          "column": "Not now",
+          "group": null,
+          "position": 0
+        }
+      },
+      "brief": [],
+      "record": [
+        {
+          "kind": "RULED",
+          "text": "Parked 2026-09-02."
+        }
+      ],
+      "document": null,
+      "other_citations": [],
+      "history": [
+        {
+          "id": 38,
+          "at": "2026-09-04T08:30:00Z",
+          "actor": "import",
+          "kind": "linked",
+          "card_number": 201,
+          "from_place": null,
+          "to_place": null,
+          "detail": "Linked to docs/plans/done/2026-09-01-a-confirmed-booking-waits-for-the-tide.md, cited on the 0.1 card."
+        },
+        {
+          "id": 37,
+          "at": "2026-09-04T08:30:00Z",
+          "actor": "import",
+          "kind": "born",
+          "card_number": 201,
+          "from_place": null,
+          "to_place": {
+            "column": "Not now",
+            "group": null,
+            "position": 0
+          },
+          "detail": "Born from Needle 0.1's card file — column, position and 2 rows."
+        }
+      ]
+    }
+  }
+}

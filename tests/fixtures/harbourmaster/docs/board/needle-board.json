@@ -1,0 +1,633 @@
+{
+  "cols": [
+    {
+      "name": "Backlog",
+      "note": "Ideas written up as suggestions.",
+      "groups": [
+        {
+          "g": "Next to plan",
+          "cards": [
+            {
+              "t": "The quay display polls the office all night",
+              "ch": [],
+              "deep": "Carried out of #249's close. <span class=\"file\">docs/slice-suggestions/2026-09-03-the-quay-display-polls-the-office-all-night.md</span>",
+              "b": [
+                [
+                  "SERVES",
+                  "The office costs nothing while nothing happens."
+                ],
+                [
+                  "TODAY",
+                  "It asks every <b>eight</b> seconds via <code>/api/quay</code>."
+                ],
+                [
+                  "COST",
+                  "Small."
+                ]
+              ],
+              "id": 252
+            },
+            {
+              "t": "The welcome board shows one boat's whole stay",
+              "ch": [],
+              "deep": "<span class=\"file\">docs/slice-suggestions/2026-09-02-the-welcome-board-shows-one-boats-whole-stay.md</span>",
+              "b": [
+                [
+                  "SERVES",
+                  "A skipper walking up the pontoon sees berth, gate code and departure on one board."
+                ],
+                [
+                  "TODAY",
+                  "Three screens, and the departure is on none of them."
+                ],
+                [
+                  "COST",
+                  "A day."
+                ]
+              ],
+              "id": 242
+            },
+            {
+              "t": "The night audit re-reads the whole harbour log",
+              "ch": [],
+              "deep": "<span class=\"file\">docs/slice-suggestions/2026-09-01-the-night-audit-re-reads-the-whole-harbour-log.md</span>",
+              "b": [
+                [
+                  "SERVES",
+                  "The night audit reads only what changed since the last one."
+                ],
+                [
+                  "TODAY",
+                  "It reads all 14,000 log lines every night."
+                ],
+                [
+                  "COST",
+                  "Half a day."
+                ]
+              ],
+              "id": 232
+            },
+            {
+              "t": "Two small office-screen fixes",
+              "ch": [],
+              "deep": "<span class=\"file\">docs/slice-suggestions/2026-07-12-berth-list-keys.md · 2026-08-19-office-screen-refresh.md</span>",
+              "b": [
+                [
+                  "SERVES",
+                  "Screens refresh."
+                ]
+              ],
+              "id": 120
+            }
+          ]
+        },
+        {
+          "g": "Season opening",
+          "cards": []
+        },
+        {
+          "g": "Skipper-facing quality",
+          "cards": [
+            {
+              "t": "The skipper's yes or no: wrong states, slow loads",
+              "ch": [
+                "B"
+              ],
+              "b": [
+                [
+                  "SERVES",
+                  "Saying yes to a berth takes one tap."
+                ]
+              ],
+              "id": 105
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Planned",
+      "note": "Plans waiting their turn.",
+      "groups": [
+        {
+          "g": "Season opening",
+          "cards": [
+            {
+              "t": "The waiting list offers every berth that fits",
+              "ch": [
+                "A"
+              ],
+              "gate": "high",
+              "b": [
+                [
+                  "SERVES",
+                  "A boat on the waiting list is offered every berth it fits, not only the one it asked for."
+                ],
+                [
+                  "TODAY",
+                  "The list matches on the berth number alone."
+                ],
+                [
+                  "WAITS",
+                  "#139 — the four berth-first rulings."
+                ]
+              ],
+              "deep": "Split 2026-09-01 out of the shipped plan.<span class=\"file\">docs/plans/2026-09-01-the-waiting-list-offers-every-berth-that-fits.md</span>",
+              "id": 196
+            }
+          ]
+        },
+        {
+          "g": "Skipper-facing quality",
+          "cards": [
+            {
+              "t": "The skipper sees the price before the berth",
+              "ch": [
+                "B"
+              ],
+              "gate": "high",
+              "deep": "<span class=\"file\">docs/plans/2026-09-02-the-skipper-sees-the-price-before-the-berth.md</span>",
+              "b": [
+                [
+                  "SERVES",
+                  "A skipper knows what a night costs before choosing where to lie."
+                ],
+                [
+                  "TODAY",
+                  "The price appears on the confirmation."
+                ]
+              ],
+              "id": 109
+            }
+          ]
+        },
+        {
+          "g": "Trust — from the winter review",
+          "cards": [
+            {
+              "t": "A screen nobody opens is removed",
+              "ch": [
+                "D"
+              ],
+              "gate": "high",
+              "deep": "<span class=\"file\">docs/plans/2026-08-26-a-screen-nobody-opens-is-removed.md</span>",
+              "b": [
+                [
+                  "SERVES",
+                  "Every future session reading the office's code sees only screens that are actually opened."
+                ],
+                [
+                  "TODAY",
+                  "Four screens have had no visit since June."
+                ],
+                [
+                  "COST",
+                  "A day."
+                ]
+              ],
+              "id": 172
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Up next",
+      "note": "Ranked.",
+      "ranked": true,
+      "groups": [
+        {
+          "g": null,
+          "cards": [
+            {
+              "t": "Every metered kilowatt is billed",
+              "ch": [],
+              "gate": "medium",
+              "deep": "Every meter reading since 5 July has been dropped. <span class=\"file\">docs/plans/2026-09-03-every-metered-kilowatt-is-billed.md</span>",
+              "b": [
+                [
+                  "SERVES",
+                  "Power truth. Every kilowatt a boat draws lands on its invoice."
+                ],
+                [
+                  "TODAY",
+                  "The handler reads the reading as a number; the meters send a string."
+                ],
+                [
+                  "COST",
+                  "Under an hour."
+                ],
+                [
+                  "PLAN",
+                  "Written 3 Sep."
+                ]
+              ],
+              "id": 253
+            },
+            {
+              "t": "A gate code arrives before the boat does",
+              "ch": [],
+              "gate": "medium",
+              "deep": "<span class=\"file\">docs/plans/2026-09-02-a-gate-code-arrives-before-the-boat-does.md</span>",
+              "b": [
+                [
+                  "SERVES",
+                  "A skipper who booked from sea finds the gate code waiting when the boat is tied up."
+                ],
+                [
+                  "TODAY",
+                  "The code is sent when the office opens the next morning."
+                ],
+                [
+                  "COST",
+                  "Two hours."
+                ],
+                [
+                  "YOUR TIME",
+                  "Try one arrival from the phone."
+                ],
+                [
+                  "PLAN",
+                  "Written 2 Sep."
+                ]
+              ],
+              "id": 241
+            },
+            {
+              "t": "The skipper is told what the office decided",
+              "ch": [],
+              "gate": "high",
+              "b": [
+                [
+                  "SERVES",
+                  "When a skipper asks why a berth was refused, the answer is the reason the office wrote down."
+                ],
+                [
+                  "TODAY",
+                  "The refusal says only no."
+                ],
+                [
+                  "COST",
+                  "A day."
+                ],
+                [
+                  "WAITS",
+                  "A plan."
+                ]
+              ],
+              "id": 228
+            },
+            {
+              "t": "A berth is never let twice",
+              "ch": [],
+              "gate": "xhigh",
+              "deep": "<span class=\"file\">docs/plans/2026-08-28-a-berth-is-never-let-twice.md</span>",
+              "b": [
+                [
+                  "SERVES",
+                  "Two boats never hold the same berth for the same night."
+                ],
+                [
+                  "TODAY",
+                  "Two bookings a minute apart both succeed."
+                ],
+                [
+                  "COST",
+                  "Three days."
+                ],
+                [
+                  "STAKES",
+                  "A double-let is a boat turned away at the pontoon at dusk."
+                ]
+              ],
+              "id": 237
+            },
+            {
+              "t": "The booking office stops growing into one file",
+              "ch": [
+                "D"
+              ],
+              "gate": "xhigh",
+              "deep": "<span class=\"file\">docs/plans/2026-08-30-the-booking-office-stops-growing-into-one-file.md</span>",
+              "b": [
+                [
+                  "SERVES",
+                  "The file that applies every booking is a set of readable, single-concern modules."
+                ],
+                [
+                  "TODAY",
+                  "It is 4,100 lines."
+                ],
+                [
+                  "COST",
+                  "A week."
+                ]
+              ],
+              "id": 174
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Executing",
+      "note": "In flight now.",
+      "groups": [
+        {
+          "g": null,
+          "cards": [
+            {
+              "t": "The fuel pontoon takes cards, live",
+              "ch": [],
+              "gate": "high",
+              "deep": "<span class=\"file\">docs/plans/done/2026-08-25-the-fuel-pontoon-takes-cards.md</span>",
+              "b": [
+                [
+                  "SERVES",
+                  "A skipper pays for fuel at the pump with a card and the litres land on the same invoice."
+                ],
+                [
+                  "TODAY",
+                  "Cash and a paper slip."
+                ],
+                [
+                  "COST",
+                  "Two days."
+                ],
+                [
+                  "DELIVERED",
+                  "The terminal is mounted."
+                ],
+                [
+                  "WATCH",
+                  "The first card payment."
+                ]
+              ],
+              "id": 259
+            },
+            {
+              "t": "The gate code goes out in plain text",
+              "ch": [],
+              "gate": "xhigh",
+              "deep": "<span class=\"file\">docs/slice-suggestions/2026-08-20-the-gate-code-goes-out-in-plain-text.md</span>",
+              "b": [
+                [
+                  "SERVES",
+                  "A gate code reaches only the skipper it was issued to."
+                ],
+                [
+                  "TODAY",
+                  "It is in the subject line of the confirmation email."
+                ],
+                [
+                  "COST",
+                  "A day."
+                ],
+                [
+                  "STAKES",
+                  "Anyone with the email opens the gate."
+                ]
+              ],
+              "id": 223
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Decision moment",
+      "note": "Your move.",
+      "cls": "decision",
+      "groups": [
+        {
+          "g": null,
+          "cards": [
+            {
+              "t": "The pricing rule, judged against a real season",
+              "ch": [
+                "B"
+              ],
+              "gate": "xhigh",
+              "deep": "<span class=\"file\">docs/plans/2026-09-02-the-pricing-rule-judged-against-a-real-season.md</span>",
+              "b": [
+                [
+                  "SERVES",
+                  "A season's real bookings say whether length-based or berth-based pricing fills the harbour."
+                ],
+                [
+                  "TODAY",
+                  "Both rules exist; neither has been run against a season."
+                ],
+                [
+                  "YOUR TIME",
+                  "Two sittings: one to read the packs, one to rule."
+                ],
+                [
+                  "DELIVERED",
+                  "The read-out, with the two seasons side by side."
+                ],
+                [
+                  "WATCH",
+                  "Your ruling on the five forks."
+                ],
+                [
+                  "REVIEW",
+                  "<code>docs/reviews/2026-09-02-the-pricing-rule-judged.md</code>"
+                ]
+              ],
+              "id": 219
+            },
+            {
+              "t": "Tell the bank which account takes the deposits",
+              "ch": [
+                "X",
+                "R"
+              ],
+              "b": [
+                [
+                  "ASK",
+                  "Which account?"
+                ],
+                [
+                  "TODAY",
+                  "Deposits from the new terminal go to the old account."
+                ],
+                [
+                  "STAKES",
+                  "The season's deposits sit in the wrong ledger."
+                ]
+              ],
+              "id": 147
+            }
+          ]
+        },
+        {
+          "g": "Rulings that unblock lanes",
+          "cards": [
+            {
+              "t": "Berth-first booking — 4 rulings",
+              "ch": [
+                "R"
+              ],
+              "gate": "xhigh",
+              "deep": "<span class=\"file\">docs/plans/2026-08-18-berth-first-booking.md</span>",
+              "b": [
+                [
+                  "SERVES",
+                  "May a booking page open with the harbour map itself, instead of a form?"
+                ],
+                [
+                  "ASK",
+                  "Four rulings, one sitting."
+                ],
+                [
+                  "WAITS",
+                  "You."
+                ],
+                [
+                  "PLAN",
+                  "Written 18 Aug."
+                ]
+              ],
+              "id": 139
+            }
+          ]
+        },
+        {
+          "g": "Actions & sign-offs elsewhere",
+          "cards": [
+            {
+              "t": "Harbour council read-through",
+              "ch": [
+                "X"
+              ],
+              "b": [
+                [
+                  "ASK",
+                  "Read the season report before Thursday's council."
+                ],
+                [
+                  "TODAY",
+                  "The report is built."
+                ],
+                [
+                  "COST",
+                  "An hour of yours."
+                ]
+              ],
+              "id": 149
+            },
+            {
+              "t": "Suggestions are written but have no card",
+              "ch": [],
+              "b": [
+                [
+                  "ASK",
+                  "Card them?"
+                ],
+                [
+                  "ITEMS",
+                  "<li>a</li><li>b</li>"
+                ]
+              ],
+              "board": "suggestion-without-card",
+              "id": 204
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Executed",
+      "note": "Waiting for the signal.",
+      "groups": [
+        {
+          "g": null,
+          "cards": [
+            {
+              "t": "The office runs its own checks, nightly",
+              "ch": [
+                "W"
+              ],
+              "gate": "high",
+              "progress": [
+                7,
+                7
+              ],
+              "progress_unit": "items",
+              "lane": {
+                "s": "clear",
+                "n": "nothing in flight"
+              },
+              "deep": "All seven items built.<span class=\"file\">docs/plans/done/2026-08-30-the-office-runs-its-own-checks.md</span><span class=\"file\">docs/audits/2026-08-30-full-office-review.md</span>",
+              "b": [
+                [
+                  "SERVES",
+                  "The suite runs every night on the office machine."
+                ],
+                [
+                  "DELIVERED",
+                  "Seven items."
+                ],
+                [
+                  "WATCH",
+                  "The first overdue review runs by itself."
+                ]
+              ],
+              "id": 134
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Done",
+      "note": "The signal arrived.",
+      "groups": [
+        {
+          "g": null,
+          "cards": []
+        }
+      ]
+    },
+    {
+      "name": "Not now",
+      "note": "Parked.",
+      "groups": [
+        {
+          "g": null,
+          "cards": [
+            {
+              "t": "A confirmed booking waits for the tide",
+              "ch": [],
+              "gate": "high",
+              "citations": [
+                "docs/plans/done/2026-09-01-a-confirmed-booking-waits-for-the-tide.md"
+              ],
+              "b": [
+                [
+                  "SERVES",
+                  "A confirmed booking is held until the tide allows the boat in."
+                ],
+                [
+                  "RULED",
+                  "Parked 2026-09-02."
+                ]
+              ],
+              "id": 201
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "nextId": 262,
+  "lanes": {
+    "asOf": "31 Aug",
+    "executing": "stale text"
+  },
+  "retired": {
+    "123": "parked into #167",
+    "140": "merged into #135"
+  }
+}
