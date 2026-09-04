@@ -110,12 +110,13 @@ rather than the half that showed things. The lessons, carried as principles:
 
 ## How the project is built
 
-Needle is built the way Hello Revenue is built, because that method is what
-the board exists to serve: intent first, a written plan per slice with an
-effort gate, execution in an isolated lane, a review before anything is called
-done, ratchets for every boundary that matters, one way to do each thing. The
-project's `CLAUDE.md` carries the working rules; `docs/plans/` carries the
-slices, with the folder as the status.
+Needle is built the way it asks every project to be built. The way of working
+is written once, by the owner and the coordinating session together, in
+`docs/HOW-WE-WORK.md`: intent over orders, loops as falsifiable theses, the
+corpus as the way in, one move the person's, lanes, reviews as loops, the
+close ritual. The project's `CLAUDE.md` carries the working rules specific to
+this repository; `docs/plans/` carries the slices, with the folder as the
+status.
 
 ## Sequence
 
