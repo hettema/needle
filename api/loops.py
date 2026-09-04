@@ -31,6 +31,7 @@ from board.lane import (
     LaneFacts,
     card_of_cwd,
     doors_for,
+    entered_executing_at,
     exit_for,
     lane_for,
     should_enter_executing,
@@ -403,7 +404,11 @@ class Loops:
                 continue
             history = self.live.store.history(slug, card.number)
             record = by_record.get(card.number)
-            since = record.first_seen if record is not None else lane.hands_on_since
+            since = (
+                record.first_seen
+                if record is not None
+                else lane.hands_on_since or entered_executing_at(history)
+            )
             reason = should_enter_executing(card, lane, history)
             if reason is not None:
                 self.live.move(

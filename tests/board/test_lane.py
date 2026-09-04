@@ -8,6 +8,7 @@ from board.lane import (
     came_from,
     card_of_cwd,
     doors_for,
+    entered_executing_at,
     exit_for,
     is_question,
     lane_for,
@@ -336,7 +337,7 @@ def test_a_discussion_is_never_hands_on_but_is_said():
         session_id="dddd0001-0000-4000-8000-000000000000", kind=SessionKind.INTERACTIVE
     )
     talking = talking.model_copy(update={"cwd": PROJECT, "worktree": None, "name": "x"})
-    lane = lane_for(card(), facts(sessions=[talking], discussions=[talk]))
+    lane = lane_for(card(), facts(sessions=[talking], discussions=[talk], worktrees={}))
     assert lane.state == LaneState.NONE and lane.discussing == ["dddd0001"]
     assert lane.sentence == "In discussion with you (dddd0001)."
 
@@ -466,7 +467,7 @@ def doors(c: Card, lane, **changes):
 
 
 def test_start_says_the_slot_and_model_the_rule_named_and_refuses_by_name():
-    fresh = lane_for(card(), facts())
+    fresh = lane_for(card(), facts(worktrees={}))
     offered = doors(card(), fresh)
     assert offered.start.offered and offered.start.label == "Start · fable on alpha"
     assert not offered.watch.offered and not offered.answer.offered and not offered.look.offered
@@ -488,7 +489,7 @@ def test_a_collision_closes_start_and_opens_start_anyway_with_the_reason():
         sentence="#9's lane is editing api/app.py right now.",
         files=["api/app.py"],
     )
-    fresh = lane_for(card(), facts())
+    fresh = lane_for(card(), facts(worktrees={}))
     offered = doors(card(), fresh, collision=collision)
     assert not offered.start.offered and offered.start.why.startswith("Lane collision")
     assert offered.start_anyway.offered and "#9's lane" in offered.start_anyway.why
@@ -559,3 +560,13 @@ def test_a_session_whose_worktree_is_gone_is_an_ended_lane_whatever_proc_says():
     )
     assert lane.state == LaneState.ENDED and lane.hands_on_since is None
     assert lane.died == "its worktree is gone from disk"
+
+
+def test_entered_executing_at_reads_the_last_entry_into_executing():
+    since = NOW - timedelta(hours=1)
+    history = [
+        moved(Column.UP_NEXT, Column.EXECUTING, Actor.MACHINE, since, id=2),
+        moved(Column.EXECUTING, Column.UP_NEXT, Actor.MACHINE, NOW - timedelta(days=1), id=1),
+    ]
+    assert entered_executing_at(history) == since
+    assert entered_executing_at([]) is None

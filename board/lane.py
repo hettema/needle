@@ -407,6 +407,21 @@ def came_from(history: list[AuditEntry]) -> Column:
     return Column.UP_NEXT
 
 
+def entered_executing_at(history: list[AuditEntry]) -> datetime | None:
+    """When the card last entered Executing, from the record; None when it
+    never did. The exit rule's "this life of the lane" starts here when the
+    lane itself no longer says: an ended lane has no hands_on_since, which
+    read a stale DELIVERED row as current and pinned card #147 on 2026-09-04."""
+    for entry in history:
+        if (
+            entry.kind == AuditKind.MOVED
+            and entry.to_place is not None
+            and entry.to_place.column == Column.EXECUTING
+        ):
+            return entry.at
+    return None
+
+
 def close_landed(card: Card) -> bool:
     """A session said it shipped: the plan is archived and DELIVERED is written."""
     return card.link is not None and card.link.archived and has_row(card, RowKind.DELIVERED)
