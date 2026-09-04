@@ -1,10 +1,13 @@
 # Needle
 
-A board for one person and their AI team. Intent goes in as plans, work runs
-as lanes, the machine keeps the board true, and every loop closes by
-evidence. No second human in the loop: one person holds the intent, the
-sessions hold everything else, and the work moves at the speed the intent
-allows.
+Needle is how one person runs a team of AI sessions on intent alone, and
+trusts the result. Intent is agreed once and written as plans; the sessions
+execute, in lanes, at the speed of the work rather than of a human decision
+cycle; the board is the only thing the person has to read to know what is
+true, what is running, and what has proved itself; and any card is a door
+back into the work, to watch, to answer, to talk. Quality is held by
+conventions the machine defends, not by anyone remembering them, and the
+board is what defends the whole of it. No second human in the loop.
 
 Needle is the instrument; the way of working is the product. Read
 `docs/HOW-WE-WORK.md` first — without it the board is an empty page over an
@@ -13,7 +16,9 @@ empty folder.
 Written by Dennis Hettema together with Claude, in the way it describes: the
 intent is Dennis's, the plans, rulings and reviews are the sessions', and the
 board ran its own construction from the second day. Licensed AGPL-3.0: use it,
-change it, run it for anyone — and publish what you changed.
+change it, run it for anyone — and publish what you changed. A closed
+commercial use, one that keeps its changes private, is available by a
+separate licence from the author.
 
 - `docs/INTENT.md` — why this exists and what it must be true about. Start there.
 - `docs/plans/` — the slices, with the folder as their status; `docs/plans/done/` is the archive.
