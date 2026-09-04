@@ -13,12 +13,14 @@ from domain.document import Document
 from domain.handout import Dispatch, Handout, Handouts
 
 
-def handouts_for(document: Document | None, roles: list[str] | None) -> Handouts:
+def handouts_for(document: Document | None, roles: list[str] | None, *, read: bool) -> Handouts:
     """`roles` is what the machine's roles file names, as the runtime last
-    read it; None when the machine has no such file."""
+    read it; None when the machine has no such file. `read` is whether the
+    loop has read the machine at all: before that the roles are unknown,
+    not absent, and the board claims nothing about them (review pass 2)."""
     named = document.handouts if document is not None else []
-    if not named:
-        return Handouts(named=[], unknown=[], verdict=None)
+    if not named or not read:
+        return Handouts(named=named, unknown=[], verdict=None)
     wanted: list[str] = []
     for handout in named:
         if handout.role not in wanted:

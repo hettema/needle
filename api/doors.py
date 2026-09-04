@@ -709,12 +709,15 @@ class Doors:
                 f"#{number} cannot enter Executed while its plan is live; archive it to "
                 "docs/plans/done/ first, or name another column."
             )
+        lane = live.snapshot.lanes.get(number) if live.snapshot else None
+        # Read before any row is written: a transcript that cannot be read
+        # must refuse the whole close, never leave DELIVERED on a card that
+        # did not move (review pass 2).
+        handed = self._handed_out(slug, number, lane)
         self.live.add_row(slug, number, Row(kind=RowKind.DELIVERED, text=delivered.strip()), actor)
         self.live.add_row(slug, number, Row(kind=RowKind.WATCH, text=watch.strip()), actor)
         if review:
             self.live.add_row(slug, number, Row(kind=RowKind.REVIEW, text=review.strip()), actor)
-        lane = live.snapshot.lanes.get(number) if live.snapshot else None
-        handed = self._handed_out(slug, number, lane)
         if handed is not None:
             self.live.add_row(slug, number, Row(kind=RowKind.HANDED_OUT, text=handed), actor)
         hands = lane is not None and lane.state in HANDS_ON and lane.state != LaneState.NONE

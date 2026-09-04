@@ -124,20 +124,25 @@ PILOT = Handout(item="3. C", role="harbour-pilot", what="w", verifies="v")
 
 
 def test_a_role_the_machine_names_passes_and_one_it_does_not_is_the_boards_line():
-    known = handouts_for(_document(SEARCH, EXECUTION), ["top", "execution", "search"])
+    known = handouts_for(_document(SEARCH, EXECUTION), ["top", "execution", "search"], read=True)
     assert known.named == [SEARCH, EXECUTION] and known.unknown == [] and known.verdict is None
-    unknown = handouts_for(_document(SEARCH, PILOT, PILOT), ["execution", "search"])
+    unknown = handouts_for(_document(SEARCH, PILOT, PILOT), ["execution", "search"], read=True)
     assert unknown.unknown == ["harbour-pilot"]
     assert unknown.verdict is not None
     assert '"harbour-pilot"' in unknown.verdict and "execution, search" in unknown.verdict
 
 
 def test_with_no_roles_file_the_roles_cannot_be_checked_and_the_board_says_so():
-    none = handouts_for(_document(SEARCH), None)
+    none = handouts_for(_document(SEARCH), None, read=True)
     assert none.unknown == ["search"]
     assert none.verdict is not None and "names no roles" in none.verdict
-    assert handouts_for(_document(), None).verdict is None
-    assert handouts_for(None, ["search"]).named == []
+    assert handouts_for(_document(), None, read=True).verdict is None
+    assert handouts_for(None, ["search"], read=True).named == []
+
+
+def test_before_the_loop_has_read_the_machine_the_roles_are_shown_and_not_judged():
+    unread = handouts_for(_document(PILOT), None, read=False)
+    assert unread.named == [PILOT] and unread.unknown == [] and unread.verdict is None
 
 
 def _dispatch(role: str) -> Dispatch:

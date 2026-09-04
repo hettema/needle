@@ -70,6 +70,17 @@ def test_every_agent_tool_use_on_a_main_thread_is_a_dispatch_and_nothing_else_is
     assert found[0].at == datetime(2026, 9, 5, 10, 0, 1, tzinfo=UTC)
 
 
+def test_a_transcript_the_board_cannot_read_hides_nothing_else(machine_floor: Floor):
+    write_transcript(LANE, "readable", [_record("assistant", [_agent("search")])])
+    locked = write_transcript(LANE, "locked", [_record("assistant", [_agent("execution")])])
+    locked.chmod(0)
+    try:
+        found = transcripts.dispatches(LANE)
+    finally:
+        locked.chmod(0o600)
+    assert found is not None and [d.role for d in found] == ["search"]
+
+
 def test_the_roles_are_the_roles_files_keys_without_its_notes(machine_floor: Floor):
     assert roles.roles() == ["top", "downgrade", "execution", "search"]
     machine.roles_path().write_text("not json", encoding="utf-8")

@@ -292,6 +292,11 @@ describe("what a plan hands out", () => {
     expect(screen.getByText(/2\. Split along them — execution: the move of each path/)).toBeInTheDocument();
     expect(screen.queryByText(/has not defined/)).toBeNull();
     await userEvent.keyboard("{Escape}");
+    // The snapshot is the board before the loop's first read, when the roles
+    // are unknown and nothing is judged; once read, the board's line is on the card.
+    const d = detail(237);
+    d.handouts = { ...d.handouts, unknown: ["harbour-pilot"], verdict: 'This plan hands out to "harbour-pilot", which this machine has not defined; its roles are top, downgrade, execution, search. A role is named in the machine\'s roles file before a plan names it.' };
+    api.getCard.mockImplementation((_slug: string, number: number) => Promise.resolve(number === 237 ? d : detail(number)));
     await userEvent.click(screen.getByText("A berth is never let twice"));
     expect(await screen.findByText(/hands out to "harbour-pilot", which this machine has not defined/)).toBeInTheDocument();
   });

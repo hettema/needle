@@ -5520,10 +5520,8 @@
             "verifies": "the losing confirmation's sentence"
           }
         ],
-        "unknown": [
-          "harbour-pilot"
-        ],
-        "verdict": "This plan hands out to \"harbour-pilot\", which this machine has not defined; its roles are top, downgrade, execution, search. A role is named in the machine's roles file before a plan names it."
+        "unknown": [],
+        "verdict": null
       }
     },
     "174": {

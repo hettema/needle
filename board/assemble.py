@@ -843,5 +843,5 @@ def assemble_detail(
         verdict_note=verdict_note,
         watercooler=watercooler or [],
         heard=heard,
-        handouts=handouts_for(document, machine.roles if machine is not None else None),
+        handouts=handouts_for(document, machine.roles if machine is not None else None, read=read),
     )

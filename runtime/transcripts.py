@@ -29,8 +29,14 @@ def dispatches(cwd: str) -> list[Dispatch] | None:
         return None
     found: list[Dispatch] = []
     for path in files:
-        found.extend(_dispatches_in(path.read_text(encoding="utf-8", errors="replace")))
-    return sorted(found, key=lambda d: (d.at is None, d.at or datetime.min))
+        try:
+            text = path.read_text(encoding="utf-8", errors="replace")
+        except OSError:
+            # One file the board cannot read never hides the others; what
+            # is counted is what could be read (review pass 2).
+            continue
+        found.extend(_dispatches_in(text))
+    return sorted(found, key=lambda d: (d.at is None, d.at.timestamp() if d.at else 0.0))
 
 
 def _dispatches_in(text: str) -> list[Dispatch]:

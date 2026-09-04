@@ -20,9 +20,9 @@ subagent's result is a claim, so the plan is where "hand it out, then check
 this" is decided rather than remembered. The board reads the sentence onto
 the card per item, says on the card when a role named is not one the
 machine has, and at the lane's close writes what the plan named against
-what the lane dispatched (plan 12). This file is the source of the line;
-the machine's `docs/plans/README.md` and Hello Revenue's `hr-plan-write`
-carry copies that cite it.
+what the lane dispatched (plan 12). This file is the source of the line:
+the machine's `docs/plans/README.md` carries a copy that cites it, and
+Hello Revenue's `hr-plan-write` does the same on its own card.
 
 A plan's title is its card's title, and the owner ranks cards from their
 titles alone. So the title says what will be true when the plan is done, in
