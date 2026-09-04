@@ -127,3 +127,37 @@ def test_a_checkout_off_develop_is_named_not_moved(repos: tuple[Path, Path]):
     sh(checkout, "checkout", "-q", "-b", "elsewhere")
     levelled = git.level(checkout)
     assert levelled.level is True and "on elsewhere, not develop" in (levelled.note or "")
+
+
+def test_a_checkout_ahead_of_origin_is_rebased_and_pushed_when_clean(repos: tuple[Path, Path]):
+    origin, checkout = repos
+    path = lane(checkout, "card-9-lane")
+    (path / "README.md").write_text("lane\n")
+    sh(path, "add", "README.md")
+    sh(path, "commit", "-q", "-m", "lane")
+    assert git.fold(path, promote_main=False).pushed
+    # The owner's session committed in the main checkout and never pushed.
+    (checkout / "OWNER.md").write_text("main thread\n")
+    sh(checkout, "add", "OWNER.md")
+    sh(checkout, "commit", "-q", "-m", "main thread")
+    levelled = git.level(checkout)
+    assert levelled.level is True and levelled.behind == 0
+    assert "rebased and pushed 1 local commit(s)" in (levelled.note or "")
+    assert sh(origin, "rev-parse", "develop") == git.head(checkout)
+    assert (checkout / "README.md").read_text() == "lane\n"
+
+
+def test_a_checkout_ahead_of_origin_with_a_conflict_is_left_and_named(repos: tuple[Path, Path]):
+    origin, checkout = repos
+    path = lane(checkout, "card-9-lane")
+    (path / "README.md").write_text("lane\n")
+    sh(path, "add", "README.md")
+    sh(path, "commit", "-q", "-m", "lane")
+    assert git.fold(path, promote_main=False).pushed
+    (checkout / "README.md").write_text("owner\n")
+    sh(checkout, "commit", "-q", "-am", "owner")
+    before = git.head(checkout)
+    levelled = git.level(checkout)
+    assert levelled.level is False and "rebase conflicts" in (levelled.note or "")
+    assert git.head(checkout) == before and git.tracked_changes(checkout) == []
+    assert sh(origin, "rev-parse", "develop") != before

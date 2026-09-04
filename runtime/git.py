@@ -229,14 +229,63 @@ def level(repo: str | Path) -> Levelled:
     try:
         _git(repo, "merge", "--ff-only", f"{REMOTE}/{TRUNK}")
     except GitFailed as error:
+        return _rebase_ahead(repo, behind, main_updated, error)
+    return Levelled(level=True, behind=0, note=None, fetched=True, main_updated=main_updated)
+
+
+def ahead_count(repo: str | Path) -> int:
+    out = _try(repo, "rev-list", "--count", f"{REMOTE}/{TRUNK}..HEAD")
+    return int(out.strip()) if out and out.strip().isdigit() else 0
+
+
+def _rebase_ahead(repo: str | Path, behind: int, main_updated: bool, error: GitFailed) -> Levelled:
+    """A trunk that is ahead of origin cannot fast-forward: a main-thread
+    session committed in the main checkout and never pushed while a lane
+    folded. Until 2026-09-05 this stopped every fold and every close that
+    reads the corpus until a human ran `git pull --rebase` (omarchy, twice).
+    The machine repo's post-commit hook pushes at commit time; this is the
+    recovery when it could not. A clean rebase is pushed and the trunk is
+    level; a conflict is aborted and named, the commits left in place."""
+    ahead = ahead_count(repo)
+    if ahead == 0:
+        return Levelled(
+            level=False, behind=behind, note=f"could not fast-forward: {error}", fetched=True,
+            main_updated=main_updated,
+        )
+    try:
+        _git(repo, "rebase", "--quiet", "--autostash", f"{REMOTE}/{TRUNK}")
+    except GitFailed as conflict:
+        _try(repo, "rebase", "--abort")
         return Levelled(
             level=False,
             behind=behind,
-            note=f"could not fast-forward: {error}",
+            note=(
+                f"the checkout is {ahead} commit(s) ahead of {REMOTE}/{TRUNK} and the rebase "
+                f"conflicts ({conflict}); left as it was — resolve with git pull --rebase there"
+            ),
             fetched=True,
             main_updated=main_updated,
         )
-    return Levelled(level=True, behind=0, note=None, fetched=True, main_updated=main_updated)
+    try:
+        _git(repo, "push", "--quiet", REMOTE, TRUNK, timeout=FETCH_SECONDS)
+    except GitFailed as refused:
+        return Levelled(
+            level=False,
+            behind=0,
+            note=(
+                f"rebased {ahead} local commit(s) onto {REMOTE}/{TRUNK} but the push was refused "
+                f"({refused}); the checkout is level, {REMOTE} is not"
+            ),
+            fetched=True,
+            main_updated=main_updated,
+        )
+    return Levelled(
+        level=True,
+        behind=0,
+        note=f"rebased and pushed {ahead} local commit(s) that were ahead of {REMOTE}/{TRUNK}",
+        fetched=True,
+        main_updated=main_updated,
+    )
 
 
 # ── the fold ───────────────────────────────────────────────────────────
