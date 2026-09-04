@@ -162,7 +162,7 @@ export function OpenCard({ card, onMoveTo }: { card: CardSummary; onMoveTo: (num
 
   // The doors sit under the title, where the owner's hand already is (plan 04,
   // item 2), and every door he would expect on this card that cannot open says
-  // why in text: on #387 he looked for Watch and found only a tooltip.
+  // why in text: on card 387 he looked for Watch and found only a tooltip.
   const expected: { label: string; why: string }[] = [];
   if (lane && lane.state !== "none") {
     for (const d of [doors.watch, doors.answer, doors.look, doors.resume, doors.stop]) if (!d.offered) expected.push({ label: d.label, why: d.why });

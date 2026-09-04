@@ -81,9 +81,21 @@ uv run needle sync | signals | lanes hellorevenue    # the loops, by hand
 A card enters Executed only with a WATCH row that names its signal — what
 will be observed, where, and by when — in the grammar `WATCH: <what> —
 url|file|command|owner <target> [expect <value>] by <YYYY-MM-DD> [every
-<N>h|<N>d]`. The board reads URLs, files and commands on the row's cadence and
-moves the card on what they say; a signal only the owner can read is put to
-him as a question at its due time.
+<N>h|<N>d]`. One example of each reader, as `needle close --watch` takes it:
+
+```
+prod answers on the new path — url https://app.example.test/health expect "ok" by 2026-09-12 every 6h
+the plan is archived — file docs/plans/done/2026-09-10-the-work.md by 2026-09-12
+the next codebase review landed — command ls docs/audits/*-review.md | wc -l expect >= 3 by 2026-09-30
+Did the first real client build finish without a needs-a-look note? — owner by 2026-09-18
+```
+
+The board reads URLs, files and commands on the row's cadence and moves the
+card on what they say; a signal only the owner can read is put to him as one
+question, in a list batched with every other such card, at its due time. A
+row that names none of the four readers is refused with the grammar in the
+message. Every machine placement names the predicate it rests on and is
+re-tested on every read; a card whose evidence is gone says so on the page.
 
 ## Check it
 
