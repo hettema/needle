@@ -10,6 +10,7 @@ import type { Doors, Lane, LaneState } from "./lane";
 import type { Project } from "./project";
 import type { Row } from "./row";
 import type { Reading, Signal } from "./signal";
+import type { Verdict, VerdictLine } from "./verdict";
 
 export const ESSENCE_SOURCE_VALUES = ["card", "document"] as const;
 export type EssenceSource = (typeof ESSENCE_SOURCE_VALUES)[number];
@@ -21,6 +22,7 @@ export interface Attention {
   signals_due: number;
   signals_asking: number;
   doubted: number;
+  verdicts_unread: number;
   arrived_today: number;
   documents_gone: number;
   documents_without_card: number;
@@ -37,6 +39,7 @@ export interface BoardState {
   columns: ColumnView[];
   documents_without_card: DocumentRef[];
   asks: OwnerAsk[];
+  verdicts: VerdictLine[];
 }
 
 export interface CardDetail {
@@ -52,6 +55,8 @@ export interface CardDetail {
   signal: Signal | null;
   signal_note: string | null;
   readings: Reading[];
+  verdict: Verdict | null;
+  verdict_note: string | null;
 }
 
 export interface CardSummary {

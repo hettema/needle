@@ -12,6 +12,7 @@ needle hook install REPO                 # register the session hook in REPO/.cl
 needle sync [SLUG]                       # level each main checkout with origin/develop now
 needle signals [SLUG]                    # read every due signal now
 needle lanes SLUG                        # every card's lane, as the board reads it
+needle verdicts SLUG [--write]           # the verdicts the board's own facts settle (plan 05)
 
 Rows are written to the store directly — the one writer — and the running
 board hears the store change; a start goes through the server so the board
@@ -29,10 +30,14 @@ from pathlib import Path
 
 from api.doors import REPO_ROOT, DoorFailed, DoorRefused, Doors
 from api.loops import Loops, project_of_cwd
+from board.lane import has_row
+from board.verdicts import CLOSED, VerdictUnreadable, machine_verdict, parse_verdict, render_verdict
 from domain.audit import AuditKind
 from domain.card import Actor
 from domain.column import Column
+from domain.lane import LaneState
 from domain.row import Row, RowKind
+from domain.verdict import EvidenceClass
 from infrastructure import clock
 from infrastructure.live import Live
 from infrastructure.paths import db_path
@@ -94,6 +99,12 @@ def row(args: argparse.Namespace, live: Live, runtime: Runtime, loops: Loops, do
     if not text:
         print("an empty row says nothing", file=sys.stderr)
         return 1
+    if kind == RowKind.VERDICT:
+        try:
+            parse_verdict(text)
+        except VerdictUnreadable as why:
+            print(f"not written: {why}", file=sys.stderr)
+            return 1
     live.add_row(args.slug, args.number, Row(kind=kind, text=text), Actor.SESSION)
     print(f"#{args.number}: {kind.value} written")
     return 0
@@ -266,6 +277,54 @@ def lanes(
     return 0
 
 
+def verdicts(
+    args: argparse.Namespace, live: Live, runtime: Runtime, loops: Loops, doors: Doors
+) -> int:
+    """The verdicts the board's own facts settle, for every open card that
+    carries none yet; `--write` puts them on the cards as the machine's
+    rows. The classes the corpus decides are left to a session."""
+    loops.reconcile_now()
+    project = live.projects.get(args.slug)
+    if project is None:
+        print(f'no project "{args.slug}" is on the board', file=sys.stderr)
+        return 1
+    slug = project.project.slug
+    with_lane = {r.card_number for r in live.store.lanes(slug)}
+    counts: dict[EvidenceClass, int] = {}
+    undecided = 0
+    for card in sorted(live.store.cards(slug), key=lambda c: c.number):
+        if card.place.column in CLOSED or has_row(card, RowKind.VERDICT):
+            continue
+        detail = live.detail(slug, card.number)
+        ever = (
+            card.number in with_lane
+            or (detail.lane is not None and detail.lane.state != LaneState.NONE)
+            or any(h.kind == AuditKind.STARTED for h in detail.history)
+        )
+        verdict = machine_verdict(
+            card,
+            detail.summary.standing,
+            detail.document,
+            detail.signal,
+            detail.readings[0] if detail.readings else None,
+            ever_had_a_lane=ever,
+            now=clock.now(),
+        )
+        if verdict is None:
+            undecided += 1
+            print(f"#{card.number:<4} {card.place.column.value:<16} (the corpus decides)")
+            continue
+        counts[verdict.evidence_class] = counts.get(verdict.evidence_class, 0) + 1
+        text = render_verdict(verdict)
+        print(f"#{card.number:<4} {card.place.column.value:<16} {text}")
+        if args.write:
+            live.add_row(slug, card.number, Row(kind=RowKind.VERDICT, text=text), Actor.MACHINE)
+    said = ", ".join(f"{k.value}: {n}" for k, n in sorted(counts.items(), key=lambda kv: -kv[1]))
+    verb = "written" if args.write else "proposed"
+    print(f"{sum(counts.values())} {verb} ({said or 'none'}); {undecided} for the corpus to decide")
+    return 0
+
+
 def register(sub: "argparse._SubParsersAction[argparse.ArgumentParser]") -> None:
     p_card = sub.add_parser("card", help="the card as text: the brief a lane opens with")
     p_card.add_argument("slug")
@@ -326,3 +385,10 @@ def register(sub: "argparse._SubParsersAction[argparse.ArgumentParser]") -> None
     p_lanes = sub.add_parser("lanes", help="every card's lane, as the board reads it")
     p_lanes.add_argument("slug")
     p_lanes.set_defaults(run=_with_board(lanes))
+
+    p_verdicts = sub.add_parser(
+        "verdicts", help="the verdicts the board's own facts settle, for cards carrying none"
+    )
+    p_verdicts.add_argument("slug")
+    p_verdicts.add_argument("--write", action="store_true", help="write them as VERDICT rows")
+    p_verdicts.set_defaults(run=_with_board(verdicts))

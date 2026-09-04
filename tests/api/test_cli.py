@@ -60,3 +60,53 @@ def test_projects_lists_what_is_on_the_board(corpus: Path, database: Path, capsy
     capsys.readouterr()
     assert main(["projects"]) == 0
     assert capsys.readouterr().out.startswith("harbourmaster\tharbourmaster\t")
+
+
+def test_a_verdict_row_is_read_before_it_is_written(corpus: Path, database: Path, capsys):
+    main(["add", str(corpus)])
+    capsys.readouterr()
+    assert main(["row", "harbourmaster", "253", "VERDICT", "probably done → Done"]) == 1
+    err = capsys.readouterr().err
+    assert "not written: the VERDICT row names no class the board knows" in err
+    assert (
+        main(["row", "harbourmaster", "253", "VERDICT", "live and open — waits on #241 → stays"])
+        == 0
+    )
+    assert "#253: VERDICT written" in capsys.readouterr().out
+    store = Store(database)
+    card = store.card("harbourmaster", 253)
+    assert card is not None and [r.text for r in card.rows if r.kind.value == "VERDICT"] == [
+        "live and open — waits on #241 → stays"
+    ]
+    store.close()
+
+
+def test_verdicts_proposes_what_the_boards_facts_settle_and_writes_them_on_request(
+    corpus: Path, database: Path, capsys
+):
+    main(["add", str(corpus)])
+    capsys.readouterr()
+    assert main(["verdicts", "harbourmaster"]) == 0
+    out = capsys.readouterr().out
+    # 0.1's file put #259 and #223 in Executing with no lane: doubted on the first read.
+    assert "#259  Executing        doubted — no lane exists for it" in out
+    assert "→ Decision moment" in out
+    assert "(the corpus decides)" in out
+    assert "proposed (doubted: " in out
+    store = Store(database)
+    assert not any(r.kind.value == "VERDICT" for c in store.cards("harbourmaster") for r in c.rows)
+    store.close()
+    assert main(["verdicts", "harbourmaster", "--write"]) == 0
+    out = capsys.readouterr().out
+    assert "written (doubted: " in out
+    store = Store(database)
+    written = {
+        c.number
+        for c in store.cards("harbourmaster")
+        if any(r.kind.value == "VERDICT" for r in c.rows)
+    }
+    assert {259, 223} <= written
+    store.close()
+    # A card carrying a verdict is not proposed again.
+    assert main(["verdicts", "harbourmaster"]) == 0
+    assert "#259 " not in capsys.readouterr().out

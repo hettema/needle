@@ -12,6 +12,7 @@ from board.evidence import placement_from, standing_for
 from board.moves import GroupLayout
 from board.reconcile import ref
 from board.signals import is_due, past_due, read_or_decline
+from board.verdicts import read_or_decline as read_verdict_or_decline
 from domain.audit import AuditEntry
 from domain.board import (
     Attention,
@@ -35,6 +36,7 @@ from domain.lane import Doors, Lane, LaneSnapshot, LaneState
 from domain.project import Project
 from domain.row import ROW_HALF, Row, RowHalf, RowKind
 from domain.signal import Reading, Signal, SignalKind
+from domain.verdict import Verdict, VerdictLine
 
 NEW_FOR = timedelta(days=1)
 
@@ -91,6 +93,24 @@ def watch_signal(card: Card) -> tuple[Signal | None, str | None]:
     """The signal the card's WATCH row names, or why it names none."""
     watch = next((r.text for r in card.rows if r.kind == RowKind.WATCH), None)
     return read_or_decline(watch)
+
+
+def card_verdict(card: Card) -> tuple[Verdict | None, str | None]:
+    """The verdict the card's VERDICT row names, or why it names none."""
+    text = next((r.text for r in card.rows if r.kind == RowKind.VERDICT), None)
+    return read_verdict_or_decline(text)
+
+
+def verdict_lines(cards: list[Card]) -> list[VerdictLine]:
+    """Every card carrying a verdict the owner has not yet ruled on, by number."""
+    lines: list[VerdictLine] = []
+    for card in sorted(cards, key=lambda c: c.number):
+        verdict, _ = card_verdict(card)
+        if verdict is not None:
+            lines.append(
+                VerdictLine(number=card.number, title=card.title, place=card.place, verdict=verdict)
+            )
+    return lines
 
 
 def signal_asks_owner(
@@ -251,6 +271,7 @@ def assemble_board(
         for n, c in sorted(by_number.items())
         if signal_asks_owner(c, signals[n], readings.get(n), now) and signals[n] is not None
     ]
+    verdicts = verdict_lines(cards)
     attention = Attention(
         asking_you=count(Column.DECISION_MOMENT) + asking_lanes + len(asks),
         in_flight=count(Column.EXECUTING),
@@ -266,6 +287,7 @@ def assemble_board(
         ),
         signals_asking=len(asks),
         doubted=sum(1 for s in summaries.values() if s.standing.state == EvidenceState.DOUBTED),
+        verdicts_unread=len(verdicts),
         arrived_today=sum(1 for s in summaries.values() if s.is_new),
         documents_gone=sum(1 for s in summaries.values() if s.document_state == DocumentState.GONE),
         documents_without_card=len(without_card),
@@ -281,6 +303,7 @@ def assemble_board(
         columns=columns,
         documents_without_card=without_card,
         asks=asks,
+        verdicts=verdicts,
     )
 
 
@@ -300,6 +323,7 @@ def assemble_detail(
     brief, record = split_rows(card.rows)
     own = cited_path(card)
     signal, signal_note = watch_signal(card)
+    verdict, verdict_note = card_verdict(card)
     return CardDetail(
         card=card,
         summary=summarize(
@@ -321,4 +345,6 @@ def assemble_detail(
         signal=signal,
         signal_note=signal_note,
         readings=readings,
+        verdict=verdict,
+        verdict_note=verdict_note,
     )

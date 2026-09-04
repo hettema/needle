@@ -16,6 +16,7 @@ from domain.lane import Doors, Lane, LaneState
 from domain.project import Project
 from domain.row import Row
 from domain.signal import Reading, Signal
+from domain.verdict import Verdict, VerdictLine
 
 
 class EssenceSource(StrEnum):
@@ -77,6 +78,8 @@ class Attention(BaseModel):
     """Shipped cards whose signal only you can read, due now: one batched list (plan 04)."""
     doubted: int
     """Machine-placed cards whose evidence is gone on this read."""
+    verdicts_unread: int
+    """Cards carrying a verdict the owner has not yet accepted or overturned (plan 05)."""
     arrived_today: int
     documents_gone: int
     documents_without_card: int
@@ -123,6 +126,8 @@ class BoardState(BaseModel):
     documents_without_card: list[DocumentRef]
     asks: list[OwnerAsk]
     """Every shipped card waiting on the owner's reading, one click each way per card."""
+    verdicts: list[VerdictLine]
+    """Every card carrying an unread verdict, for the triage lens (plan 05)."""
 
 
 class ProjectFile(BaseModel):
@@ -150,3 +155,7 @@ class CardDetail(BaseModel):
     signal_note: str | None
     """Why the WATCH row names no signal the board can read, when it does not."""
     readings: list[Reading]
+    verdict: Verdict | None
+    """The verdict the card's VERDICT row names, when one parses."""
+    verdict_note: str | None
+    """Why the VERDICT row names no verdict the board can act on, when it does not."""

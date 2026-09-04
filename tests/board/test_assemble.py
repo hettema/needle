@@ -173,6 +173,7 @@ def test_the_board_always_has_eight_columns_each_with_a_group_and_counts_attenti
         "arrived_today": 1,
         "documents_gone": 1,
         "documents_without_card": 1,
+        "verdicts_unread": 0,
     }
     assert [d.stem for d in board.documents_without_card] == ["unlinked"]
     assert board.corpus.watching is False and board.corpus.watch_note == "inotify limit"

@@ -191,3 +191,73 @@ def test_discussions_lanes_readings_and_the_trunk_round_trip(board: Store):
     assert board.trunk("proj") == TrunkState(level=None, behind=0, note=None, read_at=None)
     board.record_trunk("proj", TrunkState(level=False, behind=3, note="dirty", read_at=NOW))
     assert board.trunk("proj").behind == 3 and board.trunk("proj").note == "dirty"
+
+
+def test_a_ruling_on_a_verdict_is_one_act_the_row_the_move_and_the_owners_name(board: Store):
+    """Accepting moves the card by the machine with the verdict's reason on the
+    history row and the owner named; overturning keeps it with his word; a
+    verdict that stays on a doubted card re-places it by his hand (plan 05)."""
+    verdict = "superseded — a later plan carries it → Not now"
+    board.add_row("proj", 228, Row(kind=RowKind.VERDICT, text=verdict), Actor.SESSION, NOW)
+    with pytest.raises(StoreRefusal, match="carries no verdict"):
+        board.rule_on_verdict(
+            "proj", 253, NOW, accepted=True, word=None, to=None, replace=False, said="x"
+        )
+    card = board.rule_on_verdict(
+        "proj",
+        228,
+        NOW + timedelta(minutes=1),
+        accepted=True,
+        word=None,
+        to=Place(column=Column.NOT_NOW, group=None, position=0),
+        replace=False,
+        said="accepted the verdict: superseded — a later plan carries it",
+    )
+    assert card.place.column == Column.NOT_NOW
+    assert [r.kind for r in card.rows if r.kind in (RowKind.VERDICT, RowKind.RULED)] == [
+        RowKind.RULED
+    ]
+    assert next(r.text for r in card.rows if r.kind == RowKind.RULED) == f"accepted: {verdict}"
+    history = board.history("proj", 228)
+    moved = next(h for h in history if h.kind == AuditKind.MOVED)
+    assert moved.actor == Actor.OWNER and moved.evidence is None
+    assert moved.detail.endswith("— accepted the verdict: superseded — a later plan carries it")
+    assert any(
+        h.kind == AuditKind.ROW and h.detail == f"VERDICT accepted: {verdict}" for h in history
+    )
+
+    stays = "live and open — waits on a client → stays"
+    board.add_row("proj", 241, Row(kind=RowKind.VERDICT, text=stays), Actor.SESSION, NOW)
+    card = board.rule_on_verdict(
+        "proj",
+        241,
+        NOW,
+        accepted=False,
+        word="not a client wait, a design wait",
+        to=None,
+        replace=False,
+        said="overturned the verdict: not a client wait, a design wait",
+    )
+    assert card.place.column == Column.UP_NEXT
+    ruled = next(r.text for r in card.rows if r.kind == RowKind.RULED)
+    assert ruled == f"overturned: not a client wait, a design wait — the verdict read: {stays}"
+    assert not any(h.kind == AuditKind.MOVED for h in board.history("proj", 241))
+
+    doubted = "doubted — no lane exists for it → stays"
+    board.add_row("proj", 259, Row(kind=RowKind.VERDICT, text=doubted), Actor.MACHINE, NOW)
+    before = board.card("proj", 259)
+    assert before is not None
+    card = board.rule_on_verdict(
+        "proj",
+        259,
+        NOW,
+        accepted=True,
+        word=None,
+        to=None,
+        replace=True,
+        said="accepted the verdict: doubted — no lane exists for it",
+    )
+    assert card.place == before.place
+    kept = board.placements("proj")[259]
+    assert kept.actor == Actor.OWNER and kept.from_place == kept.to_place == before.place
+    assert kept.detail.startswith("Kept in Executing — accepted the verdict")

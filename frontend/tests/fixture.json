@@ -23,6 +23,7 @@
       "signals_due": 0,
       "signals_asking": 0,
       "doubted": 0,
+      "verdicts_unread": 0,
       "arrived_today": 1,
       "documents_gone": 2,
       "documents_without_card": 0
@@ -976,7 +977,8 @@
       }
     ],
     "documents_without_card": [],
-    "asks": []
+    "asks": [],
+    "verdicts": []
   },
   "details": {
     "252": {
@@ -1180,7 +1182,9 @@
       },
       "signal": null,
       "signal_note": "no WATCH row names a signal",
-      "readings": []
+      "readings": [],
+      "verdict": null,
+      "verdict_note": "no VERDICT row is written"
     },
     "242": {
       "card": {
@@ -1383,7 +1387,9 @@
       },
       "signal": null,
       "signal_note": "no WATCH row names a signal",
-      "readings": []
+      "readings": [],
+      "verdict": null,
+      "verdict_note": "no VERDICT row is written"
     },
     "232": {
       "card": {
@@ -1586,7 +1592,9 @@
       },
       "signal": null,
       "signal_note": "no WATCH row names a signal",
-      "readings": []
+      "readings": [],
+      "verdict": null,
+      "verdict_note": "no VERDICT row is written"
     },
     "120": {
       "card": {
@@ -1748,7 +1756,9 @@
       },
       "signal": null,
       "signal_note": "no WATCH row names a signal",
-      "readings": []
+      "readings": [],
+      "verdict": null,
+      "verdict_note": "no VERDICT row is written"
     },
     "105": {
       "card": {
@@ -1896,7 +1906,9 @@
       },
       "signal": null,
       "signal_note": "no WATCH row names a signal",
-      "readings": []
+      "readings": [],
+      "verdict": null,
+      "verdict_note": "no VERDICT row is written"
     },
     "263": {
       "card": {
@@ -2066,7 +2078,9 @@
       },
       "signal": null,
       "signal_note": "no WATCH row names a signal",
-      "readings": []
+      "readings": [],
+      "verdict": null,
+      "verdict_note": "no VERDICT row is written"
     },
     "264": {
       "card": {
@@ -2236,7 +2250,9 @@
       },
       "signal": null,
       "signal_note": "no WATCH row names a signal",
-      "readings": []
+      "readings": [],
+      "verdict": null,
+      "verdict_note": "no VERDICT row is written"
     },
     "265": {
       "card": {
@@ -2406,7 +2422,9 @@
       },
       "signal": null,
       "signal_note": "no WATCH row names a signal",
-      "readings": []
+      "readings": [],
+      "verdict": null,
+      "verdict_note": "no VERDICT row is written"
     },
     "266": {
       "card": {
@@ -2576,7 +2594,9 @@
       },
       "signal": null,
       "signal_note": "no WATCH row names a signal",
-      "readings": []
+      "readings": [],
+      "verdict": null,
+      "verdict_note": "no VERDICT row is written"
     },
     "196": {
       "card": {
@@ -2795,7 +2815,9 @@
       },
       "signal": null,
       "signal_note": "no WATCH row names a signal",
-      "readings": []
+      "readings": [],
+      "verdict": null,
+      "verdict_note": "no VERDICT row is written"
     },
     "109": {
       "card": {
@@ -3006,7 +3028,9 @@
       },
       "signal": null,
       "signal_note": "no WATCH row names a signal",
-      "readings": []
+      "readings": [],
+      "verdict": null,
+      "verdict_note": "no VERDICT row is written"
     },
     "172": {
       "card": {
@@ -3225,7 +3249,9 @@
       },
       "signal": null,
       "signal_note": "no WATCH row names a signal",
-      "readings": []
+      "readings": [],
+      "verdict": null,
+      "verdict_note": "no VERDICT row is written"
     },
     "262": {
       "card": {
@@ -3407,7 +3433,9 @@
       },
       "signal": null,
       "signal_note": "no WATCH row names a signal",
-      "readings": []
+      "readings": [],
+      "verdict": null,
+      "verdict_note": "no VERDICT row is written"
     },
     "267": {
       "card": {
@@ -3589,7 +3617,9 @@
       },
       "signal": null,
       "signal_note": "no WATCH row names a signal",
-      "readings": []
+      "readings": [],
+      "verdict": null,
+      "verdict_note": "no VERDICT row is written"
     },
     "253": {
       "card": {
@@ -3816,7 +3846,9 @@
       },
       "signal": null,
       "signal_note": "no WATCH row names a signal",
-      "readings": []
+      "readings": [],
+      "verdict": null,
+      "verdict_note": "no VERDICT row is written"
     },
     "241": {
       "card": {
@@ -4051,7 +4083,9 @@
       },
       "signal": null,
       "signal_note": "no WATCH row names a signal",
-      "readings": []
+      "readings": [],
+      "verdict": null,
+      "verdict_note": "no VERDICT row is written"
     },
     "228": {
       "card": {
@@ -4220,7 +4254,9 @@
       },
       "signal": null,
       "signal_note": "no WATCH row names a signal",
-      "readings": []
+      "readings": [],
+      "verdict": null,
+      "verdict_note": "no VERDICT row is written"
     },
     "237": {
       "card": {
@@ -4443,7 +4479,9 @@
       },
       "signal": null,
       "signal_note": "no WATCH row names a signal",
-      "readings": []
+      "readings": [],
+      "verdict": null,
+      "verdict_note": "no VERDICT row is written"
     },
     "174": {
       "card": {
@@ -4662,7 +4700,9 @@
       },
       "signal": null,
       "signal_note": "no WATCH row names a signal",
-      "readings": []
+      "readings": [],
+      "verdict": null,
+      "verdict_note": "no VERDICT row is written"
     },
     "259": {
       "card": {
@@ -4894,7 +4934,9 @@
       },
       "signal": null,
       "signal_note": "the WATCH row names no reader (url, file, command or owner). The grammar: WATCH: <what> — url|file|command|owner <target> [expect <value>] by <YYYY-MM-DD> [every <N>h|<N>d]",
-      "readings": []
+      "readings": [],
+      "verdict": null,
+      "verdict_note": "no VERDICT row is written"
     },
     "223": {
       "card": {
@@ -5105,7 +5147,9 @@
       },
       "signal": null,
       "signal_note": "no WATCH row names a signal",
-      "readings": []
+      "readings": [],
+      "verdict": null,
+      "verdict_note": "no VERDICT row is written"
     },
     "219": {
       "card": {
@@ -5349,7 +5393,9 @@
       },
       "signal": null,
       "signal_note": "the WATCH row names no reader (url, file, command or owner). The grammar: WATCH: <what> — url|file|command|owner <target> [expect <value>] by <YYYY-MM-DD> [every <N>h|<N>d]",
-      "readings": []
+      "readings": [],
+      "verdict": null,
+      "verdict_note": "no VERDICT row is written"
     },
     "147": {
       "card": {
@@ -5520,7 +5566,9 @@
       },
       "signal": null,
       "signal_note": "no WATCH row names a signal",
-      "readings": []
+      "readings": [],
+      "verdict": null,
+      "verdict_note": "no VERDICT row is written"
     },
     "139": {
       "card": {
@@ -5747,7 +5795,9 @@
       },
       "signal": null,
       "signal_note": "no WATCH row names a signal",
-      "readings": []
+      "readings": [],
+      "verdict": null,
+      "verdict_note": "no VERDICT row is written"
     },
     "149": {
       "card": {
@@ -5916,7 +5966,9 @@
       },
       "signal": null,
       "signal_note": "no WATCH row names a signal",
-      "readings": []
+      "readings": [],
+      "verdict": null,
+      "verdict_note": "no VERDICT row is written"
     },
     "134": {
       "card": {
@@ -6138,7 +6190,9 @@
       },
       "signal": null,
       "signal_note": "the WATCH row names no reader (url, file, command or owner). The grammar: WATCH: <what> — url|file|command|owner <target> [expect <value>] by <YYYY-MM-DD> [every <N>h|<N>d]",
-      "readings": []
+      "readings": [],
+      "verdict": null,
+      "verdict_note": "no VERDICT row is written"
     },
     "201": {
       "card": {
@@ -6309,7 +6363,9 @@
       },
       "signal": null,
       "signal_note": "no WATCH row names a signal",
-      "readings": []
+      "readings": [],
+      "verdict": null,
+      "verdict_note": "no VERDICT row is written"
     }
   }
 }

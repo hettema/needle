@@ -18,7 +18,7 @@ from sqlalchemy.engine import Engine
 from sqlalchemy.orm import Session
 
 from board.import_01 import Import01
-from board.moves import GroupLayout, MoveRefused, apply_move
+from board.moves import GroupLayout, MoveRefused, MoveResult, apply_move
 from board.reconcile import Effects
 from board.signals import read_or_decline
 from domain.audit import AuditEntry, AuditKind
@@ -55,9 +55,12 @@ from infrastructure.schema import (
 
 _COLUMN_ORDER: dict[str, int] = {d.column.value: i for i, d in enumerate(COLUMN_DEFINITIONS)}
 _MIGRATIONS = Path(__file__).parent / "migrations"
-ONE_PER_CARD: frozenset[RowKind] = frozenset({RowKind.DELIVERED, RowKind.WATCH, RowKind.REVIEW})
+ONE_PER_CARD: frozenset[RowKind] = frozenset(
+    {RowKind.DELIVERED, RowKind.WATCH, RowKind.REVIEW, RowKind.VERDICT}
+)
 """Record rows a card carries once: writing one again replaces it, so a
-close written twice never says two things about what shipped."""
+close written twice never says two things about what shipped, and a card
+never carries two verdicts."""
 ROW_DETAIL_LENGTH = 140
 
 
@@ -216,44 +219,88 @@ class Store:
         with Session(self.engine) as session, session.begin():
             if session.get(ProjectRow, slug) is None:
                 raise StoreRefusal(f'No project "{slug}" is on the board.')
-            if to.column == Column.EXECUTED:
-                rows = _rows_by_card(session, slug, number).get(number, [])
-                watch = next((r.text for r in rows if r.kind == RowKind.WATCH), None)
-                signal, why = read_or_decline(watch)
-                if signal is None:
-                    raise StoreRefusal(
-                        f"#{number} cannot enter Executed: {why}. Done is a closed loop, and "
-                        "the loop starts with the signal named."
-                    )
-            if to.group is None:
-                _landing_group(session, slug, to.column)
-            layout = _layout(session, slug)
-            try:
-                result = apply_move(layout, number, to)
-            except MoveRefused as refusal:
-                raise StoreRefusal(str(refusal)) from refusal
-            if result.changed:
-                for group in (result.source, result.target):
-                    _write_positions(session, slug, group)
-                said = _describe_move(result.from_place, result.to_place)
+            _move(session, slug, number, to, actor, at, detail=detail, evidence=evidence)
+            session.flush()
+            return _card_now(session, slug, number)
+
+    def rule_on_verdict(
+        self,
+        slug: str,
+        number: int,
+        at: datetime,
+        *,
+        accepted: bool,
+        word: str | None,
+        to: Place | None,
+        replace: bool,
+        said: str,
+    ) -> Card:
+        """The owner's ruling on a card's verdict, in one act (plan 05): the
+        VERDICT row becomes a RULED row carrying his word, and the card moves
+        where the verdict said, or stays. `replace` re-places a card that
+        stays by the owner's own hand, so a placement the board doubted
+        becomes his word and is trusted from here — that is what accepting
+        "stays" on a doubted card means."""
+        with Session(self.engine) as session, session.begin():
+            card = session.get(CardRow, (slug, number))
+            if card is None:
+                raise StoreRefusal(f"There is no card #{number} on this board.")
+            existing = session.scalars(
+                select(CardRowRow)
+                .where(CardRowRow.project_slug == slug, CardRowRow.card_number == number)
+                .order_by(CardRowRow.position)
+            ).all()
+            verdict_row = next((r for r in existing if r.kind == RowKind.VERDICT.value), None)
+            if verdict_row is None:
+                raise StoreRefusal(f"#{number} carries no verdict to rule on.")
+            text = verdict_row.text
+            session.delete(verdict_row)
+            verb = "accepted" if accepted else "overturned"
+            ruled = (
+                f"accepted: {text}"
+                if accepted
+                else f"overturned: {word} — the verdict read: {text}"
+            )
+            session.add(
+                CardRowRow(
+                    project_slug=slug,
+                    card_number=number,
+                    position=max([r.position for r in existing], default=-1) + 1,
+                    kind=RowKind.RULED.value,
+                    text=ruled,
+                )
+            )
+            _audit(
+                session,
+                slug,
+                number,
+                at=at,
+                actor=Actor.OWNER,
+                kind=AuditKind.ROW,
+                from_place=None,
+                to_place=None,
+                detail=f"VERDICT {verb}: {text}" + (f" — his word: {word}" if word else ""),
+            )
+            session.flush()
+            if to is not None:
+                _move(session, slug, number, to, Actor.OWNER, at, detail=said, evidence=None)
+            elif replace:
+                group = session.get(GroupRow, card.group_id)
+                assert group is not None
+                place = Place(column=Column(group.column), group=group.name, position=card.position)
                 _audit(
                     session,
                     slug,
                     number,
                     at=at,
-                    actor=actor,
+                    actor=Actor.OWNER,
                     kind=AuditKind.MOVED,
-                    from_place=result.from_place,
-                    to_place=result.to_place,
-                    detail=f"{said} — {detail}" if detail else said,
-                    evidence=evidence,
+                    from_place=place,
+                    to_place=place,
+                    detail=f"Kept in {_where(place)} — {said}",
                 )
             session.flush()
-            row = session.get(CardRow, (slug, number))
-            assert row is not None
-            group_row = session.get(GroupRow, row.group_id)
-            assert group_row is not None
-            return _card(row, group_row, _rows_by_card(session, slug, number).get(number, []))
+            return _card_now(session, slug, number)
 
     def apply_effects(
         self, slug: str, effects: Effects, *, origin: CardOrigin, at: datetime
@@ -290,7 +337,7 @@ class Store:
                 card.link_kind = relinked.document.kind.value
                 card.link_stem = relinked.document.stem
                 card.link_title = relinked.document.title
-                card.link_archived = False
+                card.link_archived = relinked.archived
                 if relinked.document.path not in card.citations:
                     card.citations = [*card.citations, relinked.document.path]
                 _audit(
@@ -510,9 +557,7 @@ class Store:
                 + (f" — it read: {was}" if was is not None else ""),
             )
             session.flush()
-            group_row = session.get(GroupRow, card.group_id)
-            assert group_row is not None
-            return _card(card, group_row, _rows_by_card(session, slug, number).get(number, []))
+            return _card_now(session, slug, number)
 
     def note(
         self, slug: str, number: int, kind: AuditKind, actor: Actor, at: datetime, detail: str
@@ -946,6 +991,63 @@ def _rows_by_card(session: Session, slug: str, number: int | None = None) -> dic
     for row in session.scalars(query):
         out.setdefault(row.card_number, []).append(Row(kind=RowKind(row.kind), text=row.text))
     return out
+
+
+def _card_now(session: Session, slug: str, number: int) -> Card:
+    """The card as the transaction now holds it."""
+    row = session.get(CardRow, (slug, number))
+    assert row is not None
+    group = session.get(GroupRow, row.group_id)
+    assert group is not None
+    return _card(row, group, _rows_by_card(session, slug, number).get(number, []))
+
+
+def _move(
+    session: Session,
+    slug: str,
+    number: int,
+    to: Place,
+    actor: Actor,
+    at: datetime,
+    *,
+    detail: str | None,
+    evidence: Evidence | None,
+) -> MoveResult:
+    """The move inside a transaction: the Executed guard, the landing group,
+    the positions and the audit row. A move that changes nothing writes nothing."""
+    if to.column == Column.EXECUTED:
+        rows = _rows_by_card(session, slug, number).get(number, [])
+        watch = next((r.text for r in rows if r.kind == RowKind.WATCH), None)
+        signal, why = read_or_decline(watch)
+        if signal is None:
+            raise StoreRefusal(
+                f"#{number} cannot enter Executed: {why}. Done is a closed loop, and "
+                "the loop starts with the signal named."
+            )
+    if to.group is None:
+        _landing_group(session, slug, to.column)
+    layout = _layout(session, slug)
+    try:
+        result = apply_move(layout, number, to)
+    except MoveRefused as refusal:
+        raise StoreRefusal(str(refusal)) from refusal
+    if result.changed:
+        for group in (result.source, result.target):
+            _write_positions(session, slug, group)
+        said = _describe_move(result.from_place, result.to_place)
+        _audit(
+            session,
+            slug,
+            number,
+            at=at,
+            actor=actor,
+            kind=AuditKind.MOVED,
+            from_place=result.from_place,
+            to_place=result.to_place,
+            detail=f"{said} — {detail}" if detail else said,
+            evidence=evidence,
+        )
+    return result
 
 
 def _layout(session: Session, slug: str) -> list[GroupLayout]:

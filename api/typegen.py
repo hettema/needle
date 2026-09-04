@@ -33,6 +33,7 @@ MODULES: list[str] = [
     "signal",
     "lane",
     "evidence",
+    "verdict",
 ]
 
 TYPES_DIR = Path(__file__).resolve().parent.parent / "frontend" / "src" / "types"

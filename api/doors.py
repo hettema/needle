@@ -14,14 +14,16 @@ from domain.audit import AuditKind
 from domain.board import CardDetail
 from domain.card import Actor, Place
 from domain.column import Column
-from domain.evidence import Evidence
+from domain.evidence import Evidence, EvidenceState
 from domain.gate import Gate
 from domain.lane import DoorResult, LaneRecord, LaneState
 from domain.launch import LaunchVerdict, Start
 from domain.row import Row, RowKind
+from domain.verdict import EvidenceClass, VerdictsRuled
 from domain.window import WindowKind
 from infrastructure import clock
 from infrastructure.live import Live
+from infrastructure.store import StoreRefusal
 from runtime.service import Runtime
 from runtime.windows import WindowRefused
 
@@ -342,6 +344,78 @@ class Doors:
         return DoorResult(
             door="signal", said=f"Read as {words.split(' as ')[1]}; moved to {column}."
         )
+
+    # ── the owner rules on a verdict ───────────────────────────────────
+
+    def accept(self, slug: str, number: int) -> DoorResult:
+        """The owner accepts the card's verdict: the machine moves the card
+        where it said, with the verdict's reason on the history row and the
+        owner named as the acceptor; a verdict that stays is his word that
+        the card belongs where it is (plan 05, item 2)."""
+        detail = self._detail(slug, number)
+        verdict = detail.verdict
+        if verdict is None:
+            raise DoorRefused(
+                f"#{number} carries no verdict the board can act on: {detail.verdict_note}"
+            )
+        card = detail.card
+        to = (
+            Place(column=verdict.to, group=None, position=0)
+            if verdict.to is not None and verdict.to != card.place.column
+            else None
+        )
+        said = f"accepted the verdict: {verdict.evidence_class.value} — {verdict.evidence}"
+        replace = to is None and detail.summary.standing.state == EvidenceState.DOUBTED
+        after = self.live.rule_on_verdict(
+            slug, number, accepted=True, word=None, to=to, replace=replace, said=said
+        )
+        where = (
+            f"moved to {after.place.column}" if to is not None else f"stays in {after.place.column}"
+        )
+        return DoorResult(
+            door="accept",
+            said=f"#{number} {where}: {verdict.evidence_class.value} — {verdict.evidence}",
+        )
+
+    def overturn(self, slug: str, number: int, word: str) -> DoorResult:
+        """The owner overturns the card's verdict: the card stays and his word
+        is recorded on it in a RULED row."""
+        word = word.strip()
+        if not word:
+            raise DoorRefused("An overturn without a word records nothing; say why.")
+        detail = self._detail(slug, number)
+        if detail.verdict is None:
+            raise DoorRefused(
+                f"#{number} carries no verdict the board can act on: {detail.verdict_note}"
+            )
+        after = self.live.rule_on_verdict(
+            slug,
+            number,
+            accepted=False,
+            word=word,
+            to=None,
+            replace=False,
+            said=f"overturned the verdict: {word}",
+        )
+        return DoorResult(
+            door="overturn", said=f"#{number} stays in {after.place.column}; your word: {word}"
+        )
+
+    def accept_class(self, slug: str, evidence_class: EvidenceClass) -> VerdictsRuled:
+        """Accept every unread verdict in one class, each as its own act; a
+        card the store refuses stays with the refusal's words in the answer."""
+        board = self.live.board(slug)
+        accepted = 0
+        refused: list[str] = []
+        for line in board.verdicts:
+            if line.verdict.evidence_class != evidence_class:
+                continue
+            try:
+                self.accept(slug, line.number)
+                accepted += 1
+            except (DoorRefused, StoreRefusal) as why:
+                refused.append(f"#{line.number}: {why}")
+        return VerdictsRuled(evidence_class=evidence_class, accepted=accepted, refused=refused)
 
     # ── a session's close ──────────────────────────────────────────────
 

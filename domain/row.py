@@ -42,6 +42,9 @@ class RowKind(StrEnum):
     RULING = "RULING"
     RULED = "RULED"
     DONE = "DONE"
+    VERDICT = "VERDICT"
+    """A proposal on the card's own fate, unread until the owner accepts or
+    overturns it (plan 05)."""
 
 
 ROW_HALF: dict[RowKind, RowHalf] = {
@@ -68,6 +71,7 @@ ROW_HALF: dict[RowKind, RowHalf] = {
     RowKind.RULING: RowHalf.RECORD,
     RowKind.RULED: RowHalf.RECORD,
     RowKind.DONE: RowHalf.RECORD,
+    RowKind.VERDICT: RowHalf.RECORD,
 }
 
 LEAD_ROWS: frozenset[RowKind] = frozenset({RowKind.TODAY})
@@ -76,7 +80,9 @@ LEAD_ROWS: frozenset[RowKind] = frozenset({RowKind.TODAY})
 LANDED_ROWS: frozenset[RowKind] = frozenset({RowKind.DELIVERED})
 """The row that says it shipped, drawn in green."""
 
-ASK_ROWS: frozenset[RowKind] = frozenset({RowKind.WATCH, RowKind.YOUR_TIME, RowKind.ASK, RowKind.Q})
+ASK_ROWS: frozenset[RowKind] = frozenset(
+    {RowKind.WATCH, RowKind.YOUR_TIME, RowKind.ASK, RowKind.Q, RowKind.VERDICT}
+)
 """Rows that are the owner's move, drawn in amber."""
 
 

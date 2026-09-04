@@ -3,7 +3,7 @@
 export const ROW_HALF_VALUES = ["essence", "brief", "record"] as const;
 export type RowHalf = (typeof ROW_HALF_VALUES)[number];
 
-export const ROW_KIND_VALUES = ["SERVES", "TODAY", "COST", "YOUR TIME", "WAITS", "PLAN", "REC", "Q", "ASK", "WHY", "WHY NOW", "STAKES", "STATE", "ITEMS", "OPEN", "WHAT", "WEEK", "DELIVERED", "WATCH", "REVIEW", "RULING", "RULED", "DONE"] as const;
+export const ROW_KIND_VALUES = ["SERVES", "TODAY", "COST", "YOUR TIME", "WAITS", "PLAN", "REC", "Q", "ASK", "WHY", "WHY NOW", "STAKES", "STATE", "ITEMS", "OPEN", "WHAT", "WEEK", "DELIVERED", "WATCH", "REVIEW", "RULING", "RULED", "DONE", "VERDICT"] as const;
 export type RowKind = (typeof ROW_KIND_VALUES)[number];
 
 export interface Row {
@@ -35,10 +35,11 @@ export const ROW_HALF: Record<RowKind, RowHalf> = {
   "RULING": "record",
   "RULED": "record",
   "DONE": "record",
+  "VERDICT": "record",
 };
 
 export const LEAD_ROWS: readonly RowKind[] = ["TODAY"];
 
 export const LANDED_ROWS: readonly RowKind[] = ["DELIVERED"];
 
-export const ASK_ROWS: readonly RowKind[] = ["ASK", "Q", "WATCH", "YOUR TIME"];
+export const ASK_ROWS: readonly RowKind[] = ["ASK", "Q", "VERDICT", "WATCH", "YOUR TIME"];

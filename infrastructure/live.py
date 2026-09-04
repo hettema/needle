@@ -287,6 +287,31 @@ class Live:
         self.bump()
         return card
 
+    def rule_on_verdict(
+        self,
+        slug: str,
+        number: int,
+        *,
+        accepted: bool,
+        word: str | None,
+        to: Place | None,
+        replace: bool,
+        said: str,
+    ) -> Card:
+        self._live(slug)
+        card = self.store.rule_on_verdict(
+            slug,
+            number,
+            self.now(),
+            accepted=accepted,
+            word=word,
+            to=to,
+            replace=replace,
+            said=said,
+        )
+        self.bump()
+        return card
+
     def note(self, slug: str, number: int, kind: AuditKind, actor: Actor, detail: str) -> None:
         self._live(slug)
         self.store.note(slug, number, kind, actor, self.now(), detail)

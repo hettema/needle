@@ -31,10 +31,14 @@ class Renamed(BaseModel):
 
 
 class Relinked(BaseModel):
-    """A plan naming `**Card:** #N` becomes that card's document."""
+    """A document naming `**Card:** #N` becomes that card's document."""
 
     card_number: int
     document: DocumentRef
+    archived: bool
+    """The document sits in done/: the link is born archived, so a shipped
+    card whose plan named it only at the close is not doubted for want of a
+    plan (three of Hello Revenue's Executed cards were, 2026-09-04)."""
 
 
 class Archived(BaseModel):
@@ -103,18 +107,39 @@ def reconcile(index: CorpusIndex, cards: list[Card]) -> Effects:
                 Renamed(card_number=card.number, old_stem=card.link.stem, document=ref(match))
             )
 
-    for document in unlinked_docs:
-        if (document.kind, document.stem) in claimed:
-            continue
+    def names_its_card(document: Document) -> Card | None:
         target = by_number.get(document.card_ref) if document.card_ref is not None else None
         if target is not None and (
             target.link is None
             or (target.link.kind == DocumentKind.SUGGESTION and document.kind == DocumentKind.PLAN)
         ):
-            claimed.add((document.kind, document.stem))
-            relinked.append(Relinked(card_number=target.number, document=ref(document)))
+            return target
+        return None
+
+    for document in unlinked_docs:
+        if (document.kind, document.stem) in claimed:
             continue
         claimed.add((document.kind, document.stem))
+        target = names_its_card(document)
+        if target is not None:
+            relinked.append(
+                Relinked(card_number=target.number, document=ref(document), archived=False)
+            )
+            continue
         born.append(Born(document=ref(document), column=BIRTH_COLUMN[document.kind]))
+
+    # An archived document is never born (the corpus is the only way in, and
+    # done/ is the record of what already came in), but one that names its
+    # card links to it: a plan written at the close, archived in the same
+    # fold, is still the card's document.
+    for document in index.archived():
+        if (document.kind, document.stem) in linked or (document.kind, document.stem) in claimed:
+            continue
+        target = names_its_card(document)
+        if target is not None and target.number not in {r.card_number for r in relinked}:
+            claimed.add((document.kind, document.stem))
+            relinked.append(
+                Relinked(card_number=target.number, document=ref(document), archived=True)
+            )
 
     return Effects(renamed=renamed, relinked=relinked, archived=archived, born=born)

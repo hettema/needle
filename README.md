@@ -97,6 +97,20 @@ row that names none of the four readers is refused with the grammar in the
 message. Every machine placement names the predicate it rests on and is
 re-tested on every read; a card whose evidence is gone says so on the page.
 
+The board is cleaned by evidence, never by discarding: every open card can
+carry one verdict — a class of evidence, the evidence in a sentence, and
+where the card should go — in the grammar `VERDICT: <class> — <evidence> →
+Done|Not now|Decision moment|Backlog|Planned|Up next|stays`, the class one
+of `shipped, signal read`, `shipped, signal owner-only`, `built under
+another name`, `superseded`, `doubted`, `stale plan`, `live and open`.
+`needle verdicts SLUG --write` writes the ones the board's own facts settle;
+a session writes the rest through `needle row SLUG N VERDICT "…"` after
+reading the corpus. Nothing moves on a verdict: the attention line says how
+many wait unread, the Triage lens lists them grouped by class, and the owner
+accepts them (by class or one at a time) or overturns them with his word;
+an accepted verdict moves the card with its reason on the history row and
+the owner named as the acceptor.
+
 ## Check it
 
 ```bash

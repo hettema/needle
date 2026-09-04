@@ -145,3 +145,33 @@ def test_a_second_plan_naming_a_planned_card_is_its_own_card():
 def test_a_plan_naming_an_unknown_card_is_born_as_usual():
     effects = reconcile(index(doc(DocumentKind.PLAN, "p1", "Plan one", card_ref=999)), [])
     assert [b.document.stem for b in effects.born] == ["p1"]
+
+
+def test_an_archived_plan_naming_a_card_links_to_it_archived_and_is_never_born():
+    """A plan written at the close and archived in the same fold is still the
+    card's document; three of Hello Revenue's shipped cards were doubted for
+    want of a plan they had (2026-09-04)."""
+    link = DocumentLink(kind=DocumentKind.SUGGESTION, stem="s1", title="Idea", archived=False)
+    effects = reconcile(
+        index(
+            doc(DocumentKind.PLAN, "p1", "Plan one", archived=True, card_ref=7),
+            doc(DocumentKind.PLAN, "p2", "Plan two", archived=True, card_ref=8),
+            doc(DocumentKind.SUGGESTION, "s1", "Idea"),
+        ),
+        [card(7, None, Column.EXECUTED), card(8, link, Column.EXECUTED)],
+    )
+    assert [(r.card_number, r.document.stem, r.archived) for r in effects.relinked] == [
+        (7, "p1", True),
+        (8, "p2", True),
+    ]
+    assert effects.born == []
+    # A card that already has a plan keeps it: the archived one is not its document.
+    planned = DocumentLink(kind=DocumentKind.PLAN, stem="p0", title="Plan zero", archived=False)
+    effects = reconcile(
+        index(
+            doc(DocumentKind.PLAN, "p0", "Plan zero"),
+            doc(DocumentKind.PLAN, "p1", "Plan one", archived=True, card_ref=7),
+        ),
+        [card(7, planned)],
+    )
+    assert effects.relinked == [] and effects.born == []

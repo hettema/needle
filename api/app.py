@@ -24,6 +24,7 @@ from domain.card import Move
 from domain.hook import HookEvent, HookPosted
 from domain.lane import DoorResult
 from domain.project import Project
+from domain.verdict import EvidenceClass, VerdictsRuled
 from infrastructure import clock
 from infrastructure.live import Live
 from infrastructure.paths import db_path
@@ -47,6 +48,10 @@ class StartBody(BaseModel):
 
 class SignalAnswer(BaseModel):
     delivered: bool
+
+
+class ClassBody(BaseModel):
+    evidence_class: EvidenceClass
 
 
 class HooksReceived(BaseModel):
@@ -199,6 +204,25 @@ def create_app(store: Store | None = None, *, dist: Path | None = FRONTEND_DIST)
         return await through_door(
             request, slug, lambda doors: doors.signal(slug, number, delivered=body.delivered)
         )
+
+    @app.post("/api/projects/{slug}/cards/{number}/accept", response_model=DoorResult)
+    async def accept(slug: str, number: int, request: Request) -> DoorResult:
+        return await through_door(request, slug, lambda doors: doors.accept(slug, number))
+
+    @app.post("/api/projects/{slug}/cards/{number}/overturn", response_model=DoorResult)
+    async def overturn(slug: str, number: int, body: Answer, request: Request) -> DoorResult:
+        return await through_door(
+            request, slug, lambda doors: doors.overturn(slug, number, body.text)
+        )
+
+    @app.post("/api/projects/{slug}/triage/accept", response_model=VerdictsRuled)
+    async def accept_class(slug: str, body: ClassBody, request: Request) -> VerdictsRuled:
+        """Accept every unread verdict in one class, under the loops' lock like any door."""
+        await live_for(request, slug)
+        loops: Loops = request.app.state.loops
+        doors: Doors = request.app.state.doors
+        async with loops.lock:
+            return await asyncio.to_thread(doors.accept_class, slug, body.evidence_class)
 
     @app.get("/api/projects/{slug}/cards/{number}/brief", response_class=PlainTextResponse)
     async def brief(slug: str, number: int, request: Request) -> str:

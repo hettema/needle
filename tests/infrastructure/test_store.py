@@ -219,6 +219,7 @@ def test_renames_relinks_and_archives_move_the_link_and_leave_a_row(
                     path="docs/plans/told.md",
                     title="The skipper is told what the office decided",
                 ),
+                archived=False,
             )
         ],
         archived=[
