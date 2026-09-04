@@ -710,9 +710,10 @@ class Doors:
                 "docs/plans/done/ first, or name another column."
             )
         lane = live.snapshot.lanes.get(number) if live.snapshot else None
-        # Read before any row is written: a transcript that cannot be read
-        # must refuse the whole close, never leave DELIVERED on a card that
-        # did not move (review pass 2).
+        # Read before any row is written, so nothing that goes wrong reading
+        # the lane leaves DELIVERED on a card that did not move (review
+        # pass 2; a file the board cannot read is skipped, and a directory
+        # it cannot list would raise here, before the first row).
         handed = self._handed_out(slug, number, lane)
         self.live.add_row(slug, number, Row(kind=RowKind.DELIVERED, text=delivered.strip()), actor)
         self.live.add_row(slug, number, Row(kind=RowKind.WATCH, text=watch.strip()), actor)
