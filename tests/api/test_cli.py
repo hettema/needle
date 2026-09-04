@@ -113,3 +113,16 @@ def test_verdicts_proposes_what_the_boards_facts_settle_and_writes_them_on_reque
     # A card carrying a verdict is not proposed again.
     assert main(["verdicts", "harbourmaster"]) == 0
     assert "#223 " not in capsys.readouterr().out
+
+
+def test_kinds_prints_every_live_suggestions_kind_and_why(corpus: Path, database: Path, capsys):
+    """Plan 06, item 2: the table of guesses is printed, never tracked — a
+    project's titles stay in its own repository."""
+    main(["add", str(corpus)])
+    capsys.readouterr()
+    assert main(["kinds", "harbourmaster"]) == 0
+    out = capsys.readouterr().out
+    assert out.splitlines()[0].endswith("read from their text, 1 of them as defects")
+    assert "defect  docs/slice-suggestions/" in out and "(its title or Found-by)" in out
+    assert "idea    docs/slice-suggestions/" in out and "(no sign of a defect)" in out
+    assert main(["kinds", "nowhere"]) == 1

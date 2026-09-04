@@ -13,6 +13,7 @@ needle sync [SLUG]                       # level each main checkout with origin/
 needle signals [SLUG]                    # read every due signal now
 needle lanes SLUG                        # every card's lane, as the board reads it
 needle verdicts SLUG [--write]           # the verdicts the board's own facts settle (plan 05)
+needle kinds SLUG                        # every live suggestion's kind as the board reads it (plan 06)
 needle watercooler SLUG [N "text"]       # read the watercooler, or say one line as #N's lane
 
 Rows are written to the store directly — the one writer — and the running
@@ -37,6 +38,7 @@ from board.verdicts import CLOSED, VerdictUnreadable, machine_verdict, parse_ver
 from domain.audit import AuditKind
 from domain.card import Actor
 from domain.column import Column
+from domain.document import DocumentKind, SuggestionKind
 from domain.lane import HANDS_ON, LaneState
 from domain.row import Row, RowKind
 from domain.verdict import EvidenceClass
@@ -394,6 +396,31 @@ def verdicts(
     return 0
 
 
+def kinds(args: argparse.Namespace, live: Live, runtime: Runtime, loops: Loops, doors: Doors) -> int:
+    """Every live suggestion's kind as the board reads it (plan 06, item 2):
+    from its `Kind:` line, or guessed from its text where there is none —
+    the table of guesses the owner checks, printed rather than tracked,
+    since a project's titles stay in that project's repository."""
+    project = live.projects.get(args.slug)
+    if project is None:
+        print(f'no project "{args.slug}" is on the board', file=sys.stderr)
+        return 1
+    rows = [d for d in project.index.live() if d.kind == DocumentKind.SUGGESTION]
+    lined = sum(1 for d in rows if any(f.key.lower() == "kind" for f in d.head_fields))
+    guessed = [d for d in rows if not any(f.key.lower() == "kind" for f in d.head_fields)]
+    defects = sum(1 for d in guessed if d.suggestion_kind == SuggestionKind.DEFECT)
+    print(
+        f"{len(rows)} live suggestions; {lined} with a Kind line; {len(guessed)} read from "
+        f"their text, {defects} of them as defects"
+    )
+    for document in rows:
+        line = next((f.value for f in document.head_fields if f.key.lower() == "kind"), None)
+        kind = document.suggestion_kind.value if document.suggestion_kind else "-"
+        why = f"Kind: {line}" if line else ("its title or Found-by" if kind == "defect" else "no sign of a defect")
+        print(f"{kind:<7} {document.path}  {document.title}  ({why})")
+    return 0
+
+
 def register(sub: "argparse._SubParsersAction[argparse.ArgumentParser]") -> None:
     p_card = sub.add_parser("card", help="the card as text: the brief a lane opens with")
     p_card.add_argument("slug")
@@ -461,6 +488,12 @@ def register(sub: "argparse._SubParsersAction[argparse.ArgumentParser]") -> None
     p_verdicts.add_argument("slug")
     p_verdicts.add_argument("--write", action="store_true", help="write them as VERDICT rows")
     p_verdicts.set_defaults(run=_with_board(verdicts))
+
+    p_kinds = sub.add_parser(
+        "kinds", help="every live suggestion's kind as the board reads it, and why"
+    )
+    p_kinds.add_argument("slug")
+    p_kinds.set_defaults(run=_with_board(kinds))
 
     p_water = sub.add_parser(
         "watercooler", help="the project's watercooler: read it, or say one line as a card's lane"
