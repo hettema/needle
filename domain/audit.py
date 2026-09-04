@@ -18,6 +18,22 @@ class AuditKind(StrEnum):
     RENAMED = "renamed"
     ARCHIVED = "archived"
     RETIRED = "retired"
+    STARTED = "started"
+    """A lane was launched for the card."""
+    ROW = "row"
+    """A row was written on the card by a session or the owner."""
+    ANSWERED = "answered"
+    DISCUSSED = "discussed"
+    STOPPED = "stopped"
+    RESCUED = "rescued"
+    """The runtime moved the lane's session to another rung."""
+    ENDED = "ended"
+    """The lane's session ended, with the machine's reason."""
+    SIGNAL = "signal"
+    """A reading of the card's WATCH signal, or the owner's answer to it."""
+    FOLDED = "folded"
+    SYNCED = "synced"
+    """The trunk or main checkout was brought level after a fold."""
 
 
 class AuditEntry(BaseModel):

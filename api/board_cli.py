@@ -1,0 +1,328 @@
+"""`needle`'s verbs for sessions and the owner's terminal: the card as a
+brief, the rows a session writes back, the close, the fold, a start that
+goes through the running board, the hook's registration, and the loops run
+by hand.
+
+needle card SLUG N                       # the brief a lane opens with
+needle row SLUG N KIND "text"            # one row on the card
+needle close SLUG N --delivered … --watch … [--review PATH] [--column COL]
+needle fold [--main] [--worktree PATH]   # fast-forward push to origin/develop, trunk synced
+needle start-card SLUG N [--anyway]      # Start, through the running board
+needle hook install REPO                 # register the session hook in REPO/.claude/settings.json
+needle sync [SLUG]                       # level each main checkout with origin/develop now
+needle signals [SLUG]                    # read every due signal now
+needle lanes SLUG                        # every card's lane, as the board reads it
+
+Rows are written to the store directly — the one writer — and the running
+board hears the store change; a start goes through the server so the board
+watches the launch exactly as the button's.
+"""
+
+import argparse
+import contextlib
+import json
+import sys
+import urllib.error
+import urllib.request
+from collections.abc import Callable
+from pathlib import Path
+
+from api.doors import REPO_ROOT, DoorFailed, DoorRefused, Doors
+from api.loops import Loops, project_of_cwd
+from domain.audit import AuditKind
+from domain.card import Actor
+from domain.column import Column
+from domain.row import Row, RowKind
+from infrastructure import clock
+from infrastructure.live import Live
+from infrastructure.paths import db_path
+from infrastructure.store import Store, StoreRefusal
+from runtime.service import Runtime
+
+DEFAULT_URL = "http://127.0.0.1:8480"
+HOOK_EVENTS = ("SessionStart", "Stop", "SessionEnd", "StopFailure")
+HOOK_SCRIPT = REPO_ROOT / "hooks" / "needle_hook.py"
+
+
+def _board() -> tuple[Store, Live, Runtime, Loops, Doors]:
+    store = Store(db_path())
+    live = Live(store)
+    live.load()
+    runtime = Runtime(store)
+    loops = Loops(live, runtime)
+    return store, live, runtime, loops, Doors(live, runtime, loops)
+
+
+def _with_board(verb: Callable[..., int]) -> Callable[[argparse.Namespace], int]:
+    def run(args: argparse.Namespace) -> int:
+        store, live, runtime, loops, doors = _board()
+        try:
+            return verb(args, live, runtime, loops, doors)
+        except (StoreRefusal, DoorRefused, DoorFailed) as error:
+            print(str(error), file=sys.stderr)
+            return 1
+        finally:
+            store.close()
+
+    return run
+
+
+def hook_command() -> str:
+    return f"python3 {HOOK_SCRIPT}"
+
+
+# ── the verbs ──────────────────────────────────────────────────────────
+
+
+def card(args: argparse.Namespace, live: Live, runtime: Runtime, loops: Loops, doors: Doors) -> int:
+    detail = live.detail(args.slug, args.number)
+    print(
+        doors.brief_for_lane(detail, args.slug, overrode=None) if args.lane else _brief(live, args)
+    )
+    return 0
+
+
+def _brief(live: Live, args: argparse.Namespace) -> str:
+    from board.brief import render
+
+    return render(live.detail(args.slug, args.number), live.projects[args.slug].project)
+
+
+def row(args: argparse.Namespace, live: Live, runtime: Runtime, loops: Loops, doors: Doors) -> int:
+    kind = RowKind(args.kind.upper())
+    text = args.text.strip()
+    if not text:
+        print("an empty row says nothing", file=sys.stderr)
+        return 1
+    live.add_row(args.slug, args.number, Row(kind=kind, text=text), Actor.SESSION)
+    print(f"#{args.number}: {kind.value} written")
+    return 0
+
+
+def close(
+    args: argparse.Namespace, live: Live, runtime: Runtime, loops: Loops, doors: Doors
+) -> int:
+    result = doors.close(
+        args.slug,
+        args.number,
+        delivered=args.delivered,
+        watch=args.watch,
+        review=args.review,
+        column=Column(args.column) if args.column else None,
+        actor=Actor.SESSION,
+    )
+    print(result.said)
+    return 0
+
+
+def fold(args: argparse.Namespace, live: Live, runtime: Runtime, loops: Loops, doors: Doors) -> int:
+    worktree = str(Path(args.worktree or ".").resolve())
+    project = project_of_cwd(worktree, live.projects)
+    if project is None:
+        print(f"{worktree} is in no project on the board", file=sys.stderr)
+        return 1
+    folded = runtime.fold(worktree, promote_main=args.main)
+    if not folded.pushed:
+        print(f"not folded: {folded.words}", file=sys.stderr)
+        return 1
+    print(f"folded: {folded.words}")
+    from board.lane import card_of_cwd
+
+    number = card_of_cwd(worktree, project.project.path)
+    slug = project.project.slug
+    now = clock.now()
+    if number is not None and folded.tip:
+        record = live.store.lane(slug, number)
+        if record is not None:
+            live.store.record_lane(
+                record.model_copy(update={"tip": folded.tip, "folded_at": record.folded_at or now})
+            )
+        live.note(slug, number, AuditKind.FOLDED, Actor.SESSION, f"Folded: {folded.words}")
+    else:
+        print("(this worktree is not a card's lane, so no card carries the fold)")
+    state = loops.level_project(project)
+    if state.level:
+        print(f"trunk synced: {project.project.path} is level with origin/develop")
+    else:
+        print(f"trunk not synced: {state.note}", file=sys.stderr)
+    if args.main:
+        if folded.main_pushed:
+            print("main promoted: origin/main is the same commit")
+            if number is not None:
+                record = live.store.lane(slug, number)
+                if record is not None and record.main_synced_at is None:
+                    live.store.record_lane(record.model_copy(update={"main_synced_at": now}))
+                live.note(
+                    slug,
+                    number,
+                    AuditKind.SYNCED,
+                    Actor.SESSION,
+                    "Main synced: promoted at the fold",
+                )
+        else:
+            print("main not promoted: see above", file=sys.stderr)
+            return 1
+    return 0
+
+
+def start_card(args: argparse.Namespace) -> int:
+    """Start through the running board, so the launch is watched like the button's."""
+    url = f"{args.url.rstrip('/')}/api/projects/{args.slug}/cards/{args.number}/start"
+    body = json.dumps({"anyway": bool(args.anyway)}).encode("utf-8")
+    request = urllib.request.Request(url, data=body, headers={"Content-Type": "application/json"})
+    try:
+        with urllib.request.urlopen(request, timeout=120) as response:
+            answer = json.loads(response.read().decode("utf-8"))
+    except urllib.error.HTTPError as error:
+        detail = error.read().decode("utf-8", errors="replace")
+        with contextlib.suppress(json.JSONDecodeError, AttributeError):
+            detail = json.loads(detail).get("detail", detail)
+        print(f"not started ({error.code}): {detail}", file=sys.stderr)
+        return 1
+    except (urllib.error.URLError, OSError) as error:
+        print(f"the board at {args.url} could not be reached: {error}", file=sys.stderr)
+        return 1
+    print(answer.get("said", answer))
+    return 0
+
+
+def hook_install(args: argparse.Namespace) -> int:
+    repo = Path(args.repo).expanduser().resolve()
+    settings = repo / ".claude" / "settings.json"
+    blob: dict = {}
+    if settings.is_file():
+        try:
+            blob = json.loads(settings.read_text(encoding="utf-8"))
+        except json.JSONDecodeError as error:
+            print(f"{settings} is not JSON: {error}", file=sys.stderr)
+            return 1
+    hooks = blob.setdefault("hooks", {})
+    command = hook_command()
+    added = []
+    for event in HOOK_EVENTS:
+        entries = hooks.setdefault(event, [])
+        present = any(
+            h.get("command") == command
+            for entry in entries
+            for h in entry.get("hooks", [])
+            if isinstance(h, dict)
+        )
+        if present:
+            continue
+        entries.append({"matcher": "", "hooks": [{"type": "command", "command": command}]})
+        added.append(event)
+    settings.parent.mkdir(parents=True, exist_ok=True)
+    settings.write_text(json.dumps(blob, indent=2) + "\n", encoding="utf-8")
+    if added:
+        print(f"registered Needle's hook in {settings} for {', '.join(added)}")
+    else:
+        print(f"Needle's hook is already registered in {settings}")
+    return 0
+
+
+def sync(args: argparse.Namespace, live: Live, runtime: Runtime, loops: Loops, doors: Doors) -> int:
+    code = 0
+    for project in live.projects.values():
+        if args.slug and project.project.slug != args.slug:
+            continue
+        state = loops.level_project(project)
+        if state.level:
+            print(f"{project.project.slug}: level with origin/develop")
+        else:
+            code = 1
+            print(
+                f"{project.project.slug}: {state.note or f'{state.behind} behind'}", file=sys.stderr
+            )
+    return code
+
+
+def signals(
+    args: argparse.Namespace, live: Live, runtime: Runtime, loops: Loops, doors: Doors
+) -> int:
+    loops.read_signals_now()
+    for project in live.projects.values():
+        if args.slug and project.project.slug != args.slug:
+            continue
+        for number, reading in sorted(live.store.last_readings(project.project.slug).items()):
+            said = {True: "delivered", False: "not delivered", None: "unreadable"}[
+                reading.delivered
+            ]
+            print(f"#{number}: {said} — {reading.words} ({reading.at.isoformat()})")
+    return 0
+
+
+def lanes(
+    args: argparse.Namespace, live: Live, runtime: Runtime, loops: Loops, doors: Doors
+) -> int:
+    loops.reconcile_now()
+    project = live.projects.get(args.slug)
+    if project is None or project.snapshot is None:
+        print(f'no project "{args.slug}" is on the board', file=sys.stderr)
+        return 1
+    for number, lane in sorted(project.snapshot.lanes.items()):
+        if lane.state.value == "none":
+            continue
+        print(f"#{number}  {lane.state.value:<8} {lane.name}  {lane.sentence}")
+    return 0
+
+
+def register(sub: "argparse._SubParsersAction[argparse.ArgumentParser]") -> None:
+    p_card = sub.add_parser("card", help="the card as text: the brief a lane opens with")
+    p_card.add_argument("slug")
+    p_card.add_argument("number", type=int)
+    p_card.add_argument("--lane", action="store_true", help="with the riders a launched lane gets")
+    p_card.set_defaults(run=_with_board(card))
+
+    p_row = sub.add_parser("row", help="write one row on a card")
+    p_row.add_argument("slug")
+    p_row.add_argument("number", type=int)
+    p_row.add_argument("kind", choices=[k.value for k in RowKind])
+    p_row.add_argument("text")
+    p_row.set_defaults(run=_with_board(row))
+
+    p_close = sub.add_parser(
+        "close", help="a session's close: DELIVERED, WATCH, REVIEW and the move"
+    )
+    p_close.add_argument("slug")
+    p_close.add_argument("number", type=int)
+    p_close.add_argument("--delivered", required=True, help="what the owner now has")
+    p_close.add_argument(
+        "--watch", required=True, help="the signal: <what> — kind target by YYYY-MM-DD"
+    )
+    p_close.add_argument("--review", help="the review record's path under docs/reviews/")
+    p_close.add_argument("--column", choices=[c.value for c in Column], help="Executed unless said")
+    p_close.set_defaults(run=_with_board(close))
+
+    p_fold = sub.add_parser(
+        "fold", help="fast-forward push this lane to origin/develop; level the trunk"
+    )
+    p_fold.add_argument("--main", action="store_true", help="promote main from the same commit")
+    p_fold.add_argument("--worktree", help="the lane's worktree; the current directory if omitted")
+    p_fold.set_defaults(run=_with_board(fold))
+
+    p_start = sub.add_parser("start-card", help="Start a card through the running board")
+    p_start.add_argument("slug")
+    p_start.add_argument("number", type=int)
+    p_start.add_argument("--anyway", action="store_true", help="override a named lane collision")
+    p_start.add_argument("--url", default=DEFAULT_URL)
+    p_start.set_defaults(run=start_card)
+
+    p_hook = sub.add_parser("hook", help="the session hook")
+    hook_sub = p_hook.add_subparsers(dest="hook_command", required=True)
+    p_install = hook_sub.add_parser(
+        "install", help="register the hook in a project's .claude/settings.json"
+    )
+    p_install.add_argument("repo")
+    p_install.set_defaults(run=hook_install)
+
+    p_sync = sub.add_parser("sync", help="level each project's main checkout with origin/develop")
+    p_sync.add_argument("slug", nargs="?")
+    p_sync.set_defaults(run=_with_board(sync))
+
+    p_signals = sub.add_parser("signals", help="read every due signal now")
+    p_signals.add_argument("slug", nargs="?")
+    p_signals.set_defaults(run=_with_board(signals))
+
+    p_lanes = sub.add_parser("lanes", help="every card's lane, as the board reads it")
+    p_lanes.add_argument("slug")
+    p_lanes.set_defaults(run=_with_board(lanes))

@@ -8,6 +8,7 @@ from board.assemble import (
     essence,
     summarize,
 )
+from board.lane import nothing_read
 from board.moves import GroupLayout
 from domain.card import Card, CardOrigin, DocumentLink, Place
 from domain.column import Column
@@ -165,6 +166,8 @@ def test_the_board_always_has_eight_columns_each_with_a_group_and_counts_attenti
     assert board.attention.model_dump() == {
         "asking_you": 1,
         "in_flight": 1,
+        "lanes_ended": 0,
+        "signals_due": 0,
         "arrived_today": 1,
         "documents_gone": 1,
         "documents_without_card": 1,
@@ -185,7 +188,8 @@ def test_the_detail_splits_rows_into_the_brief_and_the_record():
     index = CorpusIndex(documents=[doc()], read_at=NOW)
     c = card(link=LINK, rows=rows)
     c.citations = ["docs/plans/p1.md", "docs/audits/a.md"]
-    detail = assemble_detail(c, index, [], NOW)
+    lane, doors = nothing_read(c, "/srv/p", NOW)
+    detail = assemble_detail(c, index, [], NOW, lane=lane, doors=doors, readings=[])
     assert [r.kind for r in detail.brief] == [RowKind.TODAY]
     assert [r.kind for r in detail.record] == [RowKind.DELIVERED, RowKind.WATCH]
     assert detail.document is not None and detail.document.stem == "p1"

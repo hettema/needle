@@ -10,6 +10,7 @@ from datetime import datetime, timedelta
 
 from board.moves import GroupLayout
 from board.reconcile import ref
+from board.signals import is_due, past_due, read_or_decline
 from domain.audit import AuditEntry
 from domain.board import (
     Attention,
@@ -19,14 +20,18 @@ from domain.board import (
     ColumnView,
     EssenceSource,
     GroupView,
+    MachineState,
+    TrunkState,
 )
 from domain.card import Card, CardOrigin
 from domain.column import COLUMN_DEFINITIONS, Column
 from domain.corpus import CorpusIndex, CorpusSummary
 from domain.document import Document, DocumentKind, DocumentRef, DocumentState
 from domain.gate import Gate
+from domain.lane import Doors, Lane, LaneSnapshot, LaneState
 from domain.project import Project
 from domain.row import ROW_HALF, Row, RowHalf, RowKind
+from domain.signal import Reading, Signal, SignalKind
 
 NEW_FOR = timedelta(days=1)
 
@@ -79,7 +84,51 @@ def is_new(card: Card, now: datetime) -> bool:
     return card.origin == CardOrigin.ARRIVED and card.born_at >= now - NEW_FOR
 
 
-def summarize(card: Card, index: CorpusIndex, now: datetime) -> CardSummary:
+def watch_signal(card: Card) -> tuple[Signal | None, str | None]:
+    """The signal the card's WATCH row names, or why it names none."""
+    watch = next((r.text for r in card.rows if r.kind == RowKind.WATCH), None)
+    return read_or_decline(watch)
+
+
+def signal_asks_owner(
+    card: Card, signal: Signal | None, last: Reading | None, now: datetime
+) -> bool:
+    """An Executed card whose signal only the owner can read, at or past its due time."""
+    return (
+        card.place.column == Column.EXECUTED
+        and signal is not None
+        and signal.kind == SignalKind.OWNER
+        and now.date() >= signal.due
+        and (last is None or last.delivered is None)
+    )
+
+
+def signal_overdue(card: Card, signal: Signal | None, last: Reading | None, now: datetime) -> bool:
+    """An Executed card past its due time with nothing delivered."""
+    return (
+        card.place.column == Column.EXECUTED
+        and signal is not None
+        and past_due(signal, now)
+        and (last is None or not last.delivered)
+    )
+
+
+def signal_wants_reading(
+    card: Card, signal: Signal | None, last: Reading | None, now: datetime
+) -> bool:
+    """A board-readable signal whose cadence asks for a reading now."""
+    return (
+        card.place.column == Column.EXECUTED
+        and signal is not None
+        and signal.kind != SignalKind.OWNER
+        and (last is None or not last.delivered)
+        and is_due(signal, last_read=last.at if last else None, now=now)
+    )
+
+
+def summarize(
+    card: Card, index: CorpusIndex, now: datetime, lane: Lane | None = None
+) -> CardSummary:
     document = document_of(card, index)
     text, source = essence(card, document)
     state = document_state(card, document)
@@ -97,6 +146,8 @@ def summarize(card: Card, index: CorpusIndex, now: datetime) -> CardSummary:
         is_new=is_new(card, now),
         age_date=document.date if document is not None and document.date else card.born_at.date(),
         place=card.place,
+        lane_state=lane.state if lane is not None else LaneState.NONE,
+        lane_sentence=lane.sentence if lane is not None and lane.sentence else None,
     )
 
 
@@ -133,9 +184,20 @@ def assemble_board(
     watching: bool,
     watch_note: str | None,
     now: datetime,
+    snapshot: LaneSnapshot | None = None,
+    readings: dict[int, Reading] | None = None,
+    trunk: TrunkState | None = None,
+    machine: MachineState | None = None,
 ) -> BoardState:
+    """`snapshot`, `readings`, `trunk` and `machine` are what the loop has
+    read; before its first read they are absent and the board says so."""
+    readings = readings or {}
+    trunk = trunk or TrunkState(level=None, behind=0, note=None, read_at=None)
+    machine = machine or MachineState(missing=[])
     by_number = {c.number: c for c in cards}
-    summaries = {n: summarize(c, index, now) for n, c in by_number.items()}
+    lanes = snapshot.lanes if snapshot is not None else {}
+    summaries = {n: summarize(c, index, now, lanes.get(n)) for n, c in by_number.items()}
+    signals = {n: watch_signal(c)[0] for n, c in by_number.items()}
 
     columns: list[ColumnView] = []
     for definition in COLUMN_DEFINITIONS:
@@ -158,9 +220,23 @@ def assemble_board(
         return sum(1 for c in cards if c.place.column == column)
 
     without_card = documents_without_card(index, cards)
+    asking_lanes = sum(1 for lane in lanes.values() if lane.state == LaneState.ASKING)
+    owner_signals = sum(
+        1 for n, c in by_number.items() if signal_asks_owner(c, signals[n], readings.get(n), now)
+    )
     attention = Attention(
-        asking_you=count(Column.DECISION_MOMENT),
+        asking_you=count(Column.DECISION_MOMENT) + asking_lanes + owner_signals,
         in_flight=count(Column.EXECUTING),
+        lanes_ended=sum(
+            1
+            for n, lane in lanes.items()
+            if lane.state == LaneState.ENDED
+            and n in by_number
+            and by_number[n].place.column not in {Column.EXECUTED, Column.DONE, Column.NOT_NOW}
+        ),
+        signals_due=sum(
+            1 for n, c in by_number.items() if signal_overdue(c, signals[n], readings.get(n), now)
+        ),
         arrived_today=sum(1 for s in summaries.values() if s.is_new),
         documents_gone=sum(1 for s in summaries.values() if s.document_state == DocumentState.GONE),
         documents_without_card=len(without_card),
@@ -171,23 +247,38 @@ def assemble_board(
         generated_at=now,
         corpus=corpus_summary(index, watching=watching, watch_note=watch_note),
         attention=attention,
+        trunk=trunk,
+        machine=machine,
         columns=columns,
         documents_without_card=without_card,
     )
 
 
 def assemble_detail(
-    card: Card, index: CorpusIndex, history: list[AuditEntry], now: datetime
+    card: Card,
+    index: CorpusIndex,
+    history: list[AuditEntry],
+    now: datetime,
+    *,
+    lane: Lane | None,
+    doors: Doors,
+    readings: list[Reading],
 ) -> CardDetail:
     document = document_of(card, index)
     brief, record = split_rows(card.rows)
     own = cited_path(card)
+    signal, signal_note = watch_signal(card)
     return CardDetail(
         card=card,
-        summary=summarize(card, index, now),
+        summary=summarize(card, index, now, lane),
         brief=brief,
         record=record,
         document=document,
         other_citations=[c for c in card.citations if c != own],
         history=history,
+        lane=lane,
+        doors=doors,
+        signal=signal,
+        signal_note=signal_note,
+        readings=readings,
     )

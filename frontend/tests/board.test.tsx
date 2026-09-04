@@ -1,10 +1,11 @@
 import { describe, expect, it, vi, beforeEach } from "vitest";
 import { render, screen, within, waitFor, fireEvent, act } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { ApiError } from "../src/api";
+import { ApiError, type DoorName } from "../src/api";
 import { PROJECT, board, detail } from "./fixture";
-import type { BoardState } from "../src/types/board";
+import type { BoardState, CardDetail } from "../src/types/board";
 import type { Place } from "../src/types/card";
+import type { DoorResult, Lane } from "../src/types/lane";
 import type { Project } from "../src/types/project";
 
 const api = vi.hoisted(() => ({
@@ -13,6 +14,7 @@ const api = vi.hoisted(() => ({
   getCard: vi.fn(),
   getFile: vi.fn(),
   getProjects: vi.fn<() => Promise<Project[]>>(),
+  openDoor: vi.fn<(slug: string, number: number, door: DoorName, body?: object) => Promise<DoorResult>>(),
   streamUrl: (slug: string) => `/api/projects/${slug}/stream`,
 }));
 
@@ -38,8 +40,69 @@ beforeEach(() => {
   api.getBoard.mockReset().mockResolvedValue(board());
   api.getCard.mockReset().mockImplementation((_slug: string, number: number) => Promise.resolve(detail(number)));
   api.moveCard.mockReset();
+  api.openDoor.mockReset();
   window.history.replaceState(null, "", "/");
 });
+
+/** #253 with a lane: a live session on alpha, the doors a working lane offers. */
+function withLane(state: Lane["state"], sentence: string, question: string | null = null): CardDetail {
+  const d = detail(253);
+  const session = {
+    slot: "alpha",
+    config_dir: "/x/alpha",
+    short_id: "aaaa0001",
+    session_id: "aaaa0001-0000-4000-8000-000000000000",
+    kind: "background" as const,
+    name: "card-253-every-metered-kilowatt-is-billed",
+    cwd: "/srv/harbourmaster/.claude/worktrees/card-253-every-metered-kilowatt-is-billed",
+    worktree: "/srv/harbourmaster/.claude/worktrees/card-253-every-metered-kilowatt-is-billed",
+    state: state === "working" ? ("working" as const) : ("done" as const),
+    recorded: "working",
+    detail: "",
+    pid: state === "ended" ? null : 4242,
+    scope: null,
+    model: "fable" as const,
+    effort: "medium" as const,
+    stale: false,
+    wall: null,
+    intent: "",
+    created_at: null,
+    updated_at: null,
+  };
+  d.lane = {
+    card_number: 253,
+    name: session.name,
+    path: session.worktree,
+    state,
+    sentence,
+    session,
+    question,
+    said: question,
+    said_at: null,
+    discussing: [],
+    window_open: false,
+    hands_on_since: null,
+    died: state === "ended" ? "the journal says: Killed process 4242" : null,
+    moved: null,
+    folded: false,
+    trunk_synced: false,
+    main_synced: false,
+  };
+  d.summary.lane_state = state;
+  d.summary.lane_sentence = sentence;
+  const open = (label: string, why: string) => ({ offered: true, label, why });
+  const closed = (label: string, why: string) => ({ offered: false, label, why });
+  d.doors = {
+    ...d.doors,
+    start: closed("Start", `A session already has hands on it: ${sentence}`),
+    watch: state === "ended" ? closed("Watch", "No live session to watch.") : open("Watch", "Opens a window into the live session; closing it ends nothing."),
+    answer: state === "asking" ? open("Answer", "Your sentence resumes the lane with it; one live copy stays.") : closed("Answer", "The session is working; answer it when it stops."),
+    look: state === "ended" ? open("Look", "A fresh session in the worktree from the transcript; its first line says so.") : closed("Look", "The session is live; watch it instead."),
+    resume: state === "ended" ? open("Resume", "Resumes the lane's session where the rule says.") : closed("Resume", "The session is live; watch it instead."),
+    stop: state === "ended" ? closed("Stop", "No background session to stop.") : open("Stop", "Ends the session through its own slot and says where the card is then."),
+  };
+  return d;
+}
 
 async function renderBoard() {
   render(<App />);
@@ -159,7 +222,11 @@ describe("the open card", () => {
     expect(within(card).getByRole("button", { name: "Open the plan" })).toBeInTheDocument();
     expect(within(card).getByRole("button", { name: "Copy path" })).toBeInTheDocument();
     expect(within(card).getByRole("combobox", { name: "Move to" })).toHaveValue("Up next");
-    expect(within(card).queryByText(/Start/)).not.toBeInTheDocument();
+    // Before the runtime's first read no door opens, and Start says why rather than vanishing.
+    const start = within(card).getByText("Start");
+    expect(start).toHaveAttribute("aria-disabled", "true");
+    expect(start).toHaveAttribute("title", expect.stringContaining("the runtime has not read this board yet"));
+    expect(within(card).queryByRole("button", { name: /Watch|Answer|Stop|Look|Resume|Discuss/ })).not.toBeInTheDocument();
     expect(card.closest("section")?.className).toContain("wide");
     expect(window.location.hash).toBe("#card-253");
   });
@@ -171,6 +238,111 @@ describe("the open card", () => {
     const select = await screen.findByRole("combobox", { name: "Move to" });
     await userEvent.selectOptions(select, "Not now");
     await waitFor(() => expect(api.moveCard).toHaveBeenCalledWith(SLUG, 253, { column: "Not now", group: null, position: 1000000 }));
+  });
+});
+
+describe("the doors", () => {
+  it("offers Start with the slot and model the rule named, opens it, and shows the evidence", async () => {
+    const d = detail(253);
+    d.doors = {
+      ...d.doors,
+      start: { offered: true, label: "Start · fable on alpha", why: "Fable headroom on alpha (12% of Fable used)" },
+      discuss: { offered: true, label: "Discuss", why: "A fresh conversation about this card, never hands on its tree." },
+      placement: { slot: "alpha", model: "fable", config_dir: "/x", why: "Fable headroom on alpha (12% of Fable used)" },
+      collision: { verdict: "clear", sentence: "No running lane or trunk session touches this plan's files.", files: [] },
+    };
+    api.getCard.mockResolvedValue(d);
+    api.openDoor.mockResolvedValue({ door: "start", said: "Started aaaa0001, fable on alpha, at medium, in card-253-every-metered-kilowatt-is-billed, in needle-card-253.scope" });
+    await renderBoard();
+    await userEvent.click(screen.getByText("Every metered kilowatt is billed"));
+    const start = await screen.findByRole("button", { name: "Start · fable on alpha" });
+    expect(start).toHaveAttribute("title", "Fable headroom on alpha (12% of Fable used)");
+    expect(screen.getByRole("button", { name: "Discuss" })).toBeInTheDocument();
+    await userEvent.click(start);
+    await waitFor(() => expect(api.openDoor).toHaveBeenCalledWith(SLUG, 253, "start", {}));
+    expect(await screen.findByText(/Started aaaa0001, fable on alpha/)).toBeInTheDocument();
+  });
+
+  it("names a collision, closes Start and offers Start anyway with the reason", async () => {
+    const d = detail(253);
+    const sentence = "#241's lane is editing engine/metering.py right now.";
+    d.doors = {
+      ...d.doors,
+      start: { offered: false, label: "Start", why: `Lane collision — ${sentence}` },
+      start_anyway: { offered: true, label: "Start anyway · fable on alpha", why: `Overrides the collision with its reason in front of you: ${sentence}` },
+      collision: { verdict: "collides", sentence, files: ["engine/metering.py"] },
+    };
+    api.getCard.mockResolvedValue(d);
+    api.openDoor.mockResolvedValue({ door: "start", said: "Started; collision overridden" });
+    await renderBoard();
+    await userEvent.click(screen.getByText("Every metered kilowatt is billed"));
+    const anyway = await screen.findByRole("button", { name: "Start anyway · fable on alpha" });
+    expect(screen.getByText("Start")).toHaveAttribute("title", `Lane collision — ${sentence}`);
+    expect(screen.getByText(sentence)).toBeInTheDocument();
+    await userEvent.click(anyway);
+    await waitFor(() => expect(api.openDoor).toHaveBeenCalledWith(SLUG, 253, "start", { anyway: true }));
+  });
+
+  it("shows a working lane's band on the resting card and Watch and Stop on the open one", async () => {
+    const sentence = "Working, fable on alpha, hands on for 12 min.";
+    const b = board();
+    const column = b.columns.find((c) => c.definition.column === "Up next");
+    const card = column?.groups[0]?.cards.find((c) => c.number === 253);
+    if (!card) throw new Error("no #253");
+    card.lane_state = "working";
+    card.lane_sentence = sentence;
+    api.getBoard.mockResolvedValue(b);
+    api.getCard.mockResolvedValue(withLane("working", sentence));
+    api.openDoor.mockResolvedValue({ door: "watch", said: "Window org.omarchy.board-watch-card-253 opened into aaaa0001; closing it ends nothing." });
+    await renderBoard();
+    const resting = screen.getByText("#253").closest("article") as HTMLElement;
+    expect(within(resting).getByRole("status")).toHaveTextContent(`Working${sentence}`);
+    await userEvent.click(screen.getByText("Every metered kilowatt is billed"));
+    const watch = await screen.findByRole("button", { name: "Watch" });
+    expect(screen.getByRole("button", { name: "Stop" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Look" })).not.toBeInTheDocument();
+    expect(screen.getByText("Start")).toHaveAttribute("aria-disabled", "true");
+    await userEvent.click(watch);
+    await waitFor(() => expect(api.openDoor).toHaveBeenCalledWith(SLUG, 253, "watch", {}));
+    expect(await screen.findByText(/closing it ends nothing/)).toBeInTheDocument();
+  });
+
+  it("puts a lane's question on the card and one sentence answers it", async () => {
+    api.getCard.mockResolvedValue(withLane("asking", "Asking you: High or medium?", "The parser is in.\n\nHigh or medium?"));
+    api.openDoor.mockResolvedValue({ door: "answer", said: "Answered, and the lane resumed as aaaa0001 (fable on alpha): High." });
+    await renderBoard();
+    await userEvent.click(screen.getByText("Every metered kilowatt is billed"));
+    expect(await screen.findByText(/High or medium\?/, { selector: ".ask-block" })).toBeInTheDocument();
+    const field = screen.getByRole("textbox", { name: "Answer" });
+    await userEvent.type(field, "High.{enter}");
+    await waitFor(() => expect(api.openDoor).toHaveBeenCalledWith(SLUG, 253, "answer", { text: "High." }));
+    expect(await screen.findByText(/the lane resumed as aaaa0001/)).toBeInTheDocument();
+  });
+
+  it("offers Look and Resume, never Watch, on a lane whose session is gone, with the machine's reason", async () => {
+    api.getCard.mockResolvedValue(withLane("ended", "Lane ended 3 min ago: the journal says: Killed process 4242. nothing folded."));
+    api.openDoor.mockRejectedValue(new ApiError(502, "Look did not open: no window appeared under org.omarchy.board-look-card-253 within 8 s"));
+    await renderBoard();
+    await userEvent.click(screen.getByText("Every metered kilowatt is billed"));
+    const look = await screen.findByRole("button", { name: "Look" });
+    expect(screen.getByRole("button", { name: "Resume" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Watch" })).not.toBeInTheDocument();
+    expect(screen.getByText("the journal says: Killed process 4242")).toBeInTheDocument();
+    await userEvent.click(look);
+    expect(await screen.findByText(/Look did not open: no window appeared/)).toBeInTheDocument();
+  });
+
+  it("counts what needs the owner on the attention line and names a trunk that is not level", async () => {
+    const b = board();
+    b.attention = { ...b.attention, asking_you: 3, lanes_ended: 1, signals_due: 2 };
+    b.trunk = { level: false, behind: 4, note: "the checkout has uncommitted work that is not the runtime's (README.md); not touched", read_at: "2026-09-04T12:00:00+00:00" };
+    b.machine = { missing: ["hyprctl"] };
+    api.getBoard.mockResolvedValue(b);
+    await renderBoard();
+    expect(screen.getByText("lane ended — Resume or Look")).toBeInTheDocument();
+    expect(screen.getByText("signals past due")).toBeInTheDocument();
+    expect(screen.getByText("the runtime cannot find: hyprctl")).toBeInTheDocument();
+    expect(screen.getByRole("alert")).toHaveTextContent("The main checkout is not level with origin/develop: the checkout has uncommitted work");
   });
 });
 

@@ -5,8 +5,10 @@ import type { ColumnDefinition } from "./column";
 import type { CorpusSummary } from "./corpus";
 import type { Document, DocumentRef, DocumentState } from "./document";
 import type { Gate } from "./gate";
+import type { Doors, Lane, LaneState } from "./lane";
 import type { Project } from "./project";
 import type { Row } from "./row";
+import type { Reading, Signal } from "./signal";
 
 export const ESSENCE_SOURCE_VALUES = ["card", "document"] as const;
 export type EssenceSource = (typeof ESSENCE_SOURCE_VALUES)[number];
@@ -14,6 +16,8 @@ export type EssenceSource = (typeof ESSENCE_SOURCE_VALUES)[number];
 export interface Attention {
   asking_you: number;
   in_flight: number;
+  lanes_ended: number;
+  signals_due: number;
   arrived_today: number;
   documents_gone: number;
   documents_without_card: number;
@@ -25,6 +29,8 @@ export interface BoardState {
   generated_at: string;
   corpus: CorpusSummary;
   attention: Attention;
+  trunk: TrunkState;
+  machine: MachineState;
   columns: ColumnView[];
   documents_without_card: DocumentRef[];
 }
@@ -37,6 +43,11 @@ export interface CardDetail {
   document: Document | null;
   other_citations: string[];
   history: AuditEntry[];
+  lane: Lane | null;
+  doors: Doors;
+  signal: Signal | null;
+  signal_note: string | null;
+  readings: Reading[];
 }
 
 export interface CardSummary {
@@ -52,6 +63,8 @@ export interface CardSummary {
   is_new: boolean;
   age_date: string;
   place: Place;
+  lane_state: LaneState;
+  lane_sentence: string | null;
 }
 
 export interface ColumnView {
@@ -65,8 +78,19 @@ export interface GroupView {
   cards: CardSummary[];
 }
 
+export interface MachineState {
+  missing: string[];
+}
+
 export interface ProjectFile {
   path: string;
   text: string;
   read_at: string;
+}
+
+export interface TrunkState {
+  level: boolean | null;
+  behind: number;
+  note: string | null;
+  read_at: string | null;
 }

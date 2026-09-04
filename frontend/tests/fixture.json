@@ -19,9 +19,20 @@
     "attention": {
       "asking_you": 4,
       "in_flight": 2,
+      "lanes_ended": 0,
+      "signals_due": 0,
       "arrived_today": 1,
       "documents_gone": 2,
       "documents_without_card": 0
+    },
+    "trunk": {
+      "level": null,
+      "behind": 0,
+      "note": null,
+      "read_at": null
+    },
+    "machine": {
+      "missing": []
     },
     "columns": [
       {
@@ -57,7 +68,9 @@
                   "column": "Backlog",
                   "group": "Next to plan",
                   "position": 0
-                }
+                },
+                "lane_state": "none",
+                "lane_sentence": null
               },
               {
                 "number": 242,
@@ -75,7 +88,9 @@
                   "column": "Backlog",
                   "group": "Next to plan",
                   "position": 1
-                }
+                },
+                "lane_state": "none",
+                "lane_sentence": null
               },
               {
                 "number": 232,
@@ -93,7 +108,9 @@
                   "column": "Backlog",
                   "group": "Next to plan",
                   "position": 2
-                }
+                },
+                "lane_state": "none",
+                "lane_sentence": null
               },
               {
                 "number": 120,
@@ -111,7 +128,9 @@
                   "column": "Backlog",
                   "group": "Next to plan",
                   "position": 3
-                }
+                },
+                "lane_state": "none",
+                "lane_sentence": null
               }
             ]
           },
@@ -140,7 +159,9 @@
                   "column": "Backlog",
                   "group": "Skipper-facing quality",
                   "position": 0
-                }
+                },
+                "lane_state": "none",
+                "lane_sentence": null
               }
             ]
           },
@@ -163,7 +184,9 @@
                   "column": "Backlog",
                   "group": null,
                   "position": 0
-                }
+                },
+                "lane_state": "none",
+                "lane_sentence": null
               },
               {
                 "number": 264,
@@ -181,7 +204,9 @@
                   "column": "Backlog",
                   "group": null,
                   "position": 1
-                }
+                },
+                "lane_state": "none",
+                "lane_sentence": null
               },
               {
                 "number": 265,
@@ -199,7 +224,9 @@
                   "column": "Backlog",
                   "group": null,
                   "position": 2
-                }
+                },
+                "lane_state": "none",
+                "lane_sentence": null
               },
               {
                 "number": 266,
@@ -217,7 +244,9 @@
                   "column": "Backlog",
                   "group": null,
                   "position": 3
-                }
+                },
+                "lane_state": "none",
+                "lane_sentence": null
               }
             ]
           }
@@ -259,7 +288,9 @@
                   "column": "Planned",
                   "group": "Season opening",
                   "position": 0
-                }
+                },
+                "lane_state": "none",
+                "lane_sentence": null
               }
             ]
           },
@@ -284,7 +315,9 @@
                   "column": "Planned",
                   "group": "Skipper-facing quality",
                   "position": 0
-                }
+                },
+                "lane_state": "none",
+                "lane_sentence": null
               }
             ]
           },
@@ -309,7 +342,9 @@
                   "column": "Planned",
                   "group": "Trust — from the winter review",
                   "position": 0
-                }
+                },
+                "lane_state": "none",
+                "lane_sentence": null
               }
             ]
           },
@@ -332,7 +367,9 @@
                   "column": "Planned",
                   "group": null,
                   "position": 0
-                }
+                },
+                "lane_state": "none",
+                "lane_sentence": null
               },
               {
                 "number": 267,
@@ -350,7 +387,9 @@
                   "column": "Planned",
                   "group": null,
                   "position": 1
-                }
+                },
+                "lane_state": "none",
+                "lane_sentence": null
               }
             ]
           }
@@ -390,7 +429,9 @@
                   "column": "Up next",
                   "group": null,
                   "position": 0
-                }
+                },
+                "lane_state": "none",
+                "lane_sentence": null
               },
               {
                 "number": 241,
@@ -408,7 +449,9 @@
                   "column": "Up next",
                   "group": null,
                   "position": 1
-                }
+                },
+                "lane_state": "none",
+                "lane_sentence": null
               },
               {
                 "number": 228,
@@ -426,7 +469,9 @@
                   "column": "Up next",
                   "group": null,
                   "position": 2
-                }
+                },
+                "lane_state": "none",
+                "lane_sentence": null
               },
               {
                 "number": 237,
@@ -444,7 +489,9 @@
                   "column": "Up next",
                   "group": null,
                   "position": 3
-                }
+                },
+                "lane_state": "none",
+                "lane_sentence": null
               },
               {
                 "number": 174,
@@ -464,7 +511,9 @@
                   "column": "Up next",
                   "group": null,
                   "position": 4
-                }
+                },
+                "lane_state": "none",
+                "lane_sentence": null
               }
             ]
           }
@@ -504,7 +553,9 @@
                   "column": "Executing",
                   "group": null,
                   "position": 0
-                }
+                },
+                "lane_state": "none",
+                "lane_sentence": null
               },
               {
                 "number": 223,
@@ -522,7 +573,9 @@
                   "column": "Executing",
                   "group": null,
                   "position": 1
-                }
+                },
+                "lane_state": "none",
+                "lane_sentence": null
               }
             ]
           }
@@ -564,7 +617,9 @@
                   "column": "Decision moment",
                   "group": null,
                   "position": 0
-                }
+                },
+                "lane_state": "none",
+                "lane_sentence": null
               },
               {
                 "number": 147,
@@ -585,7 +640,9 @@
                   "column": "Decision moment",
                   "group": null,
                   "position": 1
-                }
+                },
+                "lane_state": "none",
+                "lane_sentence": null
               }
             ]
           },
@@ -610,7 +667,9 @@
                   "column": "Decision moment",
                   "group": "Rulings that unblock lanes",
                   "position": 0
-                }
+                },
+                "lane_state": "none",
+                "lane_sentence": null
               }
             ]
           },
@@ -635,7 +694,9 @@
                   "column": "Decision moment",
                   "group": "Actions & sign-offs elsewhere",
                   "position": 0
-                }
+                },
+                "lane_state": "none",
+                "lane_sentence": null
               }
             ]
           }
@@ -677,7 +738,9 @@
                   "column": "Executed",
                   "group": null,
                   "position": 0
-                }
+                },
+                "lane_state": "none",
+                "lane_sentence": null
               }
             ]
           }
@@ -738,7 +801,9 @@
                   "column": "Not now",
                   "group": null,
                   "position": 0
-                }
+                },
+                "lane_state": "none",
+                "lane_sentence": null
               }
             ]
           }
@@ -804,7 +869,9 @@
           "column": "Backlog",
           "group": "Next to plan",
           "position": 0
-        }
+        },
+        "lane_state": "none",
+        "lane_sentence": null
       },
       "brief": [
         {
@@ -868,7 +935,79 @@
           },
           "detail": "Born from Needle 0.1's card file — column, position and 3 rows."
         }
-      ]
+      ],
+      "lane": {
+        "card_number": 252,
+        "name": "card-252-the-quay-display-polls-the-offic",
+        "path": null,
+        "state": "none",
+        "sentence": "",
+        "session": null,
+        "question": null,
+        "said": null,
+        "said_at": null,
+        "discussing": [],
+        "window_open": false,
+        "hands_on_since": null,
+        "died": null,
+        "moved": null,
+        "folded": false,
+        "trunk_synced": false,
+        "main_synced": false
+      },
+      "doors": {
+        "start": {
+          "offered": false,
+          "label": "Start",
+          "why": "Start is offered in Up next and Planned; this card is in Backlog."
+        },
+        "start_anyway": {
+          "offered": false,
+          "label": "Start anyway",
+          "why": "There is no collision to override."
+        },
+        "placement": null,
+        "placement_note": "the runtime has not read this board yet",
+        "collision": null,
+        "watch": {
+          "offered": false,
+          "label": "Watch",
+          "why": "No live session to watch."
+        },
+        "answer": {
+          "offered": false,
+          "label": "Answer",
+          "why": "No live session to answer."
+        },
+        "discuss": {
+          "offered": false,
+          "label": "Discuss",
+          "why": "The rule found nowhere to run: the runtime has not read this board yet"
+        },
+        "look": {
+          "offered": false,
+          "label": "Look",
+          "why": "No session to look at."
+        },
+        "resume": {
+          "offered": false,
+          "label": "Resume",
+          "why": "No session to look at."
+        },
+        "stop": {
+          "offered": false,
+          "label": "Stop",
+          "why": "No background session to stop."
+        },
+        "signal": {
+          "offered": false,
+          "label": "Delivered?",
+          "why": "No signal waits on your reading."
+        }
+      },
+      "signal": null,
+      "signal_note": "no WATCH row names a signal",
+      "readings": []
     },
     "242": {
       "card": {
@@ -925,7 +1064,9 @@
           "column": "Backlog",
           "group": "Next to plan",
           "position": 1
-        }
+        },
+        "lane_state": "none",
+        "lane_sentence": null
       },
       "brief": [
         {
@@ -989,7 +1130,79 @@
           },
           "detail": "Born from Needle 0.1's card file — column, position and 3 rows."
         }
-      ]
+      ],
+      "lane": {
+        "card_number": 242,
+        "name": "card-242-the-welcome-board-shows-one-boat",
+        "path": null,
+        "state": "none",
+        "sentence": "",
+        "session": null,
+        "question": null,
+        "said": null,
+        "said_at": null,
+        "discussing": [],
+        "window_open": false,
+        "hands_on_since": null,
+        "died": null,
+        "moved": null,
+        "folded": false,
+        "trunk_synced": false,
+        "main_synced": false
+      },
+      "doors": {
+        "start": {
+          "offered": false,
+          "label": "Start",
+          "why": "Start is offered in Up next and Planned; this card is in Backlog."
+        },
+        "start_anyway": {
+          "offered": false,
+          "label": "Start anyway",
+          "why": "There is no collision to override."
+        },
+        "placement": null,
+        "placement_note": "the runtime has not read this board yet",
+        "collision": null,
+        "watch": {
+          "offered": false,
+          "label": "Watch",
+          "why": "No live session to watch."
+        },
+        "answer": {
+          "offered": false,
+          "label": "Answer",
+          "why": "No live session to answer."
+        },
+        "discuss": {
+          "offered": false,
+          "label": "Discuss",
+          "why": "The rule found nowhere to run: the runtime has not read this board yet"
+        },
+        "look": {
+          "offered": false,
+          "label": "Look",
+          "why": "No session to look at."
+        },
+        "resume": {
+          "offered": false,
+          "label": "Resume",
+          "why": "No session to look at."
+        },
+        "stop": {
+          "offered": false,
+          "label": "Stop",
+          "why": "No background session to stop."
+        },
+        "signal": {
+          "offered": false,
+          "label": "Delivered?",
+          "why": "No signal waits on your reading."
+        }
+      },
+      "signal": null,
+      "signal_note": "no WATCH row names a signal",
+      "readings": []
     },
     "232": {
       "card": {
@@ -1046,7 +1259,9 @@
           "column": "Backlog",
           "group": "Next to plan",
           "position": 2
-        }
+        },
+        "lane_state": "none",
+        "lane_sentence": null
       },
       "brief": [
         {
@@ -1110,7 +1325,79 @@
           },
           "detail": "Born from Needle 0.1's card file — column, position and 3 rows."
         }
-      ]
+      ],
+      "lane": {
+        "card_number": 232,
+        "name": "card-232-the-night-audit-re-reads-the-who",
+        "path": null,
+        "state": "none",
+        "sentence": "",
+        "session": null,
+        "question": null,
+        "said": null,
+        "said_at": null,
+        "discussing": [],
+        "window_open": false,
+        "hands_on_since": null,
+        "died": null,
+        "moved": null,
+        "folded": false,
+        "trunk_synced": false,
+        "main_synced": false
+      },
+      "doors": {
+        "start": {
+          "offered": false,
+          "label": "Start",
+          "why": "Start is offered in Up next and Planned; this card is in Backlog."
+        },
+        "start_anyway": {
+          "offered": false,
+          "label": "Start anyway",
+          "why": "There is no collision to override."
+        },
+        "placement": null,
+        "placement_note": "the runtime has not read this board yet",
+        "collision": null,
+        "watch": {
+          "offered": false,
+          "label": "Watch",
+          "why": "No live session to watch."
+        },
+        "answer": {
+          "offered": false,
+          "label": "Answer",
+          "why": "No live session to answer."
+        },
+        "discuss": {
+          "offered": false,
+          "label": "Discuss",
+          "why": "The rule found nowhere to run: the runtime has not read this board yet"
+        },
+        "look": {
+          "offered": false,
+          "label": "Look",
+          "why": "No session to look at."
+        },
+        "resume": {
+          "offered": false,
+          "label": "Resume",
+          "why": "No session to look at."
+        },
+        "stop": {
+          "offered": false,
+          "label": "Stop",
+          "why": "No background session to stop."
+        },
+        "signal": {
+          "offered": false,
+          "label": "Delivered?",
+          "why": "No signal waits on your reading."
+        }
+      },
+      "signal": null,
+      "signal_note": "no WATCH row names a signal",
+      "readings": []
     },
     "120": {
       "card": {
@@ -1159,7 +1446,9 @@
           "column": "Backlog",
           "group": "Next to plan",
           "position": 3
-        }
+        },
+        "lane_state": "none",
+        "lane_sentence": null
       },
       "brief": [],
       "record": [],
@@ -1190,7 +1479,79 @@
           },
           "detail": "Born from Needle 0.1's card file — column, position and 1 row."
         }
-      ]
+      ],
+      "lane": {
+        "card_number": 120,
+        "name": "card-120-two-small-office-screen-fixes",
+        "path": null,
+        "state": "none",
+        "sentence": "",
+        "session": null,
+        "question": null,
+        "said": null,
+        "said_at": null,
+        "discussing": [],
+        "window_open": false,
+        "hands_on_since": null,
+        "died": null,
+        "moved": null,
+        "folded": false,
+        "trunk_synced": false,
+        "main_synced": false
+      },
+      "doors": {
+        "start": {
+          "offered": false,
+          "label": "Start",
+          "why": "Start is offered in Up next and Planned; this card is in Backlog."
+        },
+        "start_anyway": {
+          "offered": false,
+          "label": "Start anyway",
+          "why": "There is no collision to override."
+        },
+        "placement": null,
+        "placement_note": "the runtime has not read this board yet",
+        "collision": null,
+        "watch": {
+          "offered": false,
+          "label": "Watch",
+          "why": "No live session to watch."
+        },
+        "answer": {
+          "offered": false,
+          "label": "Answer",
+          "why": "No live session to answer."
+        },
+        "discuss": {
+          "offered": false,
+          "label": "Discuss",
+          "why": "The rule found nowhere to run: the runtime has not read this board yet"
+        },
+        "look": {
+          "offered": false,
+          "label": "Look",
+          "why": "No session to look at."
+        },
+        "resume": {
+          "offered": false,
+          "label": "Resume",
+          "why": "No session to look at."
+        },
+        "stop": {
+          "offered": false,
+          "label": "Stop",
+          "why": "No background session to stop."
+        },
+        "signal": {
+          "offered": false,
+          "label": "Delivered?",
+          "why": "No signal waits on your reading."
+        }
+      },
+      "signal": null,
+      "signal_note": "no WATCH row names a signal",
+      "readings": []
     },
     "105": {
       "card": {
@@ -1236,7 +1597,9 @@
           "column": "Backlog",
           "group": "Skipper-facing quality",
           "position": 0
-        }
+        },
+        "lane_state": "none",
+        "lane_sentence": null
       },
       "brief": [],
       "record": [],
@@ -1257,7 +1620,79 @@
           },
           "detail": "Born from Needle 0.1's card file — column, position and 1 row."
         }
-      ]
+      ],
+      "lane": {
+        "card_number": 105,
+        "name": "card-105-the-skipper-s-yes-or-no-wrong-st",
+        "path": null,
+        "state": "none",
+        "sentence": "",
+        "session": null,
+        "question": null,
+        "said": null,
+        "said_at": null,
+        "discussing": [],
+        "window_open": false,
+        "hands_on_since": null,
+        "died": null,
+        "moved": null,
+        "folded": false,
+        "trunk_synced": false,
+        "main_synced": false
+      },
+      "doors": {
+        "start": {
+          "offered": false,
+          "label": "Start",
+          "why": "Start is offered in Up next and Planned; this card is in Backlog."
+        },
+        "start_anyway": {
+          "offered": false,
+          "label": "Start anyway",
+          "why": "There is no collision to override."
+        },
+        "placement": null,
+        "placement_note": "the runtime has not read this board yet",
+        "collision": null,
+        "watch": {
+          "offered": false,
+          "label": "Watch",
+          "why": "No live session to watch."
+        },
+        "answer": {
+          "offered": false,
+          "label": "Answer",
+          "why": "No live session to answer."
+        },
+        "discuss": {
+          "offered": false,
+          "label": "Discuss",
+          "why": "The rule found nowhere to run: the runtime has not read this board yet"
+        },
+        "look": {
+          "offered": false,
+          "label": "Look",
+          "why": "No session to look at."
+        },
+        "resume": {
+          "offered": false,
+          "label": "Resume",
+          "why": "No session to look at."
+        },
+        "stop": {
+          "offered": false,
+          "label": "Stop",
+          "why": "No background session to stop."
+        },
+        "signal": {
+          "offered": false,
+          "label": "Delivered?",
+          "why": "No signal waits on your reading."
+        }
+      },
+      "signal": null,
+      "signal_note": "no WATCH row names a signal",
+      "readings": []
     },
     "263": {
       "card": {
@@ -1301,7 +1736,9 @@
           "column": "Backlog",
           "group": null,
           "position": 0
-        }
+        },
+        "lane_state": "none",
+        "lane_sentence": null
       },
       "brief": [],
       "record": [],
@@ -1346,7 +1783,79 @@
           },
           "detail": "Born from docs/slice-suggestions/2026-08-29-two-meters-on-one-pontoon-disagree.md, at registration."
         }
-      ]
+      ],
+      "lane": {
+        "card_number": 263,
+        "name": "card-263-two-meters-on-one-pontoon-disagr",
+        "path": null,
+        "state": "none",
+        "sentence": "",
+        "session": null,
+        "question": null,
+        "said": null,
+        "said_at": null,
+        "discussing": [],
+        "window_open": false,
+        "hands_on_since": null,
+        "died": null,
+        "moved": null,
+        "folded": false,
+        "trunk_synced": false,
+        "main_synced": false
+      },
+      "doors": {
+        "start": {
+          "offered": false,
+          "label": "Start",
+          "why": "Start is offered in Up next and Planned; this card is in Backlog."
+        },
+        "start_anyway": {
+          "offered": false,
+          "label": "Start anyway",
+          "why": "There is no collision to override."
+        },
+        "placement": null,
+        "placement_note": "the runtime has not read this board yet",
+        "collision": null,
+        "watch": {
+          "offered": false,
+          "label": "Watch",
+          "why": "No live session to watch."
+        },
+        "answer": {
+          "offered": false,
+          "label": "Answer",
+          "why": "No live session to answer."
+        },
+        "discuss": {
+          "offered": false,
+          "label": "Discuss",
+          "why": "The rule found nowhere to run: the runtime has not read this board yet"
+        },
+        "look": {
+          "offered": false,
+          "label": "Look",
+          "why": "No session to look at."
+        },
+        "resume": {
+          "offered": false,
+          "label": "Resume",
+          "why": "No session to look at."
+        },
+        "stop": {
+          "offered": false,
+          "label": "Stop",
+          "why": "No background session to stop."
+        },
+        "signal": {
+          "offered": false,
+          "label": "Delivered?",
+          "why": "No signal waits on your reading."
+        }
+      },
+      "signal": null,
+      "signal_note": "no WATCH row names a signal",
+      "readings": []
     },
     "264": {
       "card": {
@@ -1390,7 +1899,9 @@
           "column": "Backlog",
           "group": null,
           "position": 1
-        }
+        },
+        "lane_state": "none",
+        "lane_sentence": null
       },
       "brief": [],
       "record": [],
@@ -1435,7 +1946,79 @@
           },
           "detail": "Born from docs/slice-suggestions/2026-08-31-the-same-slip-is-mailed-twice.md, at registration."
         }
-      ]
+      ],
+      "lane": {
+        "card_number": 264,
+        "name": "card-264-the-same-slip-is-mailed-twice",
+        "path": null,
+        "state": "none",
+        "sentence": "",
+        "session": null,
+        "question": null,
+        "said": null,
+        "said_at": null,
+        "discussing": [],
+        "window_open": false,
+        "hands_on_since": null,
+        "died": null,
+        "moved": null,
+        "folded": false,
+        "trunk_synced": false,
+        "main_synced": false
+      },
+      "doors": {
+        "start": {
+          "offered": false,
+          "label": "Start",
+          "why": "Start is offered in Up next and Planned; this card is in Backlog."
+        },
+        "start_anyway": {
+          "offered": false,
+          "label": "Start anyway",
+          "why": "There is no collision to override."
+        },
+        "placement": null,
+        "placement_note": "the runtime has not read this board yet",
+        "collision": null,
+        "watch": {
+          "offered": false,
+          "label": "Watch",
+          "why": "No live session to watch."
+        },
+        "answer": {
+          "offered": false,
+          "label": "Answer",
+          "why": "No live session to answer."
+        },
+        "discuss": {
+          "offered": false,
+          "label": "Discuss",
+          "why": "The rule found nowhere to run: the runtime has not read this board yet"
+        },
+        "look": {
+          "offered": false,
+          "label": "Look",
+          "why": "No session to look at."
+        },
+        "resume": {
+          "offered": false,
+          "label": "Resume",
+          "why": "No session to look at."
+        },
+        "stop": {
+          "offered": false,
+          "label": "Stop",
+          "why": "No background session to stop."
+        },
+        "signal": {
+          "offered": false,
+          "label": "Delivered?",
+          "why": "No signal waits on your reading."
+        }
+      },
+      "signal": null,
+      "signal_note": "no WATCH row names a signal",
+      "readings": []
     },
     "265": {
       "card": {
@@ -1479,7 +2062,9 @@
           "column": "Backlog",
           "group": null,
           "position": 2
-        }
+        },
+        "lane_state": "none",
+        "lane_sentence": null
       },
       "brief": [],
       "record": [],
@@ -1524,7 +2109,79 @@
           },
           "detail": "Born from docs/slice-suggestions/2026-09-01-the-waiting-list-forgets-who-asked-first.md, at registration."
         }
-      ]
+      ],
+      "lane": {
+        "card_number": 265,
+        "name": "card-265-the-waiting-list-forgets-who-ask",
+        "path": null,
+        "state": "none",
+        "sentence": "",
+        "session": null,
+        "question": null,
+        "said": null,
+        "said_at": null,
+        "discussing": [],
+        "window_open": false,
+        "hands_on_since": null,
+        "died": null,
+        "moved": null,
+        "folded": false,
+        "trunk_synced": false,
+        "main_synced": false
+      },
+      "doors": {
+        "start": {
+          "offered": false,
+          "label": "Start",
+          "why": "Start is offered in Up next and Planned; this card is in Backlog."
+        },
+        "start_anyway": {
+          "offered": false,
+          "label": "Start anyway",
+          "why": "There is no collision to override."
+        },
+        "placement": null,
+        "placement_note": "the runtime has not read this board yet",
+        "collision": null,
+        "watch": {
+          "offered": false,
+          "label": "Watch",
+          "why": "No live session to watch."
+        },
+        "answer": {
+          "offered": false,
+          "label": "Answer",
+          "why": "No live session to answer."
+        },
+        "discuss": {
+          "offered": false,
+          "label": "Discuss",
+          "why": "The rule found nowhere to run: the runtime has not read this board yet"
+        },
+        "look": {
+          "offered": false,
+          "label": "Look",
+          "why": "No session to look at."
+        },
+        "resume": {
+          "offered": false,
+          "label": "Resume",
+          "why": "No session to look at."
+        },
+        "stop": {
+          "offered": false,
+          "label": "Stop",
+          "why": "No background session to stop."
+        },
+        "signal": {
+          "offered": false,
+          "label": "Delivered?",
+          "why": "No signal waits on your reading."
+        }
+      },
+      "signal": null,
+      "signal_note": "no WATCH row names a signal",
+      "readings": []
     },
     "266": {
       "card": {
@@ -1568,7 +2225,9 @@
           "column": "Backlog",
           "group": null,
           "position": 3
-        }
+        },
+        "lane_state": "none",
+        "lane_sentence": null
       },
       "brief": [],
       "record": [],
@@ -1613,7 +2272,79 @@
           },
           "detail": "Born from docs/slice-suggestions/2026-09-04-a-boat-longer-than-its-berth-is-accepted.md, at registration."
         }
-      ]
+      ],
+      "lane": {
+        "card_number": 266,
+        "name": "card-266-a-boat-longer-than-its-berth-is",
+        "path": null,
+        "state": "none",
+        "sentence": "",
+        "session": null,
+        "question": null,
+        "said": null,
+        "said_at": null,
+        "discussing": [],
+        "window_open": false,
+        "hands_on_since": null,
+        "died": null,
+        "moved": null,
+        "folded": false,
+        "trunk_synced": false,
+        "main_synced": false
+      },
+      "doors": {
+        "start": {
+          "offered": false,
+          "label": "Start",
+          "why": "Start is offered in Up next and Planned; this card is in Backlog."
+        },
+        "start_anyway": {
+          "offered": false,
+          "label": "Start anyway",
+          "why": "There is no collision to override."
+        },
+        "placement": null,
+        "placement_note": "the runtime has not read this board yet",
+        "collision": null,
+        "watch": {
+          "offered": false,
+          "label": "Watch",
+          "why": "No live session to watch."
+        },
+        "answer": {
+          "offered": false,
+          "label": "Answer",
+          "why": "No live session to answer."
+        },
+        "discuss": {
+          "offered": false,
+          "label": "Discuss",
+          "why": "The rule found nowhere to run: the runtime has not read this board yet"
+        },
+        "look": {
+          "offered": false,
+          "label": "Look",
+          "why": "No session to look at."
+        },
+        "resume": {
+          "offered": false,
+          "label": "Resume",
+          "why": "No session to look at."
+        },
+        "stop": {
+          "offered": false,
+          "label": "Stop",
+          "why": "No background session to stop."
+        },
+        "signal": {
+          "offered": false,
+          "label": "Delivered?",
+          "why": "No signal waits on your reading."
+        }
+      },
+      "signal": null,
+      "signal_note": "no WATCH row names a signal",
+      "readings": []
     },
     "196": {
       "card": {
@@ -1674,7 +2405,9 @@
           "column": "Planned",
           "group": "Season opening",
           "position": 0
-        }
+        },
+        "lane_state": "none",
+        "lane_sentence": null
       },
       "brief": [
         {
@@ -1750,7 +2483,79 @@
           },
           "detail": "Born from Needle 0.1's card file — column, position and 3 rows."
         }
-      ]
+      ],
+      "lane": {
+        "card_number": 196,
+        "name": "card-196-the-waiting-list-offers-every-be",
+        "path": null,
+        "state": "none",
+        "sentence": "",
+        "session": null,
+        "question": null,
+        "said": null,
+        "said_at": null,
+        "discussing": [],
+        "window_open": false,
+        "hands_on_since": null,
+        "died": null,
+        "moved": null,
+        "folded": false,
+        "trunk_synced": false,
+        "main_synced": false
+      },
+      "doors": {
+        "start": {
+          "offered": false,
+          "label": "Start",
+          "why": "The rule found nowhere to run: the runtime has not read this board yet"
+        },
+        "start_anyway": {
+          "offered": false,
+          "label": "Start anyway",
+          "why": "There is no collision to override."
+        },
+        "placement": null,
+        "placement_note": "the runtime has not read this board yet",
+        "collision": null,
+        "watch": {
+          "offered": false,
+          "label": "Watch",
+          "why": "No live session to watch."
+        },
+        "answer": {
+          "offered": false,
+          "label": "Answer",
+          "why": "No live session to answer."
+        },
+        "discuss": {
+          "offered": false,
+          "label": "Discuss",
+          "why": "The rule found nowhere to run: the runtime has not read this board yet"
+        },
+        "look": {
+          "offered": false,
+          "label": "Look",
+          "why": "No session to look at."
+        },
+        "resume": {
+          "offered": false,
+          "label": "Resume",
+          "why": "No session to look at."
+        },
+        "stop": {
+          "offered": false,
+          "label": "Stop",
+          "why": "No background session to stop."
+        },
+        "signal": {
+          "offered": false,
+          "label": "Delivered?",
+          "why": "No signal waits on your reading."
+        }
+      },
+      "signal": null,
+      "signal_note": "no WATCH row names a signal",
+      "readings": []
     },
     "109": {
       "card": {
@@ -1807,7 +2612,9 @@
           "column": "Planned",
           "group": "Skipper-facing quality",
           "position": 0
-        }
+        },
+        "lane_state": "none",
+        "lane_sentence": null
       },
       "brief": [
         {
@@ -1879,7 +2686,79 @@
           },
           "detail": "Born from Needle 0.1's card file — column, position and 2 rows."
         }
-      ]
+      ],
+      "lane": {
+        "card_number": 109,
+        "name": "card-109-the-skipper-sees-the-price-befor",
+        "path": null,
+        "state": "none",
+        "sentence": "",
+        "session": null,
+        "question": null,
+        "said": null,
+        "said_at": null,
+        "discussing": [],
+        "window_open": false,
+        "hands_on_since": null,
+        "died": null,
+        "moved": null,
+        "folded": false,
+        "trunk_synced": false,
+        "main_synced": false
+      },
+      "doors": {
+        "start": {
+          "offered": false,
+          "label": "Start",
+          "why": "The rule found nowhere to run: the runtime has not read this board yet"
+        },
+        "start_anyway": {
+          "offered": false,
+          "label": "Start anyway",
+          "why": "There is no collision to override."
+        },
+        "placement": null,
+        "placement_note": "the runtime has not read this board yet",
+        "collision": null,
+        "watch": {
+          "offered": false,
+          "label": "Watch",
+          "why": "No live session to watch."
+        },
+        "answer": {
+          "offered": false,
+          "label": "Answer",
+          "why": "No live session to answer."
+        },
+        "discuss": {
+          "offered": false,
+          "label": "Discuss",
+          "why": "The rule found nowhere to run: the runtime has not read this board yet"
+        },
+        "look": {
+          "offered": false,
+          "label": "Look",
+          "why": "No session to look at."
+        },
+        "resume": {
+          "offered": false,
+          "label": "Resume",
+          "why": "No session to look at."
+        },
+        "stop": {
+          "offered": false,
+          "label": "Stop",
+          "why": "No background session to stop."
+        },
+        "signal": {
+          "offered": false,
+          "label": "Delivered?",
+          "why": "No signal waits on your reading."
+        }
+      },
+      "signal": null,
+      "signal_note": "no WATCH row names a signal",
+      "readings": []
     },
     "172": {
       "card": {
@@ -1940,7 +2819,9 @@
           "column": "Planned",
           "group": "Trust — from the winter review",
           "position": 0
-        }
+        },
+        "lane_state": "none",
+        "lane_sentence": null
       },
       "brief": [
         {
@@ -2016,7 +2897,79 @@
           },
           "detail": "Born from Needle 0.1's card file — column, position and 3 rows."
         }
-      ]
+      ],
+      "lane": {
+        "card_number": 172,
+        "name": "card-172-a-screen-nobody-opens-is-removed",
+        "path": null,
+        "state": "none",
+        "sentence": "",
+        "session": null,
+        "question": null,
+        "said": null,
+        "said_at": null,
+        "discussing": [],
+        "window_open": false,
+        "hands_on_since": null,
+        "died": null,
+        "moved": null,
+        "folded": false,
+        "trunk_synced": false,
+        "main_synced": false
+      },
+      "doors": {
+        "start": {
+          "offered": false,
+          "label": "Start",
+          "why": "The rule found nowhere to run: the runtime has not read this board yet"
+        },
+        "start_anyway": {
+          "offered": false,
+          "label": "Start anyway",
+          "why": "There is no collision to override."
+        },
+        "placement": null,
+        "placement_note": "the runtime has not read this board yet",
+        "collision": null,
+        "watch": {
+          "offered": false,
+          "label": "Watch",
+          "why": "No live session to watch."
+        },
+        "answer": {
+          "offered": false,
+          "label": "Answer",
+          "why": "No live session to answer."
+        },
+        "discuss": {
+          "offered": false,
+          "label": "Discuss",
+          "why": "The rule found nowhere to run: the runtime has not read this board yet"
+        },
+        "look": {
+          "offered": false,
+          "label": "Look",
+          "why": "No session to look at."
+        },
+        "resume": {
+          "offered": false,
+          "label": "Resume",
+          "why": "No session to look at."
+        },
+        "stop": {
+          "offered": false,
+          "label": "Stop",
+          "why": "No background session to stop."
+        },
+        "signal": {
+          "offered": false,
+          "label": "Delivered?",
+          "why": "No signal waits on your reading."
+        }
+      },
+      "signal": null,
+      "signal_note": "no WATCH row names a signal",
+      "readings": []
     },
     "262": {
       "card": {
@@ -2060,7 +3013,9 @@
           "column": "Planned",
           "group": null,
           "position": 0
-        }
+        },
+        "lane_state": "none",
+        "lane_sentence": null
       },
       "brief": [],
       "record": [],
@@ -2117,7 +3072,79 @@
           },
           "detail": "Born from docs/plans/2026-09-04-the-tide-table-is-the-harbours-own.md, at registration."
         }
-      ]
+      ],
+      "lane": {
+        "card_number": 262,
+        "name": "card-262-the-tide-table-is-the-harbour-s",
+        "path": null,
+        "state": "none",
+        "sentence": "",
+        "session": null,
+        "question": null,
+        "said": null,
+        "said_at": null,
+        "discussing": [],
+        "window_open": false,
+        "hands_on_since": null,
+        "died": null,
+        "moved": null,
+        "folded": false,
+        "trunk_synced": false,
+        "main_synced": false
+      },
+      "doors": {
+        "start": {
+          "offered": false,
+          "label": "Start",
+          "why": "The rule found nowhere to run: the runtime has not read this board yet"
+        },
+        "start_anyway": {
+          "offered": false,
+          "label": "Start anyway",
+          "why": "There is no collision to override."
+        },
+        "placement": null,
+        "placement_note": "the runtime has not read this board yet",
+        "collision": null,
+        "watch": {
+          "offered": false,
+          "label": "Watch",
+          "why": "No live session to watch."
+        },
+        "answer": {
+          "offered": false,
+          "label": "Answer",
+          "why": "No live session to answer."
+        },
+        "discuss": {
+          "offered": false,
+          "label": "Discuss",
+          "why": "The rule found nowhere to run: the runtime has not read this board yet"
+        },
+        "look": {
+          "offered": false,
+          "label": "Look",
+          "why": "No session to look at."
+        },
+        "resume": {
+          "offered": false,
+          "label": "Resume",
+          "why": "No session to look at."
+        },
+        "stop": {
+          "offered": false,
+          "label": "Stop",
+          "why": "No background session to stop."
+        },
+        "signal": {
+          "offered": false,
+          "label": "Delivered?",
+          "why": "No signal waits on your reading."
+        }
+      },
+      "signal": null,
+      "signal_note": "no WATCH row names a signal",
+      "readings": []
     },
     "267": {
       "card": {
@@ -2161,7 +3188,9 @@
           "column": "Planned",
           "group": null,
           "position": 1
-        }
+        },
+        "lane_state": "none",
+        "lane_sentence": null
       },
       "brief": [],
       "record": [],
@@ -2218,7 +3247,79 @@
           },
           "detail": "Born from docs/plans/2026-09-04-a-storm-warning-reaches-every-skipper.md, after registration."
         }
-      ]
+      ],
+      "lane": {
+        "card_number": 267,
+        "name": "card-267-a-storm-warning-reaches-every-sk",
+        "path": null,
+        "state": "none",
+        "sentence": "",
+        "session": null,
+        "question": null,
+        "said": null,
+        "said_at": null,
+        "discussing": [],
+        "window_open": false,
+        "hands_on_since": null,
+        "died": null,
+        "moved": null,
+        "folded": false,
+        "trunk_synced": false,
+        "main_synced": false
+      },
+      "doors": {
+        "start": {
+          "offered": false,
+          "label": "Start",
+          "why": "The rule found nowhere to run: the runtime has not read this board yet"
+        },
+        "start_anyway": {
+          "offered": false,
+          "label": "Start anyway",
+          "why": "There is no collision to override."
+        },
+        "placement": null,
+        "placement_note": "the runtime has not read this board yet",
+        "collision": null,
+        "watch": {
+          "offered": false,
+          "label": "Watch",
+          "why": "No live session to watch."
+        },
+        "answer": {
+          "offered": false,
+          "label": "Answer",
+          "why": "No live session to answer."
+        },
+        "discuss": {
+          "offered": false,
+          "label": "Discuss",
+          "why": "The rule found nowhere to run: the runtime has not read this board yet"
+        },
+        "look": {
+          "offered": false,
+          "label": "Look",
+          "why": "No session to look at."
+        },
+        "resume": {
+          "offered": false,
+          "label": "Resume",
+          "why": "No session to look at."
+        },
+        "stop": {
+          "offered": false,
+          "label": "Stop",
+          "why": "No background session to stop."
+        },
+        "signal": {
+          "offered": false,
+          "label": "Delivered?",
+          "why": "No signal waits on your reading."
+        }
+      },
+      "signal": null,
+      "signal_note": "no WATCH row names a signal",
+      "readings": []
     },
     "253": {
       "card": {
@@ -2279,7 +3380,9 @@
           "column": "Up next",
           "group": null,
           "position": 0
-        }
+        },
+        "lane_state": "none",
+        "lane_sentence": null
       },
       "brief": [
         {
@@ -2363,7 +3466,79 @@
           },
           "detail": "Born from Needle 0.1's card file — column, position and 4 rows."
         }
-      ]
+      ],
+      "lane": {
+        "card_number": 253,
+        "name": "card-253-every-metered-kilowatt-is-billed",
+        "path": null,
+        "state": "none",
+        "sentence": "",
+        "session": null,
+        "question": null,
+        "said": null,
+        "said_at": null,
+        "discussing": [],
+        "window_open": false,
+        "hands_on_since": null,
+        "died": null,
+        "moved": null,
+        "folded": false,
+        "trunk_synced": false,
+        "main_synced": false
+      },
+      "doors": {
+        "start": {
+          "offered": false,
+          "label": "Start",
+          "why": "The rule found nowhere to run: the runtime has not read this board yet"
+        },
+        "start_anyway": {
+          "offered": false,
+          "label": "Start anyway",
+          "why": "There is no collision to override."
+        },
+        "placement": null,
+        "placement_note": "the runtime has not read this board yet",
+        "collision": null,
+        "watch": {
+          "offered": false,
+          "label": "Watch",
+          "why": "No live session to watch."
+        },
+        "answer": {
+          "offered": false,
+          "label": "Answer",
+          "why": "No live session to answer."
+        },
+        "discuss": {
+          "offered": false,
+          "label": "Discuss",
+          "why": "The rule found nowhere to run: the runtime has not read this board yet"
+        },
+        "look": {
+          "offered": false,
+          "label": "Look",
+          "why": "No session to look at."
+        },
+        "resume": {
+          "offered": false,
+          "label": "Resume",
+          "why": "No session to look at."
+        },
+        "stop": {
+          "offered": false,
+          "label": "Stop",
+          "why": "No background session to stop."
+        },
+        "signal": {
+          "offered": false,
+          "label": "Delivered?",
+          "why": "No signal waits on your reading."
+        }
+      },
+      "signal": null,
+      "signal_note": "no WATCH row names a signal",
+      "readings": []
     },
     "241": {
       "card": {
@@ -2428,7 +3603,9 @@
           "column": "Up next",
           "group": null,
           "position": 1
-        }
+        },
+        "lane_state": "none",
+        "lane_sentence": null
       },
       "brief": [
         {
@@ -2516,7 +3693,79 @@
           },
           "detail": "Born from Needle 0.1's card file — column, position and 5 rows."
         }
-      ]
+      ],
+      "lane": {
+        "card_number": 241,
+        "name": "card-241-a-gate-code-arrives-before-the-b",
+        "path": null,
+        "state": "none",
+        "sentence": "",
+        "session": null,
+        "question": null,
+        "said": null,
+        "said_at": null,
+        "discussing": [],
+        "window_open": false,
+        "hands_on_since": null,
+        "died": null,
+        "moved": null,
+        "folded": false,
+        "trunk_synced": false,
+        "main_synced": false
+      },
+      "doors": {
+        "start": {
+          "offered": false,
+          "label": "Start",
+          "why": "The rule found nowhere to run: the runtime has not read this board yet"
+        },
+        "start_anyway": {
+          "offered": false,
+          "label": "Start anyway",
+          "why": "There is no collision to override."
+        },
+        "placement": null,
+        "placement_note": "the runtime has not read this board yet",
+        "collision": null,
+        "watch": {
+          "offered": false,
+          "label": "Watch",
+          "why": "No live session to watch."
+        },
+        "answer": {
+          "offered": false,
+          "label": "Answer",
+          "why": "No live session to answer."
+        },
+        "discuss": {
+          "offered": false,
+          "label": "Discuss",
+          "why": "The rule found nowhere to run: the runtime has not read this board yet"
+        },
+        "look": {
+          "offered": false,
+          "label": "Look",
+          "why": "No session to look at."
+        },
+        "resume": {
+          "offered": false,
+          "label": "Resume",
+          "why": "No session to look at."
+        },
+        "stop": {
+          "offered": false,
+          "label": "Stop",
+          "why": "No background session to stop."
+        },
+        "signal": {
+          "offered": false,
+          "label": "Delivered?",
+          "why": "No signal waits on your reading."
+        }
+      },
+      "signal": null,
+      "signal_note": "no WATCH row names a signal",
+      "readings": []
     },
     "228": {
       "card": {
@@ -2570,7 +3819,9 @@
           "column": "Up next",
           "group": null,
           "position": 2
-        }
+        },
+        "lane_state": "none",
+        "lane_sentence": null
       },
       "brief": [
         {
@@ -2604,7 +3855,79 @@
           },
           "detail": "Born from Needle 0.1's card file — column, position and 4 rows."
         }
-      ]
+      ],
+      "lane": {
+        "card_number": 228,
+        "name": "card-228-the-skipper-is-told-what-the-off",
+        "path": null,
+        "state": "none",
+        "sentence": "",
+        "session": null,
+        "question": null,
+        "said": null,
+        "said_at": null,
+        "discussing": [],
+        "window_open": false,
+        "hands_on_since": null,
+        "died": null,
+        "moved": null,
+        "folded": false,
+        "trunk_synced": false,
+        "main_synced": false
+      },
+      "doors": {
+        "start": {
+          "offered": false,
+          "label": "Start",
+          "why": "The rule found nowhere to run: the runtime has not read this board yet"
+        },
+        "start_anyway": {
+          "offered": false,
+          "label": "Start anyway",
+          "why": "There is no collision to override."
+        },
+        "placement": null,
+        "placement_note": "the runtime has not read this board yet",
+        "collision": null,
+        "watch": {
+          "offered": false,
+          "label": "Watch",
+          "why": "No live session to watch."
+        },
+        "answer": {
+          "offered": false,
+          "label": "Answer",
+          "why": "No live session to answer."
+        },
+        "discuss": {
+          "offered": false,
+          "label": "Discuss",
+          "why": "The rule found nowhere to run: the runtime has not read this board yet"
+        },
+        "look": {
+          "offered": false,
+          "label": "Look",
+          "why": "No session to look at."
+        },
+        "resume": {
+          "offered": false,
+          "label": "Resume",
+          "why": "No session to look at."
+        },
+        "stop": {
+          "offered": false,
+          "label": "Stop",
+          "why": "No background session to stop."
+        },
+        "signal": {
+          "offered": false,
+          "label": "Delivered?",
+          "why": "No signal waits on your reading."
+        }
+      },
+      "signal": null,
+      "signal_note": "no WATCH row names a signal",
+      "readings": []
     },
     "237": {
       "card": {
@@ -2665,7 +3988,9 @@
           "column": "Up next",
           "group": null,
           "position": 3
-        }
+        },
+        "lane_state": "none",
+        "lane_sentence": null
       },
       "brief": [
         {
@@ -2745,7 +4070,79 @@
           },
           "detail": "Born from Needle 0.1's card file — column, position and 4 rows."
         }
-      ]
+      ],
+      "lane": {
+        "card_number": 237,
+        "name": "card-237-a-berth-is-never-let-twice",
+        "path": null,
+        "state": "none",
+        "sentence": "",
+        "session": null,
+        "question": null,
+        "said": null,
+        "said_at": null,
+        "discussing": [],
+        "window_open": false,
+        "hands_on_since": null,
+        "died": null,
+        "moved": null,
+        "folded": false,
+        "trunk_synced": false,
+        "main_synced": false
+      },
+      "doors": {
+        "start": {
+          "offered": false,
+          "label": "Start",
+          "why": "The rule found nowhere to run: the runtime has not read this board yet"
+        },
+        "start_anyway": {
+          "offered": false,
+          "label": "Start anyway",
+          "why": "There is no collision to override."
+        },
+        "placement": null,
+        "placement_note": "the runtime has not read this board yet",
+        "collision": null,
+        "watch": {
+          "offered": false,
+          "label": "Watch",
+          "why": "No live session to watch."
+        },
+        "answer": {
+          "offered": false,
+          "label": "Answer",
+          "why": "No live session to answer."
+        },
+        "discuss": {
+          "offered": false,
+          "label": "Discuss",
+          "why": "The rule found nowhere to run: the runtime has not read this board yet"
+        },
+        "look": {
+          "offered": false,
+          "label": "Look",
+          "why": "No session to look at."
+        },
+        "resume": {
+          "offered": false,
+          "label": "Resume",
+          "why": "No session to look at."
+        },
+        "stop": {
+          "offered": false,
+          "label": "Stop",
+          "why": "No background session to stop."
+        },
+        "signal": {
+          "offered": false,
+          "label": "Delivered?",
+          "why": "No signal waits on your reading."
+        }
+      },
+      "signal": null,
+      "signal_note": "no WATCH row names a signal",
+      "readings": []
     },
     "174": {
       "card": {
@@ -2806,7 +4203,9 @@
           "column": "Up next",
           "group": null,
           "position": 4
-        }
+        },
+        "lane_state": "none",
+        "lane_sentence": null
       },
       "brief": [
         {
@@ -2882,7 +4281,79 @@
           },
           "detail": "Born from Needle 0.1's card file — column, position and 3 rows."
         }
-      ]
+      ],
+      "lane": {
+        "card_number": 174,
+        "name": "card-174-the-booking-office-stops-growing",
+        "path": null,
+        "state": "none",
+        "sentence": "",
+        "session": null,
+        "question": null,
+        "said": null,
+        "said_at": null,
+        "discussing": [],
+        "window_open": false,
+        "hands_on_since": null,
+        "died": null,
+        "moved": null,
+        "folded": false,
+        "trunk_synced": false,
+        "main_synced": false
+      },
+      "doors": {
+        "start": {
+          "offered": false,
+          "label": "Start",
+          "why": "The rule found nowhere to run: the runtime has not read this board yet"
+        },
+        "start_anyway": {
+          "offered": false,
+          "label": "Start anyway",
+          "why": "There is no collision to override."
+        },
+        "placement": null,
+        "placement_note": "the runtime has not read this board yet",
+        "collision": null,
+        "watch": {
+          "offered": false,
+          "label": "Watch",
+          "why": "No live session to watch."
+        },
+        "answer": {
+          "offered": false,
+          "label": "Answer",
+          "why": "No live session to answer."
+        },
+        "discuss": {
+          "offered": false,
+          "label": "Discuss",
+          "why": "The rule found nowhere to run: the runtime has not read this board yet"
+        },
+        "look": {
+          "offered": false,
+          "label": "Look",
+          "why": "No session to look at."
+        },
+        "resume": {
+          "offered": false,
+          "label": "Resume",
+          "why": "No session to look at."
+        },
+        "stop": {
+          "offered": false,
+          "label": "Stop",
+          "why": "No background session to stop."
+        },
+        "signal": {
+          "offered": false,
+          "label": "Delivered?",
+          "why": "No signal waits on your reading."
+        }
+      },
+      "signal": null,
+      "signal_note": "no WATCH row names a signal",
+      "readings": []
     },
     "259": {
       "card": {
@@ -2947,7 +4418,9 @@
           "column": "Executing",
           "group": null,
           "position": 0
-        }
+        },
+        "lane_state": "none",
+        "lane_sentence": null
       },
       "brief": [
         {
@@ -3032,7 +4505,79 @@
           },
           "detail": "Born from Needle 0.1's card file — column, position and 5 rows."
         }
-      ]
+      ],
+      "lane": {
+        "card_number": 259,
+        "name": "card-259-the-fuel-pontoon-takes-cards-liv",
+        "path": null,
+        "state": "none",
+        "sentence": "",
+        "session": null,
+        "question": null,
+        "said": null,
+        "said_at": null,
+        "discussing": [],
+        "window_open": false,
+        "hands_on_since": null,
+        "died": null,
+        "moved": null,
+        "folded": false,
+        "trunk_synced": false,
+        "main_synced": false
+      },
+      "doors": {
+        "start": {
+          "offered": false,
+          "label": "Start",
+          "why": "Start is offered in Up next and Planned; this card is in Executing."
+        },
+        "start_anyway": {
+          "offered": false,
+          "label": "Start anyway",
+          "why": "There is no collision to override."
+        },
+        "placement": null,
+        "placement_note": "the runtime has not read this board yet",
+        "collision": null,
+        "watch": {
+          "offered": false,
+          "label": "Watch",
+          "why": "No live session to watch."
+        },
+        "answer": {
+          "offered": false,
+          "label": "Answer",
+          "why": "No live session to answer."
+        },
+        "discuss": {
+          "offered": false,
+          "label": "Discuss",
+          "why": "The rule found nowhere to run: the runtime has not read this board yet"
+        },
+        "look": {
+          "offered": false,
+          "label": "Look",
+          "why": "No session to look at."
+        },
+        "resume": {
+          "offered": false,
+          "label": "Resume",
+          "why": "No session to look at."
+        },
+        "stop": {
+          "offered": false,
+          "label": "Stop",
+          "why": "No background session to stop."
+        },
+        "signal": {
+          "offered": false,
+          "label": "Delivered?",
+          "why": "No signal waits on your reading."
+        }
+      },
+      "signal": null,
+      "signal_note": "the WATCH row names no reader (url, file, command or owner). The grammar: WATCH: <what> — url|file|command|owner <target> [expect <value>] by <YYYY-MM-DD> [every <N>h|<N>d]",
+      "readings": []
     },
     "223": {
       "card": {
@@ -3093,7 +4638,9 @@
           "column": "Executing",
           "group": null,
           "position": 1
-        }
+        },
+        "lane_state": "none",
+        "lane_sentence": null
       },
       "brief": [
         {
@@ -3161,7 +4708,79 @@
           },
           "detail": "Born from Needle 0.1's card file — column, position and 4 rows."
         }
-      ]
+      ],
+      "lane": {
+        "card_number": 223,
+        "name": "card-223-the-gate-code-goes-out-in-plain",
+        "path": null,
+        "state": "none",
+        "sentence": "",
+        "session": null,
+        "question": null,
+        "said": null,
+        "said_at": null,
+        "discussing": [],
+        "window_open": false,
+        "hands_on_since": null,
+        "died": null,
+        "moved": null,
+        "folded": false,
+        "trunk_synced": false,
+        "main_synced": false
+      },
+      "doors": {
+        "start": {
+          "offered": false,
+          "label": "Start",
+          "why": "Start is offered in Up next and Planned; this card is in Executing."
+        },
+        "start_anyway": {
+          "offered": false,
+          "label": "Start anyway",
+          "why": "There is no collision to override."
+        },
+        "placement": null,
+        "placement_note": "the runtime has not read this board yet",
+        "collision": null,
+        "watch": {
+          "offered": false,
+          "label": "Watch",
+          "why": "No live session to watch."
+        },
+        "answer": {
+          "offered": false,
+          "label": "Answer",
+          "why": "No live session to answer."
+        },
+        "discuss": {
+          "offered": false,
+          "label": "Discuss",
+          "why": "The rule found nowhere to run: the runtime has not read this board yet"
+        },
+        "look": {
+          "offered": false,
+          "label": "Look",
+          "why": "No session to look at."
+        },
+        "resume": {
+          "offered": false,
+          "label": "Resume",
+          "why": "No session to look at."
+        },
+        "stop": {
+          "offered": false,
+          "label": "Stop",
+          "why": "No background session to stop."
+        },
+        "signal": {
+          "offered": false,
+          "label": "Delivered?",
+          "why": "No signal waits on your reading."
+        }
+      },
+      "signal": null,
+      "signal_note": "no WATCH row names a signal",
+      "readings": []
     },
     "219": {
       "card": {
@@ -3234,7 +4853,9 @@
           "column": "Decision moment",
           "group": null,
           "position": 0
-        }
+        },
+        "lane_state": "none",
+        "lane_sentence": null
       },
       "brief": [
         {
@@ -3323,7 +4944,79 @@
           },
           "detail": "Born from Needle 0.1's card file — column, position and 6 rows."
         }
-      ]
+      ],
+      "lane": {
+        "card_number": 219,
+        "name": "card-219-the-pricing-rule-judged-against",
+        "path": null,
+        "state": "none",
+        "sentence": "",
+        "session": null,
+        "question": null,
+        "said": null,
+        "said_at": null,
+        "discussing": [],
+        "window_open": false,
+        "hands_on_since": null,
+        "died": null,
+        "moved": null,
+        "folded": false,
+        "trunk_synced": false,
+        "main_synced": false
+      },
+      "doors": {
+        "start": {
+          "offered": false,
+          "label": "Start",
+          "why": "Start is offered in Up next and Planned; this card is in Decision moment."
+        },
+        "start_anyway": {
+          "offered": false,
+          "label": "Start anyway",
+          "why": "There is no collision to override."
+        },
+        "placement": null,
+        "placement_note": "the runtime has not read this board yet",
+        "collision": null,
+        "watch": {
+          "offered": false,
+          "label": "Watch",
+          "why": "No live session to watch."
+        },
+        "answer": {
+          "offered": false,
+          "label": "Answer",
+          "why": "No live session to answer."
+        },
+        "discuss": {
+          "offered": false,
+          "label": "Discuss",
+          "why": "The rule found nowhere to run: the runtime has not read this board yet"
+        },
+        "look": {
+          "offered": false,
+          "label": "Look",
+          "why": "No session to look at."
+        },
+        "resume": {
+          "offered": false,
+          "label": "Resume",
+          "why": "No session to look at."
+        },
+        "stop": {
+          "offered": false,
+          "label": "Stop",
+          "why": "No background session to stop."
+        },
+        "signal": {
+          "offered": false,
+          "label": "Delivered?",
+          "why": "No signal waits on your reading."
+        }
+      },
+      "signal": null,
+      "signal_note": "the WATCH row names no reader (url, file, command or owner). The grammar: WATCH: <what> — url|file|command|owner <target> [expect <value>] by <YYYY-MM-DD> [every <N>h|<N>d]",
+      "readings": []
     },
     "147": {
       "card": {
@@ -3379,7 +5072,9 @@
           "column": "Decision moment",
           "group": null,
           "position": 1
-        }
+        },
+        "lane_state": "none",
+        "lane_sentence": null
       },
       "brief": [
         {
@@ -3413,7 +5108,79 @@
           },
           "detail": "Born from Needle 0.1's card file — column, position and 3 rows."
         }
-      ]
+      ],
+      "lane": {
+        "card_number": 147,
+        "name": "card-147-tell-the-bank-which-account-take",
+        "path": null,
+        "state": "none",
+        "sentence": "",
+        "session": null,
+        "question": null,
+        "said": null,
+        "said_at": null,
+        "discussing": [],
+        "window_open": false,
+        "hands_on_since": null,
+        "died": null,
+        "moved": null,
+        "folded": false,
+        "trunk_synced": false,
+        "main_synced": false
+      },
+      "doors": {
+        "start": {
+          "offered": false,
+          "label": "Start",
+          "why": "Start is offered in Up next and Planned; this card is in Decision moment."
+        },
+        "start_anyway": {
+          "offered": false,
+          "label": "Start anyway",
+          "why": "There is no collision to override."
+        },
+        "placement": null,
+        "placement_note": "the runtime has not read this board yet",
+        "collision": null,
+        "watch": {
+          "offered": false,
+          "label": "Watch",
+          "why": "No live session to watch."
+        },
+        "answer": {
+          "offered": false,
+          "label": "Answer",
+          "why": "No live session to answer."
+        },
+        "discuss": {
+          "offered": false,
+          "label": "Discuss",
+          "why": "The rule found nowhere to run: the runtime has not read this board yet"
+        },
+        "look": {
+          "offered": false,
+          "label": "Look",
+          "why": "No session to look at."
+        },
+        "resume": {
+          "offered": false,
+          "label": "Resume",
+          "why": "No session to look at."
+        },
+        "stop": {
+          "offered": false,
+          "label": "Stop",
+          "why": "No background session to stop."
+        },
+        "signal": {
+          "offered": false,
+          "label": "Delivered?",
+          "why": "No signal waits on your reading."
+        }
+      },
+      "signal": null,
+      "signal_note": "no WATCH row names a signal",
+      "readings": []
     },
     "139": {
       "card": {
@@ -3478,7 +5245,9 @@
           "column": "Decision moment",
           "group": "Rulings that unblock lanes",
           "position": 0
-        }
+        },
+        "lane_state": "none",
+        "lane_sentence": null
       },
       "brief": [
         {
@@ -3558,7 +5327,79 @@
           },
           "detail": "Born from Needle 0.1's card file — column, position and 4 rows."
         }
-      ]
+      ],
+      "lane": {
+        "card_number": 139,
+        "name": "card-139-berth-first-booking-4-rulings",
+        "path": null,
+        "state": "none",
+        "sentence": "",
+        "session": null,
+        "question": null,
+        "said": null,
+        "said_at": null,
+        "discussing": [],
+        "window_open": false,
+        "hands_on_since": null,
+        "died": null,
+        "moved": null,
+        "folded": false,
+        "trunk_synced": false,
+        "main_synced": false
+      },
+      "doors": {
+        "start": {
+          "offered": false,
+          "label": "Start",
+          "why": "Start is offered in Up next and Planned; this card is in Decision moment."
+        },
+        "start_anyway": {
+          "offered": false,
+          "label": "Start anyway",
+          "why": "There is no collision to override."
+        },
+        "placement": null,
+        "placement_note": "the runtime has not read this board yet",
+        "collision": null,
+        "watch": {
+          "offered": false,
+          "label": "Watch",
+          "why": "No live session to watch."
+        },
+        "answer": {
+          "offered": false,
+          "label": "Answer",
+          "why": "No live session to answer."
+        },
+        "discuss": {
+          "offered": false,
+          "label": "Discuss",
+          "why": "The rule found nowhere to run: the runtime has not read this board yet"
+        },
+        "look": {
+          "offered": false,
+          "label": "Look",
+          "why": "No session to look at."
+        },
+        "resume": {
+          "offered": false,
+          "label": "Resume",
+          "why": "No session to look at."
+        },
+        "stop": {
+          "offered": false,
+          "label": "Stop",
+          "why": "No background session to stop."
+        },
+        "signal": {
+          "offered": false,
+          "label": "Delivered?",
+          "why": "No signal waits on your reading."
+        }
+      },
+      "signal": null,
+      "signal_note": "no WATCH row names a signal",
+      "readings": []
     },
     "149": {
       "card": {
@@ -3612,7 +5453,9 @@
           "column": "Decision moment",
           "group": "Actions & sign-offs elsewhere",
           "position": 0
-        }
+        },
+        "lane_state": "none",
+        "lane_sentence": null
       },
       "brief": [
         {
@@ -3646,7 +5489,79 @@
           },
           "detail": "Born from Needle 0.1's card file — column, position and 3 rows."
         }
-      ]
+      ],
+      "lane": {
+        "card_number": 149,
+        "name": "card-149-harbour-council-read-through",
+        "path": null,
+        "state": "none",
+        "sentence": "",
+        "session": null,
+        "question": null,
+        "said": null,
+        "said_at": null,
+        "discussing": [],
+        "window_open": false,
+        "hands_on_since": null,
+        "died": null,
+        "moved": null,
+        "folded": false,
+        "trunk_synced": false,
+        "main_synced": false
+      },
+      "doors": {
+        "start": {
+          "offered": false,
+          "label": "Start",
+          "why": "Start is offered in Up next and Planned; this card is in Decision moment."
+        },
+        "start_anyway": {
+          "offered": false,
+          "label": "Start anyway",
+          "why": "There is no collision to override."
+        },
+        "placement": null,
+        "placement_note": "the runtime has not read this board yet",
+        "collision": null,
+        "watch": {
+          "offered": false,
+          "label": "Watch",
+          "why": "No live session to watch."
+        },
+        "answer": {
+          "offered": false,
+          "label": "Answer",
+          "why": "No live session to answer."
+        },
+        "discuss": {
+          "offered": false,
+          "label": "Discuss",
+          "why": "The rule found nowhere to run: the runtime has not read this board yet"
+        },
+        "look": {
+          "offered": false,
+          "label": "Look",
+          "why": "No session to look at."
+        },
+        "resume": {
+          "offered": false,
+          "label": "Resume",
+          "why": "No session to look at."
+        },
+        "stop": {
+          "offered": false,
+          "label": "Stop",
+          "why": "No background session to stop."
+        },
+        "signal": {
+          "offered": false,
+          "label": "Delivered?",
+          "why": "No signal waits on your reading."
+        }
+      },
+      "signal": null,
+      "signal_note": "no WATCH row names a signal",
+      "readings": []
     },
     "134": {
       "card": {
@@ -3708,7 +5623,9 @@
           "column": "Executed",
           "group": null,
           "position": 0
-        }
+        },
+        "lane_state": "none",
+        "lane_sentence": null
       },
       "brief": [],
       "record": [
@@ -3786,7 +5703,79 @@
           },
           "detail": "Born from Needle 0.1's card file — column, position and 3 rows."
         }
-      ]
+      ],
+      "lane": {
+        "card_number": 134,
+        "name": "card-134-the-office-runs-its-own-checks-n",
+        "path": null,
+        "state": "none",
+        "sentence": "",
+        "session": null,
+        "question": null,
+        "said": null,
+        "said_at": null,
+        "discussing": [],
+        "window_open": false,
+        "hands_on_since": null,
+        "died": null,
+        "moved": null,
+        "folded": false,
+        "trunk_synced": false,
+        "main_synced": false
+      },
+      "doors": {
+        "start": {
+          "offered": false,
+          "label": "Start",
+          "why": "Start is offered in Up next and Planned; this card is in Executed."
+        },
+        "start_anyway": {
+          "offered": false,
+          "label": "Start anyway",
+          "why": "There is no collision to override."
+        },
+        "placement": null,
+        "placement_note": "the runtime has not read this board yet",
+        "collision": null,
+        "watch": {
+          "offered": false,
+          "label": "Watch",
+          "why": "No live session to watch."
+        },
+        "answer": {
+          "offered": false,
+          "label": "Answer",
+          "why": "No live session to answer."
+        },
+        "discuss": {
+          "offered": false,
+          "label": "Discuss",
+          "why": "The rule found nowhere to run: the runtime has not read this board yet"
+        },
+        "look": {
+          "offered": false,
+          "label": "Look",
+          "why": "No session to look at."
+        },
+        "resume": {
+          "offered": false,
+          "label": "Resume",
+          "why": "No session to look at."
+        },
+        "stop": {
+          "offered": false,
+          "label": "Stop",
+          "why": "No background session to stop."
+        },
+        "signal": {
+          "offered": false,
+          "label": "Delivered?",
+          "why": "No signal waits on your reading."
+        }
+      },
+      "signal": null,
+      "signal_note": "the WATCH row names no reader (url, file, command or owner). The grammar: WATCH: <what> — url|file|command|owner <target> [expect <value>] by <YYYY-MM-DD> [every <N>h|<N>d]",
+      "readings": []
     },
     "201": {
       "card": {
@@ -3839,7 +5828,9 @@
           "column": "Not now",
           "group": null,
           "position": 0
-        }
+        },
+        "lane_state": "none",
+        "lane_sentence": null
       },
       "brief": [],
       "record": [
@@ -3875,7 +5866,79 @@
           },
           "detail": "Born from Needle 0.1's card file — column, position and 2 rows."
         }
-      ]
+      ],
+      "lane": {
+        "card_number": 201,
+        "name": "card-201-a-confirmed-booking-waits-for-th",
+        "path": null,
+        "state": "none",
+        "sentence": "",
+        "session": null,
+        "question": null,
+        "said": null,
+        "said_at": null,
+        "discussing": [],
+        "window_open": false,
+        "hands_on_since": null,
+        "died": null,
+        "moved": null,
+        "folded": false,
+        "trunk_synced": false,
+        "main_synced": false
+      },
+      "doors": {
+        "start": {
+          "offered": false,
+          "label": "Start",
+          "why": "Start is offered in Up next and Planned; this card is in Not now."
+        },
+        "start_anyway": {
+          "offered": false,
+          "label": "Start anyway",
+          "why": "There is no collision to override."
+        },
+        "placement": null,
+        "placement_note": "the runtime has not read this board yet",
+        "collision": null,
+        "watch": {
+          "offered": false,
+          "label": "Watch",
+          "why": "No live session to watch."
+        },
+        "answer": {
+          "offered": false,
+          "label": "Answer",
+          "why": "No live session to answer."
+        },
+        "discuss": {
+          "offered": false,
+          "label": "Discuss",
+          "why": "The rule found nowhere to run: the runtime has not read this board yet"
+        },
+        "look": {
+          "offered": false,
+          "label": "Look",
+          "why": "No session to look at."
+        },
+        "resume": {
+          "offered": false,
+          "label": "Resume",
+          "why": "No session to look at."
+        },
+        "stop": {
+          "offered": false,
+          "label": "Stop",
+          "why": "No background session to stop."
+        },
+        "signal": {
+          "offered": false,
+          "label": "Delivered?",
+          "why": "No signal waits on your reading."
+        }
+      },
+      "signal": null,
+      "signal_note": "no WATCH row names a signal",
+      "readings": []
     }
   }
 }

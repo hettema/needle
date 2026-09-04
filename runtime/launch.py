@@ -474,10 +474,23 @@ def stop(session: Session) -> Stopped:
     )
 
 
-def move(store: Store, session: Session, *, to: Placement | None, card: str) -> Launch:
+def move(
+    store: Store,
+    session: Session,
+    *,
+    to: Placement | None,
+    card: str,
+    prompt: str | None = None,
+    spent: bool = True,
+) -> Launch:
     """Move a session to another slot: stop it where it runs, resume it where
     the handoff or the rule names, or start it fresh with its brief when the
-    transcript is above the resume limit. One hop per call."""
+    transcript is above the resume limit. One hop per call.
+
+    `prompt` is what the resumed session is told (the owner's answer, from
+    the Answer door); without it the handoff's words or CONTINUE. `spent`
+    says whether the slot it ran on is used up: a move on a wall rules the
+    slot out, a resume after an answer or a death prefers to stay put."""
     name = session.name
     if session.stale:
         return dead(
@@ -504,7 +517,8 @@ def move(store: Store, session: Session, *, to: Placement | None, card: str) -> 
                 None,
             )
     if to is None:
-        where = rule.where(session.slot, [Rung(slot=session.slot, model=None)], cached=False)
+        tried = [Rung(slot=session.slot, model=None)] if spent else []
+        where = rule.where(session.slot, tried, cached=False)
         if where.placement is None:
             return dead(name, [], where.reason, None)
         to = where.placement
@@ -524,12 +538,12 @@ def move(store: Store, session: Session, *, to: Placement | None, card: str) -> 
     fresh = size is not None and size > RESUME_SIZE_LIMIT
     if fresh:
         assert size is not None
-        prompt, resume = fresh_brief(session, size), None
+        told = fresh_brief(session, size) + (f"\n\nThe owner says: {prompt}" if prompt else "")
+        resume = None
     else:
-        prompt, resume = (wall.prompt if wall and wall.prompt else CONTINUE), session.session_id
-    argv = argv_for(
-        to, effort=session.effort, name=name, prompt=prompt, resume=resume, worktree=None
-    )
+        told = prompt or (wall.prompt if wall and wall.prompt else CONTINUE)
+        resume = session.session_id
+    argv = argv_for(to, effort=session.effort, name=name, prompt=told, resume=resume, worktree=None)
     short, words, since = _launch(to, argv, Path(home))
     if short is None:
         attempts.append(
@@ -565,7 +579,11 @@ def move(store: Store, session: Session, *, to: Placement | None, card: str) -> 
             reason=verified.reason,
         )
     launch = _settle(store, to, short, verified, card, attempts)
-    reason = wall.reason if wall else "moved by request"
+    reason = (
+        wall.reason
+        if wall
+        else ("resumed with the owner's answer" if prompt else "moved by request")
+    )
     if fresh:
         assert size is not None and verified.session_id is not None
         reason += (

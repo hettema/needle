@@ -29,6 +29,9 @@ MODULES: list[str] = [
     "session",
     "window",
     "launch",
+    "hook",
+    "signal",
+    "lane",
 ]
 
 TYPES_DIR = Path(__file__).resolve().parent.parent / "frontend" / "src" / "types"
@@ -86,6 +89,11 @@ def _ts_type(schema: dict[str, object], uses: set[str]) -> str:
         assert isinstance(items, dict)
         inner = _ts_type(items, uses)
         return f"({inner})[]" if " | " in inner else f"{inner}[]"
+    if kind == "object" and isinstance(schema.get("additionalProperties"), dict):
+        # A dict keyed by a string or an int: JSON keys are strings either way.
+        values = schema["additionalProperties"]
+        assert isinstance(values, dict)
+        return f"Record<string, {_ts_type(values, uses)}>"
     raise ValueError(f"The generator has no TypeScript for the schema {schema!r}.")
 
 

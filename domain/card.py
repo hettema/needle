@@ -23,6 +23,8 @@ class Actor(StrEnum):
     SESSION = "session"
     IMPORT = "import"
     CORPUS = "corpus"
+    MACHINE = "machine"
+    """The board itself, on evidence: a session with hands on, a signal read."""
 
 
 class CardOrigin(StrEnum):

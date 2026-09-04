@@ -48,6 +48,43 @@ The model rule and the limit detector live in `claude-acct`
 acts and never re-implements them. A start runs in a transient systemd scope of
 its own, so nothing the board does can end it.
 
+## The doors and the loops
+
+From a card the owner presses Start, and everything else about the card's
+life happens without him: the card enters Executing because a session has
+hands on its worktree, leaves it to where the work says (Executed when the
+close landed, Decision moment when the work folded but nobody wrote it up,
+back where it came from when nothing folded), and moves on to Done when the
+signal its WATCH row names arrives. Every door on the card — Start, Watch,
+Answer, Discuss, Look, Resume, Stop — opens through the runtime, proves its
+effect, and fails loudly by name. Every machine move is an audit row with its
+reason in one sentence, in the card's history.
+
+Sessions push; the board never polls a session. The hook in
+`hooks/needle_hook.py` is registered in each project's `.claude/settings.json`
+(`uv run needle hook install /path/to/repo`) for SessionStart, Stop,
+SessionEnd and StopFailure; it queues on disk and drains to `/api/hooks`, so a
+board that was down loses nothing. A session writes its outcome back through
+the command line, never by editing a file:
+
+```bash
+uv run needle card hellorevenue 253                  # the brief a lane opens with
+uv run needle row hellorevenue 253 WAITS "the deploy"  # one row on the card
+uv run needle close hellorevenue 253 --delivered "…" \
+    --watch "prod answers — url https://… expect \"ok\" by 2026-09-12 every 6h" \
+    --review docs/reviews/2026-09-10-the-work.md      # rows and the move, one act
+uv run needle fold [--main]                          # from the lane: fast-forward push to origin/develop, trunk levelled
+uv run needle start-card hellorevenue 253            # Start, through the running board (what a discussion's "go" runs)
+uv run needle sync | signals | lanes hellorevenue    # the loops, by hand
+```
+
+A card enters Executed only with a WATCH row that names its signal — what
+will be observed, where, and by when — in the grammar `WATCH: <what> —
+url|file|command|owner <target> [expect <value>] by <YYYY-MM-DD> [every
+<N>h|<N>d]`. The board reads URLs, files and commands on the row's cadence and
+moves the card on what they say; a signal only the owner can read is put to
+him as a question at its due time.
+
 ## Check it
 
 ```bash
@@ -64,7 +101,8 @@ cd frontend && npx vitest run          # frontend tests
 | `board/` | What happens: the rules, pure over domain values — parsing a document, reconciling the corpus with the cards, placing a move, assembling the page's view, reading the 0.1 card file. |
 | `infrastructure/` | The store (SQLite, migrated by Alembic), the corpus on disk and its watcher, the running board. |
 | `runtime/` | The thing that runs: sessions as one list across subscriptions, the model rule (asked of `claude-acct`, never re-implemented), starting a lane in its own transient scope, a window into any session. Everything that touches the machine goes through `runtime/machine.py`, the one door the tests stand in for. |
-| `api/` | The HTTP API, the `needle` command line (the board's verbs and the runtime's), and the generator that mirrors `domain/` into `frontend/src/types/`. |
+| `api/` | The HTTP API, the doors (`doors.py`) and the loops (`loops.py`) where the board and the runtime meet, the `needle` command line (the board's verbs, the runtime's, and a session's), and the generator that mirrors `domain/` into `frontend/src/types/`. |
+| `hooks/` | The session hook every project registers: standard library only, never blocks, queues while the board is down. |
 | `frontend/` | The page: React, one design system in `src/components/ui/`, the board in `src/board/`. |
 | `tests/ratchets/` | Every boundary in `CLAUDE.md`, held by a test. |
 | `tests/floor.py`, `tests/fakes/bin/` | The fixture floor: a machine the runtime stands on without touching this one — every path redirected, every command a stand-in. A ratchet holds that no test reaches the real machine. |

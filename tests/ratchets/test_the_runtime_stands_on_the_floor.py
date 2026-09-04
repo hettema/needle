@@ -16,7 +16,15 @@ from tests.floor import FAKE_BIN, Floor
 from tests.ratchets.paths import REPO, python_files
 
 THE_ONE_DOOR = REPO / "runtime" / "machine.py"
-COMMANDS = ("claude", "claude-acct", "hyprctl", "omarchy-launch-tui", "busctl")
+COMMANDS = (
+    "claude",
+    "claude-acct",
+    "hyprctl",
+    "omarchy-launch-tui",
+    "busctl",
+    "curl",
+    "journalctl",
+)
 FORBIDDEN_CALLS = {"home", "expanduser", "getenv", "which"}
 FORBIDDEN_NAMES = {"environ"}
 

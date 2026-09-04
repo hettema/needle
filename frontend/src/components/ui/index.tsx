@@ -5,6 +5,7 @@ import type { DraggableAttributes } from "@dnd-kit/core";
 import { marked } from "marked";
 import DOMPurify from "dompurify";
 import type { DocumentState } from "../../types/document";
+import type { LaneState } from "../../types/lane";
 import type { RowKind } from "../../types/row";
 import { ASK_ROWS, LANDED_ROWS, LEAD_ROWS } from "../../types/row";
 
@@ -534,11 +535,67 @@ export function Acts({ children }: { children: ReactNode }) {
   return <div className="acts">{children}</div>;
 }
 
-export function Button({ ghost, onClick, children, disabled }: { ghost?: boolean; onClick: () => void; children: ReactNode; disabled?: boolean }) {
+export function Button({ ghost, onClick, children, disabled, title }: { ghost?: boolean; onClick: () => void; children: ReactNode; disabled?: boolean; title?: string | undefined }) {
   return (
-    <button type="button" className={`btn${ghost ? " ghost" : ""}`} onClick={onClick} disabled={disabled ?? false}>
+    <button type="button" className={`btn${ghost ? " ghost" : ""}`} onClick={onClick} disabled={disabled ?? false} title={title}>
       {children}
     </button>
+  );
+}
+
+/** A door that does not open still shows, with why, so the owner knows what the card cannot do and why. */
+export function ClosedDoor({ children, why }: { children: ReactNode; why: string }) {
+  return (
+    <span className="btn ghost off" title={why} aria-disabled="true">
+      {children}
+    </span>
+  );
+}
+
+const LANE_LABEL: Record<LaneState, string> = {
+  none: "",
+  working: "Working",
+  asking: "Asking you",
+  stopped: "Stopped",
+  blocked: "Blocked",
+  moving: "Moving",
+  ended: "Lane ended",
+};
+
+/** The thin band on a card: its lane reporting in, in one sentence. */
+export function Band({ state, children }: { state: LaneState; children: ReactNode }) {
+  return (
+    <div className={`band ${state}`} role="status">
+      <span className="bstate">{LANE_LABEL[state]}</span>
+      <span className="bsay">{children}</span>
+    </div>
+  );
+}
+
+/** The question a lane stopped with, as the owner's move. */
+export function Ask({ children }: { children: ReactNode }) {
+  return <div className="ask-block">{children}</div>;
+}
+
+/** One sentence typed on the card resumes the lane with it. */
+export function AnswerBox({ onSend, disabled, hint }: { onSend: (text: string) => void; disabled?: boolean; hint: string }) {
+  return (
+    <form
+      className="answer"
+      onSubmit={(e) => {
+        e.preventDefault();
+        const field = e.currentTarget.elements.namedItem("answer") as HTMLInputElement | null;
+        const text = field?.value.trim() ?? "";
+        if (!text) return;
+        onSend(text);
+        if (field) field.value = "";
+      }}
+    >
+      <input name="answer" type="text" aria-label="Answer" title={hint} disabled={disabled ?? false} autoComplete="off" />
+      <button type="submit" className="btn" disabled={disabled ?? false}>
+        Answer
+      </button>
+    </form>
   );
 }
 

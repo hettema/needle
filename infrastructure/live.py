@@ -15,18 +15,22 @@ a project added while the server runs is on the page without a restart.
 import asyncio
 import contextlib
 import logging
-from collections.abc import Callable
+from collections.abc import Awaitable, Callable
 from datetime import datetime
 from pathlib import Path
 
 from watchfiles import Change, awatch
 
 from board.assemble import assemble_board, assemble_detail
+from board.lane import nothing_read
 from board.reconcile import Effects, reconcile
-from domain.board import BoardState, CardDetail
-from domain.card import Actor, CardOrigin, Place
+from domain.audit import AuditKind
+from domain.board import BoardState, CardDetail, MachineState
+from domain.card import Actor, Card, CardOrigin, Place
 from domain.corpus import CorpusIndex
+from domain.lane import Doors, Lane, LaneSnapshot
 from domain.project import Project
+from domain.row import Row
 from infrastructure import clock
 from infrastructure.corpus import scan, watch
 from infrastructure.store import Store, StoreRefusal
@@ -51,6 +55,8 @@ class LiveProject:
         self.watching = False
         self.watch_note: str | None = "not started"
         self.task: asyncio.Task[None] | None = None
+        self.snapshot: LaneSnapshot | None = None
+        """Every lane and every card's doors, as the loop last read them."""
 
 
 class Live:
@@ -61,6 +67,11 @@ class Live:
         self.projects: dict[str, LiveProject] = {}
         self.closing = False
         """Set once the server was told to stop; every open stream ends on it."""
+        self.machine = MachineState(missing=[])
+        """What the runtime cannot reach, as the loop last found; shown on the page."""
+        self.on_store_change: Callable[[], Awaitable[None]] | None = None
+        """What to run when the store's file changes under the server: the
+        loops set it, so a row written from the command line is read at once."""
         self._stop = asyncio.Event()
         self._store_task: asyncio.Task[None] | None = None
         self._waiters: list[asyncio.Future[int]] = []
@@ -145,6 +156,13 @@ class Live:
                 for live in list(self.projects.values()):
                     if not live.watching:
                         self.rescan(live.project.slug)
+                # A write from outside the server — a session's `needle row`,
+                # a `needle close` — is a change the page has to see and the
+                # loops have to act on; the server's own writes bumped already
+                # and cost one more read here.
+                self.bump()
+                if self.on_store_change is not None:
+                    await self.on_store_change()
         except asyncio.CancelledError:
             raise
         except Exception as error:  # noqa: BLE001 — the reason is logged, never swallowed
@@ -207,17 +225,79 @@ class Live:
             watching=live.watching,
             watch_note=live.watch_note,
             now=self.now(),
+            snapshot=live.snapshot,
+            readings=self.store.last_readings(slug),
+            trunk=self.store.trunk(slug),
+            machine=self.machine,
         )
 
-    def detail(self, slug: str, number: int) -> CardDetail:
-        live = self._live(slug)
+    def card(self, slug: str, number: int) -> Card:
+        self._live(slug)
         card = self.store.card(slug, number)
         if card is None:
             raise StoreRefusal(f"There is no card #{number} on this board.")
-        return assemble_detail(card, live.index, self.store.history(slug, number), self.now())
+        return card
 
-    def move(self, slug: str, number: int, to: Place) -> BoardState:
+    def detail(self, slug: str, number: int) -> CardDetail:
         live = self._live(slug)
-        self.store.move(live.project.slug, number, to, Actor.OWNER, self.now())
+        card = self.card(slug, number)
+        lane, doors = self.lane_and_doors(slug, card)
+        return assemble_detail(
+            card,
+            live.index,
+            self.store.history(slug, number),
+            self.now(),
+            lane=lane,
+            doors=doors,
+            readings=self.store.readings(slug, number),
+        )
+
+    def lane_and_doors(self, slug: str, card: Card) -> tuple[Lane | None, Doors]:
+        """The card's lane and doors from the loop's last read; before the
+        first read, a lane derived from nothing and every door closed for
+        that reason."""
+        live = self._live(slug)
+        if live.snapshot is not None and card.number in live.snapshot.doors:
+            return live.snapshot.lanes.get(card.number), live.snapshot.doors[card.number]
+        return nothing_read(card, live.project.path, self.now())
+
+    def move(
+        self,
+        slug: str,
+        number: int,
+        to: Place,
+        *,
+        actor: Actor = Actor.OWNER,
+        detail: str | None = None,
+    ) -> BoardState:
+        live = self._live(slug)
+        self.store.move(live.project.slug, number, to, actor, self.now(), detail=detail)
         self.bump()
         return self.board(slug)
+
+    def add_row(self, slug: str, number: int, row: Row, actor: Actor) -> Card:
+        self._live(slug)
+        card = self.store.add_row(slug, number, row, actor, self.now())
+        self.bump()
+        return card
+
+    def note(self, slug: str, number: int, kind: AuditKind, actor: Actor, detail: str) -> None:
+        self._live(slug)
+        self.store.note(slug, number, kind, actor, self.now(), detail)
+        self.bump()
+
+    def set_snapshot(self, slug: str, snapshot: LaneSnapshot) -> bool:
+        """The loop's read of the project's lanes. Bumps only when a lane or
+        a door changed, so a quiet machine costs the page nothing."""
+        live = self._live(slug)
+        before = live.snapshot
+        live.snapshot = snapshot
+        changed = before is None or before.lanes != snapshot.lanes or before.doors != snapshot.doors
+        if changed:
+            self.bump()
+        return changed
+
+    def set_machine(self, machine: MachineState) -> None:
+        if machine != self.machine:
+            self.machine = machine
+            self.bump()

@@ -15,6 +15,7 @@ import re
 import shlex
 import time
 
+from domain.gate import Gate
 from domain.session import Session, SessionKind
 from domain.slot import Placement
 from domain.window import Opened, WindowKind
@@ -112,6 +113,61 @@ def look_command(session: Session, placement: Placement) -> tuple[str, str]:
     return banner, command
 
 
+def discuss_command(
+    placement: Placement, *, cwd: str, session_id: str, brief: str, effort: Gate | None, what: str
+) -> tuple[str, str]:
+    """A fresh conversation in the project root, on the slot and model the
+    rule chose, with the card's brief as its first prompt. The session id is
+    chosen here so the board can tell the conversation from hands on a tree."""
+    banner = (
+        f"{what} — {placement.model.value} on the {placement.slot} subscription. "
+        "A conversation, never hands on the card's tree; closing this window ends only it."
+    )
+    parts = ["claude", "--model", placement.model.value, "--session-id", session_id]
+    if effort is not None:
+        parts += ["--effort", effort.value]
+    parts += [*PROMPTS_SETTLED, brief]
+    command = (
+        f"cd {shlex.quote(cwd)} && printf '%s\\n\\n' {shlex.quote(banner)} && "
+        f"CLAUDE_CONFIG_DIR={shlex.quote(placement.config_dir)} "
+        f"CLAUDE_ACCOUNT={shlex.quote(placement.slot)} exec "
+        + " ".join(shlex.quote(p) for p in parts)
+    )
+    return banner, command
+
+
+def open_fresh(
+    store: Store,
+    *,
+    session_id: str,
+    kind: WindowKind,
+    card: str,
+    command: str,
+    banner: str | None,
+    fresh: bool,
+) -> Opened:
+    """Open a terminal running `command` under the kind's app-id and prove it
+    by one more client than before; record it against the session id."""
+    app_id = app_id_for(kind, card)
+    before = set(present(app_id))
+    try:
+        launcher = machine.which("omarchy-launch-tui")
+    except machine.CommandMissing as missing:
+        raise WindowRefused(f"the terminal did not open: {missing}") from missing
+    machine.spawn([launcher, f"--app-id={app_id}", "bash", "-lc", command])
+    deadline = time.time() + WINDOW_VERIFY_SECONDS
+    while time.time() < deadline:
+        new = [address for address in present(app_id) if address not in before]
+        if new:
+            window = store.record_window(session_id, kind, app_id, new[0], clock.now())
+            return Opened(window=window, fresh=fresh, banner=banner)
+        time.sleep(WINDOW_POLL_SECONDS)
+    raise WindowRefused(
+        f"no window appeared under {app_id} within {WINDOW_VERIFY_SECONDS:.0f} s; "
+        "is the desktop session reachable from here?"
+    )
+
+
 def open_window(
     store: Store,
     session: Session,
@@ -147,21 +203,12 @@ def open_window(
         kind = kind or WindowKind.LOOK
         banner, command = look_command(session, look)
         fresh = True
-    app_id = app_id_for(kind, card)
-    before = set(present(app_id))
-    try:
-        launcher = machine.which("omarchy-launch-tui")
-    except machine.CommandMissing as missing:
-        raise WindowRefused(f"the terminal did not open: {missing}") from missing
-    machine.spawn([launcher, f"--app-id={app_id}", "bash", "-lc", command])
-    deadline = time.time() + WINDOW_VERIFY_SECONDS
-    while time.time() < deadline:
-        new = [address for address in present(app_id) if address not in before]
-        if new:
-            window = store.record_window(session.session_id, kind, app_id, new[0], clock.now())
-            return Opened(window=window, fresh=fresh, banner=banner)
-        time.sleep(WINDOW_POLL_SECONDS)
-    raise WindowRefused(
-        f"no window appeared under {app_id} within {WINDOW_VERIFY_SECONDS:.0f} s; "
-        "is the desktop session reachable from here?"
+    return open_fresh(
+        store,
+        session_id=session.session_id,
+        kind=kind,
+        card=card,
+        command=command,
+        banner=banner,
+        fresh=fresh,
     )

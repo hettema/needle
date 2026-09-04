@@ -1,12 +1,17 @@
 import { useEffect, useState } from "react";
-import { getCard, getFile } from "../api";
+import { getCard, getFile, openDoor, type DoorName } from "../api";
 import type { CardDetail, CardSummary } from "../types/board";
 import type { Column } from "../types/column";
 import { COLUMN_VALUES } from "../types/column";
 import type { AuditEntry } from "../types/audit";
+import type { Door } from "../types/lane";
 import {
   Acts,
+  AnswerBox,
+  Ask,
+  Band,
   Button,
+  ClosedDoor,
   EssenceBig,
   Hist,
   HistRow,
@@ -30,7 +35,7 @@ import {
 import { ago, when } from "./time";
 import { useProject } from "./ProjectContext";
 
-const WHO: Record<AuditEntry["actor"], string> = { owner: "you", session: "session", import: "import", corpus: "corpus" };
+const WHO: Record<AuditEntry["actor"], string> = { owner: "you", session: "session", import: "import", corpus: "corpus", machine: "board" };
 
 function What({ detail }: { detail: string }) {
   const space = detail.indexOf(" ");
@@ -50,6 +55,7 @@ export function OpenCard({ card, onMoveTo }: { card: CardSummary; onMoveTo: (num
   const [wholeFile, setWholeFile] = useState<{ path: string; text: string } | null>(null);
   const [said, setSaid] = useState<{ text: string; bad: boolean } | null>(null);
   const [intentOpen, setIntentOpen] = useState(true);
+  const [opening, setOpening] = useState<DoorName | null>(null);
 
   useEffect(() => {
     let live = true;
@@ -122,6 +128,29 @@ export function OpenCard({ card, onMoveTo }: { card: CardSummary; onMoveTo: (num
     setSaid(ok ? { text: `Moved to ${column}`, bad: false } : { text: "Not moved — see the card", bad: true });
   };
 
+  // A door opens through the runtime and answers with its evidence, or fails by name;
+  // the board's own stream then brings the card's new state.
+  const through = async (door: DoorName, body: object = {}) => {
+    setOpening(door);
+    setSaid({ text: `${door === "signal" ? "Reading" : door[0]?.toUpperCase() + door.slice(1)}…`, bad: false });
+    try {
+      const result = await openDoor(slug, card.number, door, body);
+      setSaid({ text: result.said, bad: false });
+    } catch (e) {
+      setSaid({ text: `${door[0]?.toUpperCase() + door.slice(1)} did not open: ${e instanceof Error ? e.message : String(e)}`, bad: true });
+    } finally {
+      setOpening(null);
+    }
+  };
+  const door = (name: DoorName, d: Door, ghost = true) =>
+    d.offered ? (
+      <Button key={name} ghost={ghost} onClick={() => void through(name)} disabled={opening !== null} title={d.why}>
+        {d.label}
+      </Button>
+    ) : null;
+  const doors = detail.doors;
+  const lane = detail.lane;
+
   const essenceFrom =
     detail.summary.essence_source === "card"
       ? "the card's own words"
@@ -145,6 +174,46 @@ export function OpenCard({ card, onMoveTo }: { card: CardSummary; onMoveTo: (num
           </Note>
         ) : null}
       </Section>
+
+      {lane && lane.state !== "none" ? (
+        <Section title="The lane" from={lane.session ? `${lane.session.short_id} · ${lane.session.model ?? "fable"} on ${lane.session.slot}` : lane.name}>
+          <Band state={lane.state}>{lane.sentence}</Band>
+          {lane.state === "asking" && lane.question ? <Ask>{lane.question}</Ask> : null}
+          {doors.answer.offered ? <AnswerBox onSend={(text) => void through("answer", { text })} disabled={opening !== null} hint="One sentence resumes the lane with it" /> : null}
+          {lane.died ? <Quiet>{lane.died}</Quiet> : null}
+          {lane.moved ? <Quiet>{lane.moved}</Quiet> : null}
+        </Section>
+      ) : null}
+
+      {card.place.column === "Executed" || card.place.column === "Done" || detail.signal ? (
+        <Section title="The signal" from={detail.signal ? `${detail.signal.kind} · due ${detail.signal.due} · every ${detail.signal.every_hours}h` : "none the board can read"}>
+          {detail.signal ? (
+            <RowLine kind="WATCH" text={`${detail.signal.what} — ${detail.signal.kind} ${detail.signal.target}${detail.signal.expect ? ` expect ${detail.signal.expect}` : ""}`} />
+          ) : (
+            <Quiet>{detail.signal_note ?? "No WATCH row names a signal."} Without one the card cannot enter Executed.</Quiet>
+          )}
+          {doors.signal.offered ? (
+            <Ask>
+              {doors.signal.why}
+              <Acts>
+                <Button onClick={() => void through("signal", { delivered: true })} disabled={opening !== null}>
+                  Delivered
+                </Button>
+                <Button ghost onClick={() => void through("signal", { delivered: false })} disabled={opening !== null}>
+                  Not delivered
+                </Button>
+              </Acts>
+            </Ask>
+          ) : null}
+          {detail.readings.length ? (
+            <Hist>
+              {detail.readings.slice(0, 5).map((r) => (
+                <HistRow key={r.id} when={when(r.at)} what={<What detail={`${r.delivered === null ? "Unreadable" : r.delivered ? "Delivered" : "Not delivered"} — ${r.words}`} />} who="board" owner={false} />
+              ))}
+            </Hist>
+          ) : null}
+        </Section>
+      ) : null}
 
       <Section title="The brief" from={detail.brief.length ? `${detail.brief.length} point${detail.brief.length === 1 ? "" : "s"}` : "nothing written yet"}>
         {detail.brief.length ? detail.brief.map((r, i) => <RowLine key={i} kind={r.kind} text={r.text} />) : <Quiet>Nothing is written on this card before the work.</Quiet>}
@@ -205,7 +274,27 @@ export function OpenCard({ card, onMoveTo }: { card: CardSummary; onMoveTo: (num
       </Section>
 
       <Acts>
-        {docPath && document ? <Button onClick={() => void openFile(docPath, document.kind === "plan" ? "the plan" : "the suggestion")}>{wholeFile?.path === docPath ? "Close the file" : document.kind === "plan" ? "Open the plan" : "Open the suggestion"}</Button> : null}
+        {doors.start.offered ? (
+          <Button onClick={() => void through("start")} disabled={opening !== null} title={doors.start.why}>
+            {doors.start.label}
+          </Button>
+        ) : doors.start_anyway.offered ? (
+          <>
+            <ClosedDoor why={doors.start.why}>Start</ClosedDoor>
+            <Button onClick={() => void through("start", { anyway: true })} disabled={opening !== null} title={doors.start_anyway.why}>
+              {doors.start_anyway.label}
+            </Button>
+          </>
+        ) : card.gate && (card.place.column === "Up next" || card.place.column === "Planned") ? (
+          <ClosedDoor why={doors.start.why}>Start</ClosedDoor>
+        ) : null}
+        {door("watch", doors.watch)}
+        {door("look", doors.look)}
+        {door("resume", doors.resume)}
+        {door("stop", doors.stop)}
+        {door("discuss", doors.discuss)}
+        {doors.collision && doors.collision.verdict !== "clear" && (doors.start.offered || doors.start_anyway.offered) ? <Quiet>{doors.collision.sentence}</Quiet> : null}
+        {docPath && document ? <Button ghost onClick={() => void openFile(docPath, document.kind === "plan" ? "the plan" : "the suggestion")}>{wholeFile?.path === docPath ? "Close the file" : document.kind === "plan" ? "Open the plan" : "Open the suggestion"}</Button> : null}
         {docPath ? (
           <Button ghost onClick={() => void copyPath()}>
             Copy path

@@ -11,8 +11,10 @@ from domain.column import ColumnDefinition
 from domain.corpus import CorpusSummary
 from domain.document import Document, DocumentRef, DocumentState
 from domain.gate import Gate
+from domain.lane import Doors, Lane, LaneState
 from domain.project import Project
 from domain.row import Row
+from domain.signal import Reading, Signal
 
 
 class EssenceSource(StrEnum):
@@ -41,6 +43,9 @@ class CardSummary(BaseModel):
     age_date: date
     """The document's date, else the day the card was born; the Age lens."""
     place: Place
+    lane_state: LaneState
+    lane_sentence: str | None
+    """What the card says about its lane, when it has one."""
 
 
 class GroupView(BaseModel):
@@ -58,10 +63,34 @@ class Attention(BaseModel):
     """The first inch: does anything need me?"""
 
     asking_you: int
+    """Cards in Decision moment, lanes stopped with a question, and signals only you can read."""
     in_flight: int
+    """Lanes with hands on them."""
+    lanes_ended: int
+    """Lanes whose session is gone without a close: Resume or Look is your choice."""
+    signals_due: int
+    """Executed cards past their signal's due time with nothing delivered yet."""
     arrived_today: int
     documents_gone: int
     documents_without_card: int
+
+
+class TrunkState(BaseModel):
+    """The project's main checkout against `origin/develop`, as the runtime last kept it."""
+
+    level: bool | None
+    """True when the checkout is at origin/develop; None when never read."""
+    behind: int
+    note: str | None
+    """Why it could not be levelled, when it could not; shown on the attention rail."""
+    read_at: datetime | None
+
+
+class MachineState(BaseModel):
+    """Whether the runtime can reach what it needs on this machine."""
+
+    missing: list[str]
+    """Commands the runtime needs and cannot find, by name."""
 
 
 class BoardState(BaseModel):
@@ -71,6 +100,8 @@ class BoardState(BaseModel):
     generated_at: datetime
     corpus: CorpusSummary
     attention: Attention
+    trunk: TrunkState
+    machine: MachineState
     columns: list[ColumnView]
     documents_without_card: list[DocumentRef]
 
@@ -93,3 +124,10 @@ class CardDetail(BaseModel):
     document: Document | None
     other_citations: list[str]
     history: list[AuditEntry]
+    lane: Lane | None
+    doors: Doors
+    signal: Signal | None
+    """The signal the card's WATCH row names, when one parses."""
+    signal_note: str | None
+    """Why the WATCH row names no signal the board can read, when it does not."""
+    readings: list[Reading]

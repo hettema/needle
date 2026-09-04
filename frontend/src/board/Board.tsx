@@ -188,15 +188,18 @@ export function Board({ slug, store, projects, onSwitch }: { slug: string; store
           <Lens value={lens} options={LENSES} onChange={setLens} title="A lens, never a write: sorting changes what you see, never the rank. Drag needs Rank." />
         </HeadTools>
       </AppHead>
-      <AttentionLine quiet="nothing runs in this slice · the board is a reader">
+      <AttentionLine quiet={board.machine.missing.length ? `the runtime cannot find: ${board.machine.missing.join(", ")}` : board.trunk.level === null ? "the trunk has not been read yet" : `trunk ${board.trunk.level ? "level with" : `${board.trunk.behind} behind`} origin/develop`}>
         <Att n={board.attention.asking_you} label="asking you" tone="you" />
         <Att n={board.attention.in_flight} label="in flight" />
+        {board.attention.lanes_ended > 0 ? <Att n={board.attention.lanes_ended} label={board.attention.lanes_ended === 1 ? "lane ended — Resume or Look" : "lanes ended — Resume or Look"} tone="bad" /> : null}
+        {board.attention.signals_due > 0 ? <Att n={board.attention.signals_due} label={board.attention.signals_due === 1 ? "signal past due" : "signals past due"} tone="you" /> : null}
         <Att n={board.attention.arrived_today} label="arrived today" />
         {board.attention.documents_gone > 0 ? <Att n={board.attention.documents_gone} label={board.attention.documents_gone === 1 ? "card cites a document that is nowhere" : "cards cite documents that are nowhere"} tone="bad" /> : null}
         {board.attention.documents_without_card > 0 ? <Att n={board.attention.documents_without_card} label="documents have no card" tone="bad" /> : null}
         {Object.values(store.statuses).filter((s) => s.kind === "failed").length > 0 ? <Att n={Object.values(store.statuses).filter((s) => s.kind === "failed").length} label="write failed" tone="bad" /> : null}
       </AttentionLine>
       {store.error ? <Notice>The board could not be re-read: {store.error}. Showing it as last read, {ago(board.generated_at)}.</Notice> : null}
+      {board.trunk.note ? <Notice>The main checkout is not level with origin/develop: {board.trunk.note}</Notice> : null}
       {board.documents_without_card.length ? (
         <Notice>
           Documents in the corpus with no card — the watcher should have carded them; it did not:

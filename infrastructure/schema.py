@@ -147,6 +147,91 @@ class WindowRow(Base):
     closed_at: Mapped[datetime | None] = mapped_column(UtcDateTime, nullable=True)
 
 
+class HookEventRow(Base):
+    """One hook firing, as posted by a session. Attributed to a card by its
+    working directory when that is a lane of a registered project."""
+
+    __tablename__ = "hook_events"
+    __table_args__ = (
+        Index("ix_hook_events_card", "project_slug", "card_number"),
+        Index("ix_hook_events_session", "session_id"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    at: Mapped[datetime] = mapped_column(UtcDateTime)
+    kind: Mapped[str] = mapped_column(String(20))
+    session_id: Mapped[str] = mapped_column(String(36))
+    cwd: Mapped[str] = mapped_column(Text)
+    project_slug: Mapped[str | None] = mapped_column(String(80), nullable=True)
+    card_number: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    source: Mapped[str | None] = mapped_column(String(40), nullable=True)
+    message: Mapped[str | None] = mapped_column(Text, nullable=True)
+    reason: Mapped[str | None] = mapped_column(String(80), nullable=True)
+    error: Mapped[str | None] = mapped_column(String(80), nullable=True)
+    transcript_path: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+
+class DiscussionRow(Base):
+    """A conversation opened from a card's Discuss door: its session id and
+    the slot it runs on, so the one list can tell it from hands on the tree."""
+
+    __tablename__ = "discussions"
+    __table_args__ = (Index("ix_discussions_card", "project_slug", "card_number"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    project_slug: Mapped[str] = mapped_column(String(80))
+    card_number: Mapped[int] = mapped_column(Integer)
+    session_id: Mapped[str] = mapped_column(String(36))
+    slot: Mapped[str] = mapped_column(String(40))
+    started_at: Mapped[datetime] = mapped_column(UtcDateTime)
+
+
+class LaneRow(Base):
+    """The board's record of a card's lane: where it lives and what became of
+    its work. No foreign key to cards or to the runtime's tables."""
+
+    __tablename__ = "lanes"
+
+    project_slug: Mapped[str] = mapped_column(String(80), primary_key=True)
+    card_number: Mapped[int] = mapped_column(Integer, primary_key=True)
+    name: Mapped[str] = mapped_column(Text)
+    path: Mapped[str] = mapped_column(Text)
+    branch: Mapped[str | None] = mapped_column(Text, nullable=True)
+    tip: Mapped[str | None] = mapped_column(String(40), nullable=True)
+    first_seen: Mapped[datetime] = mapped_column(UtcDateTime)
+    last_seen: Mapped[datetime] = mapped_column(UtcDateTime)
+    gone_at: Mapped[datetime | None] = mapped_column(UtcDateTime, nullable=True)
+    folded_at: Mapped[datetime | None] = mapped_column(UtcDateTime, nullable=True)
+    trunk_synced_at: Mapped[datetime | None] = mapped_column(UtcDateTime, nullable=True)
+    main_synced_at: Mapped[datetime | None] = mapped_column(UtcDateTime, nullable=True)
+
+
+class ReadingRow(Base):
+    """One reading of a card's WATCH signal, by the board or by the owner."""
+
+    __tablename__ = "readings"
+    __table_args__ = (Index("ix_readings_card", "project_slug", "card_number"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    project_slug: Mapped[str] = mapped_column(String(80))
+    card_number: Mapped[int] = mapped_column(Integer)
+    at: Mapped[datetime] = mapped_column(UtcDateTime)
+    delivered: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
+    words: Mapped[str] = mapped_column(Text)
+
+
+class TrunkRow(Base):
+    """A project's main checkout against origin/develop, as last kept."""
+
+    __tablename__ = "trunks"
+
+    project_slug: Mapped[str] = mapped_column(String(80), primary_key=True)
+    level: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
+    behind: Mapped[int] = mapped_column(Integer)
+    note: Mapped[str | None] = mapped_column(Text, nullable=True)
+    read_at: Mapped[datetime | None] = mapped_column(UtcDateTime, nullable=True)
+
+
 class AuditRow(Base):
     """One row per change. No foreign key to cards: a card's history outlives it."""
 

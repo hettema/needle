@@ -1,9 +1,12 @@
-"""The HTTP API. Thin: every route reads or writes through `Live` and returns a
-domain type. The one write is a move; it is persisted before the response is
-built, and a failure is returned with the store's own words so the page can
-show it on the card.
+"""The HTTP API. Thin: every route reads or writes through `Live`, the doors
+or the loops and returns a domain type. A move is persisted before the
+response is built, and a failure is returned with the store's own words so
+the page can show it on the card. A door that does not open answers 409
+with its reason; a door the machine failed answers 502 with the machine's
+words. Sessions push their events to `/api/hooks`.
 """
 
+import asyncio
 import json
 from collections.abc import AsyncIterator, Awaitable, Callable
 from contextlib import asynccontextmanager
@@ -12,20 +15,44 @@ from pathlib import Path
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import FileResponse, JSONResponse, PlainTextResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
+from pydantic import BaseModel
 
+from api.doors import DoorFailed, DoorRefused, Doors
+from api.loops import Loops
 from domain.board import BoardState, CardDetail, ProjectFile
 from domain.card import Move
+from domain.hook import HookEvent, HookPosted
+from domain.lane import DoorResult
 from domain.project import Project
 from infrastructure import clock
 from infrastructure.live import Live
 from infrastructure.paths import db_path
 from infrastructure.store import Store, StoreRefusal
+from runtime.service import Runtime
 
 STREAM_KEEPALIVE_SECONDS = 15.0
 
 
 class StoreFailure(Exception):
     """A write failed for a reason the store did not choose; the page shows the words."""
+
+
+class Answer(BaseModel):
+    text: str
+
+
+class StartBody(BaseModel):
+    anyway: bool = False
+
+
+class SignalAnswer(BaseModel):
+    delivered: bool
+
+
+class HooksReceived(BaseModel):
+    received: int
+    attributed: int
+    """How many of them landed on a card of a registered project."""
 
 
 async def board_events(
@@ -58,10 +85,17 @@ def create_app(store: Store | None = None, *, dist: Path | None = FRONTEND_DIST)
         live = Live(store or Store(db_path()))
         live.load()
         await live.start_watching()
+        runtime = Runtime(live.store)
+        loops = Loops(live, runtime)
         app.state.live = live
+        app.state.loops = loops
+        app.state.doors = Doors(live, runtime, loops)
+        await loops.start()
+        await loops.reconcile()
         try:
             yield
         finally:
+            await loops.stop()
             await live.stop()
             if owned:
                 live.store.close()
@@ -87,6 +121,23 @@ def create_app(store: Store | None = None, *, dist: Path | None = FRONTEND_DIST)
     async def failed(request: Request, error: StoreFailure) -> JSONResponse:
         return JSONResponse(status_code=500, content={"detail": str(error)})
 
+    @app.exception_handler(DoorRefused)
+    async def door_refused(request: Request, error: DoorRefused) -> JSONResponse:
+        return JSONResponse(status_code=409, content={"detail": str(error)})
+
+    @app.exception_handler(DoorFailed)
+    async def door_failed(request: Request, error: DoorFailed) -> JSONResponse:
+        return JSONResponse(status_code=502, content={"detail": str(error)})
+
+    async def through_door(request: Request, slug: str, work: Callable[[Doors], DoorResult]):
+        """A door runs off the loop's thread and under the loops' lock, so a
+        door and a machine read never act on the same lane at once."""
+        await live_for(request, slug)
+        loops: Loops = request.app.state.loops
+        doors: Doors = request.app.state.doors
+        async with loops.lock:
+            return await asyncio.to_thread(work, doors)
+
     @app.get("/api/projects", response_model=list[Project])
     async def projects(request: Request) -> list[Project]:
         live = live_of(request)
@@ -110,6 +161,63 @@ def create_app(store: Store | None = None, *, dist: Path | None = FRONTEND_DIST)
             raise
         except Exception as error:  # noqa: BLE001 — shown on the card, never hidden
             raise StoreFailure(f"The store refused: {type(error).__name__}: {error}") from error
+
+    @app.post("/api/projects/{slug}/cards/{number}/start", response_model=DoorResult)
+    async def start(slug: str, number: int, body: StartBody, request: Request) -> DoorResult:
+        return await through_door(
+            request, slug, lambda doors: doors.start(slug, number, anyway=body.anyway)
+        )
+
+    @app.post("/api/projects/{slug}/cards/{number}/answer", response_model=DoorResult)
+    async def answer(slug: str, number: int, body: Answer, request: Request) -> DoorResult:
+        return await through_door(
+            request, slug, lambda doors: doors.answer(slug, number, body.text)
+        )
+
+    @app.post("/api/projects/{slug}/cards/{number}/watch", response_model=DoorResult)
+    async def watch(slug: str, number: int, request: Request) -> DoorResult:
+        return await through_door(request, slug, lambda doors: doors.watch(slug, number))
+
+    @app.post("/api/projects/{slug}/cards/{number}/look", response_model=DoorResult)
+    async def look(slug: str, number: int, request: Request) -> DoorResult:
+        return await through_door(request, slug, lambda doors: doors.look(slug, number))
+
+    @app.post("/api/projects/{slug}/cards/{number}/discuss", response_model=DoorResult)
+    async def discuss(slug: str, number: int, request: Request) -> DoorResult:
+        return await through_door(request, slug, lambda doors: doors.discuss(slug, number))
+
+    @app.post("/api/projects/{slug}/cards/{number}/resume", response_model=DoorResult)
+    async def resume(slug: str, number: int, request: Request) -> DoorResult:
+        return await through_door(request, slug, lambda doors: doors.resume(slug, number))
+
+    @app.post("/api/projects/{slug}/cards/{number}/stop", response_model=DoorResult)
+    async def stop(slug: str, number: int, request: Request) -> DoorResult:
+        return await through_door(request, slug, lambda doors: doors.stop(slug, number))
+
+    @app.post("/api/projects/{slug}/cards/{number}/signal", response_model=DoorResult)
+    async def signal(slug: str, number: int, body: SignalAnswer, request: Request) -> DoorResult:
+        return await through_door(
+            request, slug, lambda doors: doors.signal(slug, number, delivered=body.delivered)
+        )
+
+    @app.get("/api/projects/{slug}/cards/{number}/brief", response_class=PlainTextResponse)
+    async def brief(slug: str, number: int, request: Request) -> str:
+        live = await live_for(request, slug)
+        doors: Doors = request.app.state.doors
+        return doors.brief_for_lane(live.detail(slug, number), slug, overrode=None)
+
+    @app.post("/api/hooks", response_model=HooksReceived)
+    async def hooks(body: list[HookPosted], request: Request) -> HooksReceived:
+        """What sessions push. Every event is kept; the ones inside a lane of
+        a registered project move the board."""
+        live = live_of(request)
+        await live.sync_projects()
+        loops: Loops = request.app.state.loops
+        recorded: list[HookEvent] = await loops.hooks(body)
+        return HooksReceived(
+            received=len(recorded),
+            attributed=sum(1 for e in recorded if e.card_number is not None),
+        )
 
     @app.get("/api/projects/{slug}/files", response_model=ProjectFile)
     async def file(slug: str, path: str, request: Request) -> ProjectFile:

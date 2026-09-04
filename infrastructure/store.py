@@ -20,30 +20,44 @@ from sqlalchemy.orm import Session
 from board.import_01 import Import01
 from board.moves import GroupLayout, MoveRefused, apply_move
 from board.reconcile import Effects
+from board.signals import read_or_decline
 from domain.audit import AuditEntry, AuditKind
+from domain.board import TrunkState
 from domain.card import Actor, Card, CardOrigin, DocumentLink, Place
 from domain.column import COLUMN_DEFINITIONS, Column
 from domain.document import DocumentKind, DocumentRef
 from domain.gate import Gate
+from domain.hook import HookEvent, HookKind, HookPosted
+from domain.lane import Discussion, LaneRecord
 from domain.launch import Rescue
 from domain.project import Project
 from domain.row import Row, RowKind
 from domain.session import SessionSlot
+from domain.signal import Reading
 from domain.slot import Model, Rung
 from domain.window import Window, WindowKind
 from infrastructure.schema import (
     AuditRow,
     CardRow,
     CardRowRow,
+    DiscussionRow,
     GroupRow,
+    HookEventRow,
+    LaneRow,
     ProjectRow,
+    ReadingRow,
     RescueRow,
     SessionSlotRow,
+    TrunkRow,
     WindowRow,
 )
 
 _COLUMN_ORDER: dict[str, int] = {d.column.value: i for i, d in enumerate(COLUMN_DEFINITIONS)}
 _MIGRATIONS = Path(__file__).parent / "migrations"
+ONE_PER_CARD: frozenset[RowKind] = frozenset({RowKind.DELIVERED, RowKind.WATCH, RowKind.REVIEW})
+"""Record rows a card carries once: writing one again replaces it, so a
+close written twice never says two things about what shipped."""
+ROW_DETAIL_LENGTH = 140
 
 
 class StoreRefusal(Exception):
@@ -161,10 +175,33 @@ class Store:
 
     # ── writing ────────────────────────────────────────────────────────
 
-    def move(self, slug: str, number: int, to: Place, actor: Actor, at: datetime) -> Card:
+    def move(
+        self,
+        slug: str,
+        number: int,
+        to: Place,
+        actor: Actor,
+        at: datetime,
+        *,
+        detail: str | None = None,
+    ) -> Card:
+        """Put the card there. A machine move names its reason in `detail`;
+        a move into Executed needs a WATCH row naming a signal (plan 03,
+        item 5), whoever moves it."""
+        if actor == Actor.MACHINE and not detail:
+            raise StoreRefusal("A machine move must say why, in one sentence.")
         with Session(self.engine) as session, session.begin():
             if session.get(ProjectRow, slug) is None:
                 raise StoreRefusal(f'No project "{slug}" is on the board.')
+            if to.column == Column.EXECUTED:
+                rows = _rows_by_card(session, slug, number).get(number, [])
+                watch = next((r.text for r in rows if r.kind == RowKind.WATCH), None)
+                signal, why = read_or_decline(watch)
+                if signal is None:
+                    raise StoreRefusal(
+                        f"#{number} cannot enter Executed: {why}. Done is a closed loop, and "
+                        "the loop starts with the signal named."
+                    )
             if to.group is None:
                 _landing_group(session, slug, to.column)
             layout = _layout(session, slug)
@@ -175,6 +212,7 @@ class Store:
             if result.changed:
                 for group in (result.source, result.target):
                     _write_positions(session, slug, group)
+                said = _describe_move(result.from_place, result.to_place)
                 _audit(
                     session,
                     slug,
@@ -184,7 +222,7 @@ class Store:
                     kind=AuditKind.MOVED,
                     from_place=result.from_place,
                     to_place=result.to_place,
-                    detail=_describe_move(result.from_place, result.to_place),
+                    detail=f"{said} — {detail}" if detail else said,
                 )
             session.flush()
             row = session.get(CardRow, (slug, number))
@@ -393,6 +431,259 @@ class Store:
             project.next_card_number = max(project.next_card_number, imported.next_number)
             project.imported_01_at = at
 
+    def add_row(self, slug: str, number: int, row: Row, actor: Actor, at: datetime) -> Card:
+        """Write a row on the card, with its audit row. DELIVERED, WATCH and
+        REVIEW are one per card and a second write replaces the first."""
+        with Session(self.engine) as session, session.begin():
+            card = session.get(CardRow, (slug, number))
+            if card is None:
+                raise StoreRefusal(f"There is no card #{number} on this board.")
+            existing = session.scalars(
+                select(CardRowRow)
+                .where(CardRowRow.project_slug == slug, CardRowRow.card_number == number)
+                .order_by(CardRowRow.position)
+            ).all()
+            replaced = (
+                next((r for r in existing if r.kind == row.kind.value), None)
+                if row.kind in ONE_PER_CARD
+                else None
+            )
+            if replaced is not None:
+                replaced.text = row.text
+                verb = "rewritten"
+            else:
+                position = max([r.position for r in existing], default=-1) + 1
+                session.add(
+                    CardRowRow(
+                        project_slug=slug,
+                        card_number=number,
+                        position=position,
+                        kind=row.kind.value,
+                        text=row.text,
+                    )
+                )
+                verb = "written"
+            shown = (
+                row.text
+                if len(row.text) <= ROW_DETAIL_LENGTH
+                else row.text[: ROW_DETAIL_LENGTH - 1] + "…"
+            )
+            _audit(
+                session,
+                slug,
+                number,
+                at=at,
+                actor=actor,
+                kind=AuditKind.ROW,
+                from_place=None,
+                to_place=None,
+                detail=f"{row.kind.value} {verb}: {shown}",
+            )
+            session.flush()
+            group_row = session.get(GroupRow, card.group_id)
+            assert group_row is not None
+            return _card(card, group_row, _rows_by_card(session, slug, number).get(number, []))
+
+    def note(
+        self, slug: str, number: int, kind: AuditKind, actor: Actor, at: datetime, detail: str
+    ) -> None:
+        """An audit row that moves nothing: a door opened, a session ended, a
+        signal read. The card's history is where the machine says what it did."""
+        if not detail:
+            raise StoreRefusal("A note on a card must say something.")
+        with Session(self.engine) as session, session.begin():
+            if session.get(CardRow, (slug, number)) is None:
+                raise StoreRefusal(f"There is no card #{number} on this board.")
+            _audit(
+                session,
+                slug,
+                number,
+                at=at,
+                actor=actor,
+                kind=kind,
+                from_place=None,
+                to_place=None,
+                detail=detail,
+            )
+
+    # ── what sessions push ─────────────────────────────────────────────
+
+    def record_hook_events(
+        self, events: list[tuple[HookPosted, str | None, int | None]]
+    ) -> list[HookEvent]:
+        """Keep every event a hook posted, attributed to (project, card) as
+        the caller resolved it from the working directory."""
+        out: list[HookEvent] = []
+        with Session(self.engine) as session, session.begin():
+            for posted, slug, number in events:
+                row = HookEventRow(
+                    at=posted.at,
+                    kind=posted.kind.value,
+                    session_id=posted.session_id,
+                    cwd=posted.cwd,
+                    project_slug=slug,
+                    card_number=number,
+                    source=posted.source,
+                    message=posted.message,
+                    reason=posted.reason,
+                    error=posted.error,
+                    transcript_path=posted.transcript_path,
+                )
+                session.add(row)
+                session.flush()
+                out.append(_hook_event(row))
+        return out
+
+    def hook_events(self, slug: str, number: int | None = None) -> list[HookEvent]:
+        with Session(self.engine) as session:
+            query = select(HookEventRow).where(HookEventRow.project_slug == slug)
+            if number is not None:
+                query = query.where(HookEventRow.card_number == number)
+            return [_hook_event(r) for r in session.scalars(query.order_by(HookEventRow.id))]
+
+    def hook_events_of_session(self, session_id: str) -> list[HookEvent]:
+        with Session(self.engine) as session:
+            rows = session.scalars(
+                select(HookEventRow)
+                .where(HookEventRow.session_id == session_id)
+                .order_by(HookEventRow.id)
+            )
+            return [_hook_event(r) for r in rows]
+
+    def record_discussion(
+        self, slug: str, number: int, session_id: str, slot: str, at: datetime
+    ) -> Discussion:
+        with Session(self.engine) as session, session.begin():
+            row = DiscussionRow(
+                project_slug=slug,
+                card_number=number,
+                session_id=session_id,
+                slot=slot,
+                started_at=at,
+            )
+            session.add(row)
+            session.flush()
+            return _discussion(row)
+
+    def discussions(self, slug: str) -> list[Discussion]:
+        with Session(self.engine) as session:
+            rows = session.scalars(
+                select(DiscussionRow)
+                .where(DiscussionRow.project_slug == slug)
+                .order_by(DiscussionRow.id)
+            )
+            return [_discussion(r) for r in rows]
+
+    # ── the board's record of each lane ────────────────────────────────
+
+    def record_lane(self, record: LaneRecord) -> None:
+        with Session(self.engine) as session, session.begin():
+            row = session.get(LaneRow, (record.project, record.card_number))
+            if row is None:
+                row = LaneRow(project_slug=record.project, card_number=record.card_number)
+                session.add(row)
+            row.name = record.name
+            row.path = record.path
+            row.branch = record.branch
+            row.tip = record.tip
+            row.first_seen = record.first_seen
+            row.last_seen = record.last_seen
+            row.gone_at = record.gone_at
+            row.folded_at = record.folded_at
+            row.trunk_synced_at = record.trunk_synced_at
+            row.main_synced_at = record.main_synced_at
+
+    def lanes(self, slug: str) -> list[LaneRecord]:
+        with Session(self.engine) as session:
+            rows = session.scalars(
+                select(LaneRow).where(LaneRow.project_slug == slug).order_by(LaneRow.card_number)
+            )
+            return [_lane_record(r) for r in rows]
+
+    def lane(self, slug: str, number: int) -> LaneRecord | None:
+        with Session(self.engine) as session:
+            row = session.get(LaneRow, (slug, number))
+            return None if row is None else _lane_record(row)
+
+    def forget_lane(self, slug: str, number: int) -> None:
+        """The card is being launched again: its lane record starts over."""
+        with Session(self.engine) as session, session.begin():
+            row = session.get(LaneRow, (slug, number))
+            if row is not None:
+                session.delete(row)
+
+    # ── signal readings ────────────────────────────────────────────────
+
+    def record_reading(
+        self,
+        slug: str,
+        number: int,
+        at: datetime,
+        delivered: bool | None,
+        words: str,
+        actor: Actor,
+    ) -> Reading:
+        with Session(self.engine) as session, session.begin():
+            row = ReadingRow(
+                project_slug=slug, card_number=number, at=at, delivered=delivered, words=words
+            )
+            session.add(row)
+            said = {True: "delivered", False: "not delivered", None: "unreadable"}[delivered]
+            _audit(
+                session,
+                slug,
+                number,
+                at=at,
+                actor=actor,
+                kind=AuditKind.SIGNAL,
+                from_place=None,
+                to_place=None,
+                detail=f"Signal read as {said}: {words}",
+            )
+            session.flush()
+            return _reading(row)
+
+    def readings(self, slug: str, number: int) -> list[Reading]:
+        with Session(self.engine) as session:
+            rows = session.scalars(
+                select(ReadingRow)
+                .where(ReadingRow.project_slug == slug, ReadingRow.card_number == number)
+                .order_by(ReadingRow.id.desc())
+            )
+            return [_reading(r) for r in rows]
+
+    def last_readings(self, slug: str) -> dict[int, Reading]:
+        with Session(self.engine) as session:
+            rows = session.scalars(
+                select(ReadingRow).where(ReadingRow.project_slug == slug).order_by(ReadingRow.id)
+            )
+            out: dict[int, Reading] = {}
+            for row in rows:
+                out[row.card_number] = _reading(row)
+            return out
+
+    # ── the trunk ──────────────────────────────────────────────────────
+
+    def record_trunk(self, slug: str, state: TrunkState) -> None:
+        with Session(self.engine) as session, session.begin():
+            row = session.get(TrunkRow, slug)
+            if row is None:
+                row = TrunkRow(project_slug=slug, behind=0)
+                session.add(row)
+            row.level = state.level
+            row.behind = state.behind
+            row.note = state.note
+            row.read_at = state.read_at
+
+    def trunk(self, slug: str) -> TrunkState:
+        with Session(self.engine) as session:
+            row = session.get(TrunkRow, slug)
+            if row is None:
+                return TrunkState(level=None, behind=0, note=None, read_at=None)
+            return TrunkState(
+                level=row.level, behind=row.behind, note=row.note, read_at=row.read_at
+            )
+
     # ── the runtime's records ──────────────────────────────────────────
     # Three tables with no foreign key to the board's: where a session runs,
     # the rescues it has had, the windows it was given. Clearing a session's
@@ -528,6 +819,57 @@ def _window(row: WindowRow) -> Window:
         address=row.address,
         opened_at=row.opened_at,
         closed_at=row.closed_at,
+    )
+
+
+def _hook_event(row: HookEventRow) -> HookEvent:
+    return HookEvent(
+        id=row.id,
+        kind=HookKind(row.kind),
+        session_id=row.session_id,
+        cwd=row.cwd,
+        at=row.at,
+        source=row.source,
+        message=row.message,
+        reason=row.reason,
+        error=row.error,
+        transcript_path=row.transcript_path,
+        project=row.project_slug,
+        card_number=row.card_number,
+    )
+
+
+def _discussion(row: DiscussionRow) -> Discussion:
+    return Discussion(
+        id=row.id,
+        project=row.project_slug,
+        card_number=row.card_number,
+        session_id=row.session_id,
+        slot=row.slot,
+        started_at=row.started_at,
+    )
+
+
+def _lane_record(row: LaneRow) -> LaneRecord:
+    return LaneRecord(
+        project=row.project_slug,
+        card_number=row.card_number,
+        name=row.name,
+        path=row.path,
+        branch=row.branch,
+        tip=row.tip,
+        first_seen=row.first_seen,
+        last_seen=row.last_seen,
+        gone_at=row.gone_at,
+        folded_at=row.folded_at,
+        trunk_synced_at=row.trunk_synced_at,
+        main_synced_at=row.main_synced_at,
+    )
+
+
+def _reading(row: ReadingRow) -> Reading:
+    return Reading(
+        id=row.id, card_number=row.card_number, at=row.at, delivered=row.delivered, words=row.words
     )
 
 

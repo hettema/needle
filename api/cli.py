@@ -230,9 +230,11 @@ def main(argv: list[str] | None = None) -> int:
     p_types = sub.add_parser("types", help="regenerate the frontend's types from the domain")
     p_types.set_defaults(run=types)
 
+    from api.board_cli import register as register_board
     from api.runtime_cli import register
 
     register(sub)
+    register_board(sub)
 
     args = parser.parse_args(argv)
     return int(args.run(args))

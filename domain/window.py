@@ -18,6 +18,8 @@ class WindowKind(StrEnum):
     """A door the owner opened to look at a live session."""
     LOOK = "board-look"
     """A fresh session from a transcript, for a session live nowhere."""
+    DISCUSS = "board-discuss"
+    """A fresh conversation about a card, never hands on its tree."""
 
 
 class Window(BaseModel):

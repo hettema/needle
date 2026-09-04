@@ -191,6 +191,7 @@ def rescues(runtime: Runtime, args: argparse.Namespace) -> int:
             "its slot record is untouched"
         )
         return 0
+
     def rung(r: Rung | None) -> str:
         return "—" if r is None else f"{r.slot}/{r.model.value if r.model else 'default'}"
 

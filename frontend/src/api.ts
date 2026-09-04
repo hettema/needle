@@ -2,6 +2,7 @@
 
 import type { BoardState, CardDetail, ProjectFile } from "./types/board";
 import type { Move, Place } from "./types/card";
+import type { DoorResult } from "./types/lane";
 import type { Project } from "./types/project";
 
 export class ApiError extends Error {
@@ -54,6 +55,17 @@ export function getFile(slug: string, path: string): Promise<ProjectFile> {
 export function moveCard(slug: string, number: number, to: Place): Promise<BoardState> {
   const body: Move = { to };
   return call<BoardState>(`/api/projects/${encodeURIComponent(slug)}/cards/${number}/move`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+}
+
+/** The doors a card offers; each answers with what it did, or fails by name. */
+export type DoorName = "start" | "answer" | "watch" | "look" | "discuss" | "resume" | "stop" | "signal";
+
+export function openDoor(slug: string, number: number, door: DoorName, body: object = {}): Promise<DoorResult> {
+  return call<DoorResult>(`/api/projects/${encodeURIComponent(slug)}/cards/${number}/${door}`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
