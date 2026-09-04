@@ -1,0 +1,94 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+  <style>
+    body { margin: 0; background: #121618; color: #E4E8E5; font-family: Archivo, "Helvetica Neue", system-ui, sans-serif; }
+    a { color: #63B5BD; } a:hover { color: #8fd0d6; }
+    .mono { font-family: "IBM Plex Mono", ui-monospace, SFMono-Regular, monospace; }
+  </style>
+</helmet>
+<div style="width: 1440px; min-height: 520px; box-sizing: border-box; background: #121618; display: flex; flex-direction: column; gap: 36px; padding: 32px 0 40px;">
+
+  <div style="display: flex; flex-direction: column; gap: 10px; padding: 0 40px;">
+    <div class="mono" style="font-size: 11px; letter-spacing: .12em; color: #748086; text-transform: uppercase;">The head — one line, always. The three words are filters of the board.</div>
+  </div>
+
+  <div style="display: flex; align-items: center; gap: 18px; padding: 0 40px; height: 52px; box-sizing: border-box; background: #1C2225; border-top: 1px solid #303941; border-bottom: 1px solid #303941;">
+    <div style="font-size: 17px; font-weight: 700; color: #E4E8E5;">Needle</div>
+    <div style="font-size: 14px; font-weight: 600;">Hello Revenue</div>
+    <div style="width: 1px; height: 20px; background: #303941;"></div>
+    <div class="mono" style="font-size: 12px; color: #D6A04A;">Your move <span style="font-weight: 500;">215</span></div>
+    <div class="mono" style="font-size: 12px; color: #D57F78;">Broken <span style="font-weight: 500;">5</span></div>
+    <div class="mono" style="font-size: 12px; color: #63B5BD;">Live <span style="font-weight: 500;">1</span></div>
+    <div style="flex-grow: 1;"></div>
+    <div class="mono" style="font-size: 12px; color: #748086;"><span style="color: #E4E8E5;">Rank</span> · Age · Gate · Triage</div>
+    <div style="height: 30px; padding: 0 12px; display: flex; align-items: center; border-radius: 5px; background: #E4E8E5; color: #121618; font-size: 13px; font-weight: 600;">Idea</div>
+  </div>
+
+  <div style="display: flex; flex-direction: column; gap: 10px; padding: 0 40px;">
+    <div class="mono" style="font-size: 11px; letter-spacing: .12em; color: #748086; text-transform: uppercase;">"Your move" clicked — the board filters to those cards and the breakdown appears as sub-filters</div>
+  </div>
+
+  <div style="display: flex; flex-direction: column; background: #1C2225; border-top: 1px solid #303941; border-bottom: 1px solid #303941;">
+    <div style="display: flex; align-items: center; gap: 20px; padding: 14px 40px; height: 64px; box-sizing: border-box;">
+      <div style="font-size: 20px; font-weight: 700; color: #E4E8E5; letter-spacing: -.01em;">Needle</div>
+      <div style="display: flex; align-items: center; gap: 8px; padding: 6px 12px; border: 1px solid #3F4A51; border-radius: 5px; background: #232A2D; font-size: 15px; font-weight: 600;">Hello Revenue <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="#95A1A7" stroke-width="1.5"><path d="M3 5l3 3 3-3"></path></svg></div>
+      <div class="mono" style="font-size: 12px; color: #748086;">14 live plans · 149 suggestions · 533 archived documents</div>
+      <div style="flex-grow: 1;"></div>
+      <div style="display: flex; align-items: center; gap: 0; border: 1px solid #3F4A51; border-radius: 5px; overflow: hidden;">
+        <div class="mono" style="font-size: 12px; padding: 7px 12px; background: #232A2D; color: #E4E8E5;">Rank</div>
+        <div class="mono" style="font-size: 12px; padding: 7px 12px; color: #95A1A7; border-left: 1px solid #3F4A51;">Age</div>
+        <div class="mono" style="font-size: 12px; padding: 7px 12px; color: #95A1A7; border-left: 1px solid #3F4A51;">Gate</div>
+        <div class="mono" style="font-size: 12px; padding: 7px 12px; color: #95A1A7; border-left: 1px solid #3F4A51;">Triage</div>
+      </div>
+      <div style="display: flex; align-items: center; gap: 8px;">
+        <div style="width: 260px; height: 34px; box-sizing: border-box; border: 1px solid #3F4A51; border-radius: 5px; background: #121618; padding: 0 12px; display: flex; align-items: center; color: #748086; font-size: 13px;">Ask or propose something…</div>
+        <div style="height: 34px; padding: 0 14px; display: flex; align-items: center; border-radius: 5px; background: #E4E8E5; color: #121618; font-size: 13px; font-weight: 600;">Idea</div>
+      </div>
+    </div>
+
+    <div style="display: flex; align-items: stretch; gap: 0; padding: 0 40px 14px;">
+      <div style="display: flex; flex-direction: column; gap: 6px; padding-right: 22px; border-right: 1px solid #303941;">
+        <div class="mono" style="font-size: 10px; letter-spacing: .12em; text-transform: uppercase; color: #D6A04A; border-bottom: 2px solid #D6A04A; padding-bottom: 2px; align-self: flex-start;">Your move · 215 — filtering</div>
+        <div style="display: flex; gap: 6px; flex-wrap: wrap;">
+          <div style="display: flex; align-items: center; gap: 7px; padding: 5px 10px; border-radius: 5px; background: #2F2611; color: #E4E8E5; font-size: 13px;"><span class="mono" style="font-weight: 500; color: #D6A04A;">185</span> verdicts to accept</div>
+          <div style="display: flex; align-items: center; gap: 7px; padding: 5px 10px; border-radius: 5px; background: #2F2611; color: #E4E8E5; font-size: 13px;"><span class="mono" style="font-weight: 500; color: #D6A04A;">29</span> lanes asking you</div>
+          <div style="display: flex; align-items: center; gap: 7px; padding: 5px 10px; border-radius: 5px; background: #2F2611; color: #E4E8E5; font-size: 13px;"><span class="mono" style="font-weight: 500; color: #D6A04A;">1</span> signal for you to read</div>
+        </div>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 6px; padding: 0 22px; border-right: 1px solid #303941;">
+        <div class="mono" style="font-size: 10px; letter-spacing: .12em; text-transform: uppercase; color: #D57F78;">Broken · 18</div>
+        <div style="display: flex; gap: 6px; flex-wrap: wrap;">
+          <div style="display: flex; align-items: center; gap: 7px; padding: 5px 10px; border-radius: 5px; background: #36201E; color: #E4E8E5; font-size: 13px;"><span class="mono" style="font-weight: 500; color: #D57F78;">3</span> lanes died</div>
+          <div style="display: flex; align-items: center; gap: 7px; padding: 5px 10px; border-radius: 5px; background: #36201E; color: #E4E8E5; font-size: 13px;"><span class="mono" style="font-weight: 500; color: #D57F78;">14</span> statuses doubted</div>
+          <div style="display: flex; align-items: center; gap: 7px; padding: 5px 10px; border-radius: 5px; background: #36201E; color: #E4E8E5; font-size: 13px;"><span class="mono" style="font-weight: 500; color: #D57F78;">1</span> document nowhere</div>
+        </div>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 6px; padding: 0 22px;">
+        <div class="mono" style="font-size: 10px; letter-spacing: .12em; text-transform: uppercase; color: #63B5BD;">Live · 1</div>
+        <div style="display: flex; gap: 6px; flex-wrap: wrap;">
+          <div style="display: flex; align-items: center; gap: 7px; padding: 5px 10px; border-radius: 5px; background: #15302F; color: #E4E8E5; font-size: 13px;"><span class="mono" style="font-weight: 500; color: #63B5BD;">1</span> lane working</div>
+        </div>
+      </div>
+      <div style="flex-grow: 1;"></div>
+      <div style="display: flex; flex-direction: column; justify-content: flex-end; align-items: flex-end; gap: 4px;">
+        <div class="mono" style="font-size: 12px; color: #748086;">8 arrived today · 11 defects and 102 ideas unplanned</div>
+        <div class="mono" style="font-size: 12px; color: #7FB893;">trunk level with origin/develop</div>
+      </div>
+    </div>
+  </div>
+
+  <div style="padding: 0 40px; display: flex; flex-direction: column; gap: 6px; max-width: 900px;">
+    <div style="font-size: 14px; color: #95A1A7; line-height: 1.55;">The head is one line and never expands on its own. Each of the three words is a filter: click Your move and the board shows only the cards that need you, with the breakdown — verdicts, questions, signals — as sub-filters you can narrow to. Click it again and the whole board is back. The quiet facts live behind the counts in the project pill, not on the head.</div>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

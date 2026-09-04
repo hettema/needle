@@ -1,0 +1,86 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+  <style>
+    body { margin: 0; background: #121618; color: #E4E8E5; font-family: Archivo, "Helvetica Neue", system-ui, sans-serif; }
+    a { color: #63B5BD; } a:hover { color: #8fd0d6; }
+    .mono { font-family: "IBM Plex Mono", ui-monospace, SFMono-Regular, monospace; }
+  </style>
+</helmet>
+<div style="width: 1440px; min-height: 820px; box-sizing: border-box; padding: 32px 40px 40px; background: #121618; display: flex; flex-direction: column; gap: 22px;">
+  <div style="display: flex; align-items: flex-end; justify-content: space-between; gap: 24px;">
+    <div style="display: flex; flex-direction: column; gap: 6px;">
+      <div class="mono" style="font-size: 11px; letter-spacing: .12em; color: #D6A04A; text-transform: uppercase;">Your move · triage</div>
+      <div style="font-size: 26px; font-weight: 600; letter-spacing: -.01em;">185 verdicts to accept</div>
+      <div style="font-size: 14px; color: #95A1A7;">Each line is a card, its evidence, and where the evidence says it goes. Accept a whole class when the evidence is the same; overturn one with a word, and the word is kept.</div>
+    </div>
+    <div style="display: flex; gap: 8px;">
+      <div class="mono" style="font-size: 12px; padding: 7px 12px; border: 1px solid #3F4A51; border-radius: 5px; color: #95A1A7;">Least certain first</div>
+      <div class="mono" style="font-size: 12px; padding: 7px 12px; border: 1px solid #3F4A51; border-radius: 5px; background: #232A2D; color: #E4E8E5;">By class</div>
+    </div>
+  </div>
+
+  <div style="display: flex; flex-direction: column; gap: 0; border: 1px solid #303941; border-radius: 7px; overflow: hidden; background: #1C2225;">
+    <div style="display: flex; align-items: center; gap: 14px; padding: 12px 18px; background: #232A2D; border-bottom: 1px solid #303941;">
+      <div style="font-size: 15px; font-weight: 600;">Built under another name</div>
+      <div class="mono" style="font-size: 12px; color: #748086;">17 cards · all go to <span style="color: #7FB893;">Done</span></div>
+      <div style="flex-grow: 1;"></div>
+      <div style="height: 32px; padding: 0 14px; display: flex; align-items: center; border-radius: 5px; background: #E4E8E5; color: #121618; font-size: 13px; font-weight: 600;">Accept all 17</div>
+    </div>
+    <div style="display: grid; grid-template-columns: 64px 280px minmax(0, 1fr) 200px 180px; align-items: center; gap: 16px; padding: 12px 18px; border-bottom: 1px solid #303941;">
+      <div class="mono" style="font-size: 12px; color: #748086;">#388</div>
+      <div style="font-size: 14px; font-weight: 500; line-height: 1.35;">A page-level contradiction outlives its section-scoped repair</div>
+      <div style="font-size: 13px; color: #95A1A7; line-height: 1.45;">Delivered by <span class="mono" style="color: #E4E8E5;">contradiction-repair-holds-the-deal</span>, archived 1 Sep; its close-out names this suggestion as the origin.</div>
+      <div class="mono" style="font-size: 12px;"><span style="color: #748086;">Backlog →</span> <span style="color: #7FB893;">Done</span></div>
+      <div style="display: flex; gap: 6px; justify-content: flex-end;"><span class="mono" style="font-size: 12px; padding: 6px 12px; border-radius: 5px; border: 1px solid #3F4A51; color: #E4E8E5;">Accept</span><span class="mono" style="font-size: 12px; padding: 6px 12px; border-radius: 5px; color: #95A1A7;">Overturn</span></div>
+    </div>
+    <div style="display: grid; grid-template-columns: 64px 280px minmax(0, 1fr) 200px 180px; align-items: center; gap: 16px; padding: 12px 18px; border-bottom: 1px solid #303941;">
+      <div class="mono" style="font-size: 12px; color: #748086;">#389</div>
+      <div style="font-size: 14px; font-weight: 500; line-height: 1.35;">A failed check repairs the line, not the answer</div>
+      <div style="font-size: 13px; color: #95A1A7; line-height: 1.45;">Delivered by the plan of the same name, archived 3 Sep and closed on this board as #238.</div>
+      <div class="mono" style="font-size: 12px;"><span style="color: #748086;">Backlog →</span> <span style="color: #7FB893;">Done</span></div>
+      <div style="display: flex; gap: 6px; justify-content: flex-end;"><span class="mono" style="font-size: 12px; padding: 6px 12px; border-radius: 5px; border: 1px solid #3F4A51; color: #E4E8E5;">Accept</span><span class="mono" style="font-size: 12px; padding: 6px 12px; border-radius: 5px; color: #95A1A7;">Overturn</span></div>
+    </div>
+    <div style="display: flex; align-items: center; justify-content: center; padding: 10px; border-bottom: 1px solid #303941;"><span class="mono" style="font-size: 12px; color: #748086;">15 more in this class</span></div>
+
+    <div style="display: flex; align-items: center; gap: 14px; padding: 12px 18px; background: #232A2D; border-bottom: 1px solid #303941;">
+      <div style="font-size: 15px; font-weight: 600;">Superseded</div>
+      <div class="mono" style="font-size: 12px; color: #748086;">16 cards · all go to <span style="color: #95A1A7;">Not now</span></div>
+      <div style="flex-grow: 1;"></div>
+      <div style="height: 32px; padding: 0 14px; display: flex; align-items: center; border-radius: 5px; background: #E4E8E5; color: #121618; font-size: 13px; font-weight: 600;">Accept all 16</div>
+    </div>
+    <div style="display: grid; grid-template-columns: 64px 280px minmax(0, 1fr) 200px 180px; align-items: center; gap: 16px; padding: 12px 18px; border-bottom: 1px solid #303941;">
+      <div class="mono" style="font-size: 12px; color: #748086;">#131</div>
+      <div style="font-size: 14px; font-weight: 500; line-height: 1.35;">The first real grant</div>
+      <div style="font-size: 13px; color: #95A1A7; line-height: 1.45;">Your ruling of 22 Aug parks delegation until a campaign is handed over; nothing has been, and the card's own note says it waits on that.</div>
+      <div class="mono" style="font-size: 12px;"><span style="color: #748086;">Executed →</span> <span style="color: #95A1A7;">Not now</span></div>
+      <div style="display: flex; gap: 6px; justify-content: flex-end;"><span class="mono" style="font-size: 12px; padding: 6px 12px; border-radius: 5px; border: 1px solid #3F4A51; color: #E4E8E5;">Accept</span><span class="mono" style="font-size: 12px; padding: 6px 12px; border-radius: 5px; color: #95A1A7;">Overturn</span></div>
+    </div>
+
+    <div style="display: flex; align-items: center; gap: 14px; padding: 12px 18px; background: #232A2D; border-bottom: 1px solid #303941;">
+      <div style="font-size: 15px; font-weight: 600;">Doubted</div>
+      <div class="mono" style="font-size: 12px; color: #748086;">14 cards · the doubt's own fact decides</div>
+      <div style="flex-grow: 1;"></div>
+      <div class="mono" style="font-size: 12px; color: #748086;">read each</div>
+    </div>
+    <div style="display: grid; grid-template-columns: 64px 280px minmax(0, 1fr) 200px 180px; align-items: center; gap: 16px; padding: 12px 18px;">
+      <div class="mono" style="font-size: 12px; color: #748086;">#147</div>
+      <div style="font-size: 14px; font-weight: 500; line-height: 1.35;">Tell production which ad accounts are ours</div>
+      <div style="font-size: 13px; color: #95A1A7; line-height: 1.45;"><span style="color: #D57F78;">Doubted:</span> DELIVERED is from a previous life and the close never landed; the plan is still live.</div>
+      <div class="mono" style="font-size: 12px;"><span style="color: #748086;">Executed →</span> <span style="color: #D6A04A;">Decision moment</span></div>
+      <div style="display: flex; gap: 6px; justify-content: flex-end;"><span class="mono" style="font-size: 12px; padding: 6px 12px; border-radius: 5px; border: 1px solid #3F4A51; color: #E4E8E5;">Accept</span><span class="mono" style="font-size: 12px; padding: 6px 12px; border-radius: 5px; color: #95A1A7;">Overturn</span></div>
+    </div>
+  </div>
+
+  <div style="font-size: 14px; color: #95A1A7; line-height: 1.55; max-width: 900px;">Each line says where the card is and where the evidence sends it; the destination carries the meaning's colour — Done is proven green, Decision moment is your amber, Not now is quiet — so the table can be read by its right-hand column alone. Classes whose evidence is identical get one button; the doubted class never does, because each doubt is its own fact.</div>
+</div>
+</x-dc>
+</body>
+</html>

@@ -1,0 +1,81 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+  <style>
+    body { margin: 0; background: #121618; color: #E4E8E5; font-family: Archivo, "Helvetica Neue", system-ui, sans-serif; }
+    a { color: #63B5BD; } a:hover { color: #8fd0d6; }
+    .mono { font-family: "IBM Plex Mono", ui-monospace, SFMono-Regular, monospace; }
+  </style>
+</helmet>
+<div style="width: 1120px; min-height: 760px; box-sizing: border-box; padding: 48px 56px; background: #121618; display: flex; flex-direction: column; gap: 28px;">
+  <div style="display: flex; flex-direction: column; gap: 8px;">
+    <div class="mono" style="font-size: 11px; letter-spacing: .12em; color: #748086; text-transform: uppercase;">The colour language</div>
+    <div style="font-size: 30px; font-weight: 600; letter-spacing: -.01em; line-height: 1.15;">Five colours, five meanings, nothing decorative.</div>
+    <div style="font-size: 15px; color: #95A1A7; line-height: 1.5; max-width: 760px;">A colour appears only where its meaning holds. A pill, a card state, a door or a rail item carries colour because the board is saying one of these five things — never because a counter wanted to look important.</div>
+  </div>
+
+  <div style="display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 16px;">
+    <div style="display: flex; flex-direction: column; gap: 12px; padding: 18px; background: #1C2225; border: 1px solid #303941; border-radius: 7px;">
+      <div style="height: 10px; border-radius: 3px; background: #D6A04A;"></div>
+      <div style="font-size: 17px; font-weight: 600;">Your move</div>
+      <div style="font-size: 13px; color: #95A1A7; line-height: 1.5;">Only you can act. A question from a lane, a verdict to accept, a signal only you can read, a card in Decision moment.</div>
+      <div class="mono" style="font-size: 11px; color: #D6A04A;">amber · attn</div>
+    </div>
+    <div style="display: flex; flex-direction: column; gap: 12px; padding: 18px; background: #1C2225; border: 1px solid #303941; border-radius: 7px;">
+      <div style="height: 10px; border-radius: 3px; background: #D57F78;"></div>
+      <div style="font-size: 17px; font-weight: 600;">Broken</div>
+      <div style="font-size: 13px; color: #95A1A7; line-height: 1.5;">Evidence is gone or two things disagree. A doubted status, a document that is nowhere, a lane that died, two running lanes in one file. Not a collision before Start — that card simply waits.</div>
+      <div class="mono" style="font-size: 11px; color: #D57F78;">red · wrong</div>
+    </div>
+    <div style="display: flex; flex-direction: column; gap: 12px; padding: 18px; background: #1C2225; border: 1px solid #303941; border-radius: 7px;">
+      <div style="height: 10px; border-radius: 3px; background: #63B5BD;"></div>
+      <div style="font-size: 17px; font-weight: 600;">Live</div>
+      <div style="font-size: 13px; color: #95A1A7; line-height: 1.5;">Happening right now. A lane with hands on, a conversation in progress, a fold landing. Never a button.</div>
+      <div class="mono" style="font-size: 11px; color: #63B5BD;">teal · accent</div>
+    </div>
+    <div style="display: flex; flex-direction: column; gap: 12px; padding: 18px; background: #1C2225; border: 1px solid #303941; border-radius: 7px;">
+      <div style="height: 10px; border-radius: 3px; background: #7FB893;"></div>
+      <div style="font-size: 17px; font-weight: 600;">Proven</div>
+      <div style="font-size: 13px; color: #95A1A7; line-height: 1.5;">The loop closed. A signal read as delivered, a card in Done, a fold that landed, the trunk level.</div>
+      <div class="mono" style="font-size: 11px; color: #7FB893;">green · landed</div>
+    </div>
+    <div style="display: flex; flex-direction: column; gap: 12px; padding: 18px; background: #1C2225; border: 1px solid #303941; border-radius: 7px;">
+      <div style="height: 10px; border-radius: 3px; background: #3F4A51;"></div>
+      <div style="font-size: 17px; font-weight: 600;">Quiet</div>
+      <div style="font-size: 13px; color: #95A1A7; line-height: 1.5;">Information with no claim on you. Counts, ages, gates, kinds, what arrived today, what is unplanned.</div>
+      <div class="mono" style="font-size: 11px; color: #95A1A7;">grey · ink-2/3</div>
+    </div>
+  </div>
+
+  <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px;">
+    <div style="display: flex; flex-direction: column; gap: 10px; padding: 18px 20px; background: #1C2225; border: 1px solid #303941; border-radius: 7px;">
+      <div class="mono" style="font-size: 11px; letter-spacing: .1em; color: #748086; text-transform: uppercase;">Where colour lives</div>
+      <div style="display: flex; flex-direction: column; gap: 8px; font-size: 14px; line-height: 1.5; color: #E4E8E5;">
+        <div style="display: flex; gap: 12px;"><span style="color: #748086; min-width: 120px;">Attention rail</span><span>one line, three words that are filters of the board — <span style="color: #D6A04A;">Your move</span>, <span style="color: #D57F78;">Broken</span>, <span style="color: #63B5BD;">Live</span> — each with its count; the breakdown appears only when one is clicked.</span></div>
+        <div style="display: flex; gap: 12px;"><span style="color: #748086; min-width: 120px;">Card state</span><span>one word, one colour, always in the same place on the card.</span></div>
+        <div style="display: flex; gap: 12px;"><span style="color: #748086; min-width: 120px;">Doors</span><span>never coloured: the primary door is the filled ink button, the rest are outlined, a closed door is grey text with its reason.</span></div>
+        <div style="display: flex; gap: 12px;"><span style="color: #748086; min-width: 120px;">The loop</span><span>a shipped card carries its loop as a glyph: an open ring in ink with who reads it and when; a filled green dot with the time it was read.</span></div>
+        <div style="display: flex; gap: 12px;"><span style="color: #748086; min-width: 120px;">Columns</span><span>never coloured. The column is a stage, not a state.</span></div>
+      </div>
+    </div>
+    <div style="display: flex; flex-direction: column; gap: 10px; padding: 18px 20px; background: #1C2225; border: 1px solid #303941; border-radius: 7px;">
+      <div class="mono" style="font-size: 11px; letter-spacing: .1em; color: #748086; text-transform: uppercase;">What colour never means</div>
+      <div style="display: flex; flex-direction: column; gap: 8px; font-size: 14px; line-height: 1.5; color: #E4E8E5;">
+        <div>A count is not amber because it is large. 102 unplanned ideas is quiet.</div>
+        <div>A category is not a colour. Defects and ideas are two rails, not two hues.</div>
+        <div>A button is not a colour. Pressable is a shape — filled or outlined — never a hue, so nothing you can press is ever confused with something that is happening.</div>
+        <div>An outline ring with a number and no word is not a signal. The head is one line and keeps its words: <span class="mono" style="font-size: 12px; color: #D6A04A;">Your move 215</span> <span class="mono" style="font-size: 12px; color: #D57F78;">Broken 18</span> <span class="mono" style="font-size: 12px; color: #63B5BD;">Live 1</span>.</div>
+      </div>
+    </div>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

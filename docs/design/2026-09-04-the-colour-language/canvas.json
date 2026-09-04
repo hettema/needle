@@ -1,0 +1,16 @@
+{
+  "artboards": [
+    { "file": "Colour.dc.html", "x": 0, "y": 0, "w": 1120, "h": 840, "title": "The colour language" },
+    { "file": "Head.dc.html", "x": 1220, "y": 0, "w": 1440, "h": 540, "title": "The head and the attention rail" },
+    { "file": "Main.dc.html", "x": 0, "y": 920, "w": 1440, "h": 900, "title": "The board at rest — 1440" },
+    { "file": "Card.dc.html", "x": 1540, "y": 920, "w": 1240, "h": 580, "title": "The collapsed card, every state" },
+    { "file": "OpenCard.dc.html", "x": 0, "y": 1960, "w": 1160, "h": 780, "title": "The open card — its own run; keeps the depth" },
+    { "file": "Triage.dc.html", "x": 1260, "y": 1960, "w": 1440, "h": 840, "title": "The triage lens" }
+  ],
+  "annotations": [
+    { "id": "brief", "x": 0, "y": -170, "w": 560, "text": "Needle UI/UX — a proposal over today's feature set.\nThe intent: oversight and intuitive control. The one rule underneath everything here: colour is a language of five words, and nothing is coloured for decoration.\nAssumed: the current type (Archivo + IBM Plex Mono), the dark palette, 288px columns; everything else is up for grabs." },
+    { "id": "open-card-note", "x": 0, "y": 1880, "w": 520, "text": "The open card is its own design run. The owner ruled: keep every layer of depth the card carries today, make the depth easier to scan. This board shows only the top of it — what it is, what is happening, what you can do — and is not the proposal for the rest." },
+    { "id": "read-order", "x": 1220, "y": -110, "w": 380, "text": "Read left to right, top to bottom: the language first, then the head that speaks it, then the board, the card, the open card, the triage lens." }
+  ],
+  "launch": { "view": "canvas" }
+}
