@@ -118,15 +118,10 @@ def test_new_is_only_an_arrival_within_a_day():
     assert not summarize(card(origin=CardOrigin.IMPORTED, born_at=NOW), index, NOW).is_new
 
 
-def test_points_count_rows_the_essence_aside_and_age_prefers_the_document():
-    rows = [
-        Row(kind=RowKind.SERVES, text="s"),
-        Row(kind=RowKind.TODAY, text="t"),
-        Row(kind=RowKind.COST, text="c"),
-    ]
+def test_age_prefers_the_documents_date_over_the_cards_birth():
+    rows = [Row(kind=RowKind.SERVES, text="s"), Row(kind=RowKind.TODAY, text="t")]
     index = CorpusIndex(documents=[doc()], read_at=NOW)
     summary = summarize(card(link=LINK, rows=rows), index, NOW)
-    assert summary.points == 2
     assert summary.age_date == date(2026, 9, 1)
     assert summarize(card(rows=rows), index, NOW).age_date == NOW.date()
 
@@ -166,22 +161,18 @@ def test_the_board_always_has_eight_columns_each_with_a_group_and_counts_attenti
     assert [c.definition.column for c in board.columns] == list(Column)
     assert all(len(c.groups) >= 1 for c in board.columns)
     assert board.attention.model_dump() == {
-        "asking_you": 1,
-        "in_flight": 1,
-        "colliding": 0,
-        "in_discussion": 0,
-        "lanes_ended": 0,
-        "signals_due": 0,
-        "signals_asking": 0,
-        "signals_reading": 0,
-        "doubted": 0,
-        "arrived_today": 1,
-        "documents_gone": 1,
-        "documents_without_card": 1,
-        "verdicts_unread": 0,
+        "yours": [{"claim": "decision", "count": 1, "label": "card in Decision moment"}],
+        "broken": [
+            {"claim": "document gone", "count": 1, "label": "document nowhere"},
+            {"claim": "document without card", "count": 1, "label": "document with no card"},
+        ],
+        "live": [],
         "unplanned_defects": 0,
         "unplanned_ideas": 0,
+        "arrived_today": 1,
     }
+    states = {c.number: c.state.word for col in board.columns for g in col.groups for c in g.cards}
+    assert states == {1: "your move", 2: "no hands on it", 3: "document nowhere"}
     assert [d.stem for d in board.documents_without_card] == ["unlinked"]
     assert board.corpus.watching is False and board.corpus.watch_note == "inotify limit"
     assert board.corpus.live_plans == 2

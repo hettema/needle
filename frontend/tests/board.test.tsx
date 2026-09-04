@@ -1,12 +1,13 @@
 import { describe, expect, it, vi, beforeEach } from "vitest";
-import { render, screen, within, waitFor, fireEvent, act } from "@testing-library/react";
+import { cleanup, render, screen, within, waitFor, fireEvent, act } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { ApiError, type DoorName } from "../src/api";
-import { PROJECT, board, detail } from "./fixture";
+import { PROJECT, board, detail, language } from "./fixture";
 import type { BoardState, CardDetail } from "../src/types/board";
 import type { Place } from "../src/types/card";
 import type { DoorResult, Lane } from "../src/types/lane";
 import type { Project } from "../src/types/project";
+import type { ClaimCount } from "../src/types/board";
 import type { EvidenceClass, VerdictLine, VerdictsRuled } from "../src/types/verdict";
 
 const api = vi.hoisted(() => ({
@@ -31,6 +32,22 @@ import { App } from "../src/App";
 
 const SLUG = PROJECT.slug;
 const SECOND: Project = { slug: "needle", name: "Needle", path: "/srv/needle", registered_at: "2026-09-04T07:00:00+00:00" };
+
+/** The head's breakdown for one word, as `{claim: count}`. */
+function claims(entries: [string, number][]): ClaimCount[] {
+  return entries.map(([claim, count]) => ({ claim: claim as ClaimCount["claim"], count, label: claim }));
+}
+
+/** A board whose head counts these claims, with the cards carrying them. */
+function withClaims(b: BoardState, word: "yours" | "broken" | "live", entries: [string, number][]): BoardState {
+  b.attention = { ...b.attention, [word]: claims(entries) };
+  return b;
+}
+
+function cardOf(b: BoardState, number: number) {
+  for (const column of b.columns) for (const group of column.groups) for (const card of group.cards) if (card.number === number) return card;
+  throw new Error(`no #${number}`);
+}
 
 function upNextOrder(): number[] {
   const column = document.querySelector('[data-column="Up next"]');
@@ -99,7 +116,14 @@ function withLane(state: Lane["state"], sentence: string, question: string | nul
     colliding: null,
   };
   d.summary.lane_state = state;
-  d.summary.lane_sentence = sentence;
+  d.summary.state = {
+    word: state === "asking" ? "asking you" : state === "ended" ? "lane ended" : `${state} · fable on alpha`,
+    meaning: state === "asking" ? "yours" : state === "ended" ? "broken" : "live",
+    detail: question ? `“${question.split("\n").filter(Boolean).slice(-1)[0]}”` : sentence,
+    loop: null,
+    door: null,
+    hint: "open to see",
+  };
   const open = (label: string, why: string) => ({ offered: true, label, why });
   const closed = (label: string, why: string) => ({ offered: false, label, why });
   d.doors = {
@@ -128,14 +152,13 @@ describe("the board at rest", () => {
     expect(screen.queryByRole("heading", { name: "Executed" })).not.toBeInTheDocument();
     expect(screen.getByText("Next to plan")).toBeInTheDocument();
     expect(screen.getAllByText("Skipper-facing quality", { selector: "h3" })).toHaveLength(2);
-    expect(screen.getByText("Document gone")).toBeInTheDocument();
-    expect(screen.getAllByText("Note — nothing written yet")).toHaveLength(4);
-    expect(screen.getByText("New")).toBeInTheDocument();
-    expect(screen.getByText("cards cite documents that are nowhere")).toBeInTheDocument();
+    expect(screen.getByText("gone")).toBeInTheDocument();
+    expect(screen.getAllByText("note")).toHaveLength(4);
+    expect(screen.getByText("new")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /^Broken/ })).toHaveTextContent("Broken 2");
     expect(upNextOrder()).toEqual([253, 241, 228, 237, 174]);
-    const second = within(screen.getByText("#241").closest("article") as HTMLElement);
-    expect(second.getByText("2")).toBeInTheDocument();
-    expect(second.getByText("4 points")).toBeInTheDocument();
+    // Position is rank: no card carries a rank digit any more.
+    expect(document.querySelector(".rank")).toBeNull();
   });
 
   it("names the project in the window's tab", async () => {
@@ -208,7 +231,8 @@ describe("a write that fails", () => {
     const alert = await screen.findByRole("alert");
     expect(alert).toHaveTextContent("Not moved. The store refused: OperationalError: database is locked The card is where it was.");
     expect(upNextOrder()).toEqual([253, 241, 228, 237, 174]);
-    expect(screen.getByText("write failed")).toBeInTheDocument();
+    expect(document.querySelector(".facts")).toHaveTextContent("1 write failed — see the card");
+    expect((screen.getByText("#241").closest("article") as HTMLElement).dataset["meaning"]).toBe("broken");
     await userEvent.click(within(alert).getByRole("button", { name: "Retry" }));
     await waitFor(() => expect(api.moveCard).toHaveBeenCalledTimes(2));
     expect(api.moveCard).toHaveBeenLastCalledWith(SLUG, 241, { column: "Up next", group: null, position: 0 });
@@ -302,20 +326,19 @@ describe("the doors", () => {
     await waitFor(() => expect(api.openDoor).toHaveBeenCalledWith(SLUG, 253, "start", { anyway: true }));
   });
 
-  it("shows a working lane's band on the resting card and Watch and Stop on the open one", async () => {
+  it("shows a working lane as one live word on the resting card, and Watch and Stop on the open one", async () => {
     const sentence = "Working, fable on alpha, hands on for 12 min.";
     const b = board();
-    const column = b.columns.find((c) => c.definition.column === "Up next");
-    const card = column?.groups[0]?.cards.find((c) => c.number === 253);
-    if (!card) throw new Error("no #253");
+    const card = cardOf(b, 253);
     card.lane_state = "working";
-    card.lane_sentence = sentence;
+    card.state = { word: "working · 12 min · fable on alpha", meaning: "live", detail: null, loop: null, door: null, hint: "open to see" };
     api.getBoard.mockResolvedValue(b);
     api.getCard.mockResolvedValue(withLane("working", sentence));
     api.openDoor.mockResolvedValue({ door: "watch", said: "Window org.omarchy.board-watch-card-253 opened into aaaa0001; closing it ends nothing." });
     await renderBoard();
     const resting = screen.getByText("#253").closest("article") as HTMLElement;
-    expect(within(resting).getByRole("status")).toHaveTextContent(`Working${sentence}`);
+    expect(resting.dataset["meaning"]).toBe("live");
+    expect(within(resting).getByText("working · 12 min · fable on alpha")).toBeInTheDocument();
     await userEvent.click(screen.getByText("Every metered kilowatt is billed"));
     const watch = await screen.findByRole("button", { name: "Watch" });
     expect(screen.getByRole("button", { name: "Stop" })).toBeInTheDocument();
@@ -347,19 +370,21 @@ describe("the doors", () => {
   it("marks a card whose evidence is gone as doubted, on the resting card and the open one, and counts it", async () => {
     const words = "the board doubts this: no live session has hands on its worktree (its worktree is gone from disk)";
     const b = board();
-    const column = b.columns.find((c) => c.definition.column === "Up next");
-    const card = column?.groups[0]?.cards.find((c) => c.number === 253);
-    if (!card) throw new Error("no #253");
+    const card = cardOf(b, 253);
     card.standing = { actor: "machine", evidence: "hands-on", state: "doubted", words };
-    b.attention = { ...b.attention, doubted: 1 };
+    card.state = { word: "doubted", meaning: "broken", detail: words, loop: null, door: null, hint: "open to decide" };
+    card.claims = ["doubted"];
+    withClaims(b, "broken", [["doubted", 1]]);
     const d = detail(253);
     d.summary.standing = card.standing;
     api.getBoard.mockResolvedValue(b);
     api.getCard.mockResolvedValue(d);
     await renderBoard();
-    expect(screen.getByText("status doubted — its evidence is gone")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /^Broken/ })).toHaveTextContent("Broken 1");
     const resting = screen.getByText("#253").closest("article") as HTMLElement;
-    expect(within(resting).getByRole("status")).toHaveTextContent(`Doubted${words}`);
+    expect(resting.dataset["meaning"]).toBe("broken");
+    expect(within(resting).getByText("doubted")).toBeInTheDocument();
+    expect(within(resting).getByText(words)).toBeInTheDocument();
     await userEvent.click(screen.getByText("Every metered kilowatt is billed"));
     const open = await waitFor(() => {
       const el = screen.getByText("#253").closest("article") as HTMLElement;
@@ -367,13 +392,13 @@ describe("the doors", () => {
       return el;
     });
     await within(open).findByText("What it makes true");
-    expect(within(open).getByRole("status")).toHaveTextContent(words);
+    expect(within(open).getAllByRole("status").map((el) => el.textContent).join(" ")).toContain(words);
     expect(within(open).getByText("doubted · hands-on")).toBeInTheDocument();
   });
 
   it("batches the signals only the owner can read into one list with one click each way per card", async () => {
     const b = board();
-    b.attention = { ...b.attention, signals_asking: 2, asking_you: 2 };
+    withClaims(b, "yours", [["signal asking", 2]]);
     b.asks = [
       { number: 259, title: "The fuel pontoon takes cards, live", what: "Did the first card payment at the pontoon go through?", due: "2026-09-11", kind: "owner", evidence: null },
       { number: 134, title: "The office runs its own checks, nightly", what: "Did the nightly check email name a real event?", due: "2026-09-11", kind: "session", evidence: "no check email since the close; Friday's run decides it" },
@@ -381,9 +406,9 @@ describe("the doors", () => {
     api.getBoard.mockResolvedValue(b);
     api.openDoor.mockResolvedValue({ door: "signal", said: "Read as delivered; moved to Done." });
     await renderBoard();
-    const rail = screen.getByRole("button", { name: "2 shipped cards wait on your reading" });
     expect(screen.queryByText(/only you can read these signals/)).not.toBeInTheDocument();
-    await userEvent.click(rail);
+    await userEvent.click(screen.getByRole("button", { name: /^Your move/ }));
+    await userEvent.click(screen.getByRole("button", { name: "2 signal asking" }));
     const list = screen.getByRole("region", { name: /2 shipped cards wait on your reading/ });
     const rows = within(list).getAllByRole("listitem");
     expect(rows).toHaveLength(2);
@@ -423,16 +448,32 @@ describe("the doors", () => {
     expect(await screen.findByText(/Look did not open: no window appeared/)).toBeInTheDocument();
   });
 
-  it("counts what needs the owner on the attention line and names a trunk that is not level", async () => {
+  it("says what needs the owner in three words, and keeps the quiet facts behind the project pill", async () => {
     const b = board();
-    b.attention = { ...b.attention, asking_you: 3, lanes_ended: 1, signals_due: 2 };
+    withClaims(b, "yours", [["decision", 3]]);
+    withClaims(b, "broken", [["lane ended", 1]]);
     b.trunk = { level: false, behind: 4, note: "the checkout has uncommitted work that is not the runtime's (README.md); not touched", read_at: "2026-09-04T12:00:00+00:00" };
     b.machine = { missing: ["hyprctl"] };
     api.getBoard.mockResolvedValue(b);
     await renderBoard();
-    expect(screen.getByText("lane ended — Resume or Look")).toBeInTheDocument();
-    expect(screen.getByText("signals past due")).toBeInTheDocument();
-    expect(screen.getByText("the runtime cannot find: hyprctl")).toBeInTheDocument();
+    // The head is one line: three words, each its meaning's colour and nothing else's.
+    const head = document.querySelector(".app-head") as HTMLElement;
+    const words = within(head).getAllByRole("button").filter((el) => el.classList.contains("word"));
+    expect(words.map((el) => [el.textContent, el.dataset["meaning"]])).toEqual([
+      ["Your move 3", "yours"],
+      ["Broken 1", "broken"],
+      ["Live 0", "quiet"],
+    ]);
+    // Nothing is live, so its count claims nobody and is not painted teal.
+    expect(words[2]).toBeDisabled();
+    // The quiet facts are behind the pill, not on the head.
+    const facts = document.querySelector(".facts") as HTMLElement;
+    expect(facts).toHaveTextContent("the runtime cannot find: hyprctl");
+    expect(facts).toHaveTextContent("trunk 4 behind origin/develop");
+    expect(within(facts).getByText("trunk 4 behind origin/develop").dataset["meaning"]).toBe("broken");
+    // "Behind the pill" is literal: the facts hang off the project switcher.
+    expect(facts.closest(".project")).not.toBeNull();
+    expect(within(head).getByRole("group", { name: "What needs you" })).not.toHaveTextContent("hyprctl");
     expect(screen.getByRole("alert")).toHaveTextContent("The main checkout is not level with origin/develop: the checkout has uncommitted work");
   });
 });
@@ -514,17 +555,19 @@ describe("the triage lens", () => {
   function withVerdicts() {
     const b = board();
     b.verdicts = verdicts;
-    b.attention = { ...b.attention, verdicts_unread: verdicts.length };
+    withClaims(b, "yours", [["verdict", verdicts.length]]);
+    for (const line of verdicts) cardOf(b, line.number).claims = ["verdict"];
     return b;
   }
 
-  it("is reached from the attention line, lists every unread verdict grouped by class, and rules through the doors", async () => {
+  it("is reached from Your move, lists every unread verdict grouped by class, and rules through the doors", async () => {
     api.getBoard.mockResolvedValue(withVerdicts());
     api.openDoor.mockResolvedValue({ door: "accept", said: "#228 moved to Not now: superseded — card #263 carries the same intent as a plan" });
     api.acceptClass.mockResolvedValue({ evidence_class: "live and open", accepted: 1, refused: [] });
     await renderBoard();
     expect(screen.queryByRole("region", { name: /carry a verdict you have not read/ })).not.toBeInTheDocument();
-    await userEvent.click(screen.getByRole("button", { name: "3 cards carry a verdict you have not read" }));
+    await userEvent.click(screen.getByRole("button", { name: /^Your move/ }));
+    await userEvent.click(screen.getByRole("button", { name: "3 verdict" }));
     const lens = screen.getByRole("region", { name: "3 cards carry a verdict you have not read" });
     expect(screen.queryByRole("heading", { name: "Backlog" })).not.toBeInTheDocument();
     const groups = Array.from(lens.querySelectorAll(".tg-name")).map((el) => el.textContent);
@@ -542,7 +585,7 @@ describe("the triage lens", () => {
     await waitFor(() => expect(api.getBoard.mock.calls.length).toBeGreaterThan(1));
 
     const open = within(lens).getByRole("list", { name: "live and open" }).closest(".triage-group") as HTMLElement;
-    await userEvent.click(within(open).getByRole("button", { name: "Accept all in this class" }));
+    await userEvent.click(within(open).getByRole("button", { name: "Accept all 1" }));
     await waitFor(() => expect(api.acceptClass).toHaveBeenCalledWith(SLUG, "live and open"));
     expect(await screen.findByText('Accepted 1 in "live and open"')).toBeInTheDocument();
 
@@ -562,7 +605,7 @@ describe("the triage lens", () => {
 describe("conversations and lanes that know each other", () => {
   it("opens an idea from the head with the first line typed into the door, and lists the conversations alive", async () => {
     const b = board();
-    b.attention = { ...b.attention, in_discussion: 1 };
+    withClaims(b, "live", [["conversation", 1]]);
     b.conversations = [{ short_id: "a1b2c3d4", slot: "alpha", card_number: null, what: "Idea", started_at: "2026-09-04T08:20:00+00:00" }];
     api.getBoard.mockResolvedValue(b);
     api.openIdea.mockResolvedValue({ door: "idea", said: "Talking in org.omarchy.board-idea-harbourmaster, fable on alpha; a conversation about nothing yet (a1b2c3d4), never hands on a tree." });
@@ -576,7 +619,8 @@ describe("conversations and lanes that know each other", () => {
     await waitFor(() => expect(api.openIdea).toHaveBeenLastCalledWith(SLUG, ""));
 
     expect(screen.queryByRole("region", { name: /conversation.*alive/ })).not.toBeInTheDocument();
-    await userEvent.click(screen.getByRole("button", { name: "1 in discussion" }));
+    await userEvent.click(screen.getByRole("button", { name: /^Live/ }));
+    await userEvent.click(screen.getByRole("button", { name: "1 conversation" }));
     const talks = screen.getByRole("region", { name: "1 conversation alive — never hands on a tree" });
     expect(within(talks).getByRole("listitem")).toHaveTextContent("Idea");
     expect(within(talks).getByRole("listitem")).toHaveTextContent("a1b2c3d4 on alpha");
@@ -584,17 +628,17 @@ describe("conversations and lanes that know each other", () => {
 
   it("marks two lanes in one file as colliding on both cards and the rail, and shows the watercooler's last line on every live card", async () => {
     const b = board();
-    const upNext = b.columns.find((c) => c.definition.column === "Up next")?.groups[0];
-    const mine = upNext?.cards.find((c) => c.number === 253);
-    const theirs = upNext?.cards.find((c) => c.number === 241);
-    if (!mine || !theirs) throw new Error("no #253 or #241");
-    for (const card of [mine, theirs]) {
+    const mine = cardOf(b, 253);
+    const theirs = cardOf(b, 241);
+    for (const [card, other] of [[mine, 241], [theirs, 253]] as const) {
       card.lane_state = "working";
-      card.lane_sentence = "Working, fable on alpha, hands on for 12 min.";
+      card.claims = ["colliding", "lane working"];
+      card.colliding = { verdict: "collides", sentence: `#${other}'s lane is also editing engine/metering.py.`, files: ["engine/metering.py"], cards: [other] };
+      // Two live lanes in one file is broken, and broken beats live: the card
+      // says so in one word, in red, where every other state's word sits.
+      card.state = { word: `colliding with #${other}`, meaning: "broken", detail: card.colliding.sentence, loop: null, door: null, hint: "open to see" };
     }
-    mine.colliding = { verdict: "collides", sentence: "#241's lane is also editing engine/metering.py.", files: ["engine/metering.py"], cards: [241] };
-    theirs.colliding = { verdict: "collides", sentence: "#253's lane is also editing engine/metering.py.", files: ["engine/metering.py"], cards: [253] };
-    b.attention = { ...b.attention, colliding: 2 };
+    withClaims(b, "broken", [["colliding", 2]]);
     b.watercooler = [
       { id: 1, project: SLUG, card_number: 241, actor: "session", at: "2026-09-04T08:10:00+00:00", text: "touching engine/metering.py for the tariff; leave it" },
       { id: 2, project: SLUG, card_number: null, actor: "machine", at: "2026-09-04T08:25:00+00:00", text: "#241 folded over #253's edits in engine/metering.py" },
@@ -610,7 +654,7 @@ describe("conversations and lanes that know each other", () => {
     d.heard = { project: SLUG, card_number: 253, watercooler_id: 2, collision: "#241's lane is also editing engine/metering.py.", at: "2026-09-04T08:26:00+00:00", text: "The board said on the watercooler: #241 folded over #253's edits in engine/metering.py" };
     api.getCard.mockResolvedValue(d);
     await renderBoard();
-    expect(screen.getByText("lanes colliding — editing each other's files", { exact: false })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /^Broken/ })).toHaveTextContent("Broken 2");
     const resting = screen.getByText("#253").closest("article") as HTMLElement;
     expect(within(resting).getByText("#241's lane is also editing engine/metering.py.")).toBeInTheDocument();
     expect(within(resting).getByRole("note")).toHaveTextContent("the board#241 folded over #253's edits in engine/metering.py");
@@ -636,32 +680,29 @@ describe("conversations and lanes that know each other", () => {
 });
 
 describe("the board at a glance (plan 06)", () => {
-  const free = { state: "free" as const, why: "Fable headroom on alpha (12% of Fable used)", cards: [], files: [] };
+  const why = "Fable headroom on alpha (12% of Fable used)";
 
-  it("shows the pill on every queued card and starts a free card from its collapsed face", async () => {
+  it("says whether a queued card can start, and starts a free one from its collapsed face", async () => {
     const b = board();
-    const upNext = b.columns.find((c) => c.definition.column === "Up next")?.groups[0];
-    const mine = upNext?.cards.find((c) => c.number === 253);
-    const theirs = upNext?.cards.find((c) => c.number === 241);
-    const note = upNext?.cards.find((c) => c.number === 228);
-    if (!mine || !theirs || !note) throw new Error("no #253, #241 or #228");
-    mine.readiness = free;
-    mine.start = { offered: true, label: "Start · fable on alpha", why: free.why };
-    theirs.readiness = { state: "collides", why: "Lane collision — #253's lane is editing engine/metering.py right now.", cards: [253], files: ["engine/metering.py"] };
-    note.readiness = { state: "no gate", why: "This card names no effort gate; only a planned card is startable.", cards: [], files: [] };
+    const mine = cardOf(b, 253);
+    const theirs = cardOf(b, 241);
+    const note = cardOf(b, 228);
+    mine.state = { word: "free to start", meaning: "proven", detail: null, loop: null, door: { name: "start", label: "Start · fable on alpha", why, primary: true }, hint: null };
+    theirs.state = { word: "collides with #253 · waits", meaning: "quiet", detail: null, loop: null, door: null, hint: "1 file · open to see" };
+    note.state = { word: "no gate", meaning: "quiet", detail: "This card names no effort gate; only a planned card is startable.", loop: null, door: null, hint: "open to see" };
     api.getBoard.mockResolvedValue(b);
     api.openDoor.mockResolvedValue({ door: "start", said: "Started aaaa0001, fable on alpha, at medium, in card-253-every-metered-kilowatt-is-billed" });
     await renderBoard();
     const resting = screen.getByText("#253").closest("article") as HTMLElement;
-    expect(within(resting).getByText("free")).toHaveAttribute("title", free.why);
+    expect(within(resting).getByText("free to start")).toBeInTheDocument();
+    // A collision before Start is quiet: nothing is broken, the card waits.
     const colliding = screen.getByText("#241").closest("article") as HTMLElement;
-    expect(within(colliding).getByText("collides with #253")).toHaveAttribute("title", expect.stringContaining("On: engine/metering.py"));
+    expect(colliding.dataset["meaning"]).toBe("quiet");
+    expect(within(colliding).getByText("collides with #253 · waits")).toBeInTheDocument();
+    expect(within(colliding).getByText("1 file · open to see")).toBeInTheDocument();
     expect(within(colliding).queryByRole("button", { name: /Start/ })).not.toBeInTheDocument();
     const gateless = screen.getByText("#228").closest("article") as HTMLElement;
     expect(within(gateless).getByText("no gate")).toBeInTheDocument();
-    // A Backlog card carries no pill.
-    const backlog = screen.getByText("#252").closest("article") as HTMLElement;
-    expect(backlog.querySelector(".pill")).toBeNull();
     // Start on the collapsed face, the same door as the open card's, and the card does not open on the click.
     await userEvent.click(within(resting).getByRole("button", { name: "Start · fable on alpha" }));
     await waitFor(() => expect(api.openDoor).toHaveBeenCalledWith(SLUG, 253, "start"));
@@ -689,15 +730,19 @@ describe("the board at a glance (plan 06)", () => {
     const b = board();
     const backlog = b.columns.find((c) => c.definition.column === "Backlog");
     const suggestions = backlog?.groups.flatMap((g) => g.cards).filter((c) => c.document_state === "suggestion") ?? [];
-    for (const card of suggestions) card.plan = { offered: true, label: "Plan", why: "Opens a plan-writing conversation for this suggestion; the plan it writes carries the card." };
+    const planWhy = "Opens a plan-writing conversation for this suggestion; the plan it writes carries the card.";
+    for (const card of suggestions) {
+      card.state = { word: "no plan yet", meaning: "quiet", detail: null, loop: null, door: { name: "plan", label: "Create plan", why: planWhy, primary: false }, hint: null };
+    }
     api.getBoard.mockResolvedValue(b);
     const d = detail(252);
-    d.doors = { ...d.doors, plan: { offered: true, label: "Plan", why: "Opens a plan-writing conversation for this suggestion; the plan it writes carries the card." } };
+    d.doors = { ...d.doors, plan: { offered: true, label: "Create plan", why: planWhy } };
     api.getCard.mockResolvedValue(d);
     api.openPlan.mockResolvedValue({ door: "plan", said: "Planning #252 in org.omarchy.board-plan-card-252-x, fable on alpha; the plan it writes carries this card." });
     await renderBoard();
     const one = screen.getByText("#252").closest("article") as HTMLElement;
-    await userEvent.click(within(one).getByRole("button", { name: "Plan" }));
+    expect(within(one).getByText("no plan yet")).toBeInTheDocument();
+    await userEvent.click(within(one).getByRole("button", { name: "Create plan" }));
     await waitFor(() => expect(api.openPlan).toHaveBeenCalledWith(SLUG, [252]));
     expect(await within(one).findByText(/Planning #252/)).toBeInTheDocument();
     // A selection: + on the first, then a checkbox on every suggestion card, then one door for all.
@@ -719,7 +764,7 @@ describe("the board at a glance (plan 06)", () => {
       expect(el.className).toContain("open");
       return el;
     });
-    expect(await within(opened).findByRole("button", { name: "Plan" })).toHaveAttribute("title", expect.stringContaining("plan-writing conversation"));
+    expect(await within(opened).findByRole("button", { name: "Create plan" })).toHaveAttribute("title", expect.stringContaining("plan-writing conversation"));
   });
 
   it("pins the defects rail at the top of Backlog with its count, furled until asked", async () => {
@@ -733,15 +778,15 @@ describe("the board at a glance (plan 06)", () => {
     await userEvent.click(rail);
     expect(rail).toHaveAttribute("aria-expanded", "true");
     expect(within(backlog).getByText("#232")).toBeInTheDocument();
-    expect(screen.getByText("defect unplanned")).toBeInTheDocument();
-    expect(screen.getByText("ideas unplanned").closest(".att")).toHaveTextContent("7 ideas unplanned");
+    // A category is not a colour: the rail is a rail, and the counts of what is
+    // unplanned are a quiet fact behind the project pill, not a claim on him.
+    expect(rail.getAttribute("data-meaning")).toBeNull();
+    expect(document.querySelector(".facts")).toHaveTextContent("1 defects and 7 ideas unplanned");
   });
 
   it("shows what a card carries on both faces", async () => {
     const b = board();
-    const upNext = b.columns.find((c) => c.definition.column === "Up next")?.groups[0];
-    const mine = upNext?.cards.find((c) => c.number === 253);
-    if (!mine) throw new Error("no #253");
+    const mine = cardOf(b, 253);
     mine.folded = [
       { number: 7, title: "An archived document moves its card", document_path: "docs/slice-suggestions/done/a.md" },
       { number: 10, title: "Defects are their own rail", document_path: null },
@@ -759,19 +804,15 @@ describe("the board at a glance (plan 06)", () => {
     expect(section.closest(".sec")).toHaveTextContent("An archived document moves its card");
   });
 
-  it("folds the head to one line on a laptop once a column scrolls, and unfolds at the top", async () => {
+  it("keeps the head one line whatever a column does — there is nothing left to fold", async () => {
     await renderBoard();
-    const head = document.querySelector(".head") as HTMLElement;
-    expect(head.dataset["folded"]).toBe("false");
+    const head = document.querySelector(".app-head") as HTMLElement;
+    const before = head.textContent;
     const column = document.querySelector('[data-column="Backlog"]') as HTMLElement;
     Object.defineProperty(column, "scrollTop", { value: 240, configurable: true });
     fireEvent.scroll(column);
-    await waitFor(() => expect(head.dataset["folded"]).toBe("true"));
-    // The counts stay in the folded line; the words step aside by style, not by removal.
-    expect(within(head).getByText("in flight").closest(".att")).toBeInTheDocument();
-    Object.defineProperty(column, "scrollTop", { value: 0, configurable: true });
-    fireEvent.scroll(column);
-    await waitFor(() => expect(head.dataset["folded"]).toBe("false"));
+    expect(head.textContent).toBe(before);
+    expect(document.querySelector(".head.folded")).toBeNull();
   });
 
   it("re-reads the board once when the stream reconnects", async () => {
@@ -812,5 +853,132 @@ describe("the board at a glance (plan 06)", () => {
     } finally {
       delete (window as unknown as { EventSource?: unknown }).EventSource;
     }
+  });
+});
+
+/**
+ * The colour language (plan 27, item 6). Every state the rule can name is
+ * rendered here — one card each, from the real derivation in the fixture —
+ * and read back for its word, its meaning, the border it takes and the door
+ * it allows. The meaning is the page's only route to a colour
+ * (`tests/ratchets/test_the_colour_language.py` holds that), so asserting the
+ * meaning is asserting the colour; and because the cards come from the
+ * backend, a rule that changes a word fails here too.
+ */
+describe("the colour language", () => {
+  const CASES = language();
+
+  /** One card in one state, alone in Up next, as the page renders it. */
+  async function render1(index: number): Promise<HTMLElement> {
+    const one = CASES[index];
+    if (!one) throw new Error(`no case ${index}`);
+    cleanup();
+    const b = board();
+    for (const column of b.columns) for (const group of column.groups) group.cards = [];
+    const upNext = b.columns.find((c) => c.definition.column === "Up next")?.groups[0];
+    if (!upNext) throw new Error("no Up next");
+    upNext.cards = [{ ...one.card, place: { column: "Up next", group: null, position: 0 } }];
+    api.getBoard.mockResolvedValue(b);
+    render(<App />);
+    await screen.findByText("A card in every state");
+    return screen.getByText("A card in every state").closest("article") as HTMLElement;
+  }
+
+  const table: { case: string; word: string; meaning: string; border: boolean; door: string }[] = [
+    { case: "free to start", word: "free to start", meaning: "proven", border: false, door: "Start · fable on alpha" },
+    { case: "collides", word: "collides with #241 · waits", meaning: "quiet", border: false, door: "1 file · open to see" },
+    { case: "no gate", word: "no gate", meaning: "quiet", border: false, door: "open to see" },
+    { case: "nowhere to run", word: "nowhere to run", meaning: "quiet", border: false, door: "open to see" },
+    { case: "working", word: "working · 12 min · fable on alpha", meaning: "live", border: true, door: "Watch" },
+    { case: "asking you", word: "asking you", meaning: "yours", border: true, door: "Answer" },
+    { case: "colliding", word: "colliding with #241", meaning: "broken", border: true, door: "open to see" },
+    { case: "lane ended", word: "lane ended", meaning: "broken", border: true, door: "open to resume" },
+    { case: "doubted", word: "doubted", meaning: "broken", border: true, door: "open to decide" },
+    { case: "document nowhere", word: "document nowhere", meaning: "broken", border: true, door: "open to see" },
+    { case: "your move", word: "your move", meaning: "yours", border: true, door: "Decide" },
+    { case: "loop open", word: "loop open · a session reads it 11 Sep", meaning: "quiet", border: false, door: "open ▸" },
+    { case: "loop open, owner only", word: "loop open · you read it 11 Sep", meaning: "quiet", border: false, door: "open ▸" },
+    { case: "signal for you to read", word: "signal for you to read", meaning: "yours", border: true, door: "Read" },
+    { case: "a session is reading it", word: "loop open · a session reads it now · beta", meaning: "live", border: true, door: "open ▸" },
+    { case: "loop closed", word: "loop closed · read 09:30, delivered", meaning: "proven", border: false, door: "open ▸" },
+    { case: "not now", word: "not now", meaning: "quiet", border: false, door: "open ▸" },
+  ];
+
+  it("has one card per state and no state the table does not name", () => {
+    expect(CASES.map((c) => c.case)).toEqual(table.map((t) => t.case));
+    // Every one of the five meanings is exercised, so none of them is a
+    // colour nothing on the board ever says.
+    expect(new Set(table.map((t) => t.meaning))).toEqual(new Set(["yours", "broken", "live", "proven", "quiet"]));
+  });
+
+  table.forEach((expected, index) => {
+    it(`renders "${expected.case}" as one word in one meaning, with the one door it allows`, async () => {
+      const card = await render1(index);
+      // The word, always bottom-left of the state line, always in the same place.
+      const state = card.querySelector(".state") as HTMLElement;
+      expect(within(state).getByText(expected.word)).toBeInTheDocument();
+      // The meaning is the colour: nothing on the page can paint without it.
+      expect(card.dataset["meaning"]).toBe(expected.meaning);
+      // The border takes the state's colour only for live, asking you and broken.
+      expect(["live", "yours", "broken"].includes(expected.meaning)).toBe(expected.border);
+      // The one door the state allows, bottom-right — or what opening gives.
+      const door = within(state).queryByRole("button", { name: expected.door });
+      if (door) expect(door).toBeInTheDocument();
+      else expect(within(state).getByText(expected.door)).toBeInTheDocument();
+    });
+  });
+
+  it("carries a shipped card's loop as a glyph, and an owner-only ring is amber", async () => {
+    const open = await render1(table.findIndex((t) => t.case === "loop open"));
+    const ring = open.querySelector(".loop") as HTMLElement;
+    expect(ring.className).toContain("open");
+    // An open loop is ink, not a meaning: a live obligation, just not yours.
+    expect(ring.dataset["meaning"]).toBeUndefined();
+
+    const owned = await render1(table.findIndex((t) => t.case === "loop open, owner only"));
+    expect((owned.querySelector(".loop") as HTMLElement).dataset["meaning"]).toBe("yours");
+
+    const closed = await render1(table.findIndex((t) => t.case === "loop closed"));
+    const dot = closed.querySelector(".loop") as HTMLElement;
+    expect(dot.className).toContain("closed");
+    expect(dot.dataset["meaning"]).toBe("proven");
+  });
+
+  it("never colours a button, a column or a count", async () => {
+    await renderBoard();
+    for (const button of Array.from(document.querySelectorAll("button.btn"))) {
+      expect((button as HTMLElement).dataset["meaning"]).toBeUndefined();
+    }
+    for (const column of Array.from(document.querySelectorAll(".col"))) {
+      expect((column as HTMLElement).dataset["meaning"]).toBeUndefined();
+      expect((column.querySelector(".col-head") as HTMLElement).dataset["meaning"]).toBeUndefined();
+    }
+    // The kind is a fact, not a claim: defects and ideas are two rails, not two hues.
+    for (const kind of Array.from(document.querySelectorAll(".kind"))) {
+      expect((kind as HTMLElement).dataset["meaning"]).toBeUndefined();
+    }
+  });
+
+  it("filters the board to a word, narrows to one claim, and clears", async () => {
+    const b = board();
+    cardOf(b, 253).claims = ["decision"];
+    cardOf(b, 241).claims = ["lane asking"];
+    withClaims(b, "yours", [["verdict", 0], ["lane asking", 1], ["decision", 1]]);
+    b.attention = { ...b.attention, yours: b.attention.yours.filter((l) => l.count > 0) };
+    api.getBoard.mockResolvedValue(b);
+    await renderBoard();
+    expect(upNextOrder()).toEqual([253, 241, 228, 237, 174]);
+
+    await userEvent.click(screen.getByRole("button", { name: /^Your move/ }));
+    expect(upNextOrder()).toEqual([253, 241]);
+    const breakdown = screen.getByRole("group", { name: "What Your move counts" });
+    expect(within(breakdown).getAllByRole("button").map((el) => el.textContent)).toEqual(["1 lane asking", "1 decision", "clear"]);
+
+    await userEvent.click(within(breakdown).getByRole("button", { name: "1 decision" }));
+    expect(upNextOrder()).toEqual([253]);
+
+    await userEvent.click(screen.getByRole("button", { name: /^Your move/ }));
+    expect(upNextOrder()).toEqual([253, 241, 228, 237, 174]);
+    expect(screen.queryByRole("group", { name: /What Your move counts/ })).not.toBeInTheDocument();
   });
 });

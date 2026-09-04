@@ -3,13 +3,14 @@
  * then on. Every colour a Needle surface may use is a variable here; a raw
  * colour anywhere else is refused by tests/ratchets/test_one_design_system.py.
  *
- * Four colours carry meaning and nothing else does:
- *   accent  — structure, and the one action on a surface
- *   attn    — your move
- *   wrong   — not true: a write that failed, a citation to nothing
- *   landed  — it shipped
- * A card that is merely planned is neutral. 0.1 painted every alarm red and
- * the red became wallpaper; this is the fix.
+ * Five colours carry meaning and nothing else does (plan 27, the colour
+ * language). The meanings, not the tokens, are what a surface names:
+ *   yours   — amber: only you can act
+ *   broken  — red: evidence is gone, or two things disagree
+ *   live    — teal: happening right now
+ *   proven  — green: the loop closed
+ *   quiet   — grey: information with no claim on you
+ * 0.1 painted every alarm red and the red became wallpaper; this is the fix.
  */
 
 @import "tailwindcss";
@@ -130,6 +131,23 @@
   --color-landed-2: var(--landed-2);
   --color-on-accent: var(--on-accent);
 }
+
+/* ── the colour language ───────────────────────────────────────────────
+ * The one place a meaning meets a colour. A surface says what it means with
+ * `data-meaning` and paints with `var(--meaning)`; nothing else in the
+ * frontend may name attn, wrong, accent or landed, and
+ * tests/ratchets/test_the_colour_language.py refuses it if it tries.
+ *
+ * So a count is never amber for being large, a category is never a hue, a
+ * button is never coloured and a column is never a state: to paint at all,
+ * a surface has to say which of the five things it is saying.
+ */
+
+[data-meaning="yours"]  { --meaning: var(--attn);   --meaning-2: var(--attn-2); }
+[data-meaning="broken"] { --meaning: var(--wrong);  --meaning-2: var(--wrong-2); }
+[data-meaning="live"]   { --meaning: var(--accent); --meaning-2: var(--accent-2); }
+[data-meaning="proven"] { --meaning: var(--landed); --meaning-2: var(--landed-2); }
+[data-meaning="quiet"]  { --meaning: var(--ink-2);  --meaning-2: var(--surface-2); }
 
 * { box-sizing: border-box; }
 

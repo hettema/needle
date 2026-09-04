@@ -4,12 +4,12 @@ import type { FocusEventHandler, KeyboardEvent, MouseEvent, PointerEventHandler,
 import type { DraggableAttributes } from "@dnd-kit/core";
 import { marked } from "marked";
 import DOMPurify from "dompurify";
-import type { FoldedCard } from "../../types/board";
-import type { DocumentState } from "../../types/document";
+import type { CardState, ClaimCount, FoldedCard, Meaning } from "../../types/board";
+import type { Column } from "../../types/column";
+import type { DocumentState, SuggestionKind } from "../../types/document";
 import type { Standing } from "../../types/evidence";
-import type { LaneState, Readiness, StartState } from "../../types/lane";
 import type { RowKind } from "../../types/row";
-import { ASK_ROWS, LANDED_ROWS, LEAD_ROWS } from "../../types/row";
+import { ASK_ROWS } from "../../types/row";
 
 // ── text ──────────────────────────────────────────────────────────────
 
@@ -44,17 +44,13 @@ export function Markdown({ text }: { text: string }) {
 // ── the head ──────────────────────────────────────────────────────────
 
 /**
- * The head and the attention line, pinned above the columns (plan 06, item
- * 4). `folded` is the laptop's one-line head once a column has scrolled: the
- * wordmark, the project and the attention counts stay, the rest steps aside
- * so the columns keep their height.
+ * The head, pinned above the columns. One line, always: the wordmark, the
+ * project pill with the quiet facts behind it, the three words that are
+ * filters of the board, the lens and the Idea door (plan 27, item 1). It
+ * never expands on its own, so it never needs to fold.
  */
-export function HeadFrame({ children, folded }: { children: ReactNode; folded: boolean }) {
-  return (
-    <div className={`head${folded ? " folded" : ""}`} data-folded={folded ? "true" : "false"}>
-      {children}
-    </div>
-  );
+export function HeadFrame({ children }: { children: ReactNode }) {
+  return <div className="head">{children}</div>;
 }
 
 export function AppHead({ children }: { children: ReactNode }) {
@@ -70,7 +66,7 @@ export function Wordmark() {
  * is one keyboard-reachable control with no menu of its own to manage, and
  * the path it lands on is the page's only state (plan 01b, item 1).
  */
-export function ProjectSwitcher({ projects, current, onSwitch }: { projects: readonly { slug: string; name: string }[]; current: string; onSwitch: (slug: string) => void }) {
+export function ProjectSwitcher({ projects, current, onSwitch, facts }: { projects: readonly { slug: string; name: string }[]; current: string; onSwitch: (slug: string) => void; facts?: ReactNode }) {
   return (
     <label className="project" title="The projects on the board. Choosing one goes to its own address, /p/<slug>.">
       <select aria-label="Project" value={current} onChange={(e) => onSwitch(e.target.value)}>
@@ -83,7 +79,21 @@ export function ProjectSwitcher({ projects, current, onSwitch }: { projects: rea
       <span className="caret" aria-hidden="true">
         ▾
       </span>
+      {facts ? (
+        <span className="facts" role="note">
+          {facts}
+        </span>
+      ) : null}
     </label>
+  );
+}
+
+/** One quiet fact behind the project pill; `meaning` only where one holds. */
+export function Fact({ children, meaning }: { children: ReactNode; meaning?: Meaning }) {
+  return (
+    <span className="fact" {...(meaning ? { "data-meaning": meaning } : {})}>
+      {children}
+    </span>
   );
 }
 
@@ -95,8 +105,13 @@ export function Strong({ children }: { children: ReactNode }) {
   return <b>{children}</b>;
 }
 
+/** The corpus is not being watched: the board cannot see what it reads from. */
 export function Off({ children }: { children: ReactNode }) {
-  return <span className="off">{children}</span>;
+  return (
+    <span className="off" data-meaning="broken">
+      {children}
+    </span>
+  );
 }
 
 export function HeadTools({ children }: { children: ReactNode }) {
@@ -157,36 +172,55 @@ export function IdeaDoor({ onOpen, disabled, said }: { onOpen: (text: string) =>
   );
 }
 
-// ── the attention line ────────────────────────────────────────────────
+// ── the three words, and their breakdown ──────────────────────────────
 
-export function AttentionLine({ children, quiet }: { children: ReactNode; quiet: string }) {
+export function Words({ children }: { children: ReactNode }) {
   return (
-    <div className="attn-line">
+    <span className="words" role="group" aria-label="What needs you">
       {children}
-      <span className="quiet">{quiet}</span>
+    </span>
+  );
+}
+
+/**
+ * One of the head's three words: its meaning's colour, its count, and a
+ * filter of the board. A word nobody has to act on is quiet, whatever its
+ * count — a number is never coloured for being large (plan 27, item 1).
+ */
+export function Word({ label, count, meaning, on, onClick }: { label: string; count: number; meaning: Meaning; on: boolean; onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      className="word"
+      data-meaning={count > 0 ? meaning : "quiet"}
+      data-word={label}
+      aria-pressed={on}
+      disabled={count === 0}
+      onClick={onClick}
+      title={count === 0 ? `Nothing is ${label.toLowerCase()}` : `Show only the cards this counts`}
+    >
+      {label} <b>{count}</b>
+    </button>
+  );
+}
+
+/** The chosen word's breakdown, as sub-filters that narrow the board. */
+export function Breakdown({ children, label, onClear }: { children: ReactNode; label: string; onClear: () => void }) {
+  return (
+    <div className="breakdown" role="group" aria-label={label}>
+      {children}
+      <button type="button" className="clear" onClick={onClear}>
+        clear
+      </button>
     </div>
   );
 }
 
-export function Att({ n, label, tone = "plain", onClick, on }: { n: number; label: string; tone?: "plain" | "you" | "bad"; onClick?: (() => void) | undefined; on?: boolean }) {
-  const className = `att ${tone === "plain" ? "" : tone}${on ? " on" : ""}`;
-  // The label is its own span so the folded head can keep the count and drop the words.
-  const body = (
-    <>
-      <b>{n}</b> <span className="alabel">{label}</span>
-    </>
-  );
-  if (onClick) {
-    return (
-      <button type="button" className={className} onClick={onClick} aria-pressed={on ?? false} title={label}>
-        {body}
-      </button>
-    );
-  }
+export function Sub({ line, meaning, on, onClick }: { line: ClaimCount; meaning: Meaning; on: boolean; onClick: () => void }) {
   return (
-    <span className={className} title={label}>
-      {body}
-    </span>
+    <button type="button" className="sub" data-meaning={meaning} data-claim={line.claim} aria-pressed={on} onClick={onClick}>
+      <b>{line.count}</b> {line.label}
+    </button>
   );
 }
 
@@ -211,7 +245,7 @@ export function TogetherBar({ count, onPlan, onClear, disabled, said }: { count:
 /** The batched question: every shipped card waiting on the owner's reading, one click each way per card (plan 04, item 3). */
 export function AskList({ children, title }: { children: ReactNode; title: string }) {
   return (
-    <section className="asks" aria-label={title}>
+    <section className="asks" aria-label={title} data-meaning="yours">
       <div className="asks-h">{title}</div>
       {children}
     </section>
@@ -243,7 +277,7 @@ export function AskRow({ number, title, what, due, evidence, onRead, disabled }:
 /** Every conversation alive right now — an idea, or a card's Discuss — as the rail lists them (plan 07, item 1). */
 export function TalkList({ children, title }: { children: ReactNode; title: string }) {
   return (
-    <section className="talks" aria-label={title}>
+    <section className="talks" aria-label={title} data-meaning="live">
       <div className="talks-h">{title}</div>
       {children}
     </section>
@@ -268,22 +302,11 @@ export function BoardStrip({ children }: { children: ReactNode }) {
   return <main className="board">{children}</main>;
 }
 
-/** A column scrolls on its own (plan 06, item 4); `onScroll` says whether it is scrolled away from its top. */
-export function ColumnBox({
-  children,
-  wide,
-  yours,
-  column,
-  onScroll,
-}: {
-  children: ReactNode;
-  wide: boolean;
-  yours: boolean;
-  column: string;
-  onScroll?: ((scrolled: boolean) => void) | undefined;
-}) {
+/** A column scrolls on its own (plan 06, item 4). It is never coloured: a
+ * column is a stage, not a state — the cards in it say what they are. */
+export function ColumnBox({ children, wide, column }: { children: ReactNode; wide: boolean; column: string }) {
   return (
-    <section className={`col${wide ? " wide" : ""}${yours ? " yours" : ""}`} data-column={column} onScroll={onScroll ? (e) => onScroll(e.currentTarget.scrollTop > 0) : undefined}>
+    <section className={`col${wide ? " wide" : ""}`} data-column={column}>
       {children}
     </section>
   );
@@ -416,6 +439,7 @@ export function Rail({ name, count, onClick }: { name: string; count: number; on
 
 export interface CardShellProps {
   number: number;
+  meaning: Meaning;
   children: ReactNode;
   open?: boolean;
   saving?: boolean;
@@ -438,7 +462,7 @@ export type DragProps = Omit<DraggableAttributes, "role"> & {
 };
 
 /** The article every card is. `dragProps` are dnd-kit's listeners and attributes, spread as given. */
-export function CardShell({ number, children, open, saving, failed, ghost, lift, isStatic, nodeRef, onClick, onKeyDown, dragProps, label }: CardShellProps) {
+export function CardShell({ number, meaning, children, open, saving, failed, ghost, lift, isStatic, nodeRef, onClick, onKeyDown, dragProps, label }: CardShellProps) {
   const classes = ["card"];
   if (open) classes.push("open");
   if (saving) classes.push("saving");
@@ -449,6 +473,7 @@ export function CardShell({ number, children, open, saving, failed, ghost, lift,
   return (
     <article
       className={classes.join(" ")}
+      data-meaning={failed ? "broken" : meaning}
       data-card={number}
       id={`card-${number}`}
       ref={nodeRef}
@@ -472,10 +497,6 @@ export function Grow() {
   return <span className="grow" />;
 }
 
-export function Rank({ n }: { n: number }) {
-  return <span className="rank">{n}</span>;
-}
-
 export function Cid({ n }: { n: number }) {
   return <span className="cid">#{n}</span>;
 }
@@ -484,42 +505,75 @@ export function CardTitle({ children }: { children: ReactNode }) {
   return <h3 className="card-title">{children}</h3>;
 }
 
-export function Essence({ children }: { children: ReactNode }) {
-  return <p className="essence">{children}</p>;
+/**
+ * One line of essence — or, when the state has something to say, its words in
+ * the essence's place: a lane's question, a doubt, a signal and when it is
+ * due (plan 27, item 2). `said` marks the second, which reads in ink on a
+ * card that is asking you.
+ */
+export function Essence({ children, said }: { children: ReactNode; said?: boolean }) {
+  return <p className={`essence${said ? " said" : ""}`}>{children}</p>;
 }
 
-export function CardFoot({ children }: { children: ReactNode }) {
-  return <div className="card-foot">{children}</div>;
-}
-
-export function Points({ n }: { n: number }) {
+/**
+ * The state line: one word in its meaning's colour, always bottom-left, and
+ * the one door that state allows, always bottom-right — or, when no door
+ * opens, what opening the card gives (plan 27, item 2). The word and the
+ * door both come from the board; the page invents neither.
+ */
+export function StateLine({ state, children }: { state: CardState; children?: ReactNode }) {
   return (
-    <span className="points">
-      {n} point{n === 1 ? "" : "s"}
-    </span>
+    <div className="state" {...(state.loop ? { "data-loop": state.loop.state } : {})}>
+      <span className="state-word">
+        {state.loop ? <LoopGlyph loop={state.loop} /> : null}
+        <span className="say">{state.word}</span>
+      </span>
+      <Grow />
+      {children}
+      {state.door === null && state.hint ? <span className="hint">{state.hint}</span> : null}
+    </div>
   );
 }
 
-const START_LABEL: Record<StartState, string> = {
-  free: "free",
-  collides: "collides",
-  "no gate": "no gate",
-  "nowhere to run": "nowhere to run",
-  "lane exists": "lane exists",
-  elsewhere: "",
-  unread: "not read yet",
-};
-
-/** The pill: whether the card can start now, from the Start door's own verdict (plan 06, item 3). */
-export function Pill({ readiness }: { readiness: Readiness }) {
-  const label = readiness.state === "collides" ? `collides with ${readiness.cards.map((n) => `#${n}`).join(", ")}` : START_LABEL[readiness.state];
-  if (!label) return null;
-  const title = readiness.state === "collides" && readiness.files.length ? `${readiness.why} On: ${readiness.files.join(", ")}` : readiness.why;
+/**
+ * The open card's top answers three questions in order: what is this, what is
+ * happening to it right now, and what can I do about it. This is the second —
+ * the state sentence under the title, in the state's own colour (plan 27,
+ * item 4).
+ */
+export function StateSentence({ state }: { state: CardState }) {
   return (
-    <span className={`pill ${readiness.state.replace(/ /g, "-")}`} title={title} data-start={readiness.state}>
-      {label}
-    </span>
+    <div className="state-sentence" role="status">
+      {state.loop ? <LoopGlyph loop={state.loop} /> : <span className="dot" />}
+      <span className="say">{state.word}</span>
+      {state.detail ? <span className="then">— {state.detail}</span> : null}
+    </div>
   );
+}
+
+/**
+ * A shipped card's loop: an open ring in ink — a live obligation, just not
+ * yours — or a filled dot in green once the signal was read. An owner-only
+ * signal's ring is amber, because only he can close it (plan 27, item 3).
+ */
+export function LoopGlyph({ loop }: { loop: NonNullable<CardState["loop"]> }) {
+  const owned = loop.state === "open" && loop.owner_only;
+  return (
+    <span
+      className={`loop ${loop.state}`}
+      aria-hidden="true"
+      {...(loop.state === "closed" ? { "data-meaning": "proven" as const } : owned ? { "data-meaning": "yours" as const } : {})}
+    />
+  );
+}
+
+/**
+ * The gesture for planning several suggestions together, kept out of the
+ * card's one-door anatomy: it appears when the hand is on the card, so at
+ * rest every card still reads as one state and one door (plan 27, item 2).
+ */
+export function Pickable({ children }: { children: ReactNode }) {
+  return <span className="pickable">{children}</span>;
 }
 
 /** A checkbox on the collapsed face, for planning several suggestions together. */
@@ -553,7 +607,7 @@ export function Chip({
   onClick,
   title,
 }: {
-  kind?: "plain" | "gate" | "tag" | "new";
+  kind?: "plain" | "gate" | "tag";
   children: ReactNode;
   onClick?: (() => void) | undefined;
   title?: string | undefined;
@@ -578,18 +632,31 @@ export function Caret({ open }: { open: boolean }) {
 }
 
 const DOC_LABEL: Record<DocumentState, string> = {
-  plan: "Plan",
-  suggestion: "Suggestion",
-  archived: "Archived",
-  note: "Note — nothing written yet",
-  gone: "Document gone",
+  plan: "plan",
+  suggestion: "suggestion",
+  archived: "archived",
+  note: "note",
+  gone: "gone",
 };
 
-/** What is written behind a card: five states, and a card always shows one. */
-export function DocState({ state, path }: { state: DocumentState; path: string | null }) {
+const DOC_WHY: Record<DocumentState, string> = {
+  plan: "A plan is written behind this card",
+  suggestion: "A suggestion is written behind this card; no plan yet",
+  archived: "Its document is archived: the work shipped",
+  note: "Nothing is written behind this card — it is your own note",
+  gone: "This card cites a document, and no such file exists",
+};
+
+/**
+ * What is written behind a card, right-aligned on its first line: a fact,
+ * never a claim, so it is quiet monospace and never a hue. A suggestion says
+ * which kind it is — defects and ideas are two rails, not two colours.
+ */
+export function Kind({ state, kind, path }: { state: DocumentState; kind: SuggestionKind | null; path: string | null }) {
+  const word = state === "suggestion" && kind ? kind : DOC_LABEL[state];
   return (
-    <span className={`doc ${state}`} title={path ?? undefined}>
-      {DOC_LABEL[state]}
+    <span className="kind" data-doc={state} title={path ? `${DOC_WHY[state]}: ${path}` : DOC_WHY[state]}>
+      {word}
     </span>
   );
 }
@@ -609,7 +676,7 @@ export function FailNote({ reason, onRetry }: { reason: string; onRetry: () => v
 
 export function DropGap({ label }: { label: string }) {
   return (
-    <div className="drop-gap" role="status" aria-live="polite">
+    <div className="drop-gap" role="status" aria-live="polite" data-meaning="live">
       <span className="lands">{label}</span>
     </div>
   );
@@ -663,14 +730,14 @@ export function Note({ children }: { children: ReactNode }) {
   return <div className="note">{children}</div>;
 }
 
+/** One row of the brief or the record. Its label is quiet unless the row is
+ * the owner's own move to make, which is the one claim a row can carry. */
 export function RowLine({ kind, text }: { kind: RowKind; text: string }) {
-  const classes = ["row"];
-  if (LEAD_ROWS.includes(kind)) classes.push("lead");
-  if (LANDED_ROWS.includes(kind)) classes.push("land");
-  if (ASK_ROWS.includes(kind)) classes.push("ask");
   return (
-    <div className={classes.join(" ")}>
-      <span className="lbl">{kind}</span>
+    <div className="row">
+      <span className="lbl" {...(ASK_ROWS.includes(kind) ? { "data-meaning": "yours" as const } : {})}>
+        {kind}
+      </span>
       <span className="val">
         <Inline text={text} />
       </span>
@@ -749,21 +816,15 @@ export function ClosedDoor({ children, why }: { children: ReactNode; why: string
   );
 }
 
-const LANE_LABEL: Record<LaneState, string> = {
-  none: "",
-  working: "Working",
-  asking: "Asking you",
-  stopped: "Stopped",
-  blocked: "Blocked",
-  moving: "Moving",
-  ended: "Lane ended",
-};
-
-/** The thin band on a card: its lane reporting in, in one sentence. */
-export function Band({ state, children }: { state: LaneState; children: ReactNode }) {
+/**
+ * The lane reporting in, on the open card: the card's own state word — the
+ * same word the collapsed face shows, in the same colour — and the lane's
+ * whole sentence beside it. The page makes no second judgment about a lane.
+ */
+export function Band({ state, children }: { state: CardState; children: ReactNode }) {
   return (
-    <div className={`band ${state}`} role="status">
-      <span className="bstate">{LANE_LABEL[state]}</span>
+    <div className="band" role="status" data-meaning={state.meaning}>
+      <span className="bstate">{state.word}</span>
       <span className="bsay">{children}</span>
     </div>
   );
@@ -772,7 +833,7 @@ export function Band({ state, children }: { state: LaneState; children: ReactNod
 /** The board doubts a machine-placed status: its evidence is gone, and the missing fact is said (plan 04, item 1). */
 export function Doubt({ children }: { children: ReactNode }) {
   return (
-    <div className="doubt" role="status">
+    <div className="doubt" role="status" data-meaning="broken">
       <span className="bstate">Doubted</span>
       <span className="bsay">{children}</span>
     </div>
@@ -782,7 +843,7 @@ export function Doubt({ children }: { children: ReactNode }) {
 /** Two live lanes are editing the same file: named on both cards, before the fold (plan 07, item 2). */
 export function Clash({ children }: { children: ReactNode }) {
   return (
-    <div className="clash" role="status">
+    <div className="clash" role="status" data-meaning="broken">
       <span className="bstate">Colliding</span>
       <span className="bsay">{children}</span>
     </div>
@@ -811,7 +872,11 @@ export function StandingMark({ standing }: { standing: Standing }) {
   if (standing.state === "trusted") return null;
   const who = standing.actor === "owner" ? "you" : standing.actor === "machine" ? "the board" : standing.actor === "import" ? "0.1's import" : standing.actor;
   return (
-    <span className={`standing ${standing.state}`} title={standing.words ?? `placed by ${who} on ${standing.evidence ?? "no"} evidence`}>
+    <span
+      className={`standing ${standing.state}`}
+      {...(standing.state === "doubted" ? { "data-meaning": "broken" as const } : {})}
+      title={standing.words ?? `placed by ${who} on ${standing.evidence ?? "no"} evidence`}
+    >
       {STANDING_LABEL[standing.state]}
       {standing.evidence ? ` · ${standing.evidence}` : ""}
     </span>
@@ -834,7 +899,11 @@ export function ClosedDoors({ doors }: { doors: readonly { label: string; why: s
 
 /** The question a lane stopped with, as the owner's move. */
 export function Ask({ children }: { children: ReactNode }) {
-  return <div className="ask-block">{children}</div>;
+  return (
+    <div className="ask-block" data-meaning="yours">
+      {children}
+    </div>
+  );
 }
 
 /** One sentence typed on the card resumes the lane with it — or, labelled Overturn, is the owner's word on a verdict. */
@@ -860,7 +929,11 @@ export function AnswerBox({ onSend, disabled, hint, label = "Answer" }: { onSend
 }
 
 export function Said({ children, bad }: { children: ReactNode; bad?: boolean }) {
-  return <span className={`said${bad ? " bad" : ""}`}>{children}</span>;
+  return (
+    <span className="said" {...(bad ? { "data-meaning": "broken" as const } : {})}>
+      {children}
+    </span>
+  );
 }
 
 export function MoveTo<T extends string>({
@@ -891,22 +964,31 @@ export function MoveTo<T extends string>({
 /** Every card carrying an unread verdict, grouped by class (plan 05, item 2). */
 export function TriageList({ children, title }: { children: ReactNode; title: string }) {
   return (
-    <section className="triage" aria-label={title}>
+    <section className="triage" aria-label={title} data-meaning="yours">
       <div className="triage-h">{title}</div>
       {children}
     </section>
   );
 }
 
-export function TriageGroup({ name, count, onAcceptAll, disabled, children }: { name: string; count: number; onAcceptAll: () => void; disabled: boolean; children: ReactNode }) {
+/**
+ * One class of verdicts. A class whose evidence is the same for every card in
+ * it gets one filled button; the doubted class never does, because each doubt
+ * is its own fact (plan 27, item 5).
+ */
+export function TriageGroup({ name, count, landing, onAcceptAll, disabled, children }: { name: string; count: number; landing: ReactNode; onAcceptAll: (() => void) | null; disabled: boolean; children: ReactNode }) {
   return (
     <div className="triage-group">
       <div className="triage-gh">
         <span className="tg-name">{name}</span>
-        <span className="tg-count">{count}</span>
-        <button type="button" className="btn" onClick={onAcceptAll} disabled={disabled}>
-          Accept all in this class
-        </button>
+        <span className="tg-count">{count} card{count === 1 ? "" : "s"} · {landing}</span>
+        {onAcceptAll ? (
+          <button type="button" className="btn" onClick={onAcceptAll} disabled={disabled}>
+            Accept all {count}
+          </button>
+        ) : (
+          <span className="tg-each">read each</span>
+        )}
       </div>
       <div role="list" aria-label={name}>
         {children}
@@ -915,6 +997,11 @@ export function TriageGroup({ name, count, onAcceptAll, disabled, children }: { 
   );
 }
 
+/**
+ * One card, its evidence, and where the evidence sends it. The line says
+ * where the card is now and where it lands, and only the landing takes a
+ * colour — so the table can be read by its right-hand column alone.
+ */
 export function TriageRow({
   number,
   title,
@@ -931,7 +1018,7 @@ export function TriageRow({
   title: string;
   column: string;
   evidence: string;
-  landing: string;
+  landing: ReactNode;
   onAccept: () => void;
   onOverturn: () => void;
   overturning: boolean;
@@ -942,11 +1029,12 @@ export function TriageRow({
     <div className={`triage-row${overturning ? " overturning" : ""}`} role="listitem">
       <span className="cid">#{number}</span>
       <span className="tr-title">{title}</span>
-      <span className="tr-col">{column}</span>
       <span className="tr-evidence">{evidence}</span>
-      <span className="tr-to">{landing}</span>
+      <span className="tr-move">
+        <span className="tr-from">{column} →</span> {landing}
+      </span>
       <span className="tr-acts">
-        <button type="button" className="btn" onClick={onAccept} disabled={disabled}>
+        <button type="button" className="btn ghost" onClick={onAccept} disabled={disabled}>
           Accept
         </button>
         <button type="button" className="btn ghost" onClick={onOverturn} disabled={disabled} aria-pressed={overturning}>
@@ -958,11 +1046,24 @@ export function TriageRow({
   );
 }
 
+/** Where a verdict lands, in the meaning's colour: Done is proven, Decision
+ * moment is your move, a card that stays or is parked makes no claim. */
+export function Landing({ column }: { column: Column | null }) {
+  const meaning: Meaning = column === "Done" ? "proven" : column === "Decision moment" ? "yours" : "quiet";
+  return (
+    <span className="tr-to" data-meaning={meaning}>
+      {column ?? "stays"}
+    </span>
+  );
+}
+
 // ── page notes ────────────────────────────────────────────────────────
 
+/** A page-level note. A loud one is broken by definition: something the board
+ * expected is not there. A quiet one makes no claim and takes no colour. */
 export function Notice({ children, quiet }: { children: ReactNode; quiet?: boolean }) {
   return (
-    <div className={`notice${quiet ? " quiet" : ""}`} role={quiet ? "status" : "alert"}>
+    <div className={`notice${quiet ? " quiet" : ""}`} role={quiet ? "status" : "alert"} {...(quiet ? {} : { "data-meaning": "broken" as const })}>
       {children}
     </div>
   );

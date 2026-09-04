@@ -2,7 +2,7 @@ import { useState } from "react";
 import { acceptClass, openDoor } from "../api";
 import type { EvidenceClass, VerdictLine } from "../types/verdict";
 import { EVIDENCE_CLASS_VALUES } from "../types/verdict";
-import { AnswerBox, Notice, TriageGroup, TriageList, TriageRow } from "../components/ui";
+import { AnswerBox, Landing, Notice, TriageGroup, TriageList, TriageRow } from "../components/ui";
 
 /**
  * The triage lens (plan 05, item 2): every card carrying an unread verdict as
@@ -37,6 +37,9 @@ export function Triage({ slug, verdicts, onRuled }: { slug: string; verdicts: Ve
       return `Accepted ${ruled.accepted} in "${evidenceClass}"${refused}`;
     });
 
+  // One button for a class only where the evidence is the same for every card
+  // in it; the doubted class never has one (plan 27, item 5).
+  const uniform = (ls: VerdictLine[]) => ls.length > 0 && ls.every((l) => l.verdict.evidence_class !== "doubted" && l.verdict.to === ls[0]?.verdict.to);
   const groups = EVIDENCE_CLASS_VALUES.map((evidenceClass) => ({ evidenceClass, lines: verdicts.filter((v) => v.verdict.evidence_class === evidenceClass) })).filter((g) => g.lines.length > 0);
   const title = `${verdicts.length} card${verdicts.length === 1 ? "" : "s"} carr${verdicts.length === 1 ? "ies" : "y"} a verdict you have not read`;
 
@@ -44,7 +47,14 @@ export function Triage({ slug, verdicts, onRuled }: { slug: string; verdicts: Ve
     <TriageList title={title}>
       {groups.length === 0 ? <Notice quiet>Every verdict is read. The board is as clean as its evidence.</Notice> : null}
       {groups.map(({ evidenceClass, lines }) => (
-        <TriageGroup key={evidenceClass} name={evidenceClass} count={lines.length} onAcceptAll={() => void acceptAll(evidenceClass)} disabled={busy}>
+        <TriageGroup
+          key={evidenceClass}
+          name={evidenceClass}
+          count={lines.length}
+          landing={uniform(lines) ? <>all go to <Landing column={lines[0]?.verdict.to ?? null} /></> : "the doubt's own fact decides"}
+          onAcceptAll={uniform(lines) ? () => void acceptAll(evidenceClass) : null}
+          disabled={busy}
+        >
           {lines.map((line) => (
             <TriageRow
               key={line.number}
@@ -52,7 +62,7 @@ export function Triage({ slug, verdicts, onRuled }: { slug: string; verdicts: Ve
               title={line.title}
               column={line.place.column}
               evidence={line.verdict.evidence}
-              landing={line.verdict.to === null ? "stays" : `→ ${line.verdict.to}`}
+              landing={<Landing column={line.verdict.to} />}
               onAccept={() => void accept(line.number)}
               onOverturn={() => setOverturning(overturning === line.number ? null : line.number)}
               overturning={overturning === line.number}

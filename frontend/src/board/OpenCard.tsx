@@ -147,14 +147,26 @@ export function OpenCard({ card, onMoveTo }: { card: CardSummary; onMoveTo: (num
       setOpening(null);
     }
   };
-  const door = (name: DoorName, d: Door, ghost = true) =>
+  const doors = detail.doors;
+  const lane = detail.lane;
+  // One door is filled and the rest are outlined: pressable is a shape, never
+  // a hue (plan 27, item 4). The filled one is the first act this state
+  // allows, in the order a card is acted on.
+  const primary = ([
+    ["start", doors.start],
+    ["start_anyway", doors.start_anyway],
+    ["answer", doors.answer],
+    ["watch", doors.watch],
+    ["resume", doors.resume],
+    ["look", doors.look],
+    ["plan", doors.plan],
+  ] as const).find(([, d]) => d.offered)?.[0] ?? null;
+  const door = (name: DoorName, d: Door) =>
     d.offered ? (
-      <Button key={name} ghost={ghost} onClick={() => void through(name)} disabled={opening !== null} title={d.why}>
+      <Button key={name} ghost={primary !== name} onClick={() => void through(name)} disabled={opening !== null} title={d.why}>
         {d.label}
       </Button>
     ) : null;
-  const doors = detail.doors;
-  const lane = detail.lane;
 
   const essenceFrom =
     detail.summary.essence_source === "card"
@@ -185,7 +197,7 @@ export function OpenCard({ card, onMoveTo }: { card: CardSummary; onMoveTo: (num
         ) : doors.start_anyway.offered ? (
           <>
             <ClosedDoor why={doors.start.why}>Start</ClosedDoor>
-            <Button onClick={() => void through("start", { anyway: true })} disabled={opening !== null} title={doors.start_anyway.why}>
+            <Button ghost={primary !== "start_anyway"} onClick={() => void through("start", { anyway: true })} disabled={opening !== null} title={doors.start_anyway.why}>
               {doors.start_anyway.label}
             </Button>
           </>
@@ -198,8 +210,8 @@ export function OpenCard({ card, onMoveTo }: { card: CardSummary; onMoveTo: (num
         {door("stop", doors.stop)}
         {door("discuss", doors.discuss)}
         {doors.plan.offered ? (
-          <Button ghost onClick={() => void through("plan")} disabled={opening !== null} title={doors.plan.why}>
-            Plan
+          <Button ghost={primary !== "plan"} onClick={() => void through("plan")} disabled={opening !== null} title={doors.plan.why}>
+            {doors.plan.label}
           </Button>
         ) : null}
         {doors.collision && doors.collision.verdict !== "clear" && (doors.start.offered || doors.start_anyway.offered) ? <Quiet>{doors.collision.sentence}</Quiet> : null}
@@ -244,7 +256,7 @@ export function OpenCard({ card, onMoveTo }: { card: CardSummary; onMoveTo: (num
 
       {lane && lane.state !== "none" ? (
         <Section title="The lane" from={lane.session ? `${lane.session.short_id} · ${lane.session.model ?? "fable"} on ${lane.session.slot}` : lane.name}>
-          <Band state={lane.state}>{lane.sentence}</Band>
+          <Band state={card.state}>{lane.sentence}</Band>
           {lane.state === "asking" && lane.question ? <Ask>{lane.question}</Ask> : null}
           {doors.answer.offered ? <AnswerBox onSend={(text) => void through("answer", { text })} disabled={opening !== null} hint="One sentence resumes the lane with it" /> : null}
           {lane.colliding ? <Clash>{lane.colliding.sentence}</Clash> : null}

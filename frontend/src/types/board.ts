@@ -7,32 +7,35 @@ import type { Document, DocumentRef, DocumentState, SuggestionKind } from "./doc
 import type { Standing } from "./evidence";
 import type { Gate } from "./gate";
 import type { HeardMark } from "./hook";
-import type { Collision, Conversation, Door, Doors, Lane, LaneState, Readiness } from "./lane";
+import type { Collision, Conversation, Doors, Lane, LaneState } from "./lane";
 import type { Project } from "./project";
 import type { Row } from "./row";
 import type { Reading, ReadingSession, Signal, SignalKind } from "./signal";
 import type { Verdict, VerdictLine } from "./verdict";
 import type { WatercoolerLine } from "./watercooler";
 
+export const CLAIM_VALUES = ["verdict", "lane asking", "signal asking", "decision", "lane ended", "doubted", "document gone", "colliding", "document without card", "lane working", "conversation", "signal reading"] as const;
+export type Claim = (typeof CLAIM_VALUES)[number];
+
 export const ESSENCE_SOURCE_VALUES = ["card", "document"] as const;
 export type EssenceSource = (typeof ESSENCE_SOURCE_VALUES)[number];
 
+export const FACE_DOOR_NAME_VALUES = ["start", "plan", "watch", "open"] as const;
+export type FaceDoorName = (typeof FACE_DOOR_NAME_VALUES)[number];
+
+export const LOOP_STATE_VALUES = ["open", "closed"] as const;
+export type LoopState = (typeof LOOP_STATE_VALUES)[number];
+
+export const MEANING_VALUES = ["yours", "broken", "live", "proven", "quiet"] as const;
+export type Meaning = (typeof MEANING_VALUES)[number];
+
 export interface Attention {
-  asking_you: number;
-  in_flight: number;
-  colliding: number;
-  in_discussion: number;
-  lanes_ended: number;
-  signals_due: number;
-  signals_asking: number;
-  signals_reading: number;
-  doubted: number;
-  verdicts_unread: number;
+  yours: ClaimCount[];
+  broken: ClaimCount[];
+  live: ClaimCount[];
   unplanned_defects: number;
   unplanned_ideas: number;
   arrived_today: number;
-  documents_gone: number;
-  documents_without_card: number;
 }
 
 export interface BoardState {
@@ -70,6 +73,15 @@ export interface CardDetail {
   heard: HeardMark | null;
 }
 
+export interface CardState {
+  word: string;
+  meaning: Meaning;
+  detail: string | null;
+  loop: Loop | null;
+  door: FaceDoor | null;
+  hint: string | null;
+}
+
 export interface CardSummary {
   number: number;
   title: string;
@@ -80,25 +92,35 @@ export interface CardSummary {
   document_state: DocumentState;
   document_path: string | null;
   kind: SuggestionKind | null;
-  readiness: Readiness | null;
-  start: Door | null;
-  plan: Door | null;
+  state: CardState;
+  claims: Claim[];
   folded: FoldedCard[];
-  points: number;
   is_new: boolean;
   age_date: string;
   place: Place;
   lane_state: LaneState;
-  lane_sentence: string | null;
   colliding: Collision | null;
   standing: Standing;
   reading: ReadingSession | null;
+}
+
+export interface ClaimCount {
+  claim: Claim;
+  count: number;
+  label: string;
 }
 
 export interface ColumnView {
   definition: ColumnDefinition;
   groups: GroupView[];
   count: number;
+}
+
+export interface FaceDoor {
+  name: FaceDoorName;
+  label: string;
+  why: string;
+  primary: boolean;
 }
 
 export interface FoldedCard {
@@ -111,6 +133,11 @@ export interface GroupView {
   name: string | null;
   cards: CardSummary[];
   rail: boolean;
+}
+
+export interface Loop {
+  state: LoopState;
+  owner_only: boolean;
 }
 
 export interface MachineState {
@@ -138,3 +165,18 @@ export interface TrunkState {
   note: string | null;
   read_at: string | null;
 }
+
+export const CLAIM_MEANING: Record<Claim, Meaning> = {
+  "verdict": "yours",
+  "lane asking": "yours",
+  "signal asking": "yours",
+  "decision": "yours",
+  "lane ended": "broken",
+  "doubted": "broken",
+  "document gone": "broken",
+  "colliding": "broken",
+  "document without card": "broken",
+  "lane working": "live",
+  "conversation": "live",
+  "signal reading": "live",
+};

@@ -2,10 +2,11 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { DndContext, DragOverlay, PointerSensor, pointerWithin, rectIntersection, useSensor, useSensors, type CollisionDetection, type DragEndEvent, type DragMoveEvent, type DragStartEvent } from "@dnd-kit/core";
 import type { BoardState, CardSummary } from "../types/board";
 import type { Place } from "../types/card";
+import type { Claim } from "../types/board";
 import type { Column } from "../types/column";
 import type { Project } from "../types/project";
 import { openDoor, openIdea, openPlan } from "../api";
-import { AppHead, AskList, AskRow, Att, AttentionLine, BoardStrip, CardShell, CorpusLine, HeadFrame, HeadTools, IdeaDoor, Lens, List, Notice, Off, ProjectSwitcher, Rail, Strong, TalkList, TalkRow, TogetherBar, Wordmark } from "../components/ui";
+import { AppHead, AskList, AskRow, BoardStrip, Breakdown, CardShell, CorpusLine, Fact, HeadFrame, HeadTools, IdeaDoor, Lens, List, Notice, Off, ProjectSwitcher, Rail, Strong, Sub, TalkList, TalkRow, TogetherBar, Word, Wordmark, Words } from "../components/ui";
 import type { BoardStore } from "../state/board";
 import { CardBody } from "./CardView";
 import { ColumnBlock, FOLD_AT } from "./ColumnBlock";
@@ -13,6 +14,7 @@ import { LiftContext, type LiftController } from "./LiftContext";
 import { ProjectContext } from "./ProjectContext";
 import { Triage } from "./Triage";
 import { samePlace, stepTarget, targetInGroup, type LensKind, type Lift, type StepKey } from "./dnd";
+import { WORDS, claimsOf, counted, keeps, lines, type Filter, type WordKey } from "./filter";
 import { ago } from "./time";
 
 export const WIDE_SCREEN = "(min-width: 2300px)";
@@ -58,14 +60,11 @@ export function Board({ slug, store, projects, onSwitch }: { slug: string; store
   const [lift, setLift] = useState<Lift | null>(null);
   const [furled, setFurled] = useState<Set<Column>>(() => new Set<Column>(isWide() ? [] : ["Executed", "Done", "Not now"]));
   const [unfurledMore, setUnfurledMore] = useState<Set<Column>>(new Set());
-  const [asksOpen, setAsksOpen] = useState(false);
+  const [filter, setFilter] = useState<Filter | null>(null);
   const [reading, setReading] = useState<number | null>(null);
   const [readSaid, setReadSaid] = useState<string | null>(null);
-  const [talksOpen, setTalksOpen] = useState(false);
   const [ideaOpening, setIdeaOpening] = useState(false);
   const [ideaSaid, setIdeaSaid] = useState<string | null>(null);
-  // Which columns are scrolled away from their top: on a laptop the head folds to one line while any is.
-  const [scrolled, setScrolled] = useState<Set<Column>>(new Set());
   // Suggestion cards picked for one plan (plan 06, item 5).
   const [selected, setSelected] = useState<Set<number>>(new Set());
   const [planning, setPlanning] = useState(false);
@@ -119,16 +118,6 @@ export function Board({ slug, store, projects, onSwitch }: { slug: string; store
   const openColumns = useMemo<Column[]>(() => (board ? board.columns.map((c) => c.definition.column).filter((c) => !furled.has(c)) : []), [board, furled]);
 
   const unfurlMore = useCallback((column: Column) => setUnfurledMore((s) => new Set(s).add(column)), []);
-
-  const onScrolled = useCallback((column: Column, isScrolled: boolean) => {
-    setScrolled((s) => {
-      if (s.has(column) === isScrolled) return s;
-      const next = new Set(s);
-      if (isScrolled) next.add(column);
-      else next.delete(column);
-      return next;
-    });
-  }, []);
 
   const onSelect = useCallback((number: number, picked: boolean) => {
     setSelected((s) => {
@@ -272,44 +261,83 @@ export function Board({ slug, store, projects, onSwitch }: { slug: string; store
   const streamState = store.connected ? null : <Off> · page not connected, showing the board as read {ago(board.generated_at)}</Off>;
 
   const heard = board.watercooler.length ? (board.watercooler[board.watercooler.length - 1] ?? null) : null;
-  const folded = scrolled.size > 0 && !isWide();
+
+  // The three words filter the board; a sub-filter narrows to one claim.
+  // Clicking a word again clears it — the whole board is one click away.
+  const attention = board.attention;
+  const admitted = filter ? claimsOf(attention, filter) : null;
+  const shown = admitted
+    ? board.columns.map((column) => ({
+        ...column,
+        groups: column.groups.map((group) => ({ ...group, cards: group.cards.filter((c) => keeps(c, admitted)) })),
+      }))
+    : board.columns;
+  // Clicking the word that is already filtering clears it, narrowed or not:
+  // the whole board is always one click away.
+  const pick = (word: WordKey) => setFilter((f) => (f !== null && f.word === word ? null : { word, claim: null }));
+  const narrow = (word: WordKey, claim: Claim) => {
+    // The verdicts have a surface of their own; narrowing to them is how the
+    // head reaches it, so there is one way into the triage lens, not two.
+    if (claim === "verdict") setLens("triage");
+    setFilter((f) => (f !== null && f.claim === claim ? { word, claim: null } : { word, claim }));
+  };
+  // A sub-filter shows the surface that acts on its claim, where one exists:
+  // the batched signals, the conversations alive, the documents with no card.
+  const on = (claim: Claim) => filter !== null && (filter.claim === claim || (filter.claim === null && lines(attention, filter.word).some((l) => l.claim === claim)));
+  const failed = Object.values(store.statuses).filter((st) => st.kind === "failed").length;
 
   return (
     <ProjectContext.Provider value={{ slug, path: board.project.path, heard }}>
     <LiftContext.Provider value={controller}>
-      <HeadFrame folded={folded}>
+      <HeadFrame>
       <AppHead>
         <Wordmark />
-        <ProjectSwitcher projects={listed} current={slug} onSwitch={onSwitch} />
-        <CorpusLine>
-          <Strong>{board.corpus.live_plans}</Strong> live plans · <Strong>{board.corpus.live_suggestions}</Strong> suggestions · <Strong>{board.corpus.archived}</Strong> archived · {corpusState}
-          {streamState}
-        </CorpusLine>
+        <ProjectSwitcher
+          projects={listed}
+          current={slug}
+          onSwitch={onSwitch}
+          facts={
+            <>
+              <CorpusLine>
+                <Strong>{board.corpus.live_plans}</Strong> live plans · <Strong>{board.corpus.live_suggestions}</Strong> suggestions · <Strong>{board.corpus.archived}</Strong> archived · {corpusState}
+                {streamState}
+              </CorpusLine>
+              <Fact>
+                <Strong>{attention.arrived_today}</Strong> arrived today · <Strong>{attention.unplanned_defects}</Strong> defects and <Strong>{attention.unplanned_ideas}</Strong> ideas unplanned
+              </Fact>
+              {board.machine.missing.length ? (
+                <Fact meaning="broken">the runtime cannot find: {board.machine.missing.join(", ")}</Fact>
+              ) : null}
+              {board.trunk.level === null ? (
+                <Fact>the trunk has not been read yet</Fact>
+              ) : board.trunk.level ? (
+                <Fact meaning="proven">trunk level with origin/develop</Fact>
+              ) : (
+                <Fact meaning="broken">trunk {board.trunk.behind} behind origin/develop</Fact>
+              )}
+              {failed > 0 ? <Fact meaning="broken">{failed} write{failed === 1 ? "" : "s"} failed — see the card</Fact> : null}
+            </>
+          }
+        />
+        <Words>
+          {WORDS.map((word) => (
+            <Word key={word.key} label={word.label} count={counted(attention, word.key)} meaning={word.meaning} on={filter?.word === word.key} onClick={() => pick(word.key)} />
+          ))}
+        </Words>
         <HeadTools>
           <Lens value={lens} options={LENSES} onChange={setLens} title="A lens, never a write: sorting changes what you see, never the rank. Drag needs Rank." />
           <IdeaDoor onOpen={(text) => void openAnIdea(text)} disabled={ideaOpening} said={ideaSaid} />
         </HeadTools>
       </AppHead>
-      <AttentionLine quiet={board.machine.missing.length ? `the runtime cannot find: ${board.machine.missing.join(", ")}` : board.trunk.level === null ? "the trunk has not been read yet" : `trunk ${board.trunk.level ? "level with" : `${board.trunk.behind} behind`} origin/develop`}>
-        <Att n={board.attention.asking_you} label="asking you" tone="you" />
-        <Att n={board.attention.in_flight} label="in flight" />
-        {board.attention.colliding > 0 ? <Att n={board.attention.colliding} label={board.attention.colliding === 1 ? "lane colliding — editing another lane's file" : "lanes colliding — editing each other's files"} tone="bad" /> : null}
-        {board.attention.in_discussion > 0 ? <Att n={board.attention.in_discussion} label="in discussion" onClick={() => setTalksOpen((v) => !v)} on={talksOpen} /> : null}
-        {board.attention.lanes_ended > 0 ? <Att n={board.attention.lanes_ended} label={board.attention.lanes_ended === 1 ? "lane ended — Resume or Look" : "lanes ended — Resume or Look"} tone="bad" /> : null}
-        {board.attention.signals_asking > 0 ? <Att n={board.attention.signals_asking} label={board.attention.signals_asking === 1 ? "shipped card waits on your reading" : "shipped cards wait on your reading"} tone="you" onClick={() => setAsksOpen((v) => !v)} on={asksOpen} /> : null}
-        {board.attention.signals_reading > 0 ? <Att n={board.attention.signals_reading} label={board.attention.signals_reading === 1 ? "signal being read by a session" : "signals being read by sessions"} /> : null}
-        {board.attention.signals_due > 0 ? <Att n={board.attention.signals_due} label={board.attention.signals_due === 1 ? "signal past due" : "signals past due"} tone="you" /> : null}
-        {board.attention.doubted > 0 ? <Att n={board.attention.doubted} label={board.attention.doubted === 1 ? "status doubted — its evidence is gone" : "statuses doubted — their evidence is gone"} tone="bad" /> : null}
-        {board.attention.verdicts_unread > 0 ? <Att n={board.attention.verdicts_unread} label={board.attention.verdicts_unread === 1 ? "card carries a verdict you have not read" : "cards carry a verdict you have not read"} tone="you" onClick={() => setLens(lens === "triage" ? "rank" : "triage")} on={lens === "triage"} /> : null}
-        {board.attention.unplanned_defects > 0 ? <Att n={board.attention.unplanned_defects} label={board.attention.unplanned_defects === 1 ? "defect unplanned" : "defects unplanned"} tone="bad" /> : null}
-        <Att n={board.attention.unplanned_ideas} label={board.attention.unplanned_ideas === 1 ? "idea unplanned" : "ideas unplanned"} />
-        <Att n={board.attention.arrived_today} label="arrived today" />
-        {board.attention.documents_gone > 0 ? <Att n={board.attention.documents_gone} label={board.attention.documents_gone === 1 ? "card cites a document that is nowhere" : "cards cite documents that are nowhere"} tone="bad" /> : null}
-        {board.attention.documents_without_card > 0 ? <Att n={board.attention.documents_without_card} label="documents have no card" tone="bad" /> : null}
-        {Object.values(store.statuses).filter((s) => s.kind === "failed").length > 0 ? <Att n={Object.values(store.statuses).filter((s) => s.kind === "failed").length} label="write failed" tone="bad" /> : null}
-      </AttentionLine>
+      {filter ? (
+        <Breakdown label={`What ${WORDS.find((w) => w.key === filter.word)?.label} counts`} onClear={() => setFilter(null)}>
+          {lines(attention, filter.word).map((line) => (
+            <Sub key={line.claim} line={line} meaning={filter.word} on={filter.claim === line.claim} onClick={() => narrow(filter.word, line.claim)} />
+          ))}
+        </Breakdown>
+      ) : null}
       </HeadFrame>
-      {asksOpen && board.asks.length ? (
+      {on("signal asking") && board.asks.length ? (
         <AskList title={`${board.asks.length} shipped card${board.asks.length === 1 ? "" : "s"} wait${board.asks.length === 1 ? "s" : ""} on your reading — only you can read these signals, or a session read them and could not tell`}>
           {board.asks.map((a) => (
             <AskRow key={a.number} number={a.number} title={a.title} what={a.what} due={a.due} evidence={a.evidence} onRead={(delivered) => void readSignal(a.number, delivered)} disabled={reading !== null} />
@@ -317,7 +345,7 @@ export function Board({ slug, store, projects, onSwitch }: { slug: string; store
           {readSaid ? <Notice quiet>{readSaid}</Notice> : null}
         </AskList>
       ) : null}
-      {talksOpen && board.conversations.length ? (
+      {on("conversation") && board.conversations.length ? (
         <TalkList title={`${board.conversations.length} conversation${board.conversations.length === 1 ? "" : "s"} alive — never hands on a tree`}>
           {board.conversations.map((c) => (
             <TalkRow key={c.short_id} what={c.what} shortId={c.short_id} slot={c.slot} since={ago(c.started_at)} />
@@ -327,7 +355,7 @@ export function Board({ slug, store, projects, onSwitch }: { slug: string; store
       {selected.size > 0 || planSaid ? <TogetherBar count={selected.size} onPlan={() => void planTogether()} onClear={() => { setSelected(new Set()); setPlanSaid(null); }} disabled={planning} said={planSaid} /> : null}
       {store.error ? <Notice>The board could not be re-read: {store.error}. Showing it as last read, {ago(board.generated_at)}.</Notice> : null}
       {board.trunk.note ? <Notice>The main checkout is not level with origin/develop: {board.trunk.note}</Notice> : null}
-      {board.documents_without_card.length ? (
+      {on("document without card") && board.documents_without_card.length ? (
         <Notice>
           Documents in the corpus with no card — the watcher should have carded them; it did not:
           <List items={board.documents_without_card.map((d) => `${d.path} — ${d.title}`)} />
@@ -338,7 +366,7 @@ export function Board({ slug, store, projects, onSwitch }: { slug: string; store
       ) : (
       <DndContext sensors={sensors} collisionDetection={collision} onDragStart={onDragStart} onDragMove={onDragMove} onDragEnd={onDragEnd} onDragCancel={() => controller.cancel()}>
         <BoardStrip>
-          {board.columns.map((column, index) =>
+          {shown.map((column, index) =>
             furled.has(column.definition.column) ? (
               <Rail
                 key={column.definition.column}
@@ -357,7 +385,7 @@ export function Board({ slug, store, projects, onSwitch }: { slug: string; store
                 key={column.definition.column}
                 column={column}
                 index={index}
-                total={board.columns.length}
+                total={shown.length}
                 lens={lens}
                 lift={lift}
                 open={open}
@@ -366,24 +394,20 @@ export function Board({ slug, store, projects, onSwitch }: { slug: string; store
                 unfurled={unfurledMore.has(column.definition.column)}
                 selected={selected}
                 onUnfurl={() => unfurlMore(column.definition.column)}
-                onFurl={() => {
-                  onScrolled(column.definition.column, false);
-                  setFurled((f) => new Set(f).add(column.definition.column));
-                }}
+                onFurl={() => setFurled((f) => new Set(f).add(column.definition.column))}
                 onOpen={setOpen}
                 onRetry={(n) => void store.retry(n)}
                 onFocus={setFocused}
                 onMoveTo={moveTo}
                 onSelect={onSelect}
-                onScrolled={onScrolled}
               />
             ),
           )}
         </BoardStrip>
         <DragOverlay dropAnimation={null}>
           {lifted && lift?.by === "pointer" ? (
-            <CardShell number={lifted.number} label={`#${lifted.number} in flight`} lift isStatic>
-              <CardBody card={lifted} rank={null} open={false} />
+            <CardShell number={lifted.number} meaning={lifted.state.meaning} label={`#${lifted.number} in flight`} lift isStatic>
+              <CardBody card={lifted} open={false} />
             </CardShell>
           ) : null}
         </DragOverlay>

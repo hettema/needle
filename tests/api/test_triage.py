@@ -16,6 +16,7 @@ from domain.row import Row, RowKind
 from infrastructure.corpus import scan
 from infrastructure.live import sweep
 from infrastructure.store import Store
+from tests.api.attention import claim_count
 from tests.conftest import NOW
 
 SUPERSEDED = "superseded — card #263 carries the same intent as a plan → Not now"
@@ -53,7 +54,7 @@ def test_every_readable_verdict_is_a_line_and_the_attention_line_counts_them(cli
     board = client.get("/api/projects/proj/board").json()
     lines = {v["number"]: v for v in board["verdicts"]}
     assert set(lines) == {228, 237, 241}
-    assert board["attention"]["verdicts_unread"] == 3
+    assert claim_count(board, "verdict") == 3
     assert lines[228]["verdict"] == {
         "evidence_class": "superseded",
         "evidence": "card #263 carries the same intent as a plan",
@@ -82,7 +83,7 @@ def test_accepting_moves_the_card_with_the_reason_and_the_owner_named(client: Te
     assert [r["kind"] for r in detail["record"]] == ["RULED"]
     assert detail["record"][0]["text"] == f"accepted: {SUPERSEDED}"
     board = client.get("/api/projects/proj/board").json()
-    assert board["attention"]["verdicts_unread"] == 2
+    assert claim_count(board, "verdict") == 2
     # A second accept has nothing to act on.
     again = client.post("/api/projects/proj/cards/228/accept")
     assert again.status_code == 409 and "carries no verdict" in again.json()["detail"]

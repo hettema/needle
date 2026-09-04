@@ -19,6 +19,7 @@ from api import loops as loops_mod
 from api.cli import main
 from infrastructure import clock
 from tests.api import test_doors as doors
+from tests.api.attention import claim_count, yours
 from tests.api.test_doors import CARD, archive_plan, column_of, detail, read_signals, reconcile
 from tests.floor import Floor
 
@@ -79,8 +80,8 @@ def test_a_session_signal_starts_a_reading_the_card_lists_and_delivered_moves_it
         f"Reading started: {launched['short']}, fable on alpha"
     )
     state = board(client)
-    assert state["attention"]["signals_reading"] == 1 and state["asks"] == []
-    assert state["attention"]["signals_asking"] == 0
+    assert claim_count(state, "signal reading") == 1 and state["asks"] == []
+    assert claim_count(state, "signal asking") == 0
 
     read_signals(client)
     assert len(machine_floor.state()["launch_log"]) == 1, "one reading per card at a time"
@@ -106,7 +107,7 @@ def test_a_session_signal_starts_a_reading_the_card_lists_and_delivered_moves_it
         done["history"][0]["actor"] == "machine"
         and "the signal says delivered" in (done["history"][0]["detail"])
     )
-    assert board(client)["attention"]["signals_reading"] == 0
+    assert claim_count(board(client), "signal reading") == 0
 
     # The finished reading session is stopped by the loop once its turn is
     # over — on the floor the fake stays "working", so the grace decides.
@@ -148,7 +149,7 @@ def test_cannot_tell_asks_the_owner_with_the_sessions_words_and_his_click_answer
     assert column_of(client, CARD) == "Executed"
     assert detail(client)["history"][0]["detail"].startswith(f"Signal read as cannot tell: {words}")
     state = board(client)
-    assert state["attention"]["signals_asking"] == 1 and state["attention"]["asking_you"] >= 1
+    assert claim_count(state, "signal asking") == 1 and yours(state) >= 1
     assert state["asks"] == [
         {
             "number": CARD,

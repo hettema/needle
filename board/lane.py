@@ -753,16 +753,18 @@ def doors_for(
         if placement is not None
         else _closed("Discuss", f"The rule found nowhere to run: {placement_note}")
     )
+    # The door says what it does, and says it the same on both faces of the
+    # card: "Create plan" collapsed and open (plan 27, item 2).
     if not suggestion_live:
         plan = _closed(
-            "Plan",
+            "Create plan",
             "Plan writes the plan for a suggestion; this card is not behind a live suggestion.",
         )
     elif placement is None:
-        plan = _closed("Plan", f"The rule found nowhere to run: {placement_note}")
+        plan = _closed("Create plan", f"The rule found nowhere to run: {placement_note}")
     else:
         plan = _open(
-            "Plan",
+            "Create plan",
             "Opens a plan-writing conversation for this suggestion; the plan it writes "
             "carries the card.",
         )

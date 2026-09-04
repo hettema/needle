@@ -21,15 +21,33 @@ import json
 import shutil
 import sys
 import tempfile
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime, timedelta
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(REPO))
 
+from board.assemble import summarize  # noqa: E402
 from board.import_01 import read_01  # noqa: E402
-from domain.card import CardOrigin  # noqa: E402
+from board.lane import (  # noqa: E402
+    LaneFacts,  # noqa: E402
+    doors_for,
+    lane_for,
+)
+from domain.audit import AuditEntry, AuditKind  # noqa: E402
+from domain.card import Actor, Card, CardOrigin, DocumentLink, Place  # noqa: E402
+from domain.column import Column  # noqa: E402
+from domain.corpus import CorpusIndex  # noqa: E402
+from domain.document import Document, DocumentKind  # noqa: E402
+from domain.evidence import Evidence  # noqa: E402
+from domain.gate import Gate  # noqa: E402
+from domain.hook import HookEvent, HookKind  # noqa: E402
+from domain.lane import Collision, CollisionVerdict  # noqa: E402
 from domain.project import Project  # noqa: E402
+from domain.row import Row, RowKind  # noqa: E402
+from domain.session import Session, SessionKind, SessionState  # noqa: E402
+from domain.signal import Reading, ReadingSession  # noqa: E402
+from domain.slot import Model, Placement  # noqa: E402
 from infrastructure.corpus import scan  # noqa: E402
 from infrastructure.live import Live, sweep  # noqa: E402
 from infrastructure.store import Store  # noqa: E402
@@ -41,6 +59,311 @@ NOW = datetime(2026, 9, 4, 8, 30, tzinfo=UTC)
 SHOWN_PATH = "/srv/harbourmaster"
 """The path the snapshot shows for the project: the real one is a temporary
 directory and would differ on every run."""
+
+LANE_PATH = f"{SHOWN_PATH}/.claude/worktrees/card-900-a-card-in-every-state"
+PLACEMENT = Placement(
+    slot="alpha", model=Model.FABLE, config_dir="/x/alpha", why="Fable headroom on alpha"
+)
+
+
+def _card(
+    number: int,
+    *,
+    column: Column,
+    archived: bool = False,
+    gate: Gate | None = Gate.HIGH,
+    watch: str | None = None,
+) -> Card:
+    rows = [Row(kind=RowKind.SERVES, text="Every berth is billed by the metre.")]
+    if watch:
+        rows.append(Row(kind=RowKind.WATCH, text=watch))
+    return Card(
+        number=number,
+        project="harbourmaster",
+        place=Place(column=column, group=None, position=0),
+        title="A card in every state",
+        gate=gate,
+        tags=[],
+        deep="",
+        citations=[],
+        link=DocumentLink(
+            kind=DocumentKind.PLAN, stem="p", title="A card in every state", archived=archived
+        ),
+        origin=CardOrigin.IMPORTED,
+        born_at=NOW,
+        rows=rows,
+    )
+
+
+def _document(*, archived: bool = False) -> Document:
+    return Document(
+        kind=DocumentKind.PLAN,
+        stem="p",
+        path="docs/plans/done/2026-09-04-a-card-in-every-state.md"
+        if archived
+        else "docs/plans/2026-09-04-a-card-in-every-state.md",
+        archived=archived,
+        title="A card in every state",
+        date=date(2026, 9, 4),
+        status=None,
+        status_word=None,
+        gate=None,
+        gate_why=None,
+        sequencing=None,
+        found_by=None,
+        card_ref=None,
+        suggestion_kind=None,
+        cites=[],
+        head_fields=[],
+        intent_heading=None,
+        intent="",
+        essence="Every berth is billed by the metre.",
+        read_at=NOW,
+    )
+
+
+def _session(
+    *,
+    pid: int | None = 4242,
+    state: SessionState = SessionState.WORKING,
+    recorded: str = "working",
+    detail: str = "",
+) -> Session:
+    return Session(
+        slot="alpha",
+        config_dir="/x/alpha",
+        short_id="aaaa0001",
+        session_id="aaaa0001-0000-4000-8000-000000000000",
+        kind=SessionKind.BACKGROUND,
+        name="card-900-a-card-in-every-state",
+        cwd=LANE_PATH,
+        worktree=LANE_PATH,
+        state=state,
+        recorded=recorded,
+        detail=detail,
+        pid=pid,
+        scope="needle-card-900.scope",
+        model=Model.FABLE,
+        effort=Gate.HIGH,
+        stale=False,
+        wall=None,
+        intent="",
+        created_at=NOW - timedelta(minutes=12),
+        updated_at=NOW - timedelta(minutes=1),
+    )
+
+
+def _facts(**changes) -> LaneFacts:
+    base = dict(
+        project_path=SHOWN_PATH,
+        sessions=[],
+        events=[],
+        discussions=[],
+        records=[],
+        windows=[],
+        rescues={},
+        deaths={},
+        worktrees={LANE_PATH: "card-900-a-card-in-every-state"},
+        now=NOW,
+    )
+    base.update(changes)
+    return LaneFacts(**base)
+
+
+def _summary(
+    card: Card,
+    *,
+    lane=None,
+    placed_by_machine: bool = False,
+    last=None,
+    reading=None,
+    suggestion_live: bool = False,
+    collision: Collision | None = None,
+    placement: Placement | None = PLACEMENT,
+):
+    """One card as the page receives it, through the real derivation."""
+    the_lane = lane if lane is not None else lane_for(card, _facts(worktrees={}))
+    doors = doors_for(
+        card,
+        the_lane,
+        gate_named=card.gate is not None,
+        placement=placement,
+        placement_note="every subscription is spent" if placement is None else "",
+        collision=collision,
+        signal=None,
+        signal_due_for_owner=False,
+        signal_evidence=None,
+        suggestion_live=suggestion_live,
+    )
+    # A card the machine put in Executing on hands-on evidence, with no lane
+    # on this read, is what the board doubts: the evidence is gone.
+    placed = (
+        AuditEntry(
+            id=1,
+            at=NOW,
+            actor=Actor.MACHINE,
+            kind=AuditKind.MOVED,
+            card_number=card.number,
+            from_place=None,
+            to_place=card.place,
+            detail="hands on it",
+            evidence=Evidence.HANDS_ON,
+        )
+        if placed_by_machine
+        else None
+    )
+    index = CorpusIndex(
+        documents=[_document(archived=card.link is not None and card.link.archived)], read_at=NOW
+    )
+    summary = summarize(
+        card,
+        index,
+        NOW,
+        lane,
+        doors=doors,
+        placement=placed,
+        last=last,
+        read=True,
+        reading=reading,
+        project_path=SHOWN_PATH,
+    )
+    return summary
+
+
+def language_cases() -> list[dict[str, object]]:
+    """One card per state the rule can name (plan 27, item 6). The page test
+    renders each and asserts its word, its meaning, its border and its door
+    against this table — and the cards come from the real derivation, so a
+    backend that changes a word fails the page's test, not only its own."""
+    working = lane_for(
+        _card(900, column=Column.EXECUTING),
+        _facts(sessions=[_session(detail="Skimming the test suites for the pill's pattern.")]),
+    )
+    asking = lane_for(
+        _card(900, column=Column.EXECUTING),
+        _facts(
+            sessions=[_session(state=SessionState.DONE, recorded="done")],
+            events=[
+                HookEvent(
+                    id=1,
+                    kind=HookKind.SESSION_START,
+                    session_id=_session().session_id,
+                    cwd=LANE_PATH,
+                    at=NOW,
+                    source=None,
+                    message=None,
+                    reason=None,
+                    error=None,
+                    transcript_path=None,
+                    project="harbourmaster",
+                    card_number=900,
+                ),
+                HookEvent(
+                    id=2,
+                    kind=HookKind.STOP,
+                    session_id=_session().session_id,
+                    cwd=LANE_PATH,
+                    at=NOW,
+                    source=None,
+                    message="The parser is in.\n\nHigh or medium?",
+                    reason=None,
+                    error=None,
+                    transcript_path=None,
+                    project="harbourmaster",
+                    card_number=900,
+                ),
+            ],
+        ),
+    )
+    ended = lane_for(
+        _card(900, column=Column.DECISION_MOMENT), _facts(sessions=[_session(pid=None)])
+    )
+    colliding = working.model_copy(
+        update={
+            "colliding": Collision(
+                verdict=CollisionVerdict.COLLIDES,
+                sentence="#241's lane is also editing engine/metering.py.",
+                files=["engine/metering.py"],
+                cards=[241],
+            )
+        }
+    )
+    owner_watch = (
+        "the owner reads the board without it being explained — owner dennis by 2026-09-11"
+    )
+    session_watch = "no session re-grows the old doors — session harbourmaster by 2026-09-11"
+    due_watch = "the office check email names a real event — owner dennis by 2026-09-04"
+    read_at = NOW - timedelta(hours=1)
+    delivered = Reading(
+        id=1,
+        card_number=900,
+        at=read_at,
+        delivered=True,
+        words="the doors stayed",
+        actor=Actor.SESSION,
+    )
+    reading = ReadingSession(
+        id=1,
+        project="harbourmaster",
+        card_number=900,
+        session_id="bbbb0001-0000-4000-8000-000000000000",
+        slot="beta",
+        started_at=NOW - timedelta(minutes=2),
+        ended_at=None,
+    )
+    gone = _card(900, column=Column.UP_NEXT)
+    gone.link = DocumentLink(kind=DocumentKind.PLAN, stem="nowhere", title="", archived=False)
+    cases: list[tuple[str, object]] = [
+        ("free to start", _summary(_card(900, column=Column.UP_NEXT))),
+        (
+            "collides",
+            _summary(
+                _card(900, column=Column.UP_NEXT),
+                collision=Collision(
+                    verdict=CollisionVerdict.COLLIDES,
+                    sentence="#241's lane is editing engine/metering.py.",
+                    files=["engine/metering.py"],
+                    cards=[241],
+                ),
+            ),
+        ),
+        ("no gate", _summary(_card(900, column=Column.UP_NEXT, gate=None))),
+        ("nowhere to run", _summary(_card(900, column=Column.UP_NEXT), placement=None)),
+        ("working", _summary(_card(900, column=Column.EXECUTING), lane=working)),
+        ("asking you", _summary(_card(900, column=Column.EXECUTING), lane=asking)),
+        ("colliding", _summary(_card(900, column=Column.EXECUTING), lane=colliding)),
+        ("lane ended", _summary(_card(900, column=Column.DECISION_MOMENT), lane=ended)),
+        ("doubted", _summary(_card(900, column=Column.EXECUTING), placed_by_machine=True)),
+        ("document nowhere", _summary(gone)),
+        ("your move", _summary(_card(900, column=Column.DECISION_MOMENT))),
+        (
+            "loop open",
+            _summary(_card(900, column=Column.EXECUTED, archived=True, watch=session_watch)),
+        ),
+        (
+            "loop open, owner only",
+            _summary(_card(900, column=Column.EXECUTED, archived=True, watch=owner_watch)),
+        ),
+        (
+            "signal for you to read",
+            _summary(_card(900, column=Column.EXECUTED, archived=True, watch=due_watch)),
+        ),
+        (
+            "a session is reading it",
+            _summary(
+                _card(900, column=Column.EXECUTED, archived=True, watch=session_watch),
+                reading=reading,
+            ),
+        ),
+        (
+            "loop closed",
+            _summary(
+                _card(900, column=Column.DONE, archived=True, watch=session_watch), last=delivered
+            ),
+        ),
+        ("not now", _summary(_card(900, column=Column.NOT_NOW))),
+    ]
+    return [{"case": case, "card": card.model_dump(mode="json")} for case, card in cases]
 
 
 def snapshot() -> dict[str, object]:
@@ -73,7 +396,11 @@ def snapshot() -> dict[str, object]:
         numbers = [c.number for col in board.columns for g in col.groups for c in g.cards]
         details = {str(n): live.detail(project.slug, n).model_dump(mode="json") for n in numbers}
         store.close()
-        return {"board": board.model_dump(mode="json"), "details": details}
+        return {
+            "board": board.model_dump(mode="json"),
+            "details": details,
+            "language": language_cases(),
+        }
 
 
 def render() -> str:

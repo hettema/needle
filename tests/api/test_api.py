@@ -11,6 +11,7 @@ from domain.column import Column
 from infrastructure.corpus import scan
 from infrastructure.live import Live, sweep
 from infrastructure.store import Store
+from tests.api.attention import claim_count
 from tests.conftest import NOW
 
 
@@ -44,7 +45,7 @@ def test_the_board_is_served_with_its_eight_columns(client: TestClient):
     assert board["corpus"]["live_plans"] == 11 and board["corpus"]["watching"] is True
     assert numbers(board, "Up next") == [253, 241, 228, 237, 174]
     # #120's malformed citation and #201's archived plan the corpus lacks
-    assert board["attention"]["documents_gone"] == 2
+    assert claim_count(board, "document gone") == 2
 
 
 def test_a_move_is_stored_and_the_new_truth_comes_back(client: TestClient):

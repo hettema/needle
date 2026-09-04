@@ -13,6 +13,14 @@ import type { Project } from "../src/types/project";
 interface Snapshot {
   board: BoardState;
   details: Record<string, CardDetail>;
+  language: LanguageCase[];
+}
+
+/** One card in one state, from the real derivation: the table the page test
+ * reads back (plan 27, item 6). */
+export interface LanguageCase {
+  case: string;
+  card: CardSummary;
 }
 
 // The JSON module's inferred type has plain strings where the domain has enums; the ratchet that regenerates the file is what makes this cast true.
@@ -40,6 +48,11 @@ export function board(upNext?: number[]): BoardState {
 export function summary(number: number): CardSummary {
   for (const column of SNAPSHOT.board.columns) for (const group of column.groups) for (const card of group.cards) if (card.number === number) return structuredClone(card);
   throw new Error(`no #${number} on the snapshot`);
+}
+
+/** Every state the rule can name, each with the card the board would send. */
+export function language(): LanguageCase[] {
+  return structuredClone(SNAPSHOT.language);
 }
 
 export function detail(number: number): CardDetail {

@@ -13,7 +13,7 @@ from domain.document import Document, DocumentRef, DocumentState, SuggestionKind
 from domain.evidence import Standing
 from domain.gate import Gate
 from domain.hook import HeardMark
-from domain.lane import Collision, Conversation, Door, Doors, Lane, LaneState, Readiness
+from domain.lane import Collision, Conversation, Doors, Lane, LaneState
 from domain.project import Project
 from domain.row import Row
 from domain.signal import Reading, ReadingSession, Signal, SignalKind
@@ -36,6 +36,112 @@ class FoldedCard(BaseModel):
     document_path: str | None
 
 
+class Meaning(StrEnum):
+    """The colour language's five words (plan 27). Every colour on the board
+    says one of these and nothing else; the page paints a meaning, never a
+    count, a category, a button or a column."""
+
+    YOURS = "yours"
+    """Amber: only you can act."""
+    BROKEN = "broken"
+    """Red: evidence is gone or two things disagree."""
+    LIVE = "live"
+    """Teal: happening right now."""
+    PROVEN = "proven"
+    """Green: the loop closed."""
+    QUIET = "quiet"
+    """Grey: information with no claim on you."""
+
+
+class Claim(StrEnum):
+    """What can claim the owner's eye, one kind per value. The head counts
+    each and filters the board to the cards carrying it (plan 27, item 1)."""
+
+    VERDICT = "verdict"
+    LANE_ASKING = "lane asking"
+    SIGNAL_ASKING = "signal asking"
+    DECISION = "decision"
+    LANE_ENDED = "lane ended"
+    DOUBTED = "doubted"
+    DOCUMENT_GONE = "document gone"
+    COLLIDING = "colliding"
+    DOCUMENT_WITHOUT_CARD = "document without card"
+    LANE_WORKING = "lane working"
+    CONVERSATION = "conversation"
+    SIGNAL_READING = "signal reading"
+
+
+CLAIM_MEANING: dict[Claim, Meaning] = {
+    Claim.VERDICT: Meaning.YOURS,
+    Claim.LANE_ASKING: Meaning.YOURS,
+    Claim.SIGNAL_ASKING: Meaning.YOURS,
+    Claim.DECISION: Meaning.YOURS,
+    Claim.LANE_ENDED: Meaning.BROKEN,
+    Claim.DOUBTED: Meaning.BROKEN,
+    Claim.DOCUMENT_GONE: Meaning.BROKEN,
+    Claim.COLLIDING: Meaning.BROKEN,
+    Claim.DOCUMENT_WITHOUT_CARD: Meaning.BROKEN,
+    Claim.LANE_WORKING: Meaning.LIVE,
+    Claim.CONVERSATION: Meaning.LIVE,
+    Claim.SIGNAL_READING: Meaning.LIVE,
+}
+"""Which of the three head words each claim counts under; the two other
+meanings never claim anyone."""
+
+
+class LoopState(StrEnum):
+    OPEN = "open"
+    """Shipped; the signal is named and not yet read as delivered."""
+    CLOSED = "closed"
+    """The signal was read as delivered, or the card is Done."""
+
+
+class Loop(BaseModel):
+    """A shipped card's loop as the glyph carries it (plan 27, item 3): an
+    open ring in ink, a filled green dot; the ring is amber when only the
+    owner can read the signal."""
+
+    state: LoopState
+    owner_only: bool
+
+
+class FaceDoorName(StrEnum):
+    """What the one door on a collapsed card does when pressed."""
+
+    START = "start"
+    PLAN = "plan"
+    WATCH = "watch"
+    OPEN = "open"
+    """Opens the card: the act the state asks for lives on the open face."""
+
+
+class FaceDoor(BaseModel):
+    """The one door a state allows on the collapsed face, bottom-right. A door
+    is a shape, never a colour: filled when it is the card's primary act."""
+
+    name: FaceDoorName
+    label: str
+    why: str
+    primary: bool
+
+
+class CardState(BaseModel):
+    """The state line on a collapsed card (plan 27, item 2): one word in its
+    meaning's colour, always bottom-left, and the one door that state allows
+    or, when none opens, what opening the card gives. Named by one function
+    in `board.assemble`; the page never invents a word."""
+
+    word: str
+    meaning: Meaning
+    detail: str | None
+    """What the state has to say in the essence's place: a lane's question,
+    a doubt's words, a signal's what and when."""
+    loop: Loop | None
+    door: FaceDoor | None
+    hint: str | None
+    """Grey text where the door would be, when no door opens: "open to see"."""
+
+
 class CardSummary(BaseModel):
     """A card at rest: what the column shows."""
 
@@ -50,24 +156,18 @@ class CardSummary(BaseModel):
     """The cited path, whether or not it exists."""
     kind: SuggestionKind | None
     """A suggestion's kind, from its document; None behind a plan or a note."""
-    readiness: Readiness | None
-    """Whether the card can start now, in Planned and Up next; None elsewhere (plan 06, item 3)."""
-    start: Door | None
-    """The Start door, on the collapsed face where it is open; None outside Planned and Up next."""
-    plan: Door | None
-    """The Plan door, on every suggestion card; None behind a plan or a note (plan 06, item 5)."""
+    state: CardState
+    """The state line: one word, its meaning, the one door (plan 27, item 2)."""
+    claims: list[Claim]
+    """Every claim this card makes on the owner's eye; the head filters by them."""
     folded: list[FoldedCard]
     """The cards folded under this one: the suggestions its plan carries."""
-    points: int
-    """Rows on the card, the essence aside."""
     is_new: bool
     """Arrived within the last day (comp 1, call 1)."""
     age_date: date
     """The document's date, else the day the card was born; the Age lens."""
     place: Place
     lane_state: LaneState
-    lane_sentence: str | None
-    """What the card says about its lane, when it has one."""
     colliding: Collision | None
     """The lane has drifted into another live lane's files, named (plan 07, item 2)."""
     standing: Standing
@@ -90,37 +190,33 @@ class ColumnView(BaseModel):
     count: int
 
 
-class Attention(BaseModel):
-    """The first inch: does anything need me?"""
+class ClaimCount(BaseModel):
+    """One line of the head's breakdown: how many carry the claim, in words."""
 
-    asking_you: int
-    """Cards in Decision moment, lanes stopped with a question, and signals only you can read."""
-    in_flight: int
-    """Lanes with hands on them."""
-    colliding: int
-    """Live lanes editing a file another live lane is also editing (plan 07, item 2)."""
-    in_discussion: int
-    """Conversations alive right now: ideas and card discussions (plan 07, item 1)."""
-    lanes_ended: int
-    """Lanes whose session is gone without a close: Resume or Look is your choice."""
-    signals_due: int
-    """Executed cards past their signal's due time with nothing delivered yet."""
-    signals_asking: int
-    """Shipped cards waiting on your reading: a signal only you can read, due
-    now, or one a session read and could not tell (plan 04; plan 09, item 4)."""
-    signals_reading: int
-    """Shipped cards whose signal a session is reading right now (plan 09, item 1)."""
-    doubted: int
-    """Machine-placed cards whose evidence is gone on this read."""
-    verdicts_unread: int
-    """Cards carrying a verdict the owner has not yet accepted or overturned (plan 05)."""
+    claim: Claim
+    count: int
+    label: str
+    """The count's words, in number: "lanes asking you", "lane asking you"."""
+
+
+class Attention(BaseModel):
+    """The first inch: does anything need me? Three words on the head, each
+    the sum of its claims, and the quiet facts that claim nobody (plan 27,
+    item 1). A claim with a count of zero is not listed."""
+
+    yours: list[ClaimCount]
+    """Only you can act: verdicts to accept, lanes asking, signals only you
+    can read, cards in Decision moment."""
+    broken: list[ClaimCount]
+    """Evidence gone or two things disagreeing: lanes died, statuses doubted,
+    documents nowhere, two lanes in one file, documents with no card."""
+    live: list[ClaimCount]
+    """Happening now: lanes working, conversations, signals being read."""
     unplanned_defects: int
     """Defects written up as suggestions that no plan carries yet (plan 06, item 2)."""
     unplanned_ideas: int
     """Ideas written up as suggestions that no plan carries yet: the size of the unplanned pile."""
     arrived_today: int
-    documents_gone: int
-    documents_without_card: int
 
 
 class OwnerAsk(BaseModel):

@@ -4,8 +4,8 @@
 jsdom lays nothing out, so whether a pinned head is actually in the viewport
 after a scroll cannot be asserted by the vitest suite. This drives headless
 Chromium against a live server at a laptop's size: it scrolls one column by a
-screenful, then reads the geometry — the app head, the attention line and
-every open column's heading still inside the viewport, the scrolled column's
+screenful, then reads the geometry — the app head and every open column's
+heading still inside the viewport, the scrolled column's
 first card gone above its heading, and the first card of another column not
 moved a pixel — and takes a screenshot. Run it before a review record that
 claims the head and the column names never leave the screen.
@@ -25,7 +25,7 @@ import websockets
 
 PORT = 9342
 WIDTH, HEIGHT = 1440, 900
-"""A laptop: below the wide breakpoint, where the head folds to one line."""
+"""A laptop: below the wide breakpoint, where the archive columns start furled."""
 
 
 async def call(
@@ -103,6 +103,7 @@ async def check(url: str, scrolled: str, still: str, screenshot: str) -> int:
             heading = f"{column} .col-head h2"
             other_heading = f"{other} .col-head h2"
             before = {
+                "head": await js(_rect(".app-head")),
                 "card": await js(_rect(first_card)),
                 "other": await js(_rect(other_card)),
                 "heading": await js(_rect(heading)),
@@ -118,12 +119,10 @@ async def check(url: str, scrolled: str, still: str, screenshot: str) -> int:
             await asyncio.sleep(0.5)
             after = {
                 "head": await js(_rect(".app-head")),
-                "attn": await js(_rect(".attn-line")),
                 "heading": await js(_rect(heading)),
                 "other_heading": await js(_rect(other_heading)),
                 "card": await js(_rect(first_card)),
                 "other": await js(_rect(other_card)),
-                "folded": await js("document.querySelector('.head')?.dataset.folded"),
                 "scrollTop": await js(f"document.querySelector('{column}').scrollTop"),
                 "pageScroll": await js("window.scrollY"),
             }
@@ -146,8 +145,6 @@ async def check(url: str, scrolled: str, still: str, screenshot: str) -> int:
                 findings.append(f"the page itself scrolled by {after['pageScroll']}")
             if not in_view(after["head"]):
                 findings.append(f"the app head left the viewport: {after['head']}")
-            if not in_view(after["attn"]):
-                findings.append(f"the attention line left the viewport: {after['attn']}")
             if not in_view(after["heading"]):
                 findings.append(f"{scrolled}'s heading left the viewport: {after['heading']}")
             if not in_view(after["other_heading"]):
@@ -158,9 +155,14 @@ async def check(url: str, scrolled: str, still: str, screenshot: str) -> int:
                         f"{scrolled}'s first card did not move up under its heading: "
                         f"{before['card']} -> {after['card']}"
                     )
-            # The head folds when a column scrolls, so every column rises with it;
-            # what must not change is the other column's own scroll: its first
-            # card's distance from its heading.
+            # The head is one line and stays one line (plan 27, item 1), so it
+            # never moves and nothing rises with it; what must not change is the
+            # other column's own scroll: its first card's distance from its heading.
+            if after["head"] != before["head"]:
+                findings.append(
+                    f"the head moved when a column scrolled: {before['head']} -> {after['head']}"
+                )
+
             def gap(card: object, head: object) -> float | None:
                 if isinstance(card, list) and isinstance(head, list):
                     return round(card[1] - head[1], 2)
@@ -171,8 +173,6 @@ async def check(url: str, scrolled: str, still: str, screenshot: str) -> int:
                     f"{still} scrolled too: its first card sat {gap(before['other'], before['other_heading'])} "
                     f"under its heading and now sits {gap(after['other'], after['other_heading'])}"
                 )
-            if after["folded"] != "true":
-                findings.append(f"the head did not fold to one line on a laptop (folded={after['folded']})")
             print(f"before: {json.dumps(before)}")
             print(f"after:  {json.dumps(after)}")
             print(f"shot:   {screenshot}")

@@ -17,21 +17,24 @@
       "read_at": "2026-09-04T08:30:00Z"
     },
     "attention": {
-      "asking_you": 4,
-      "in_flight": 2,
-      "colliding": 0,
-      "in_discussion": 0,
-      "lanes_ended": 0,
-      "signals_due": 0,
-      "signals_asking": 0,
-      "signals_reading": 0,
-      "doubted": 0,
-      "verdicts_unread": 0,
+      "yours": [
+        {
+          "claim": "decision",
+          "count": 4,
+          "label": "cards in Decision moment"
+        }
+      ],
+      "broken": [
+        {
+          "claim": "document gone",
+          "count": 2,
+          "label": "documents nowhere"
+        }
+      ],
+      "live": [],
       "unplanned_defects": 1,
       "unplanned_ideas": 7,
-      "arrived_today": 1,
-      "documents_gone": 2,
-      "documents_without_card": 0
+      "arrived_today": 1
     },
     "trunk": {
       "level": null,
@@ -70,15 +73,16 @@
                 "document_state": "suggestion",
                 "document_path": "docs/slice-suggestions/2026-09-01-the-night-audit-re-reads-the-whole-harbour-log.md",
                 "kind": "defect",
-                "readiness": null,
-                "start": null,
-                "plan": {
-                  "offered": false,
-                  "label": "Plan",
-                  "why": "The rule found nowhere to run: the runtime has not read this board yet"
+                "state": {
+                  "word": "no plan yet",
+                  "meaning": "quiet",
+                  "detail": null,
+                  "loop": null,
+                  "door": null,
+                  "hint": "open to see"
                 },
+                "claims": [],
                 "folded": [],
-                "points": 2,
                 "is_new": false,
                 "age_date": "2026-09-01",
                 "place": {
@@ -87,7 +91,6 @@
                   "position": 0
                 },
                 "lane_state": "none",
-                "lane_sentence": null,
                 "colliding": null,
                 "standing": {
                   "actor": "corpus",
@@ -113,15 +116,16 @@
                 "document_state": "suggestion",
                 "document_path": "docs/slice-suggestions/2026-09-03-the-quay-display-polls-the-office-all-night.md",
                 "kind": "idea",
-                "readiness": null,
-                "start": null,
-                "plan": {
-                  "offered": false,
-                  "label": "Plan",
-                  "why": "The rule found nowhere to run: the runtime has not read this board yet"
+                "state": {
+                  "word": "no plan yet",
+                  "meaning": "quiet",
+                  "detail": null,
+                  "loop": null,
+                  "door": null,
+                  "hint": "open to see"
                 },
+                "claims": [],
                 "folded": [],
-                "points": 2,
                 "is_new": false,
                 "age_date": "2026-09-03",
                 "place": {
@@ -130,7 +134,6 @@
                   "position": 0
                 },
                 "lane_state": "none",
-                "lane_sentence": null,
                 "colliding": null,
                 "standing": {
                   "actor": "import",
@@ -150,15 +153,16 @@
                 "document_state": "suggestion",
                 "document_path": "docs/slice-suggestions/2026-09-02-the-welcome-board-shows-one-boats-whole-stay.md",
                 "kind": "idea",
-                "readiness": null,
-                "start": null,
-                "plan": {
-                  "offered": false,
-                  "label": "Plan",
-                  "why": "The rule found nowhere to run: the runtime has not read this board yet"
+                "state": {
+                  "word": "no plan yet",
+                  "meaning": "quiet",
+                  "detail": null,
+                  "loop": null,
+                  "door": null,
+                  "hint": "open to see"
                 },
+                "claims": [],
                 "folded": [],
-                "points": 2,
                 "is_new": false,
                 "age_date": "2026-09-02",
                 "place": {
@@ -167,7 +171,6 @@
                   "position": 1
                 },
                 "lane_state": "none",
-                "lane_sentence": null,
                 "colliding": null,
                 "standing": {
                   "actor": "import",
@@ -187,11 +190,18 @@
                 "document_state": "gone",
                 "document_path": "docs/slice-suggestions/2026-07-12-berth-list-keys.md · 2026-08-19-office-screen-refresh.md",
                 "kind": null,
-                "readiness": null,
-                "start": null,
-                "plan": null,
+                "state": {
+                  "word": "document nowhere",
+                  "meaning": "broken",
+                  "detail": "cites docs/slice-suggestions/2026-07-12-berth-list-keys.md · 2026-08-19-office-screen-refresh.md, and no such file exists in the project",
+                  "loop": null,
+                  "door": null,
+                  "hint": "open to see"
+                },
+                "claims": [
+                  "document gone"
+                ],
                 "folded": [],
-                "points": 0,
                 "is_new": false,
                 "age_date": "2026-09-04",
                 "place": {
@@ -200,7 +210,6 @@
                   "position": 2
                 },
                 "lane_state": "none",
-                "lane_sentence": null,
                 "colliding": null,
                 "standing": {
                   "actor": "import",
@@ -233,11 +242,16 @@
                 "document_state": "note",
                 "document_path": null,
                 "kind": null,
-                "readiness": null,
-                "start": null,
-                "plan": null,
+                "state": {
+                  "word": "no document",
+                  "meaning": "quiet",
+                  "detail": null,
+                  "loop": null,
+                  "door": null,
+                  "hint": "open to see"
+                },
+                "claims": [],
                 "folded": [],
-                "points": 0,
                 "is_new": false,
                 "age_date": "2026-09-04",
                 "place": {
@@ -246,7 +260,6 @@
                   "position": 0
                 },
                 "lane_state": "none",
-                "lane_sentence": null,
                 "colliding": null,
                 "standing": {
                   "actor": "import",
@@ -272,15 +285,16 @@
                 "document_state": "suggestion",
                 "document_path": "docs/slice-suggestions/2026-08-29-two-meters-on-one-pontoon-disagree.md",
                 "kind": "idea",
-                "readiness": null,
-                "start": null,
-                "plan": {
-                  "offered": false,
-                  "label": "Plan",
-                  "why": "The rule found nowhere to run: the runtime has not read this board yet"
+                "state": {
+                  "word": "no plan yet",
+                  "meaning": "quiet",
+                  "detail": null,
+                  "loop": null,
+                  "door": null,
+                  "hint": "open to see"
                 },
+                "claims": [],
                 "folded": [],
-                "points": 0,
                 "is_new": false,
                 "age_date": "2026-08-29",
                 "place": {
@@ -289,7 +303,6 @@
                   "position": 0
                 },
                 "lane_state": "none",
-                "lane_sentence": null,
                 "colliding": null,
                 "standing": {
                   "actor": "corpus",
@@ -309,15 +322,16 @@
                 "document_state": "suggestion",
                 "document_path": "docs/slice-suggestions/2026-08-31-the-same-slip-is-mailed-twice.md",
                 "kind": "idea",
-                "readiness": null,
-                "start": null,
-                "plan": {
-                  "offered": false,
-                  "label": "Plan",
-                  "why": "The rule found nowhere to run: the runtime has not read this board yet"
+                "state": {
+                  "word": "no plan yet",
+                  "meaning": "quiet",
+                  "detail": null,
+                  "loop": null,
+                  "door": null,
+                  "hint": "open to see"
                 },
+                "claims": [],
                 "folded": [],
-                "points": 0,
                 "is_new": false,
                 "age_date": "2026-08-31",
                 "place": {
@@ -326,7 +340,6 @@
                   "position": 1
                 },
                 "lane_state": "none",
-                "lane_sentence": null,
                 "colliding": null,
                 "standing": {
                   "actor": "corpus",
@@ -346,15 +359,16 @@
                 "document_state": "suggestion",
                 "document_path": "docs/slice-suggestions/2026-09-01-the-waiting-list-forgets-who-asked-first.md",
                 "kind": "idea",
-                "readiness": null,
-                "start": null,
-                "plan": {
-                  "offered": false,
-                  "label": "Plan",
-                  "why": "The rule found nowhere to run: the runtime has not read this board yet"
+                "state": {
+                  "word": "no plan yet",
+                  "meaning": "quiet",
+                  "detail": null,
+                  "loop": null,
+                  "door": null,
+                  "hint": "open to see"
                 },
+                "claims": [],
                 "folded": [],
-                "points": 0,
                 "is_new": false,
                 "age_date": "2026-09-01",
                 "place": {
@@ -363,7 +377,6 @@
                   "position": 2
                 },
                 "lane_state": "none",
-                "lane_sentence": null,
                 "colliding": null,
                 "standing": {
                   "actor": "corpus",
@@ -383,15 +396,16 @@
                 "document_state": "suggestion",
                 "document_path": "docs/slice-suggestions/2026-09-04-a-boat-longer-than-its-berth-is-accepted.md",
                 "kind": "idea",
-                "readiness": null,
-                "start": null,
-                "plan": {
-                  "offered": false,
-                  "label": "Plan",
-                  "why": "The rule found nowhere to run: the runtime has not read this board yet"
+                "state": {
+                  "word": "no plan yet",
+                  "meaning": "quiet",
+                  "detail": null,
+                  "loop": null,
+                  "door": null,
+                  "hint": "open to see"
                 },
+                "claims": [],
                 "folded": [],
-                "points": 0,
                 "is_new": false,
                 "age_date": "2026-09-04",
                 "place": {
@@ -400,7 +414,6 @@
                   "position": 3
                 },
                 "lane_state": "none",
-                "lane_sentence": null,
                 "colliding": null,
                 "standing": {
                   "actor": "corpus",
@@ -445,20 +458,16 @@
                 "document_state": "plan",
                 "document_path": "docs/plans/2026-09-01-the-waiting-list-offers-every-berth-that-fits.md",
                 "kind": null,
-                "readiness": {
-                  "state": "unread",
-                  "why": "The rule found nowhere to run: the runtime has not read this board yet",
-                  "cards": [],
-                  "files": []
+                "state": {
+                  "word": "not read yet",
+                  "meaning": "quiet",
+                  "detail": "The rule found nowhere to run: the runtime has not read this board yet",
+                  "loop": null,
+                  "door": null,
+                  "hint": "open to see"
                 },
-                "start": {
-                  "offered": false,
-                  "label": "Start",
-                  "why": "The rule found nowhere to run: the runtime has not read this board yet"
-                },
-                "plan": null,
+                "claims": [],
                 "folded": [],
-                "points": 2,
                 "is_new": false,
                 "age_date": "2026-09-01",
                 "place": {
@@ -467,7 +476,6 @@
                   "position": 0
                 },
                 "lane_state": "none",
-                "lane_sentence": null,
                 "colliding": null,
                 "standing": {
                   "actor": "import",
@@ -495,20 +503,16 @@
                 "document_state": "plan",
                 "document_path": "docs/plans/2026-09-02-the-skipper-sees-the-price-before-the-berth.md",
                 "kind": null,
-                "readiness": {
-                  "state": "unread",
-                  "why": "The rule found nowhere to run: the runtime has not read this board yet",
-                  "cards": [],
-                  "files": []
+                "state": {
+                  "word": "not read yet",
+                  "meaning": "quiet",
+                  "detail": "The rule found nowhere to run: the runtime has not read this board yet",
+                  "loop": null,
+                  "door": null,
+                  "hint": "open to see"
                 },
-                "start": {
-                  "offered": false,
-                  "label": "Start",
-                  "why": "The rule found nowhere to run: the runtime has not read this board yet"
-                },
-                "plan": null,
+                "claims": [],
                 "folded": [],
-                "points": 1,
                 "is_new": false,
                 "age_date": "2026-09-02",
                 "place": {
@@ -517,7 +521,6 @@
                   "position": 0
                 },
                 "lane_state": "none",
-                "lane_sentence": null,
                 "colliding": null,
                 "standing": {
                   "actor": "import",
@@ -545,20 +548,16 @@
                 "document_state": "plan",
                 "document_path": "docs/plans/2026-08-26-a-screen-nobody-opens-is-removed.md",
                 "kind": null,
-                "readiness": {
-                  "state": "unread",
-                  "why": "The rule found nowhere to run: the runtime has not read this board yet",
-                  "cards": [],
-                  "files": []
+                "state": {
+                  "word": "not read yet",
+                  "meaning": "quiet",
+                  "detail": "The rule found nowhere to run: the runtime has not read this board yet",
+                  "loop": null,
+                  "door": null,
+                  "hint": "open to see"
                 },
-                "start": {
-                  "offered": false,
-                  "label": "Start",
-                  "why": "The rule found nowhere to run: the runtime has not read this board yet"
-                },
-                "plan": null,
+                "claims": [],
                 "folded": [],
-                "points": 2,
                 "is_new": false,
                 "age_date": "2026-08-26",
                 "place": {
@@ -567,7 +566,6 @@
                   "position": 0
                 },
                 "lane_state": "none",
-                "lane_sentence": null,
                 "colliding": null,
                 "standing": {
                   "actor": "import",
@@ -593,20 +591,16 @@
                 "document_state": "plan",
                 "document_path": "docs/plans/2026-09-04-the-tide-table-is-the-harbours-own.md",
                 "kind": null,
-                "readiness": {
-                  "state": "unread",
-                  "why": "The rule found nowhere to run: the runtime has not read this board yet",
-                  "cards": [],
-                  "files": []
+                "state": {
+                  "word": "not read yet",
+                  "meaning": "quiet",
+                  "detail": "The rule found nowhere to run: the runtime has not read this board yet",
+                  "loop": null,
+                  "door": null,
+                  "hint": "open to see"
                 },
-                "start": {
-                  "offered": false,
-                  "label": "Start",
-                  "why": "The rule found nowhere to run: the runtime has not read this board yet"
-                },
-                "plan": null,
+                "claims": [],
                 "folded": [],
-                "points": 0,
                 "is_new": false,
                 "age_date": "2026-09-04",
                 "place": {
@@ -615,7 +609,6 @@
                   "position": 0
                 },
                 "lane_state": "none",
-                "lane_sentence": null,
                 "colliding": null,
                 "standing": {
                   "actor": "corpus",
@@ -635,20 +628,16 @@
                 "document_state": "plan",
                 "document_path": "docs/plans/2026-09-04-a-storm-warning-reaches-every-skipper.md",
                 "kind": null,
-                "readiness": {
-                  "state": "unread",
-                  "why": "The rule found nowhere to run: the runtime has not read this board yet",
-                  "cards": [],
-                  "files": []
+                "state": {
+                  "word": "not read yet",
+                  "meaning": "quiet",
+                  "detail": "The rule found nowhere to run: the runtime has not read this board yet",
+                  "loop": null,
+                  "door": null,
+                  "hint": "open to see"
                 },
-                "start": {
-                  "offered": false,
-                  "label": "Start",
-                  "why": "The rule found nowhere to run: the runtime has not read this board yet"
-                },
-                "plan": null,
+                "claims": [],
                 "folded": [],
-                "points": 0,
                 "is_new": true,
                 "age_date": "2026-09-04",
                 "place": {
@@ -657,7 +646,6 @@
                   "position": 1
                 },
                 "lane_state": "none",
-                "lane_sentence": null,
                 "colliding": null,
                 "standing": {
                   "actor": "corpus",
@@ -700,20 +688,16 @@
                 "document_state": "plan",
                 "document_path": "docs/plans/2026-09-03-every-metered-kilowatt-is-billed.md",
                 "kind": null,
-                "readiness": {
-                  "state": "unread",
-                  "why": "The rule found nowhere to run: the runtime has not read this board yet",
-                  "cards": [],
-                  "files": []
+                "state": {
+                  "word": "not read yet",
+                  "meaning": "quiet",
+                  "detail": "The rule found nowhere to run: the runtime has not read this board yet",
+                  "loop": null,
+                  "door": null,
+                  "hint": "open to see"
                 },
-                "start": {
-                  "offered": false,
-                  "label": "Start",
-                  "why": "The rule found nowhere to run: the runtime has not read this board yet"
-                },
-                "plan": null,
+                "claims": [],
                 "folded": [],
-                "points": 3,
                 "is_new": false,
                 "age_date": "2026-09-03",
                 "place": {
@@ -722,7 +706,6 @@
                   "position": 0
                 },
                 "lane_state": "none",
-                "lane_sentence": null,
                 "colliding": null,
                 "standing": {
                   "actor": "import",
@@ -742,20 +725,16 @@
                 "document_state": "plan",
                 "document_path": "docs/plans/2026-09-02-a-gate-code-arrives-before-the-boat-does.md",
                 "kind": null,
-                "readiness": {
-                  "state": "unread",
-                  "why": "The rule found nowhere to run: the runtime has not read this board yet",
-                  "cards": [],
-                  "files": []
+                "state": {
+                  "word": "not read yet",
+                  "meaning": "quiet",
+                  "detail": "The rule found nowhere to run: the runtime has not read this board yet",
+                  "loop": null,
+                  "door": null,
+                  "hint": "open to see"
                 },
-                "start": {
-                  "offered": false,
-                  "label": "Start",
-                  "why": "The rule found nowhere to run: the runtime has not read this board yet"
-                },
-                "plan": null,
+                "claims": [],
                 "folded": [],
-                "points": 4,
                 "is_new": false,
                 "age_date": "2026-09-02",
                 "place": {
@@ -764,7 +743,6 @@
                   "position": 1
                 },
                 "lane_state": "none",
-                "lane_sentence": null,
                 "colliding": null,
                 "standing": {
                   "actor": "import",
@@ -784,20 +762,16 @@
                 "document_state": "note",
                 "document_path": null,
                 "kind": null,
-                "readiness": {
-                  "state": "unread",
-                  "why": "The rule found nowhere to run: the runtime has not read this board yet",
-                  "cards": [],
-                  "files": []
+                "state": {
+                  "word": "not read yet",
+                  "meaning": "quiet",
+                  "detail": "The rule found nowhere to run: the runtime has not read this board yet",
+                  "loop": null,
+                  "door": null,
+                  "hint": "open to see"
                 },
-                "start": {
-                  "offered": false,
-                  "label": "Start",
-                  "why": "The rule found nowhere to run: the runtime has not read this board yet"
-                },
-                "plan": null,
+                "claims": [],
                 "folded": [],
-                "points": 3,
                 "is_new": false,
                 "age_date": "2026-09-04",
                 "place": {
@@ -806,7 +780,6 @@
                   "position": 2
                 },
                 "lane_state": "none",
-                "lane_sentence": null,
                 "colliding": null,
                 "standing": {
                   "actor": "import",
@@ -826,20 +799,16 @@
                 "document_state": "plan",
                 "document_path": "docs/plans/2026-08-28-a-berth-is-never-let-twice.md",
                 "kind": null,
-                "readiness": {
-                  "state": "unread",
-                  "why": "The rule found nowhere to run: the runtime has not read this board yet",
-                  "cards": [],
-                  "files": []
+                "state": {
+                  "word": "not read yet",
+                  "meaning": "quiet",
+                  "detail": "The rule found nowhere to run: the runtime has not read this board yet",
+                  "loop": null,
+                  "door": null,
+                  "hint": "open to see"
                 },
-                "start": {
-                  "offered": false,
-                  "label": "Start",
-                  "why": "The rule found nowhere to run: the runtime has not read this board yet"
-                },
-                "plan": null,
+                "claims": [],
                 "folded": [],
-                "points": 3,
                 "is_new": false,
                 "age_date": "2026-08-28",
                 "place": {
@@ -848,7 +817,6 @@
                   "position": 3
                 },
                 "lane_state": "none",
-                "lane_sentence": null,
                 "colliding": null,
                 "standing": {
                   "actor": "import",
@@ -870,20 +838,16 @@
                 "document_state": "plan",
                 "document_path": "docs/plans/2026-08-30-the-booking-office-stops-growing-into-one-file.md",
                 "kind": null,
-                "readiness": {
-                  "state": "unread",
-                  "why": "The rule found nowhere to run: the runtime has not read this board yet",
-                  "cards": [],
-                  "files": []
+                "state": {
+                  "word": "not read yet",
+                  "meaning": "quiet",
+                  "detail": "The rule found nowhere to run: the runtime has not read this board yet",
+                  "loop": null,
+                  "door": null,
+                  "hint": "open to see"
                 },
-                "start": {
-                  "offered": false,
-                  "label": "Start",
-                  "why": "The rule found nowhere to run: the runtime has not read this board yet"
-                },
-                "plan": null,
+                "claims": [],
                 "folded": [],
-                "points": 2,
                 "is_new": false,
                 "age_date": "2026-08-30",
                 "place": {
@@ -892,7 +856,6 @@
                   "position": 4
                 },
                 "lane_state": "none",
-                "lane_sentence": null,
                 "colliding": null,
                 "standing": {
                   "actor": "import",
@@ -935,11 +898,16 @@
                 "document_state": "archived",
                 "document_path": "docs/plans/done/2026-08-25-the-fuel-pontoon-takes-cards.md",
                 "kind": null,
-                "readiness": null,
-                "start": null,
-                "plan": null,
+                "state": {
+                  "word": "no hands on it",
+                  "meaning": "quiet",
+                  "detail": null,
+                  "loop": null,
+                  "door": null,
+                  "hint": "open to see"
+                },
+                "claims": [],
                 "folded": [],
-                "points": 4,
                 "is_new": false,
                 "age_date": "2026-08-25",
                 "place": {
@@ -948,7 +916,6 @@
                   "position": 0
                 },
                 "lane_state": "none",
-                "lane_sentence": null,
                 "colliding": null,
                 "standing": {
                   "actor": "import",
@@ -968,15 +935,16 @@
                 "document_state": "suggestion",
                 "document_path": "docs/slice-suggestions/2026-08-20-the-gate-code-goes-out-in-plain-text.md",
                 "kind": "idea",
-                "readiness": null,
-                "start": null,
-                "plan": {
-                  "offered": false,
-                  "label": "Plan",
-                  "why": "The rule found nowhere to run: the runtime has not read this board yet"
+                "state": {
+                  "word": "no plan yet",
+                  "meaning": "quiet",
+                  "detail": null,
+                  "loop": null,
+                  "door": null,
+                  "hint": "open to see"
                 },
+                "claims": [],
                 "folded": [],
-                "points": 3,
                 "is_new": false,
                 "age_date": "2026-08-20",
                 "place": {
@@ -985,7 +953,6 @@
                   "position": 1
                 },
                 "lane_state": "none",
-                "lane_sentence": null,
                 "colliding": null,
                 "standing": {
                   "actor": "import",
@@ -1030,11 +997,23 @@
                 "document_state": "plan",
                 "document_path": "docs/plans/2026-09-02-the-pricing-rule-judged-against-a-real-season.md",
                 "kind": null,
-                "readiness": null,
-                "start": null,
-                "plan": null,
+                "state": {
+                  "word": "your move",
+                  "meaning": "yours",
+                  "detail": null,
+                  "loop": null,
+                  "door": {
+                    "name": "open",
+                    "label": "Decide",
+                    "why": "This column is yours: the open card has every door and the record to rule on.",
+                    "primary": true
+                  },
+                  "hint": null
+                },
+                "claims": [
+                  "decision"
+                ],
                 "folded": [],
-                "points": 5,
                 "is_new": false,
                 "age_date": "2026-09-02",
                 "place": {
@@ -1043,7 +1022,6 @@
                   "position": 0
                 },
                 "lane_state": "none",
-                "lane_sentence": null,
                 "colliding": null,
                 "standing": {
                   "actor": "import",
@@ -1066,11 +1044,23 @@
                 "document_state": "note",
                 "document_path": null,
                 "kind": null,
-                "readiness": null,
-                "start": null,
-                "plan": null,
+                "state": {
+                  "word": "your move",
+                  "meaning": "yours",
+                  "detail": null,
+                  "loop": null,
+                  "door": {
+                    "name": "open",
+                    "label": "Decide",
+                    "why": "This column is yours: the open card has every door and the record to rule on.",
+                    "primary": true
+                  },
+                  "hint": null
+                },
+                "claims": [
+                  "decision"
+                ],
                 "folded": [],
-                "points": 3,
                 "is_new": false,
                 "age_date": "2026-09-04",
                 "place": {
@@ -1079,7 +1069,6 @@
                   "position": 1
                 },
                 "lane_state": "none",
-                "lane_sentence": null,
                 "colliding": null,
                 "standing": {
                   "actor": "import",
@@ -1107,11 +1096,23 @@
                 "document_state": "plan",
                 "document_path": "docs/plans/2026-08-18-berth-first-booking.md",
                 "kind": null,
-                "readiness": null,
-                "start": null,
-                "plan": null,
+                "state": {
+                  "word": "your move",
+                  "meaning": "yours",
+                  "detail": null,
+                  "loop": null,
+                  "door": {
+                    "name": "open",
+                    "label": "Decide",
+                    "why": "This column is yours: the open card has every door and the record to rule on.",
+                    "primary": true
+                  },
+                  "hint": null
+                },
+                "claims": [
+                  "decision"
+                ],
                 "folded": [],
-                "points": 3,
                 "is_new": false,
                 "age_date": "2026-08-18",
                 "place": {
@@ -1120,7 +1121,6 @@
                   "position": 0
                 },
                 "lane_state": "none",
-                "lane_sentence": null,
                 "colliding": null,
                 "standing": {
                   "actor": "import",
@@ -1148,11 +1148,23 @@
                 "document_state": "note",
                 "document_path": null,
                 "kind": null,
-                "readiness": null,
-                "start": null,
-                "plan": null,
+                "state": {
+                  "word": "your move",
+                  "meaning": "yours",
+                  "detail": null,
+                  "loop": null,
+                  "door": {
+                    "name": "open",
+                    "label": "Decide",
+                    "why": "This column is yours: the open card has every door and the record to rule on.",
+                    "primary": true
+                  },
+                  "hint": null
+                },
+                "claims": [
+                  "decision"
+                ],
                 "folded": [],
-                "points": 3,
                 "is_new": false,
                 "age_date": "2026-09-04",
                 "place": {
@@ -1161,7 +1173,6 @@
                   "position": 0
                 },
                 "lane_state": "none",
-                "lane_sentence": null,
                 "colliding": null,
                 "standing": {
                   "actor": "import",
@@ -1206,11 +1217,16 @@
                 "document_state": "archived",
                 "document_path": "docs/plans/done/2026-08-30-the-office-runs-its-own-checks.md",
                 "kind": null,
-                "readiness": null,
-                "start": null,
-                "plan": null,
+                "state": {
+                  "word": "no signal named",
+                  "meaning": "quiet",
+                  "detail": "the WATCH row names no reader (url, file, command, session or owner). The grammar: WATCH: <what> — url|file|command|session|owner <target> [expect <value>] by <YYYY-MM-DD> [every <N>h|<N>d]",
+                  "loop": null,
+                  "door": null,
+                  "hint": "open to see"
+                },
+                "claims": [],
                 "folded": [],
-                "points": 2,
                 "is_new": false,
                 "age_date": "2026-08-30",
                 "place": {
@@ -1219,7 +1235,6 @@
                   "position": 0
                 },
                 "lane_state": "none",
-                "lane_sentence": null,
                 "colliding": null,
                 "standing": {
                   "actor": "import",
@@ -1284,11 +1299,18 @@
                 "document_state": "gone",
                 "document_path": "docs/plans/done/2026-09-01-a-confirmed-booking-waits-for-the-tide.md",
                 "kind": null,
-                "readiness": null,
-                "start": null,
-                "plan": null,
+                "state": {
+                  "word": "document nowhere",
+                  "meaning": "broken",
+                  "detail": "cites docs/plans/done/2026-09-01-a-confirmed-booking-waits-for-the-tide.md, and no such file exists in the project",
+                  "loop": null,
+                  "door": null,
+                  "hint": "open to see"
+                },
+                "claims": [
+                  "document gone"
+                ],
                 "folded": [],
-                "points": 1,
                 "is_new": false,
                 "age_date": "2026-09-04",
                 "place": {
@@ -1297,7 +1319,6 @@
                   "position": 0
                 },
                 "lane_state": "none",
-                "lane_sentence": null,
                 "colliding": null,
                 "standing": {
                   "actor": "import",
@@ -1371,15 +1392,16 @@
         "document_state": "suggestion",
         "document_path": "docs/slice-suggestions/2026-09-01-the-night-audit-re-reads-the-whole-harbour-log.md",
         "kind": "defect",
-        "readiness": null,
-        "start": null,
-        "plan": {
-          "offered": false,
-          "label": "Plan",
-          "why": "The rule found nowhere to run: the runtime has not read this board yet"
+        "state": {
+          "word": "no plan yet",
+          "meaning": "quiet",
+          "detail": null,
+          "loop": null,
+          "door": null,
+          "hint": "open to see"
         },
+        "claims": [],
         "folded": [],
-        "points": 2,
         "is_new": false,
         "age_date": "2026-09-01",
         "place": {
@@ -1388,7 +1410,6 @@
           "position": 0
         },
         "lane_state": "none",
-        "lane_sentence": null,
         "colliding": null,
         "standing": {
           "actor": "corpus",
@@ -1543,7 +1564,7 @@
         },
         "plan": {
           "offered": false,
-          "label": "Plan",
+          "label": "Create plan",
           "why": "The rule found nowhere to run: the runtime has not read this board yet"
         },
         "look": {
@@ -1625,15 +1646,16 @@
         "document_state": "suggestion",
         "document_path": "docs/slice-suggestions/2026-09-03-the-quay-display-polls-the-office-all-night.md",
         "kind": "idea",
-        "readiness": null,
-        "start": null,
-        "plan": {
-          "offered": false,
-          "label": "Plan",
-          "why": "The rule found nowhere to run: the runtime has not read this board yet"
+        "state": {
+          "word": "no plan yet",
+          "meaning": "quiet",
+          "detail": null,
+          "loop": null,
+          "door": null,
+          "hint": "open to see"
         },
+        "claims": [],
         "folded": [],
-        "points": 2,
         "is_new": false,
         "age_date": "2026-09-03",
         "place": {
@@ -1642,7 +1664,6 @@
           "position": 0
         },
         "lane_state": "none",
-        "lane_sentence": null,
         "colliding": null,
         "standing": {
           "actor": "import",
@@ -1778,7 +1799,7 @@
         },
         "plan": {
           "offered": false,
-          "label": "Plan",
+          "label": "Create plan",
           "why": "The rule found nowhere to run: the runtime has not read this board yet"
         },
         "look": {
@@ -1860,15 +1881,16 @@
         "document_state": "suggestion",
         "document_path": "docs/slice-suggestions/2026-09-02-the-welcome-board-shows-one-boats-whole-stay.md",
         "kind": "idea",
-        "readiness": null,
-        "start": null,
-        "plan": {
-          "offered": false,
-          "label": "Plan",
-          "why": "The rule found nowhere to run: the runtime has not read this board yet"
+        "state": {
+          "word": "no plan yet",
+          "meaning": "quiet",
+          "detail": null,
+          "loop": null,
+          "door": null,
+          "hint": "open to see"
         },
+        "claims": [],
         "folded": [],
-        "points": 2,
         "is_new": false,
         "age_date": "2026-09-02",
         "place": {
@@ -1877,7 +1899,6 @@
           "position": 1
         },
         "lane_state": "none",
-        "lane_sentence": null,
         "colliding": null,
         "standing": {
           "actor": "import",
@@ -2013,7 +2034,7 @@
         },
         "plan": {
           "offered": false,
-          "label": "Plan",
+          "label": "Create plan",
           "why": "The rule found nowhere to run: the runtime has not read this board yet"
         },
         "look": {
@@ -2087,11 +2108,18 @@
         "document_state": "gone",
         "document_path": "docs/slice-suggestions/2026-07-12-berth-list-keys.md · 2026-08-19-office-screen-refresh.md",
         "kind": null,
-        "readiness": null,
-        "start": null,
-        "plan": null,
+        "state": {
+          "word": "document nowhere",
+          "meaning": "broken",
+          "detail": "cites docs/slice-suggestions/2026-07-12-berth-list-keys.md · 2026-08-19-office-screen-refresh.md, and no such file exists in the project",
+          "loop": null,
+          "door": null,
+          "hint": "open to see"
+        },
+        "claims": [
+          "document gone"
+        ],
         "folded": [],
-        "points": 0,
         "is_new": false,
         "age_date": "2026-09-04",
         "place": {
@@ -2100,7 +2128,6 @@
           "position": 2
         },
         "lane_state": "none",
-        "lane_sentence": null,
         "colliding": null,
         "standing": {
           "actor": "import",
@@ -2201,7 +2228,7 @@
         },
         "plan": {
           "offered": false,
-          "label": "Plan",
+          "label": "Create plan",
           "why": "The rule found nowhere to run: the runtime has not read this board yet"
         },
         "look": {
@@ -2272,11 +2299,16 @@
         "document_state": "note",
         "document_path": null,
         "kind": null,
-        "readiness": null,
-        "start": null,
-        "plan": null,
+        "state": {
+          "word": "no document",
+          "meaning": "quiet",
+          "detail": null,
+          "loop": null,
+          "door": null,
+          "hint": "open to see"
+        },
+        "claims": [],
         "folded": [],
-        "points": 0,
         "is_new": false,
         "age_date": "2026-09-04",
         "place": {
@@ -2285,7 +2317,6 @@
           "position": 0
         },
         "lane_state": "none",
-        "lane_sentence": null,
         "colliding": null,
         "standing": {
           "actor": "import",
@@ -2375,7 +2406,7 @@
         },
         "plan": {
           "offered": false,
-          "label": "Plan",
+          "label": "Create plan",
           "why": "Plan writes the plan for a suggestion; this card is not behind a live suggestion."
         },
         "look": {
@@ -2444,15 +2475,16 @@
         "document_state": "suggestion",
         "document_path": "docs/slice-suggestions/2026-08-29-two-meters-on-one-pontoon-disagree.md",
         "kind": "idea",
-        "readiness": null,
-        "start": null,
-        "plan": {
-          "offered": false,
-          "label": "Plan",
-          "why": "The rule found nowhere to run: the runtime has not read this board yet"
+        "state": {
+          "word": "no plan yet",
+          "meaning": "quiet",
+          "detail": null,
+          "loop": null,
+          "door": null,
+          "hint": "open to see"
         },
+        "claims": [],
         "folded": [],
-        "points": 0,
         "is_new": false,
         "age_date": "2026-08-29",
         "place": {
@@ -2461,7 +2493,6 @@
           "position": 0
         },
         "lane_state": "none",
-        "lane_sentence": null,
         "colliding": null,
         "standing": {
           "actor": "corpus",
@@ -2577,7 +2608,7 @@
         },
         "plan": {
           "offered": false,
-          "label": "Plan",
+          "label": "Create plan",
           "why": "The rule found nowhere to run: the runtime has not read this board yet"
         },
         "look": {
@@ -2646,15 +2677,16 @@
         "document_state": "suggestion",
         "document_path": "docs/slice-suggestions/2026-08-31-the-same-slip-is-mailed-twice.md",
         "kind": "idea",
-        "readiness": null,
-        "start": null,
-        "plan": {
-          "offered": false,
-          "label": "Plan",
-          "why": "The rule found nowhere to run: the runtime has not read this board yet"
+        "state": {
+          "word": "no plan yet",
+          "meaning": "quiet",
+          "detail": null,
+          "loop": null,
+          "door": null,
+          "hint": "open to see"
         },
+        "claims": [],
         "folded": [],
-        "points": 0,
         "is_new": false,
         "age_date": "2026-08-31",
         "place": {
@@ -2663,7 +2695,6 @@
           "position": 1
         },
         "lane_state": "none",
-        "lane_sentence": null,
         "colliding": null,
         "standing": {
           "actor": "corpus",
@@ -2779,7 +2810,7 @@
         },
         "plan": {
           "offered": false,
-          "label": "Plan",
+          "label": "Create plan",
           "why": "The rule found nowhere to run: the runtime has not read this board yet"
         },
         "look": {
@@ -2848,15 +2879,16 @@
         "document_state": "suggestion",
         "document_path": "docs/slice-suggestions/2026-09-01-the-waiting-list-forgets-who-asked-first.md",
         "kind": "idea",
-        "readiness": null,
-        "start": null,
-        "plan": {
-          "offered": false,
-          "label": "Plan",
-          "why": "The rule found nowhere to run: the runtime has not read this board yet"
+        "state": {
+          "word": "no plan yet",
+          "meaning": "quiet",
+          "detail": null,
+          "loop": null,
+          "door": null,
+          "hint": "open to see"
         },
+        "claims": [],
         "folded": [],
-        "points": 0,
         "is_new": false,
         "age_date": "2026-09-01",
         "place": {
@@ -2865,7 +2897,6 @@
           "position": 2
         },
         "lane_state": "none",
-        "lane_sentence": null,
         "colliding": null,
         "standing": {
           "actor": "corpus",
@@ -2981,7 +3012,7 @@
         },
         "plan": {
           "offered": false,
-          "label": "Plan",
+          "label": "Create plan",
           "why": "The rule found nowhere to run: the runtime has not read this board yet"
         },
         "look": {
@@ -3050,15 +3081,16 @@
         "document_state": "suggestion",
         "document_path": "docs/slice-suggestions/2026-09-04-a-boat-longer-than-its-berth-is-accepted.md",
         "kind": "idea",
-        "readiness": null,
-        "start": null,
-        "plan": {
-          "offered": false,
-          "label": "Plan",
-          "why": "The rule found nowhere to run: the runtime has not read this board yet"
+        "state": {
+          "word": "no plan yet",
+          "meaning": "quiet",
+          "detail": null,
+          "loop": null,
+          "door": null,
+          "hint": "open to see"
         },
+        "claims": [],
         "folded": [],
-        "points": 0,
         "is_new": false,
         "age_date": "2026-09-04",
         "place": {
@@ -3067,7 +3099,6 @@
           "position": 3
         },
         "lane_state": "none",
-        "lane_sentence": null,
         "colliding": null,
         "standing": {
           "actor": "corpus",
@@ -3183,7 +3214,7 @@
         },
         "plan": {
           "offered": false,
-          "label": "Plan",
+          "label": "Create plan",
           "why": "The rule found nowhere to run: the runtime has not read this board yet"
         },
         "look": {
@@ -3269,20 +3300,16 @@
         "document_state": "plan",
         "document_path": "docs/plans/2026-09-01-the-waiting-list-offers-every-berth-that-fits.md",
         "kind": null,
-        "readiness": {
-          "state": "unread",
-          "why": "The rule found nowhere to run: the runtime has not read this board yet",
-          "cards": [],
-          "files": []
+        "state": {
+          "word": "not read yet",
+          "meaning": "quiet",
+          "detail": "The rule found nowhere to run: the runtime has not read this board yet",
+          "loop": null,
+          "door": null,
+          "hint": "open to see"
         },
-        "start": {
-          "offered": false,
-          "label": "Start",
-          "why": "The rule found nowhere to run: the runtime has not read this board yet"
-        },
-        "plan": null,
+        "claims": [],
         "folded": [],
-        "points": 2,
         "is_new": false,
         "age_date": "2026-09-01",
         "place": {
@@ -3291,7 +3318,6 @@
           "position": 0
         },
         "lane_state": "none",
-        "lane_sentence": null,
         "colliding": null,
         "standing": {
           "actor": "import",
@@ -3439,7 +3465,7 @@
         },
         "plan": {
           "offered": false,
-          "label": "Plan",
+          "label": "Create plan",
           "why": "Plan writes the plan for a suggestion; this card is not behind a live suggestion."
         },
         "look": {
@@ -3521,20 +3547,16 @@
         "document_state": "plan",
         "document_path": "docs/plans/2026-09-02-the-skipper-sees-the-price-before-the-berth.md",
         "kind": null,
-        "readiness": {
-          "state": "unread",
-          "why": "The rule found nowhere to run: the runtime has not read this board yet",
-          "cards": [],
-          "files": []
+        "state": {
+          "word": "not read yet",
+          "meaning": "quiet",
+          "detail": "The rule found nowhere to run: the runtime has not read this board yet",
+          "loop": null,
+          "door": null,
+          "hint": "open to see"
         },
-        "start": {
-          "offered": false,
-          "label": "Start",
-          "why": "The rule found nowhere to run: the runtime has not read this board yet"
-        },
-        "plan": null,
+        "claims": [],
         "folded": [],
-        "points": 1,
         "is_new": false,
         "age_date": "2026-09-02",
         "place": {
@@ -3543,7 +3565,6 @@
           "position": 0
         },
         "lane_state": "none",
-        "lane_sentence": null,
         "colliding": null,
         "standing": {
           "actor": "import",
@@ -3687,7 +3708,7 @@
         },
         "plan": {
           "offered": false,
-          "label": "Plan",
+          "label": "Create plan",
           "why": "Plan writes the plan for a suggestion; this card is not behind a live suggestion."
         },
         "look": {
@@ -3773,20 +3794,16 @@
         "document_state": "plan",
         "document_path": "docs/plans/2026-08-26-a-screen-nobody-opens-is-removed.md",
         "kind": null,
-        "readiness": {
-          "state": "unread",
-          "why": "The rule found nowhere to run: the runtime has not read this board yet",
-          "cards": [],
-          "files": []
+        "state": {
+          "word": "not read yet",
+          "meaning": "quiet",
+          "detail": "The rule found nowhere to run: the runtime has not read this board yet",
+          "loop": null,
+          "door": null,
+          "hint": "open to see"
         },
-        "start": {
-          "offered": false,
-          "label": "Start",
-          "why": "The rule found nowhere to run: the runtime has not read this board yet"
-        },
-        "plan": null,
+        "claims": [],
         "folded": [],
-        "points": 2,
         "is_new": false,
         "age_date": "2026-08-26",
         "place": {
@@ -3795,7 +3812,6 @@
           "position": 0
         },
         "lane_state": "none",
-        "lane_sentence": null,
         "colliding": null,
         "standing": {
           "actor": "import",
@@ -3943,7 +3959,7 @@
         },
         "plan": {
           "offered": false,
-          "label": "Plan",
+          "label": "Create plan",
           "why": "Plan writes the plan for a suggestion; this card is not behind a live suggestion."
         },
         "look": {
@@ -4012,20 +4028,16 @@
         "document_state": "plan",
         "document_path": "docs/plans/2026-09-04-the-tide-table-is-the-harbours-own.md",
         "kind": null,
-        "readiness": {
-          "state": "unread",
-          "why": "The rule found nowhere to run: the runtime has not read this board yet",
-          "cards": [],
-          "files": []
+        "state": {
+          "word": "not read yet",
+          "meaning": "quiet",
+          "detail": "The rule found nowhere to run: the runtime has not read this board yet",
+          "loop": null,
+          "door": null,
+          "hint": "open to see"
         },
-        "start": {
-          "offered": false,
-          "label": "Start",
-          "why": "The rule found nowhere to run: the runtime has not read this board yet"
-        },
-        "plan": null,
+        "claims": [],
         "folded": [],
-        "points": 0,
         "is_new": false,
         "age_date": "2026-09-04",
         "place": {
@@ -4034,7 +4046,6 @@
           "position": 0
         },
         "lane_state": "none",
-        "lane_sentence": null,
         "colliding": null,
         "standing": {
           "actor": "corpus",
@@ -4162,7 +4173,7 @@
         },
         "plan": {
           "offered": false,
-          "label": "Plan",
+          "label": "Create plan",
           "why": "Plan writes the plan for a suggestion; this card is not behind a live suggestion."
         },
         "look": {
@@ -4231,20 +4242,16 @@
         "document_state": "plan",
         "document_path": "docs/plans/2026-09-04-a-storm-warning-reaches-every-skipper.md",
         "kind": null,
-        "readiness": {
-          "state": "unread",
-          "why": "The rule found nowhere to run: the runtime has not read this board yet",
-          "cards": [],
-          "files": []
+        "state": {
+          "word": "not read yet",
+          "meaning": "quiet",
+          "detail": "The rule found nowhere to run: the runtime has not read this board yet",
+          "loop": null,
+          "door": null,
+          "hint": "open to see"
         },
-        "start": {
-          "offered": false,
-          "label": "Start",
-          "why": "The rule found nowhere to run: the runtime has not read this board yet"
-        },
-        "plan": null,
+        "claims": [],
         "folded": [],
-        "points": 0,
         "is_new": true,
         "age_date": "2026-09-04",
         "place": {
@@ -4253,7 +4260,6 @@
           "position": 1
         },
         "lane_state": "none",
-        "lane_sentence": null,
         "colliding": null,
         "standing": {
           "actor": "corpus",
@@ -4381,7 +4387,7 @@
         },
         "plan": {
           "offered": false,
-          "label": "Plan",
+          "label": "Create plan",
           "why": "Plan writes the plan for a suggestion; this card is not behind a live suggestion."
         },
         "look": {
@@ -4467,20 +4473,16 @@
         "document_state": "plan",
         "document_path": "docs/plans/2026-09-03-every-metered-kilowatt-is-billed.md",
         "kind": null,
-        "readiness": {
-          "state": "unread",
-          "why": "The rule found nowhere to run: the runtime has not read this board yet",
-          "cards": [],
-          "files": []
+        "state": {
+          "word": "not read yet",
+          "meaning": "quiet",
+          "detail": "The rule found nowhere to run: the runtime has not read this board yet",
+          "loop": null,
+          "door": null,
+          "hint": "open to see"
         },
-        "start": {
-          "offered": false,
-          "label": "Start",
-          "why": "The rule found nowhere to run: the runtime has not read this board yet"
-        },
-        "plan": null,
+        "claims": [],
         "folded": [],
-        "points": 3,
         "is_new": false,
         "age_date": "2026-09-03",
         "place": {
@@ -4489,7 +4491,6 @@
           "position": 0
         },
         "lane_state": "none",
-        "lane_sentence": null,
         "colliding": null,
         "standing": {
           "actor": "import",
@@ -4645,7 +4646,7 @@
         },
         "plan": {
           "offered": false,
-          "label": "Plan",
+          "label": "Create plan",
           "why": "Plan writes the plan for a suggestion; this card is not behind a live suggestion."
         },
         "look": {
@@ -4735,20 +4736,16 @@
         "document_state": "plan",
         "document_path": "docs/plans/2026-09-02-a-gate-code-arrives-before-the-boat-does.md",
         "kind": null,
-        "readiness": {
-          "state": "unread",
-          "why": "The rule found nowhere to run: the runtime has not read this board yet",
-          "cards": [],
-          "files": []
+        "state": {
+          "word": "not read yet",
+          "meaning": "quiet",
+          "detail": "The rule found nowhere to run: the runtime has not read this board yet",
+          "loop": null,
+          "door": null,
+          "hint": "open to see"
         },
-        "start": {
-          "offered": false,
-          "label": "Start",
-          "why": "The rule found nowhere to run: the runtime has not read this board yet"
-        },
-        "plan": null,
+        "claims": [],
         "folded": [],
-        "points": 4,
         "is_new": false,
         "age_date": "2026-09-02",
         "place": {
@@ -4757,7 +4754,6 @@
           "position": 1
         },
         "lane_state": "none",
-        "lane_sentence": null,
         "colliding": null,
         "standing": {
           "actor": "import",
@@ -4917,7 +4913,7 @@
         },
         "plan": {
           "offered": false,
-          "label": "Plan",
+          "label": "Create plan",
           "why": "Plan writes the plan for a suggestion; this card is not behind a live suggestion."
         },
         "look": {
@@ -4996,20 +4992,16 @@
         "document_state": "note",
         "document_path": null,
         "kind": null,
-        "readiness": {
-          "state": "unread",
-          "why": "The rule found nowhere to run: the runtime has not read this board yet",
-          "cards": [],
-          "files": []
+        "state": {
+          "word": "not read yet",
+          "meaning": "quiet",
+          "detail": "The rule found nowhere to run: the runtime has not read this board yet",
+          "loop": null,
+          "door": null,
+          "hint": "open to see"
         },
-        "start": {
-          "offered": false,
-          "label": "Start",
-          "why": "The rule found nowhere to run: the runtime has not read this board yet"
-        },
-        "plan": null,
+        "claims": [],
         "folded": [],
-        "points": 3,
         "is_new": false,
         "age_date": "2026-09-04",
         "place": {
@@ -5018,7 +5010,6 @@
           "position": 2
         },
         "lane_state": "none",
-        "lane_sentence": null,
         "colliding": null,
         "standing": {
           "actor": "import",
@@ -5121,7 +5112,7 @@
         },
         "plan": {
           "offered": false,
-          "label": "Plan",
+          "label": "Create plan",
           "why": "Plan writes the plan for a suggestion; this card is not behind a live suggestion."
         },
         "look": {
@@ -5207,20 +5198,16 @@
         "document_state": "plan",
         "document_path": "docs/plans/2026-08-28-a-berth-is-never-let-twice.md",
         "kind": null,
-        "readiness": {
-          "state": "unread",
-          "why": "The rule found nowhere to run: the runtime has not read this board yet",
-          "cards": [],
-          "files": []
+        "state": {
+          "word": "not read yet",
+          "meaning": "quiet",
+          "detail": "The rule found nowhere to run: the runtime has not read this board yet",
+          "loop": null,
+          "door": null,
+          "hint": "open to see"
         },
-        "start": {
-          "offered": false,
-          "label": "Start",
-          "why": "The rule found nowhere to run: the runtime has not read this board yet"
-        },
-        "plan": null,
+        "claims": [],
         "folded": [],
-        "points": 3,
         "is_new": false,
         "age_date": "2026-08-28",
         "place": {
@@ -5229,7 +5216,6 @@
           "position": 3
         },
         "lane_state": "none",
-        "lane_sentence": null,
         "colliding": null,
         "standing": {
           "actor": "import",
@@ -5381,7 +5367,7 @@
         },
         "plan": {
           "offered": false,
-          "label": "Plan",
+          "label": "Create plan",
           "why": "Plan writes the plan for a suggestion; this card is not behind a live suggestion."
         },
         "look": {
@@ -5467,20 +5453,16 @@
         "document_state": "plan",
         "document_path": "docs/plans/2026-08-30-the-booking-office-stops-growing-into-one-file.md",
         "kind": null,
-        "readiness": {
-          "state": "unread",
-          "why": "The rule found nowhere to run: the runtime has not read this board yet",
-          "cards": [],
-          "files": []
+        "state": {
+          "word": "not read yet",
+          "meaning": "quiet",
+          "detail": "The rule found nowhere to run: the runtime has not read this board yet",
+          "loop": null,
+          "door": null,
+          "hint": "open to see"
         },
-        "start": {
-          "offered": false,
-          "label": "Start",
-          "why": "The rule found nowhere to run: the runtime has not read this board yet"
-        },
-        "plan": null,
+        "claims": [],
         "folded": [],
-        "points": 2,
         "is_new": false,
         "age_date": "2026-08-30",
         "place": {
@@ -5489,7 +5471,6 @@
           "position": 4
         },
         "lane_state": "none",
-        "lane_sentence": null,
         "colliding": null,
         "standing": {
           "actor": "import",
@@ -5637,7 +5618,7 @@
         },
         "plan": {
           "offered": false,
-          "label": "Plan",
+          "label": "Create plan",
           "why": "Plan writes the plan for a suggestion; this card is not behind a live suggestion."
         },
         "look": {
@@ -5727,11 +5708,16 @@
         "document_state": "archived",
         "document_path": "docs/plans/done/2026-08-25-the-fuel-pontoon-takes-cards.md",
         "kind": null,
-        "readiness": null,
-        "start": null,
-        "plan": null,
+        "state": {
+          "word": "no hands on it",
+          "meaning": "quiet",
+          "detail": null,
+          "loop": null,
+          "door": null,
+          "hint": "open to see"
+        },
+        "claims": [],
         "folded": [],
-        "points": 4,
         "is_new": false,
         "age_date": "2026-08-25",
         "place": {
@@ -5740,7 +5726,6 @@
           "position": 0
         },
         "lane_state": "none",
-        "lane_sentence": null,
         "colliding": null,
         "standing": {
           "actor": "import",
@@ -5897,7 +5882,7 @@
         },
         "plan": {
           "offered": false,
-          "label": "Plan",
+          "label": "Create plan",
           "why": "Plan writes the plan for a suggestion; this card is not behind a live suggestion."
         },
         "look": {
@@ -5983,15 +5968,16 @@
         "document_state": "suggestion",
         "document_path": "docs/slice-suggestions/2026-08-20-the-gate-code-goes-out-in-plain-text.md",
         "kind": "idea",
-        "readiness": null,
-        "start": null,
-        "plan": {
-          "offered": false,
-          "label": "Plan",
-          "why": "The rule found nowhere to run: the runtime has not read this board yet"
+        "state": {
+          "word": "no plan yet",
+          "meaning": "quiet",
+          "detail": null,
+          "loop": null,
+          "door": null,
+          "hint": "open to see"
         },
+        "claims": [],
         "folded": [],
-        "points": 3,
         "is_new": false,
         "age_date": "2026-08-20",
         "place": {
@@ -6000,7 +5986,6 @@
           "position": 1
         },
         "lane_state": "none",
-        "lane_sentence": null,
         "colliding": null,
         "standing": {
           "actor": "import",
@@ -6140,7 +6125,7 @@
         },
         "plan": {
           "offered": false,
-          "label": "Plan",
+          "label": "Create plan",
           "why": "The rule found nowhere to run: the runtime has not read this board yet"
         },
         "look": {
@@ -6238,11 +6223,23 @@
         "document_state": "plan",
         "document_path": "docs/plans/2026-09-02-the-pricing-rule-judged-against-a-real-season.md",
         "kind": null,
-        "readiness": null,
-        "start": null,
-        "plan": null,
+        "state": {
+          "word": "your move",
+          "meaning": "yours",
+          "detail": null,
+          "loop": null,
+          "door": {
+            "name": "open",
+            "label": "Decide",
+            "why": "This column is yours: the open card has every door and the record to rule on.",
+            "primary": true
+          },
+          "hint": null
+        },
+        "claims": [
+          "decision"
+        ],
         "folded": [],
-        "points": 5,
         "is_new": false,
         "age_date": "2026-09-02",
         "place": {
@@ -6251,7 +6248,6 @@
           "position": 0
         },
         "lane_state": "none",
-        "lane_sentence": null,
         "colliding": null,
         "standing": {
           "actor": "import",
@@ -6412,7 +6408,7 @@
         },
         "plan": {
           "offered": false,
-          "label": "Plan",
+          "label": "Create plan",
           "why": "Plan writes the plan for a suggestion; this card is not behind a live suggestion."
         },
         "look": {
@@ -6493,11 +6489,23 @@
         "document_state": "note",
         "document_path": null,
         "kind": null,
-        "readiness": null,
-        "start": null,
-        "plan": null,
+        "state": {
+          "word": "your move",
+          "meaning": "yours",
+          "detail": null,
+          "loop": null,
+          "door": {
+            "name": "open",
+            "label": "Decide",
+            "why": "This column is yours: the open card has every door and the record to rule on.",
+            "primary": true
+          },
+          "hint": null
+        },
+        "claims": [
+          "decision"
+        ],
         "folded": [],
-        "points": 3,
         "is_new": false,
         "age_date": "2026-09-04",
         "place": {
@@ -6506,7 +6514,6 @@
           "position": 1
         },
         "lane_state": "none",
-        "lane_sentence": null,
         "colliding": null,
         "standing": {
           "actor": "import",
@@ -6609,7 +6616,7 @@
         },
         "plan": {
           "offered": false,
-          "label": "Plan",
+          "label": "Create plan",
           "why": "Plan writes the plan for a suggestion; this card is not behind a live suggestion."
         },
         "look": {
@@ -6699,11 +6706,23 @@
         "document_state": "plan",
         "document_path": "docs/plans/2026-08-18-berth-first-booking.md",
         "kind": null,
-        "readiness": null,
-        "start": null,
-        "plan": null,
+        "state": {
+          "word": "your move",
+          "meaning": "yours",
+          "detail": null,
+          "loop": null,
+          "door": {
+            "name": "open",
+            "label": "Decide",
+            "why": "This column is yours: the open card has every door and the record to rule on.",
+            "primary": true
+          },
+          "hint": null
+        },
+        "claims": [
+          "decision"
+        ],
         "folded": [],
-        "points": 3,
         "is_new": false,
         "age_date": "2026-08-18",
         "place": {
@@ -6712,7 +6731,6 @@
           "position": 0
         },
         "lane_state": "none",
-        "lane_sentence": null,
         "colliding": null,
         "standing": {
           "actor": "import",
@@ -6864,7 +6882,7 @@
         },
         "plan": {
           "offered": false,
-          "label": "Plan",
+          "label": "Create plan",
           "why": "Plan writes the plan for a suggestion; this card is not behind a live suggestion."
         },
         "look": {
@@ -6943,11 +6961,23 @@
         "document_state": "note",
         "document_path": null,
         "kind": null,
-        "readiness": null,
-        "start": null,
-        "plan": null,
+        "state": {
+          "word": "your move",
+          "meaning": "yours",
+          "detail": null,
+          "loop": null,
+          "door": {
+            "name": "open",
+            "label": "Decide",
+            "why": "This column is yours: the open card has every door and the record to rule on.",
+            "primary": true
+          },
+          "hint": null
+        },
+        "claims": [
+          "decision"
+        ],
         "folded": [],
-        "points": 3,
         "is_new": false,
         "age_date": "2026-09-04",
         "place": {
@@ -6956,7 +6986,6 @@
           "position": 0
         },
         "lane_state": "none",
-        "lane_sentence": null,
         "colliding": null,
         "standing": {
           "actor": "import",
@@ -7059,7 +7088,7 @@
         },
         "plan": {
           "offered": false,
-          "label": "Plan",
+          "label": "Create plan",
           "why": "Plan writes the plan for a suggestion; this card is not behind a live suggestion."
         },
         "look": {
@@ -7146,11 +7175,16 @@
         "document_state": "archived",
         "document_path": "docs/plans/done/2026-08-30-the-office-runs-its-own-checks.md",
         "kind": null,
-        "readiness": null,
-        "start": null,
-        "plan": null,
+        "state": {
+          "word": "no signal named",
+          "meaning": "quiet",
+          "detail": "the WATCH row names no reader (url, file, command, session or owner). The grammar: WATCH: <what> — url|file|command|session|owner <target> [expect <value>] by <YYYY-MM-DD> [every <N>h|<N>d]",
+          "loop": null,
+          "door": null,
+          "hint": "open to see"
+        },
+        "claims": [],
         "folded": [],
-        "points": 2,
         "is_new": false,
         "age_date": "2026-08-30",
         "place": {
@@ -7159,7 +7193,6 @@
           "position": 0
         },
         "lane_state": "none",
-        "lane_sentence": null,
         "colliding": null,
         "standing": {
           "actor": "import",
@@ -7309,7 +7342,7 @@
         },
         "plan": {
           "offered": false,
-          "label": "Plan",
+          "label": "Create plan",
           "why": "Plan writes the plan for a suggestion; this card is not behind a live suggestion."
         },
         "look": {
@@ -7387,11 +7420,18 @@
         "document_state": "gone",
         "document_path": "docs/plans/done/2026-09-01-a-confirmed-booking-waits-for-the-tide.md",
         "kind": null,
-        "readiness": null,
-        "start": null,
-        "plan": null,
+        "state": {
+          "word": "document nowhere",
+          "meaning": "broken",
+          "detail": "cites docs/plans/done/2026-09-01-a-confirmed-booking-waits-for-the-tide.md, and no such file exists in the project",
+          "loop": null,
+          "door": null,
+          "hint": "open to see"
+        },
+        "claims": [
+          "document gone"
+        ],
         "folded": [],
-        "points": 1,
         "is_new": false,
         "age_date": "2026-09-04",
         "place": {
@@ -7400,7 +7440,6 @@
           "position": 0
         },
         "lane_state": "none",
-        "lane_sentence": null,
         "colliding": null,
         "standing": {
           "actor": "import",
@@ -7506,7 +7545,7 @@
         },
         "plan": {
           "offered": false,
-          "label": "Plan",
+          "label": "Create plan",
           "why": "Plan writes the plan for a suggestion; this card is not behind a live suggestion."
         },
         "look": {
@@ -7538,5 +7577,764 @@
       "watercooler": [],
       "heard": null
     }
-  }
+  },
+  "language": [
+    {
+      "case": "free to start",
+      "card": {
+        "number": 900,
+        "title": "A card in every state",
+        "essence": "Every berth is billed by the metre.",
+        "essence_source": "card",
+        "gate": "high",
+        "tags": [],
+        "document_state": "plan",
+        "document_path": "docs/plans/2026-09-04-a-card-in-every-state.md",
+        "kind": null,
+        "state": {
+          "word": "free to start",
+          "meaning": "proven",
+          "detail": null,
+          "loop": null,
+          "door": {
+            "name": "start",
+            "label": "Start · fable on alpha",
+            "why": "Fable headroom on alpha",
+            "primary": true
+          },
+          "hint": null
+        },
+        "claims": [],
+        "folded": [],
+        "is_new": false,
+        "age_date": "2026-09-04",
+        "place": {
+          "column": "Up next",
+          "group": null,
+          "position": 0
+        },
+        "lane_state": "none",
+        "colliding": null,
+        "standing": {
+          "actor": "corpus",
+          "evidence": null,
+          "state": "trusted",
+          "words": null
+        },
+        "reading": null
+      }
+    },
+    {
+      "case": "collides",
+      "card": {
+        "number": 900,
+        "title": "A card in every state",
+        "essence": "Every berth is billed by the metre.",
+        "essence_source": "card",
+        "gate": "high",
+        "tags": [],
+        "document_state": "plan",
+        "document_path": "docs/plans/2026-09-04-a-card-in-every-state.md",
+        "kind": null,
+        "state": {
+          "word": "collides with #241 · waits",
+          "meaning": "quiet",
+          "detail": null,
+          "loop": null,
+          "door": null,
+          "hint": "1 file · open to see"
+        },
+        "claims": [],
+        "folded": [],
+        "is_new": false,
+        "age_date": "2026-09-04",
+        "place": {
+          "column": "Up next",
+          "group": null,
+          "position": 0
+        },
+        "lane_state": "none",
+        "colliding": null,
+        "standing": {
+          "actor": "corpus",
+          "evidence": null,
+          "state": "trusted",
+          "words": null
+        },
+        "reading": null
+      }
+    },
+    {
+      "case": "no gate",
+      "card": {
+        "number": 900,
+        "title": "A card in every state",
+        "essence": "Every berth is billed by the metre.",
+        "essence_source": "card",
+        "gate": null,
+        "tags": [],
+        "document_state": "plan",
+        "document_path": "docs/plans/2026-09-04-a-card-in-every-state.md",
+        "kind": null,
+        "state": {
+          "word": "no gate",
+          "meaning": "quiet",
+          "detail": "This card names no effort gate; only a planned card is startable.",
+          "loop": null,
+          "door": null,
+          "hint": "open to see"
+        },
+        "claims": [],
+        "folded": [],
+        "is_new": false,
+        "age_date": "2026-09-04",
+        "place": {
+          "column": "Up next",
+          "group": null,
+          "position": 0
+        },
+        "lane_state": "none",
+        "colliding": null,
+        "standing": {
+          "actor": "corpus",
+          "evidence": null,
+          "state": "trusted",
+          "words": null
+        },
+        "reading": null
+      }
+    },
+    {
+      "case": "nowhere to run",
+      "card": {
+        "number": 900,
+        "title": "A card in every state",
+        "essence": "Every berth is billed by the metre.",
+        "essence_source": "card",
+        "gate": "high",
+        "tags": [],
+        "document_state": "plan",
+        "document_path": "docs/plans/2026-09-04-a-card-in-every-state.md",
+        "kind": null,
+        "state": {
+          "word": "nowhere to run",
+          "meaning": "quiet",
+          "detail": "The rule found nowhere to run: every subscription is spent",
+          "loop": null,
+          "door": null,
+          "hint": "open to see"
+        },
+        "claims": [],
+        "folded": [],
+        "is_new": false,
+        "age_date": "2026-09-04",
+        "place": {
+          "column": "Up next",
+          "group": null,
+          "position": 0
+        },
+        "lane_state": "none",
+        "colliding": null,
+        "standing": {
+          "actor": "corpus",
+          "evidence": null,
+          "state": "trusted",
+          "words": null
+        },
+        "reading": null
+      }
+    },
+    {
+      "case": "working",
+      "card": {
+        "number": 900,
+        "title": "A card in every state",
+        "essence": "Every berth is billed by the metre.",
+        "essence_source": "card",
+        "gate": "high",
+        "tags": [],
+        "document_state": "plan",
+        "document_path": "docs/plans/2026-09-04-a-card-in-every-state.md",
+        "kind": null,
+        "state": {
+          "word": "working · 12 min · fable on alpha",
+          "meaning": "live",
+          "detail": "Skimming the test suites for the pill's pattern.",
+          "loop": null,
+          "door": {
+            "name": "watch",
+            "label": "Watch",
+            "why": "Opens a window into the live session; closing it ends nothing.",
+            "primary": false
+          },
+          "hint": null
+        },
+        "claims": [
+          "lane working"
+        ],
+        "folded": [],
+        "is_new": false,
+        "age_date": "2026-09-04",
+        "place": {
+          "column": "Executing",
+          "group": null,
+          "position": 0
+        },
+        "lane_state": "working",
+        "colliding": null,
+        "standing": {
+          "actor": "corpus",
+          "evidence": null,
+          "state": "trusted",
+          "words": null
+        },
+        "reading": null
+      }
+    },
+    {
+      "case": "asking you",
+      "card": {
+        "number": 900,
+        "title": "A card in every state",
+        "essence": "Every berth is billed by the metre.",
+        "essence_source": "card",
+        "gate": "high",
+        "tags": [],
+        "document_state": "plan",
+        "document_path": "docs/plans/2026-09-04-a-card-in-every-state.md",
+        "kind": null,
+        "state": {
+          "word": "asking you",
+          "meaning": "yours",
+          "detail": "“High or medium?”",
+          "loop": null,
+          "door": {
+            "name": "open",
+            "label": "Answer",
+            "why": "Your sentence resumes the lane with it; one live copy stays.",
+            "primary": true
+          },
+          "hint": null
+        },
+        "claims": [
+          "lane asking"
+        ],
+        "folded": [],
+        "is_new": false,
+        "age_date": "2026-09-04",
+        "place": {
+          "column": "Executing",
+          "group": null,
+          "position": 0
+        },
+        "lane_state": "asking",
+        "colliding": null,
+        "standing": {
+          "actor": "corpus",
+          "evidence": null,
+          "state": "trusted",
+          "words": null
+        },
+        "reading": null
+      }
+    },
+    {
+      "case": "colliding",
+      "card": {
+        "number": 900,
+        "title": "A card in every state",
+        "essence": "Every berth is billed by the metre.",
+        "essence_source": "card",
+        "gate": "high",
+        "tags": [],
+        "document_state": "plan",
+        "document_path": "docs/plans/2026-09-04-a-card-in-every-state.md",
+        "kind": null,
+        "state": {
+          "word": "colliding with #241",
+          "meaning": "broken",
+          "detail": "#241's lane is also editing engine/metering.py.",
+          "loop": null,
+          "door": null,
+          "hint": "open to see"
+        },
+        "claims": [
+          "colliding",
+          "lane working"
+        ],
+        "folded": [],
+        "is_new": false,
+        "age_date": "2026-09-04",
+        "place": {
+          "column": "Executing",
+          "group": null,
+          "position": 0
+        },
+        "lane_state": "working",
+        "colliding": {
+          "verdict": "collides",
+          "sentence": "#241's lane is also editing engine/metering.py.",
+          "files": [
+            "engine/metering.py"
+          ],
+          "cards": [
+            241
+          ]
+        },
+        "standing": {
+          "actor": "corpus",
+          "evidence": null,
+          "state": "trusted",
+          "words": null
+        },
+        "reading": null
+      }
+    },
+    {
+      "case": "lane ended",
+      "card": {
+        "number": 900,
+        "title": "A card in every state",
+        "essence": "Every berth is billed by the metre.",
+        "essence_source": "card",
+        "gate": "high",
+        "tags": [],
+        "document_state": "plan",
+        "document_path": "docs/plans/2026-09-04-a-card-in-every-state.md",
+        "kind": null,
+        "state": {
+          "word": "lane ended",
+          "meaning": "broken",
+          "detail": "Lane ended 1 min ago. nothing folded.",
+          "loop": null,
+          "door": null,
+          "hint": "open to resume"
+        },
+        "claims": [
+          "decision",
+          "lane ended"
+        ],
+        "folded": [],
+        "is_new": false,
+        "age_date": "2026-09-04",
+        "place": {
+          "column": "Decision moment",
+          "group": null,
+          "position": 0
+        },
+        "lane_state": "ended",
+        "colliding": null,
+        "standing": {
+          "actor": "corpus",
+          "evidence": null,
+          "state": "trusted",
+          "words": null
+        },
+        "reading": null
+      }
+    },
+    {
+      "case": "doubted",
+      "card": {
+        "number": 900,
+        "title": "A card in every state",
+        "essence": "Every berth is billed by the metre.",
+        "essence_source": "card",
+        "gate": "high",
+        "tags": [],
+        "document_state": "plan",
+        "document_path": "docs/plans/2026-09-04-a-card-in-every-state.md",
+        "kind": null,
+        "state": {
+          "word": "doubted",
+          "meaning": "broken",
+          "detail": "the board doubts this: no lane exists for it — no worktree on disk and no session",
+          "loop": null,
+          "door": null,
+          "hint": "open to decide"
+        },
+        "claims": [
+          "doubted"
+        ],
+        "folded": [],
+        "is_new": false,
+        "age_date": "2026-09-04",
+        "place": {
+          "column": "Executing",
+          "group": null,
+          "position": 0
+        },
+        "lane_state": "none",
+        "colliding": null,
+        "standing": {
+          "actor": "machine",
+          "evidence": "hands-on",
+          "state": "doubted",
+          "words": "the board doubts this: no lane exists for it — no worktree on disk and no session"
+        },
+        "reading": null
+      }
+    },
+    {
+      "case": "document nowhere",
+      "card": {
+        "number": 900,
+        "title": "A card in every state",
+        "essence": "Every berth is billed by the metre.",
+        "essence_source": "card",
+        "gate": "high",
+        "tags": [],
+        "document_state": "gone",
+        "document_path": "docs/plans/nowhere.md",
+        "kind": null,
+        "state": {
+          "word": "document nowhere",
+          "meaning": "broken",
+          "detail": "cites docs/plans/nowhere.md, and no such file exists in the project",
+          "loop": null,
+          "door": null,
+          "hint": "open to see"
+        },
+        "claims": [
+          "document gone"
+        ],
+        "folded": [],
+        "is_new": false,
+        "age_date": "2026-09-04",
+        "place": {
+          "column": "Up next",
+          "group": null,
+          "position": 0
+        },
+        "lane_state": "none",
+        "colliding": null,
+        "standing": {
+          "actor": "corpus",
+          "evidence": null,
+          "state": "trusted",
+          "words": null
+        },
+        "reading": null
+      }
+    },
+    {
+      "case": "your move",
+      "card": {
+        "number": 900,
+        "title": "A card in every state",
+        "essence": "Every berth is billed by the metre.",
+        "essence_source": "card",
+        "gate": "high",
+        "tags": [],
+        "document_state": "plan",
+        "document_path": "docs/plans/2026-09-04-a-card-in-every-state.md",
+        "kind": null,
+        "state": {
+          "word": "your move",
+          "meaning": "yours",
+          "detail": null,
+          "loop": null,
+          "door": {
+            "name": "open",
+            "label": "Decide",
+            "why": "This column is yours: the open card has every door and the record to rule on.",
+            "primary": true
+          },
+          "hint": null
+        },
+        "claims": [
+          "decision"
+        ],
+        "folded": [],
+        "is_new": false,
+        "age_date": "2026-09-04",
+        "place": {
+          "column": "Decision moment",
+          "group": null,
+          "position": 0
+        },
+        "lane_state": "none",
+        "colliding": null,
+        "standing": {
+          "actor": "corpus",
+          "evidence": null,
+          "state": "trusted",
+          "words": null
+        },
+        "reading": null
+      }
+    },
+    {
+      "case": "loop open",
+      "card": {
+        "number": 900,
+        "title": "A card in every state",
+        "essence": "Every berth is billed by the metre.",
+        "essence_source": "card",
+        "gate": "high",
+        "tags": [],
+        "document_state": "archived",
+        "document_path": "docs/plans/done/2026-09-04-a-card-in-every-state.md",
+        "kind": null,
+        "state": {
+          "word": "loop open · a session reads it 11 Sep",
+          "meaning": "quiet",
+          "detail": "Signal: no session re-grows the old doors — by 11 Sep",
+          "loop": {
+            "state": "open",
+            "owner_only": false
+          },
+          "door": null,
+          "hint": "open ▸"
+        },
+        "claims": [],
+        "folded": [],
+        "is_new": false,
+        "age_date": "2026-09-04",
+        "place": {
+          "column": "Executed",
+          "group": null,
+          "position": 0
+        },
+        "lane_state": "none",
+        "colliding": null,
+        "standing": {
+          "actor": "corpus",
+          "evidence": null,
+          "state": "trusted",
+          "words": null
+        },
+        "reading": null
+      }
+    },
+    {
+      "case": "loop open, owner only",
+      "card": {
+        "number": 900,
+        "title": "A card in every state",
+        "essence": "Every berth is billed by the metre.",
+        "essence_source": "card",
+        "gate": "high",
+        "tags": [],
+        "document_state": "archived",
+        "document_path": "docs/plans/done/2026-09-04-a-card-in-every-state.md",
+        "kind": null,
+        "state": {
+          "word": "loop open · you read it 11 Sep",
+          "meaning": "quiet",
+          "detail": "Signal: the owner reads the board without it being explained — by 11 Sep",
+          "loop": {
+            "state": "open",
+            "owner_only": true
+          },
+          "door": null,
+          "hint": "open ▸"
+        },
+        "claims": [],
+        "folded": [],
+        "is_new": false,
+        "age_date": "2026-09-04",
+        "place": {
+          "column": "Executed",
+          "group": null,
+          "position": 0
+        },
+        "lane_state": "none",
+        "colliding": null,
+        "standing": {
+          "actor": "corpus",
+          "evidence": null,
+          "state": "trusted",
+          "words": null
+        },
+        "reading": null
+      }
+    },
+    {
+      "case": "signal for you to read",
+      "card": {
+        "number": 900,
+        "title": "A card in every state",
+        "essence": "Every berth is billed by the metre.",
+        "essence_source": "card",
+        "gate": "high",
+        "tags": [],
+        "document_state": "archived",
+        "document_path": "docs/plans/done/2026-09-04-a-card-in-every-state.md",
+        "kind": null,
+        "state": {
+          "word": "signal for you to read",
+          "meaning": "yours",
+          "detail": "Signal: the office check email names a real event — by 4 Sep",
+          "loop": {
+            "state": "open",
+            "owner_only": true
+          },
+          "door": {
+            "name": "open",
+            "label": "Read",
+            "why": "Only you can read this signal; the open card takes your reading.",
+            "primary": true
+          },
+          "hint": null
+        },
+        "claims": [
+          "signal asking"
+        ],
+        "folded": [],
+        "is_new": false,
+        "age_date": "2026-09-04",
+        "place": {
+          "column": "Executed",
+          "group": null,
+          "position": 0
+        },
+        "lane_state": "none",
+        "colliding": null,
+        "standing": {
+          "actor": "corpus",
+          "evidence": null,
+          "state": "trusted",
+          "words": null
+        },
+        "reading": null
+      }
+    },
+    {
+      "case": "a session is reading it",
+      "card": {
+        "number": 900,
+        "title": "A card in every state",
+        "essence": "Every berth is billed by the metre.",
+        "essence_source": "card",
+        "gate": "high",
+        "tags": [],
+        "document_state": "archived",
+        "document_path": "docs/plans/done/2026-09-04-a-card-in-every-state.md",
+        "kind": null,
+        "state": {
+          "word": "loop open · a session reads it now · beta",
+          "meaning": "live",
+          "detail": "Signal: no session re-grows the old doors — by 11 Sep",
+          "loop": {
+            "state": "open",
+            "owner_only": false
+          },
+          "door": null,
+          "hint": "open ▸"
+        },
+        "claims": [
+          "signal reading"
+        ],
+        "folded": [],
+        "is_new": false,
+        "age_date": "2026-09-04",
+        "place": {
+          "column": "Executed",
+          "group": null,
+          "position": 0
+        },
+        "lane_state": "none",
+        "colliding": null,
+        "standing": {
+          "actor": "corpus",
+          "evidence": null,
+          "state": "trusted",
+          "words": null
+        },
+        "reading": {
+          "id": 1,
+          "project": "harbourmaster",
+          "card_number": 900,
+          "session_id": "bbbb0001-0000-4000-8000-000000000000",
+          "slot": "beta",
+          "started_at": "2026-09-04T08:28:00Z",
+          "ended_at": null
+        }
+      }
+    },
+    {
+      "case": "loop closed",
+      "card": {
+        "number": 900,
+        "title": "A card in every state",
+        "essence": "Every berth is billed by the metre.",
+        "essence_source": "card",
+        "gate": "high",
+        "tags": [],
+        "document_state": "archived",
+        "document_path": "docs/plans/done/2026-09-04-a-card-in-every-state.md",
+        "kind": null,
+        "state": {
+          "word": "loop closed · read 09:30, delivered",
+          "meaning": "proven",
+          "detail": null,
+          "loop": {
+            "state": "closed",
+            "owner_only": false
+          },
+          "door": null,
+          "hint": "open ▸"
+        },
+        "claims": [],
+        "folded": [],
+        "is_new": false,
+        "age_date": "2026-09-04",
+        "place": {
+          "column": "Done",
+          "group": null,
+          "position": 0
+        },
+        "lane_state": "none",
+        "colliding": null,
+        "standing": {
+          "actor": "corpus",
+          "evidence": null,
+          "state": "trusted",
+          "words": null
+        },
+        "reading": null
+      }
+    },
+    {
+      "case": "not now",
+      "card": {
+        "number": 900,
+        "title": "A card in every state",
+        "essence": "Every berth is billed by the metre.",
+        "essence_source": "card",
+        "gate": "high",
+        "tags": [],
+        "document_state": "plan",
+        "document_path": "docs/plans/2026-09-04-a-card-in-every-state.md",
+        "kind": null,
+        "state": {
+          "word": "not now",
+          "meaning": "quiet",
+          "detail": null,
+          "loop": null,
+          "door": null,
+          "hint": "open ▸"
+        },
+        "claims": [],
+        "folded": [],
+        "is_new": false,
+        "age_date": "2026-09-04",
+        "place": {
+          "column": "Not now",
+          "group": null,
+          "position": 0
+        },
+        "lane_state": "none",
+        "colliding": null,
+        "standing": {
+          "actor": "corpus",
+          "evidence": null,
+          "state": "trusted",
+          "words": null
+        },
+        "reading": null
+      }
+    }
+  ]
 }

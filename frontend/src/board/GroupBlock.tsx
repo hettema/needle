@@ -38,7 +38,6 @@ export function GroupBlock({ column, group, slots, open, focused, statuses, drag
             <CardView
               key={slot.card.number}
               card={slot.card}
-              rank={slot.rank}
               ghost={slot.ghost}
               open={open === slot.card.number}
               status={statuses[slot.card.number] ?? IDLE}

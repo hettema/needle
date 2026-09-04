@@ -1,6 +1,5 @@
 import { useState } from "react";
 import type { ColumnView } from "../types/board";
-import type { Column } from "../types/column";
 import { ColumnBox, ColumnHead, ColumnNote, ColumnTop, Definition, MoreRow, RailGroup, Stack, Tool } from "../components/ui";
 import type { MoveStatus } from "../state/board";
 import { GroupBlock } from "./GroupBlock";
@@ -26,16 +25,17 @@ export interface ColumnBlockProps {
   onFocus: (number: number | null) => void;
   onMoveTo: (number: number, column: string) => Promise<boolean>;
   onSelect: (number: number, picked: boolean) => void;
-  onScrolled: (column: Column, scrolled: boolean) => void;
 }
 
-export function ColumnBlock({ column, index, total, lens, lift, open, focused, statuses, unfurled, selected, onUnfurl, onFurl, onOpen, onRetry, onFocus, onMoveTo, onSelect, onScrolled }: ColumnBlockProps) {
+export function ColumnBlock({ column, index, total, lens, lift, open, focused, statuses, unfurled, selected, onUnfurl, onFurl, onOpen, onRetry, onFocus, onMoveTo, onSelect }: ColumnBlockProps) {
   const name = column.definition.column;
   const wide = open !== null && column.groups.some((g) => g.cards.some((c) => c.number === open));
   const draggable = lens === "rank";
   // The defects rail starts furled to its one line; the owner opens it for the second scan.
   const [railOpen, setRailOpen] = useState(false);
   let budget = unfurled ? Number.POSITIVE_INFINITY : FOLD_AT;
+  // The rank digit is gone from the card — position is rank — but the drop
+  // preview still names the rank a card would land on.
   let rank = 1;
   let furledInRail = 0;
   const blocks = column.groups.map((group) => {
@@ -54,7 +54,7 @@ export function ColumnBlock({ column, index, total, lens, lift, open, focused, s
   const hidden = Math.max(0, column.count - furledInRail - shown);
 
   return (
-    <ColumnBox wide={wide} yours={column.definition.yours} column={name} onScroll={(scrolled) => onScrolled(name, scrolled)}>
+    <ColumnBox wide={wide} column={name}>
       <ColumnTop>
         <ColumnHead
           name={name}

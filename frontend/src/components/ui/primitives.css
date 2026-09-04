@@ -1,13 +1,19 @@
 /* Needle — the design system's primitives, the comp's own rules carried over
- * once (docs/design/2026-09-03-the-board.html, the-card.html). Every class
- * here is applied by a component in this folder and nowhere else; the board
- * composes those components. Colours are tokens from tokens.css only.
+ * once (docs/design/2026-09-04-the-colour-language/, and 2026-09-03-the-board
+ * before it). Every class here is applied by a component in this folder and
+ * nowhere else; the board composes those components.
+ *
+ * Colour comes from one place only: `var(--meaning)`, set by `data-meaning`
+ * in tokens.css. Nothing in this file may name attn, wrong, accent or landed
+ * — so a surface has to say which of the five things it is saying before it
+ * can be painted at all (plan 27).
  */
 
 /* ── the page frame ────────────────────────────────────────────────── */
-/* The page never scrolls: the head and the attention line are pinned and
- * each column scrolls on its own (plan 06, item 4), so a board left
- * scrolled down still names every column and the attention line. */
+/* The page never scrolls: the head is pinned and each column scrolls on its
+ * own (plan 06, item 4), so a board left scrolled down still names every
+ * column and the head. The head is one line and stays one line (plan 27,
+ * item 1), so there is nothing left for it to fold into. */
 
 body { overflow: hidden; }
 #root { display: flex; flex-direction: column; height: 100vh; }
@@ -18,98 +24,121 @@ body { overflow: hidden; }
 /* ── the head ──────────────────────────────────────────────────────── */
 
 .head { flex: none; }
-.head.folded { display: flex; align-items: center; background: var(--surface); border-bottom: 1px solid var(--line); }
-.head.folded .app-head { flex: none; border-bottom: none; padding: 6px 14px 6px 20px; gap: 10px; }
-.head.folded .corpus, .head.folded .lens, .head.folded .idea input, .head.folded .idea .said { display: none; }
-.head.folded .app-head .grow { margin-left: 0; }
-.head.folded .idea { margin-left: 0; }
-.head.folded .attn-line { flex: 1 1 auto; min-width: 0; border-bottom: none; background: transparent; padding: 6px 20px 6px 0; flex-wrap: nowrap; overflow: hidden; }
-.head.folded .att { padding: 2px 7px; gap: 4px; }
-.head.folded .att .alabel { display: none; }
-.head.folded .attn-line .quiet { display: none; }
 
 .app-head {
-  display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap;
-  padding: 13px 20px 12px;
+  display: flex; align-items: center; gap: 14px;
+  padding: 9px 20px;
   background: var(--surface);
   border-bottom: 1px solid var(--line);
 }
-.wordmark { font-size: 16px; font-weight: 700; letter-spacing: -.015em; color: var(--accent); }
+.wordmark { font-size: 16px; font-weight: 700; letter-spacing: -.015em; color: var(--ink); }
 .project {
   display: inline-flex; align-items: center; gap: 7px;
   font-size: 13.5px; font-weight: 600;
   padding: 3px 9px 3px 10px; border-radius: var(--r-ctrl);
   border: 1px solid var(--line); background: var(--surface-2); cursor: pointer;
+  position: relative;
 }
 .project select {
   appearance: none; -webkit-appearance: none;
   font: inherit; color: inherit; background: transparent; border: 0; padding: 0; margin: 0;
   cursor: pointer;
 }
-.project select:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; border-radius: 2px; }
+.project select:focus-visible { outline: 2px solid var(--ink); outline-offset: 3px; border-radius: 2px; }
 .project .caret { color: var(--ink-3); font-size: 9px; }
-.corpus { font-family: var(--mono); font-size: 10.5px; color: var(--ink-3); letter-spacing: .03em; }
-.corpus b { color: var(--ink-2); font-weight: 500; }
-.corpus .off { color: var(--wrong); font-weight: 500; }
+
+/* The quiet facts live behind the project pill, not on the head: the corpus,
+ * what arrived, what is unplanned, whether the trunk is level. None of them
+ * asks anything of the owner, so none of them takes a place in his first
+ * glance (plan 27, item 1). */
+.facts {
+  position: absolute; top: calc(100% + 6px); left: 0; width: 300px; z-index: 60;
+  background: var(--surface); border: 1px solid var(--line-2); border-radius: var(--r-card);
+  box-shadow: var(--shadow-2); padding: 11px 13px 12px;
+  display: flex; flex-direction: column; gap: 7px;
+  font-family: var(--mono); font-size: 11px; line-height: 1.5; color: var(--ink-3);
+  cursor: default;
+  opacity: 0; visibility: hidden; transform: translateY(-3px);
+  transition: opacity .12s ease, transform .12s ease, visibility .12s;
+}
+.project:hover .facts, .project:focus-within .facts {
+  opacity: 1; visibility: visible; transform: translateY(0);
+}
+.facts b { color: var(--ink-2); font-weight: 500; }
+.facts .fact[data-meaning] { color: var(--meaning); }
+
+/* The three words. Each is a filter of the board; each is its meaning's
+ * colour and nothing else's. A word nobody has to act on is quiet, whatever
+ * its count — a number is never coloured for being large. */
+.words { display: flex; align-items: center; gap: 16px; }
+.word {
+  font-family: var(--mono); font-size: 12px; letter-spacing: .02em;
+  color: var(--meaning); background: none; border: none; padding: 2px 0;
+  border-bottom: 2px solid transparent; cursor: pointer; white-space: nowrap;
+}
+.word b { font-weight: 500; }
+.word[aria-pressed="true"] { border-bottom-color: var(--meaning); }
+.word[disabled] { cursor: default; }
+.word:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+
 .app-head .grow { margin-left: auto; display: flex; align-items: center; gap: 8px; }
 
 .lens {
   display: inline-flex; align-items: stretch;
-  border: 1px solid var(--line); border-radius: var(--r-ctrl); overflow: hidden;
-  background: var(--surface-2);
+  border: 1px solid var(--line-2); border-radius: var(--r-ctrl); overflow: hidden;
+  background: var(--paper);
 }
 .lens button {
-  font-family: var(--mono); font-size: 10px; letter-spacing: .06em; text-transform: uppercase;
-  padding: 5px 9px; color: var(--ink-3); cursor: pointer; border: none; background: transparent;
+  font-family: var(--mono); font-size: 11px; letter-spacing: .04em;
+  padding: 5px 10px; color: var(--ink-2); cursor: pointer; border: none; background: transparent;
 }
-.lens button + button { border-left: 1px solid var(--line); }
-.lens button.on { background: var(--surface); color: var(--accent); font-weight: 500; }
-.lens button:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+.lens button + button { border-left: 1px solid var(--line-2); }
+.lens button.on { background: var(--surface-2); color: var(--ink); }
+.lens button:focus-visible { outline: 2px solid var(--ink); outline-offset: -2px; }
+
+/* ── the breakdown: the sub-filters under a chosen word ────────────── */
+
+.breakdown {
+  display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
+  padding: 8px 20px; background: var(--surface);
+  border-bottom: 1px solid var(--line);
+}
+.sub {
+  display: inline-flex; align-items: center; gap: 7px;
+  padding: 5px 10px; border-radius: var(--r-ctrl);
+  background: var(--meaning-2); color: var(--ink); font-size: 13px;
+  border: 1px solid transparent; cursor: pointer; white-space: nowrap;
+}
+.sub b { font-family: var(--mono); font-weight: 500; color: var(--meaning); }
+.sub[aria-pressed="true"] { border-color: var(--meaning); }
+.sub:focus-visible { outline: 2px solid var(--ink); outline-offset: 1px; }
+.breakdown .clear {
+  margin-left: auto; font-family: var(--mono); font-size: 11px; color: var(--ink-3);
+  background: none; border: none; cursor: pointer;
+}
+.breakdown .clear:focus-visible { outline: 2px solid var(--ink); outline-offset: 1px; }
 
 /* ── the Idea door ─────────────────────────────────────────────────── */
 
-.idea { display: inline-flex; align-items: center; gap: 6px; margin-left: 14px; }
+.idea { display: inline-flex; align-items: center; gap: 6px; }
 .idea input {
-  width: 220px; font: inherit; font-size: 12px; padding: 4px 9px;
-  border: 1px solid var(--line); border-radius: 20px; background: var(--surface); color: var(--ink);
+  width: 220px; font: inherit; font-size: 12px; padding: 5px 10px;
+  border: 1px solid var(--line-2); border-radius: var(--r-ctrl);
+  background: var(--paper); color: var(--ink);
 }
-.idea input:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.idea input:focus-visible { outline: 2px solid var(--ink); outline-offset: 1px; }
 .idea .said { font-size: 11px; color: var(--ink-2); max-width: 420px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-
-/* ── the attention line ────────────────────────────────────────────── */
-
-.attn-line {
-  display: flex; align-items: center; gap: 7px; flex-wrap: wrap;
-  padding: 9px 20px; background: var(--surface-2);
-  border-bottom: 1px solid var(--line);
-}
-.att {
-  display: inline-flex; align-items: center; gap: 7px;
-  font-family: var(--mono); font-size: 10.5px; letter-spacing: .03em;
-  padding: 4px 10px; border-radius: 20px;
-  border: 1px solid var(--line); background: var(--surface); color: var(--ink-2);
-  cursor: default; white-space: nowrap;
-}
-.att b { font-weight: 600; color: var(--ink); font-size: 11px; }
-.att.you   { border-color: var(--attn);  background: var(--attn-2);  color: var(--attn); }
-.att.you b { color: var(--attn); }
-.att.bad   { border-color: var(--wrong); background: var(--wrong-2); color: var(--wrong); }
-.att.bad b { color: var(--wrong); }
-.attn-line .quiet { margin-left: auto; font-family: var(--mono); font-size: 10px; color: var(--ink-3); }
-button.att { cursor: pointer; }
-button.att:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
-.att.on { box-shadow: inset 0 0 0 1px var(--attn); }
 
 /* ── the batched question ──────────────────────────────────────────── */
 
 .asks {
-  margin: 16px 20px 0; border: 1px solid var(--attn); border-radius: var(--r-card);
+  margin: 16px 20px 0; border: 1px solid var(--meaning); border-radius: var(--r-card);
   background: var(--surface); overflow: hidden;
 }
 .asks-h {
   font-family: var(--mono); font-size: 9.5px; letter-spacing: .12em; text-transform: uppercase;
-  color: var(--attn); background: var(--attn-2); padding: 7px 13px;
-  border-bottom: 1px solid var(--attn);
+  color: var(--meaning); background: var(--meaning-2); padding: 7px 13px;
+  border-bottom: 1px solid var(--meaning);
 }
 .ask-row {
   display: grid; grid-template-columns: 52px minmax(160px, 1fr) minmax(220px, 2fr) 112px auto;
@@ -122,12 +151,31 @@ button.att:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px
 .ask-row .ask-due { font-family: var(--mono); font-size: 10px; color: var(--ink-3); white-space: nowrap; }
 .ask-row .ask-acts { display: flex; gap: 6px; }
 
+/* ── every conversation alive ──────────────────────────────────────── */
+
+.talks {
+  margin: 16px 20px 0; border: 1px solid var(--meaning); border-radius: var(--r-card);
+  background: var(--surface); overflow: hidden;
+}
+.talks-h {
+  font-family: var(--mono); font-size: 9.5px; letter-spacing: .12em; text-transform: uppercase;
+  color: var(--meaning); background: var(--meaning-2); padding: 7px 13px;
+  border-bottom: 1px solid var(--meaning);
+}
+.talk-row {
+  display: grid; grid-template-columns: minmax(160px, 1fr) 200px 120px;
+  gap: 12px; align-items: center; padding: 8px 13px; font-size: 12.5px;
+}
+.talk-row + .talk-row { border-top: 1px dotted var(--line); }
+.talk-row .talk-what { color: var(--ink); font-weight: 600; }
+.talk-row .talk-where, .talk-row .talk-since { font-family: var(--mono); font-size: 10.5px; color: var(--ink-3); }
+
 /* ── plan these together ───────────────────────────────────────────── */
 
 .together {
   display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
   margin: 12px 20px 0; padding: 8px 13px; border-radius: var(--r-card);
-  border: 1px solid var(--accent); background: var(--accent-2); font-size: 12.5px; color: var(--ink);
+  border: 1px solid var(--line-2); background: var(--surface-2); font-size: 12.5px; color: var(--ink);
 }
 .together .together-n b { font-weight: 700; }
 .together .said { font-family: var(--mono); font-size: 10px; color: var(--ink-2); }
@@ -135,13 +183,13 @@ button.att:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px
 /* ── the triage lens ───────────────────────────────────────────────── */
 
 .triage {
-  margin: 16px 20px 30px; border: 1px solid var(--attn); border-radius: var(--r-card);
+  margin: 16px 20px 30px; border: 1px solid var(--meaning); border-radius: var(--r-card);
   background: var(--surface); overflow: hidden;
 }
 .triage-h {
   font-family: var(--mono); font-size: 9.5px; letter-spacing: .12em; text-transform: uppercase;
-  color: var(--attn); background: var(--attn-2); padding: 7px 13px;
-  border-bottom: 1px solid var(--attn);
+  color: var(--meaning); background: var(--meaning-2); padding: 7px 13px;
+  border-bottom: 1px solid var(--meaning);
 }
 .triage-group + .triage-group { border-top: 1px solid var(--line); }
 .triage-gh {
@@ -150,19 +198,23 @@ button.att:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px
 }
 .triage-gh .tg-name { font-size: 12.5px; font-weight: 700; letter-spacing: .02em; color: var(--ink); }
 .triage-gh .tg-count { font-family: var(--mono); font-size: 10.5px; color: var(--ink-3); }
+.triage-gh .tg-each { margin-left: auto; font-family: var(--mono); font-size: 11px; color: var(--ink-3); }
 .triage-gh .btn { margin-left: auto; }
 .triage-row {
-  display: grid; grid-template-columns: 52px minmax(160px, 1fr) 118px minmax(260px, 2.4fr) 132px auto;
-  gap: 12px; align-items: center; padding: 8px 13px; font-size: 12.5px; line-height: 1.45;
+  display: grid; grid-template-columns: 52px minmax(160px, 1fr) minmax(260px, 2.4fr) 190px auto;
+  gap: 14px; align-items: center; padding: 10px 13px; font-size: 12.5px; line-height: 1.45;
 }
 .triage-row + .triage-row { border-top: 1px dotted var(--line); }
 .triage-row .tr-title { font-weight: 600; color: var(--ink); }
-.triage-row .tr-col { font-family: var(--mono); font-size: 10px; color: var(--ink-3); white-space: nowrap; }
 .triage-row .tr-evidence { color: var(--ink-2); }
-.triage-row .tr-to { font-family: var(--mono); font-size: 10.5px; color: var(--accent); white-space: nowrap; }
-.triage-row .tr-acts { display: flex; gap: 6px; }
+/* Current → target, and the target carries the meaning's colour, so the
+ * table can be read by its right-hand column alone (plan 27, item 5). */
+.triage-row .tr-move { font-family: var(--mono); font-size: 11.5px; white-space: nowrap; }
+.triage-row .tr-from { color: var(--ink-3); }
+.triage-row .tr-to[data-meaning] { color: var(--meaning); }
+.triage-row .tr-acts { display: flex; gap: 6px; justify-content: flex-end; }
 .triage-row .tr-word { grid-column: 1 / -1; }
-.triage-row.overturning { background: var(--attn-2); }
+.triage-row.overturning { background: var(--surface-2); }
 
 /* ── the board ─────────────────────────────────────────────────────── */
 
@@ -175,7 +227,8 @@ button.att:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px
 }
 
 /* Each column scrolls on its own; its head stays pinned inside it, so a long
- * Backlog never moves Executing and every column keeps its name. */
+ * Backlog never moves Executing and every column keeps its name. A column is
+ * never coloured: it is a stage, not a state. */
 .col {
   flex: 0 0 var(--col-w); min-width: 0; transition: flex-basis .16s ease;
   overflow-y: auto; overflow-x: hidden; padding: 0 4px 30px;
@@ -187,32 +240,37 @@ button.att:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px
   display: flex; align-items: baseline; gap: 8px;
   padding: 6px 2px 7px;
   position: relative;
+  border-bottom: 1px solid var(--line);
 }
-.rail-group { display: flex; flex-direction: column; gap: 7px; }
-.rail-h {
-  display: flex; align-items: center; gap: 8px; width: 100%;
-  padding: 7px 10px; border-radius: var(--r-card); cursor: pointer; text-align: left;
-  border: 1px solid var(--wrong); background: var(--wrong-2); color: var(--wrong);
-}
-.rail-h .rail-name { font-size: 10.5px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; }
-.rail-h .count { font-family: var(--mono); font-size: 11px; color: var(--wrong); }
-.rail-h .rail-tw { margin-left: auto; font-family: var(--mono); font-size: 9.5px; letter-spacing: .05em; }
-.rail-h:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
 .col-head h2 {
-  margin: 0; font-size: 11.5px; font-weight: 700;
-  text-transform: uppercase; letter-spacing: .1em;
+  margin: 0; font-size: 12px; font-weight: 700;
+  text-transform: uppercase; letter-spacing: .08em; color: var(--ink);
 }
 .col-head .count { font-family: var(--mono); font-size: 11px; color: var(--ink-3); }
 .col-head .tools { margin-left: auto; display: flex; gap: 4px; align-items: center; }
+
+/* Defects are their own rail, not their own hue: a category is never a
+ * colour (plan 27, the sheet). */
+.rail-group { display: flex; flex-direction: column; gap: 7px; }
+.rail-h {
+  display: flex; align-items: center; gap: 8px; width: 100%;
+  padding: 7px 10px; border-radius: var(--r-ctrl); cursor: pointer; text-align: left;
+  border: 1px solid var(--line); background: var(--surface-2); color: var(--ink-2);
+}
+.rail-h .rail-name { font-size: 10.5px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; }
+.rail-h .count { font-family: var(--mono); font-size: 11px; color: var(--ink); }
+.rail-h .rail-tw { margin-left: auto; font-family: var(--mono); font-size: 9.5px; letter-spacing: .05em; color: var(--ink-3); }
+.rail-h:focus-visible { outline: 2px solid var(--ink); outline-offset: 1px; }
+
 .tool {
   font-family: var(--mono); font-size: 9.5px; letter-spacing: .05em;
   color: var(--ink-3); border: 1px solid transparent; border-radius: var(--r-chip);
   padding: 2px 5px; cursor: pointer; background: transparent;
 }
 .tool:hover { border-color: var(--line); color: var(--ink-2); }
-.tool.on { color: var(--accent); border-color: var(--line); background: var(--surface); }
-.tool:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
-.col-note { padding: 0 2px 9px; font-size: 11.5px; line-height: 1.45; color: var(--ink-3); margin: 0; }
+.tool.on { color: var(--ink); border-color: var(--line); background: var(--surface); }
+.tool:focus-visible { outline: 2px solid var(--ink); outline-offset: 1px; }
+.col-note { padding: 7px 2px 9px; font-size: 11.5px; line-height: 1.45; color: var(--ink-3); margin: 0; }
 
 .def {
   position: absolute; top: 100%; left: 0; width: min(268px, 100%); z-index: 40;
@@ -235,84 +293,113 @@ button.att:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px
   margin-top: 9px; padding-top: 8px; border-top: 1px solid var(--line);
   font-family: var(--mono); font-size: 9.5px; letter-spacing: .05em; color: var(--ink-3);
 }
-.def .who b { color: var(--accent); font-weight: 500; }
+.def .who b { color: var(--ink-2); font-weight: 500; }
 
-.stack { display: flex; flex-direction: column; gap: 7px; }
+.stack { display: flex; flex-direction: column; gap: 8px; padding-top: 10px; }
 .group-h {
   font-family: var(--mono); font-size: 9.5px; letter-spacing: .11em; text-transform: uppercase;
-  color: var(--ink-3); padding: 11px 2px 3px; display: flex; align-items: center; gap: 8px;
+  color: var(--ink-3); padding: 9px 2px 3px; display: flex; align-items: center; gap: 8px;
   margin: 0;
 }
 .group-h::after { content: ""; flex: 1; height: 1px; background: var(--line); }
-.stack > .group-h:first-child { padding-top: 2px; }
-.group-body { display: flex; flex-direction: column; gap: 7px; min-height: 8px; }
+.stack > .group-h:first-child { padding-top: 0; }
+.group-body { display: flex; flex-direction: column; gap: 8px; min-height: 8px; }
 
 .more-row {
-  margin-top: 8px; padding: 7px 2px; text-align: left;
-  font-family: var(--mono); font-size: 10px; letter-spacing: .05em;
-  color: var(--accent); background: none; border: none; cursor: pointer;
+  margin-top: 8px; padding: 7px 2px; text-align: center;
+  font-family: var(--mono); font-size: 11px; letter-spacing: .04em;
+  color: var(--ink-3); background: none; border: none; cursor: pointer;
 }
-.more-row:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.more-row:focus-visible { outline: 2px solid var(--ink); outline-offset: 1px; }
 
-/* ── the card at rest ──────────────────────────────────────────────── */
+/* ── the card: one anatomy, every state ────────────────────────────── */
+/* Number and gate on the first line with the kind right-aligned; the title;
+ * one line of essence, or what the state has to say in its place; then the
+ * state line — one word in its colour bottom-left, the one door that state
+ * allows bottom-right. The border takes the state's colour only for the
+ * three states that want the eye (plan 27, item 2). */
 
 .card {
   background: var(--surface);
   border: 1px solid var(--line);
   border-radius: var(--r-card);
-  padding: 9px 11px 9px;
+  padding: 12px 14px;
   box-shadow: var(--shadow-1);
   cursor: grab;
   position: relative;
   touch-action: none;
 }
-.card:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.card:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
 .card.static { cursor: default; }
+.card[data-meaning="live"],
+.card[data-meaning="yours"],
+.card[data-meaning="broken"] { border-color: var(--meaning); }
 
-.card-top { display: flex; align-items: center; gap: 7px; min-height: 15px; flex-wrap: wrap; }
-.rank {
-  font-family: var(--mono); font-size: 11px; font-weight: 500; color: var(--ink);
-  min-width: 13px;
-}
-.cid { font-family: var(--mono); font-size: 10px; color: var(--ink-3); }
+.card-top { display: flex; align-items: center; gap: 8px; min-height: 15px; }
+.cid { font-family: var(--mono); font-size: 12px; color: var(--ink-3); }
 .card-top .grow { margin-left: auto; }
+.kind {
+  font-family: var(--mono); font-size: 10px; letter-spacing: .08em; text-transform: uppercase;
+  color: var(--ink-3); white-space: nowrap;
+}
 
 .card-title {
-  margin: 5px 0 0; font-size: 13.5px; font-weight: 600; line-height: 1.32;
-  letter-spacing: -.003em;
+  margin: 8px 0 0; font-size: 14px; font-weight: 600; line-height: 1.3;
+  letter-spacing: -.003em; color: var(--ink);
 }
-.card.open .card-title { font-size: 16px; margin-top: 7px; }
+.card.open .card-title { font-size: 22px; margin-top: 9px; letter-spacing: -.01em; }
 .essence {
-  margin: 5px 0 0; font-size: 12px; line-height: 1.45; color: var(--ink-2);
-  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+  margin: 6px 0 0; font-size: 13px; line-height: 1.45; color: var(--ink-2);
+  display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;
 }
-.card-foot {
-  display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
-  margin-top: 8px; padding-top: 7px; border-top: 1px solid var(--line);
-}
-.card-foot .grow { margin-left: auto; }
-.points { font-family: var(--mono); font-size: 9.5px; color: var(--ink-3); letter-spacing: .04em; }
+/* What the state has to say stands in the essence's place, and a question
+ * from a lane is read, not skimmed: it takes the ink. */
+.card[data-meaning="yours"] .essence.said { color: var(--ink); }
 
-/* The pill: can this card start now? One word, from the Start door's verdict. */
-.pill {
-  font-family: var(--mono); font-size: 9px; letter-spacing: .07em; text-transform: uppercase;
-  padding: 2.5px 6px; border-radius: 20px; white-space: nowrap;
-  border: 1px solid var(--line); color: var(--ink-2); background: var(--surface-2);
+.state-sentence {
+  display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+  margin-top: 9px;
+  font-family: var(--mono); font-size: 12px; line-height: 1.4; color: var(--meaning);
 }
-.pill.free { border-color: var(--landed); color: var(--landed); background: var(--landed-2); font-weight: 500; }
-.pill.collides { border-color: var(--attn); color: var(--attn); background: var(--attn-2); }
-.pill.nowhere-to-run { border-color: var(--wrong); color: var(--wrong); background: var(--wrong-2); }
-.pill.unread { border-style: dashed; color: var(--ink-3); background: transparent; }
-.btn.small { font-size: 10.5px; padding: 3px 9px; }
+.state-sentence .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--meaning); flex: none; }
+.state-sentence .then { color: var(--ink-2); }
+
+.state {
+  display: flex; align-items: center; gap: 8px;
+  margin-top: 10px; padding-top: 8px; border-top: 1px solid var(--line);
+}
+.state .grow { margin-left: auto; }
+.state-word {
+  display: flex; align-items: center; gap: 8px; min-width: 0;
+  font-family: var(--mono); font-size: 12px; line-height: 1.3; color: var(--meaning);
+}
+.state-word .say { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.state-word b { font-weight: 500; }
+.hint { font-family: var(--mono); font-size: 12px; color: var(--ink-3); white-space: nowrap; }
+
+/* The loop is a glyph: an open ring in ink — a live obligation, just not
+ * yours — or a filled dot once the signal was read (plan 27, item 3). An
+ * owner-only signal's ring is amber, because only he can close it. */
+.loop { width: 14px; height: 14px; border-radius: 50%; flex: none; box-sizing: border-box; }
+.loop.open { border: 2.5px solid var(--ink); }
+.loop.open[data-meaning] { border-color: var(--meaning); }
+.loop.closed[data-meaning] { background: var(--meaning); }
+.state[data-loop="open"] .state-word { color: var(--ink); }
+.card[data-meaning="yours"] .state[data-loop="open"] .state-word { color: var(--meaning); }
+
+/* The gesture for planning several suggestions together is there when the
+ * hand is: at rest every card shows exactly one door. */
+.pickable { visibility: hidden; }
+.card:hover .pickable, .card:focus-within .pickable { visibility: visible; }
 .pick { display: inline-flex; align-items: center; }
-.pick input { margin: 0; width: 14px; height: 14px; accent-color: var(--accent); cursor: pointer; }
-.card-foot .said { font-family: var(--mono); font-size: 9.5px; color: var(--ink-3); flex-basis: 100%; }
-.card-foot .said.bad { color: var(--wrong); }
+.pick input { margin: 0; width: 14px; height: 14px; accent-color: var(--ink); cursor: pointer; }
+.state .said { font-family: var(--mono); font-size: 9.5px; color: var(--ink-3); flex-basis: 100%; }
+.state .said[data-meaning] { color: var(--meaning); }
 
 /* What a card carries: the suggestions folded under it. */
 .carries {
   display: flex; align-items: baseline; gap: 6px; flex-wrap: wrap;
-  margin-top: 6px; font-size: 11px; color: var(--ink-2);
+  margin-top: 7px; font-size: 11px; color: var(--ink-2);
 }
 .carries .clbl { font-family: var(--mono); font-size: 9px; letter-spacing: .09em; text-transform: uppercase; color: var(--ink-3); }
 .carries .carried { display: inline-flex; gap: 4px; align-items: baseline; }
@@ -321,35 +408,25 @@ button.att:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px
 .carries.open .ctitle { color: var(--ink); }
 
 .chip {
-  font-family: var(--mono); font-size: 9px; letter-spacing: .07em; text-transform: uppercase;
-  padding: 2.5px 6px; border-radius: var(--r-chip);
-  background: var(--surface-2); color: var(--ink-2); border: 1px solid var(--line);
+  font-family: var(--mono); font-size: 10px; letter-spacing: .08em; text-transform: uppercase;
+  padding: 1px 6px; border-radius: var(--r-chip);
+  background: transparent; color: var(--ink-2); border: 1px solid var(--line-2);
   white-space: nowrap;
 }
-.chip.gate { border-color: var(--accent); color: var(--accent); background: transparent; }
-.chip.tag  { background: var(--surface-2); color: var(--ink-3); border-color: transparent; }
-.chip.new  { background: var(--accent-2); color: var(--accent); border-color: transparent; font-weight: 500; }
+.chip.tag { background: var(--surface-2); color: var(--ink-3); border-color: transparent; }
 button.chip { cursor: pointer; }
-button.chip:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
-
-.doc { font-family: var(--mono); font-size: 9px; letter-spacing: .07em; text-transform: uppercase;
-       padding: 2.5px 6px; border-radius: var(--r-chip); white-space: nowrap; }
-.doc.plan       { background: var(--accent-2); color: var(--accent); }
-.doc.suggestion { background: var(--surface-2); color: var(--ink-2); border: 1px solid var(--line); }
-.doc.archived   { background: var(--landed-2); color: var(--landed); }
-.doc.note       { background: transparent; color: var(--ink-3); border: 1px dashed var(--line-2); }
-.doc.gone       { background: var(--wrong-2); color: var(--wrong); }
+button.chip:focus-visible { outline: 2px solid var(--ink); outline-offset: 1px; }
 
 .card.saving { border-color: var(--line-2); }
 .card.saving::after {
   content: "SAVING"; position: absolute; top: 8px; right: 10px;
   font-family: var(--mono); font-size: 8.5px; letter-spacing: .12em; color: var(--ink-3);
 }
-.card.failed { border-color: var(--wrong); box-shadow: 0 0 0 1px var(--wrong-2), var(--shadow-1); }
+.card.failed { box-shadow: 0 0 0 1px var(--meaning-2), var(--shadow-1); }
 .fail-note {
-  margin: 8px -11px -9px; padding: 8px 11px;
-  background: var(--wrong-2); color: var(--wrong);
-  border-top: 1px solid var(--wrong);
+  margin: 10px -14px -12px; padding: 8px 14px;
+  background: var(--meaning-2); color: var(--meaning);
+  border-top: 1px solid var(--meaning);
   border-radius: 0 0 var(--r-card) var(--r-card);
   font-size: 11.5px; line-height: 1.45;
   display: flex; align-items: flex-start; gap: 9px;
@@ -358,81 +435,60 @@ button.chip:focus-visible { outline: 2px solid var(--accent); outline-offset: 1p
 .fail-note .retry {
   margin-left: auto; flex: none; align-self: center;
   font-family: var(--mono); font-size: 9.5px; letter-spacing: .06em;
-  border: 1px solid var(--wrong); background: transparent; color: var(--wrong);
+  border: 1px solid var(--meaning); background: transparent; color: var(--meaning);
   border-radius: var(--r-chip); padding: 3px 8px; cursor: pointer;
 }
 .card.ghost { opacity: .38; box-shadow: none; border-style: dashed; background: transparent; }
 
-/* ── the lane's band ───────────────────────────────────────────────── */
+/* ── the lane's band, on the open card ─────────────────────────────── */
 
 .band {
   display: flex; align-items: baseline; gap: 7px;
-  margin: 7px -11px -9px; padding: 5px 11px 6px;
-  border-top: 1px solid var(--line);
-  border-radius: 0 0 var(--r-card) var(--r-card);
-  background: var(--surface-2);
+  margin: 7px 0 0; padding: 5px 0 0;
   font-size: 11.5px; line-height: 1.4; color: var(--ink-2);
 }
-.card.open .band { margin: 7px 0 0; border-radius: 0; }
 .band .bstate {
-  flex: none; font-family: var(--mono); font-size: 9px; letter-spacing: .09em; text-transform: uppercase;
-  color: var(--ink-3); padding-top: 2px;
+  flex: none; font-family: var(--mono); font-size: 11px; color: var(--meaning);
 }
-.band .bsay { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.card.open .band .bsay { white-space: normal; }
-.band.working .bstate { color: var(--accent); }
-.band.asking { background: var(--attn-2); color: var(--attn); }
-.band.asking .bstate { color: var(--attn); }
-.band.blocked .bstate, .band.moving .bstate { color: var(--attn); }
-.band.ended { background: var(--wrong-2); color: var(--wrong); }
-.band.ended .bstate { color: var(--wrong); }
+.band .bsay { min-width: 0; }
 
-.doubt {
+.doubt, .clash {
   display: flex; align-items: baseline; gap: 7px;
-  margin: 7px -11px -9px; padding: 5px 11px 6px;
-  border-top: 1px solid var(--wrong);
-  border-radius: 0 0 var(--r-card) var(--r-card);
-  background: var(--wrong-2); color: var(--wrong);
+  padding: 6px 14px;
+  background: var(--meaning-2); color: var(--meaning);
+  border-bottom: 1px solid var(--meaning);
   font-size: 11.5px; line-height: 1.4;
 }
-.clash {
-  display: flex; align-items: baseline; gap: 7px;
-  margin: 7px -11px -9px; padding: 5px 11px 6px;
-  border-top: 1px solid var(--wrong);
-  border-radius: 0 0 var(--r-card) var(--r-card);
-  background: var(--wrong-2); color: var(--wrong);
-  font-size: 11.5px; line-height: 1.4;
-}
-.band + .doubt, .band + .clash, .heard + .clash, .heard + .doubt, .clash + .doubt { margin-top: 9px; }
-.card.open .doubt, .card.open .clash { margin: 0; border-radius: 0; border-top: none; border-bottom: 1px solid var(--wrong); }
+.card.open .doubt, .card.open .clash { margin: 0; }
 .doubt .bstate, .clash .bstate {
   flex: none; font-family: var(--mono); font-size: 9px; letter-spacing: .09em; text-transform: uppercase;
   padding-top: 2px;
 }
 .doubt .bsay, .clash .bsay { min-width: 0; }
+/* The watercooler's last line, on a card with hands on it: what the lanes
+ * said to each other. Quiet — it is not this card's own state. */
 .heard {
   display: flex; align-items: baseline; gap: 7px;
-  margin: 7px -11px -9px; padding: 4px 11px 5px;
-  border-top: 1px dashed var(--line);
-  background: var(--surface);
-  font-size: 11px; line-height: 1.4; color: var(--ink-2);
+  margin-top: 7px;
+  font-size: 11px; line-height: 1.4; color: var(--ink-3);
 }
-.band + .heard { margin-top: 9px; }
-.card.open .heard { margin: 0 0 8px; padding: 4px 0 5px; border-top: none; border-bottom: 1px dashed var(--line); background: transparent; }
+.card.open .heard { margin: 0 0 8px; padding: 4px 0 5px; border-bottom: 1px dashed var(--line); }
 .card.open .heard .hsay { white-space: normal; }
-.heard .hwho { flex: none; font-family: var(--mono); font-size: 9px; letter-spacing: .09em; text-transform: uppercase; color: var(--ink-3); padding-top: 2px; }
+.heard .hwho { flex: none; font-family: var(--mono); font-size: 9px; letter-spacing: .09em; text-transform: uppercase; }
 .heard .hsay { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .standing {
   font-family: var(--mono); font-size: 9px; letter-spacing: .07em; text-transform: uppercase;
   padding: 2.5px 6px; border-radius: var(--r-chip); white-space: nowrap;
   border: 1px solid var(--line); color: var(--ink-3); background: transparent;
 }
-.standing.held { color: var(--landed); border-color: var(--landed); }
-.standing.doubted { color: var(--wrong); border-color: var(--wrong); background: var(--wrong-2); }
+.standing[data-meaning] { color: var(--meaning); border-color: var(--meaning); background: var(--meaning-2); }
 .standing.unknown { border-style: dashed; }
+
+/* A door that does not open is not hidden and not a button: one grey line
+ * saying when it opens (plan 27, item 4). */
 .closed-doors {
   display: flex; flex-wrap: wrap; gap: 4px 14px;
-  padding: 6px 11px 8px; background: var(--surface-2); border-bottom: 1px solid var(--line);
+  padding: 7px 14px 9px; background: var(--surface-2); border-bottom: 1px solid var(--line);
   font-size: 11.5px; line-height: 1.45; color: var(--ink-3);
 }
 .closed-doors b { font-weight: 600; color: var(--ink-2); }
@@ -440,7 +496,7 @@ button.chip:focus-visible { outline: 2px solid var(--accent); outline-offset: 1p
 
 .ask-block {
   margin-top: 8px; padding: 9px 11px; border-radius: var(--r-ctrl);
-  border: 1px solid var(--attn); background: var(--attn-2); color: var(--ink);
+  border: 1px solid var(--meaning); background: var(--meaning-2); color: var(--ink);
   font-size: 12.8px; line-height: 1.55; white-space: pre-line;
 }
 .answer { display: flex; gap: 6px; margin-top: 8px; }
@@ -449,27 +505,23 @@ button.chip:focus-visible { outline: 2px solid var(--accent); outline-offset: 1p
   border: 1px solid var(--line-2); border-radius: var(--r-ctrl);
   background: var(--surface); color: var(--ink);
 }
-.answer input:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
-.btn.off { opacity: .55; cursor: not-allowed; }
-
-.col.yours .card { border-left: 3px solid var(--attn); }
-.col.yours .col-head h2 { color: var(--attn); }
+.answer input:focus-visible { outline: 2px solid var(--ink); outline-offset: 1px; }
 
 /* ── drag and drop ─────────────────────────────────────────────────── */
 
 .drop-gap {
   height: 62px; border-radius: var(--r-card);
-  border: 1px dashed var(--accent); background: var(--accent-2);
+  border: 1px dashed var(--meaning); background: var(--meaning-2);
   position: relative;
 }
 .drop-gap::before {
   content: ""; position: absolute; left: 8px; right: 8px; top: -4px; height: 2px;
-  border-radius: 2px; background: var(--accent);
+  border-radius: 2px; background: var(--meaning);
 }
 .drop-gap .lands {
   position: absolute; left: 10px; bottom: 8px;
   font-family: var(--mono); font-size: 9.5px; letter-spacing: .06em;
-  color: var(--accent);
+  color: var(--meaning);
 }
 
 .lift {
@@ -483,7 +535,7 @@ button.chip:focus-visible { outline: 2px solid var(--accent); outline-offset: 1p
 
 .kbd-hint {
   display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
-  margin-top: 7px; padding: 6px 9px;
+  margin-top: 8px; padding: 6px 9px;
   border-radius: var(--r-ctrl); background: var(--surface-2); border: 1px solid var(--line);
   font-family: var(--mono); font-size: 9.5px; letter-spacing: .04em; color: var(--ink-3);
 }
@@ -503,7 +555,7 @@ button.chip:focus-visible { outline: 2px solid var(--accent); outline-offset: 1p
   padding: 10px 0 12px; cursor: pointer;
 }
 .rail:hover { border-color: var(--line-2); background: var(--surface); }
-.rail:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.rail:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
 .rail .rname {
   writing-mode: vertical-rl; text-orientation: mixed;
   font-size: 10.5px; font-weight: 700; letter-spacing: .13em; text-transform: uppercase;
@@ -519,13 +571,12 @@ button.chip:focus-visible { outline: 2px solid var(--accent); outline-offset: 1p
 
 .card.open {
   cursor: default;
-  border-color: var(--line-2);
   box-shadow: var(--shadow-2);
   padding-bottom: 0;
 }
-.open-body { margin: 10px -11px 0; border-top: 1px solid var(--line); }
+.open-body { margin: 12px -14px 0; border-top: 1px solid var(--line); }
 
-.sec { padding: 12px 11px 13px; border-bottom: 1px solid var(--line); }
+.sec { padding: 12px 14px 13px; border-bottom: 1px solid var(--line); }
 .sec:last-of-type { border-bottom: none; }
 .sec-h {
   font-family: var(--mono); font-size: 9px; letter-spacing: .13em; text-transform: uppercase;
@@ -545,13 +596,10 @@ button.chip:focus-visible { outline: 2px solid var(--accent); outline-offset: 1p
   flex: 0 0 62px; font-family: var(--mono); font-size: 9px; letter-spacing: .08em;
   color: var(--ink-3); padding-top: 3px;
 }
+.row .lbl[data-meaning] { color: var(--meaning); }
 .row .val { font-size: 12.5px; line-height: 1.55; color: var(--ink-2); min-width: 0; white-space: pre-line; }
-.row.lead .lbl { color: var(--accent); }
-.row.lead .val { color: var(--ink); }
-.row.land .lbl { color: var(--landed); }
-.row.ask  .lbl { color: var(--attn); }
-.val code, .inline code { font-family: var(--mono); font-size: 11px; color: var(--accent); overflow-wrap: break-word; }
-.path { font-family: var(--mono); font-size: 11px; color: var(--accent); word-break: break-all; }
+.val code, .inline code { font-family: var(--mono); font-size: 11px; color: var(--ink); overflow-wrap: break-word; }
+.path { font-family: var(--mono); font-size: 11px; color: var(--ink); word-break: break-all; text-decoration: underline; text-decoration-color: var(--line-2); }
 .caret-g { font-family: var(--sans); font-size: 8px; }
 
 .plan-block {
@@ -564,7 +612,7 @@ button.chip:focus-visible { outline: 2px solid var(--accent); outline-offset: 1p
 }
 .plan-head .path { flex: 1 1 220px; }
 .plan-head .tw { font-family: var(--mono); font-size: 9px; color: var(--ink-3); letter-spacing: .06em; background: none; border: none; cursor: pointer; }
-.plan-head .tw:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.plan-head .tw:focus-visible { outline: 2px solid var(--ink); outline-offset: 1px; }
 .plan-body { padding: 11px 13px 13px; background: var(--surface); }
 .plan-body h1, .plan-body h2, .plan-body h3, .plan-body h4 {
   margin: 13px 0 7px; font-size: 11.5px; font-weight: 700;
@@ -580,12 +628,12 @@ button.chip:focus-visible { outline: 2px solid var(--accent); outline-offset: 1p
   background: var(--surface-2); border: 1px solid var(--line); border-radius: var(--r-chip);
   font-family: var(--mono); font-size: 11px; line-height: 1.55; color: var(--ink-2);
 }
-.plan-body code { font-family: var(--mono); font-size: 11.5px; color: var(--accent); }
+.plan-body code { font-family: var(--mono); font-size: 11.5px; color: var(--ink); }
 .plan-body pre code { color: inherit; font-size: inherit; }
 .plan-body table { border-collapse: collapse; font-size: 12px; margin: 0 0 9px; }
 .plan-body td, .plan-body th { border: 1px solid var(--line); padding: 3px 7px; text-align: left; vertical-align: top; }
 .plan-body blockquote { margin: 0 0 9px; padding-left: 10px; border-left: 2px solid var(--line-2); color: var(--ink-2); }
-.plan-body a { color: var(--accent); }
+.plan-body a { color: var(--ink); text-decoration-color: var(--line-2); }
 .plan-body hr { border: none; border-top: 1px solid var(--line); margin: 10px 0; }
 .statline {
   display: flex; gap: 8px; align-items: flex-start; padding: 5px 0; font-size: 12.3px;
@@ -613,21 +661,28 @@ button.chip:focus-visible { outline: 2px solid var(--accent); outline-offset: 1p
   padding: 2px 6px; border-radius: var(--r-chip); background: var(--surface-2);
   color: var(--ink-3); border: 1px solid var(--line); flex: none;
 }
-.hist .who.owner { color: var(--accent); border-color: var(--accent); background: transparent; }
+.hist .who.owner { color: var(--ink); border-color: var(--line-2); background: transparent; }
 
 .acts {
   display: flex; align-items: center; gap: 7px; flex-wrap: wrap;
-  padding: 11px; background: var(--surface-2);
+  padding: 11px 14px; background: var(--surface-2);
   border-radius: 0 0 var(--r-card) var(--r-card);
 }
+
+/* A door is a shape, never a colour: the primary is filled, the rest are
+ * outlined, so nothing you can press is confused with something happening. */
 .btn {
   font-family: var(--sans); font-size: 12px; font-weight: 600;
   padding: 6px 13px; border-radius: var(--r-ctrl); cursor: pointer;
-  border: 1px solid transparent; background: var(--accent); color: var(--on-accent);
+  border: 1px solid transparent; background: var(--ink); color: var(--paper);
+  white-space: nowrap;
 }
-.btn.ghost { background: var(--surface); border-color: var(--line); color: var(--ink-2); font-weight: 500; }
-.btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
-.btn[disabled] { opacity: .6; cursor: default; }
+.btn.ghost { background: transparent; border-color: var(--ink-2); color: var(--ink); font-weight: 500; }
+.btn.small { font-size: 11.5px; padding: 4px 10px; }
+.btn:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+.btn[disabled] { opacity: .5; cursor: default; }
+.btn.off { opacity: .55; cursor: not-allowed; }
+
 .acts .moveto { margin-left: auto; display: flex; align-items: center; gap: 5px; }
 .acts .moveto .lbl { font-family: var(--mono); font-size: 9px; letter-spacing: .08em; color: var(--ink-3); }
 .acts .moveto select {
@@ -636,15 +691,18 @@ button.chip:focus-visible { outline: 2px solid var(--accent); outline-offset: 1p
   background: var(--surface); color: var(--ink-2);
 }
 .acts .said { font-family: var(--mono); font-size: 10px; color: var(--ink-3); }
-.acts .said.bad { color: var(--wrong); }
+.acts .said[data-meaning] { color: var(--meaning); }
 
 /* ── page-level notes ──────────────────────────────────────────────── */
 
 .notice {
   margin: 16px 20px 0; padding: 10px 13px; border-radius: var(--r-card);
-  border: 1px solid var(--wrong); background: var(--wrong-2); color: var(--wrong);
+  border: 1px solid var(--meaning); background: var(--meaning-2); color: var(--meaning);
   font-size: 12.5px; line-height: 1.5;
 }
 .notice.quiet { border-color: var(--line); background: var(--surface-2); color: var(--ink-2); }
 .notice code { font-family: var(--mono); font-size: 11.5px; }
 .alist { margin: 6px 0 0; padding-left: 18px; }
+.corpus { font-family: var(--mono); font-size: 11px; color: var(--ink-3); letter-spacing: .03em; }
+.corpus b { color: var(--ink-2); font-weight: 500; }
+.off[data-meaning] { color: var(--meaning); font-weight: 500; }

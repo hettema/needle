@@ -25,6 +25,7 @@ from infrastructure.corpus import scan
 from infrastructure.live import Live, sweep
 from infrastructure.store import Store
 from runtime import launch, windows
+from tests.api.attention import claim_count, yours
 from tests.conftest import NOW
 from tests.floor import Floor
 
@@ -157,7 +158,7 @@ def test_start_says_where_it_will_run_launches_there_and_the_card_enters_executi
     client: TestClient, machine_floor: Floor, repo: Path
 ):
     before = detail(client)
-    in_flight_before = client.get("/api/projects/proj/board").json()["attention"]["in_flight"]
+    in_flight_before = claim_count(client.get("/api/projects/proj/board").json(), "lane working")
     assert before["doors"]["start"]["offered"] and before["doors"]["start"]["label"] == (
         "Start · fable on alpha"
     )
@@ -187,14 +188,15 @@ def test_start_says_where_it_will_run_launches_there_and_the_card_enters_executi
     assert column_of(client, CARD) == "Executing"
     after = detail(client)
     assert after["summary"]["lane_state"] == "working"
-    assert after["summary"]["lane_sentence"].startswith("Working, fable on alpha")
+    assert after["summary"]["state"]["word"].startswith("working · ")
+    assert after["summary"]["state"]["word"].endswith("fable on alpha")
     assert after["lane"]["session"]["short_id"] == launched["short"]
     assert [h["kind"] for h in after["history"][:2]] == ["moved", "started"]
     assert after["history"][0]["actor"] == "machine" and "hands on" in after["history"][0]["detail"]
     assert after["doors"]["watch"]["offered"] and after["doors"]["stop"]["offered"]
     assert not after["doors"]["start"]["offered"] and "hands on" in after["doors"]["start"]["why"]
     board = client.get("/api/projects/proj/board").json()
-    assert board["attention"]["in_flight"] == in_flight_before + 1
+    assert claim_count(board, "lane working") == in_flight_before + 1
 
     again = client.post(f"/api/projects/proj/cards/{CARD}/start", json={"anyway": False})
     assert again.status_code == 409 and "hands on" in again.json()["detail"]
@@ -297,12 +299,10 @@ def test_a_stop_with_a_question_asks_you_and_answer_resumes_one_live_copy(
     asking = detail(client)
     assert asking["summary"]["lane_state"] == "asking"
     assert asking["lane"]["question"].endswith("Should the gate default to high or medium?")
-    assert (
-        asking["summary"]["lane_sentence"]
-        == "Asking you: Should the gate default to high or medium?"
-    )
+    assert asking["summary"]["state"]["word"] == "asking you"
+    assert asking["summary"]["state"]["detail"] == "“Should the gate default to high or medium?”"
     assert asking["doors"]["answer"]["offered"] and not asking["doors"]["look"]["offered"]
-    assert client.get("/api/projects/proj/board").json()["attention"]["asking_you"] >= 1
+    assert yours(client.get("/api/projects/proj/board").json()) >= 1
 
     empty = client.post(f"/api/projects/proj/cards/{CARD}/answer", json={"text": "  "})
     assert empty.status_code == 409
@@ -380,7 +380,7 @@ def test_watch_opens_a_tab_once_stop_ends_the_lane_and_look_takes_its_place(
     )
     ended = detail(client)
     assert ended["summary"]["lane_state"] == "ended"
-    assert ended["summary"]["lane_sentence"].startswith("Lane ended")
+    assert ended["summary"]["state"]["word"] == "lane ended"
     assert not ended["doors"]["watch"]["offered"] and ended["doors"]["look"]["offered"]
     assert ended["doors"]["resume"]["offered"]
     assert any(
@@ -508,7 +508,7 @@ def test_a_signal_only_the_owner_can_read_is_a_question_at_its_due_time(
         and "Only you can read" in asked["doors"]["signal"]["why"]
     )
     board = client.get("/api/projects/proj/board").json()
-    assert board["attention"]["asking_you"] >= 1
+    assert yours(board) >= 1
     read_signals(client)
     assert column_of(client, CARD) == "Executed", "the board never reads an owner's signal"
     answered = client.post(f"/api/projects/proj/cards/{CARD}/signal", json={"delivered": False})
@@ -562,7 +562,7 @@ def test_a_lane_that_dies_mid_close_is_doubted_on_the_next_read_until_the_loop_m
     assert held == {"actor": "machine", "evidence": "hands-on", "state": "held", "words": None}
     # The card file puts three cards in machine columns on 0.1's word alone; the
     # first read doubts those, and this lane adds to and then leaves that count.
-    doubted_before = client.get("/api/projects/proj/board").json()["attention"]["doubted"]
+    doubted_before = claim_count(client.get("/api/projects/proj/board").json(), "doubted")
 
     assert main(["row", "proj", str(CARD), "DELIVERED", "the meter bills"]) == 0
     os.kill(launched["pid"], 9)
@@ -577,7 +577,7 @@ def test_a_lane_that_dies_mid_close_is_doubted_on_the_next_read_until_the_loop_m
     )
     assert detail(client)["summary"]["standing"] == doubted
     board = client.get("/api/projects/proj/board").json()
-    assert board["attention"]["doubted"] == doubted_before + 1
+    assert claim_count(board, "doubted") == doubted_before + 1
 
     done = archive_plan(repo)
     watch = f"the plan is archived — file {done.relative_to(repo)} by 2026-12-31"
@@ -589,7 +589,7 @@ def test_a_lane_that_dies_mid_close_is_doubted_on_the_next_read_until_the_loop_m
     landed = detail(client)
     assert landed["history"][0]["evidence"] == "close-landed"
     assert landed["summary"]["standing"]["state"] == "held"
-    assert client.get("/api/projects/proj/board").json()["attention"]["doubted"] == doubted_before
+    assert claim_count(client.get("/api/projects/proj/board").json(), "doubted") == doubted_before
 
 
 def test_the_imports_placements_read_unknown_before_the_first_read_and_are_tested_after(
@@ -628,7 +628,7 @@ def test_the_imports_placements_read_unknown_before_the_first_read_and_are_teste
             s["state"] == "doubted" and "names no signal the board can read" in s["words"]
             for s in tested.values()
         )
-        assert board["attention"]["doubted"] == sum(
+        assert claim_count(board, "doubted") == sum(
             1 for _, s in states.values() if s["state"] == "doubted"
         )
 
@@ -658,9 +658,8 @@ def test_a_lane_that_dies_on_a_limit_is_moved_and_the_card_says_where(
         for h in moved["history"]
     ), [h["detail"] for h in moved["history"]]
     assert moved["lane"]["session"]["slot"] == "beta"
-    assert moved["summary"]["lane_sentence"].startswith(
-        "Moved to fable on beta, new window opened."
-    )
+    assert moved["summary"]["state"]["word"].endswith("fable on beta")
+    assert moved["summary"]["state"]["detail"] == "Moved to fable on beta, new window opened."
     assert column_of(client, CARD) == "Executing"
     assert len(machine_floor.state()["spawned"]) == 2
 
@@ -687,7 +686,7 @@ def test_a_lane_killed_otherwise_carries_the_machines_reason(
     assert dead["doors"]["resume"]["offered"] and dead["doors"]["look"]["offered"]
     assert column_of(client, CARD) == "Up next"
     board = client.get("/api/projects/proj/board").json()
-    assert board["attention"]["lanes_ended"] == 1
+    assert claim_count(board, "lane ended") == 1
 
     resumed = client.post(f"/api/projects/proj/cards/{CARD}/resume")
     assert resumed.status_code == 200, resumed.text
@@ -706,7 +705,7 @@ def test_idea_opens_a_conversation_the_rail_lists_and_a_document_it_writes_is_bo
     while its session lives and never hands on a tree; a document naming the
     conversation becomes a card whose history says where it was born."""
     board_before = client.get("/api/projects/proj/board").json()
-    assert board_before["attention"]["in_discussion"] == 0 and board_before["conversations"] == []
+    assert claim_count(board_before, "conversation") == 0 and board_before["conversations"] == []
     opened = client.post(
         "/api/projects/proj/idea", json={"text": "should berths be priced by the metre?"}
     )
@@ -726,15 +725,15 @@ def test_idea_opens_a_conversation_the_rail_lists_and_a_document_it_writes_is_bo
     assert "The corpus is the only way in" in command and "Write nothing else" in command
 
     # No process yet: the window was spawned but the fake launcher runs nothing.
-    assert client.get("/api/projects/proj/board").json()["attention"]["in_discussion"] == 0
+    assert claim_count(client.get("/api/projects/proj/board").json(), "conversation") == 0
     machine_floor.write_job("alpha", short, session_id=session_id, cwd=str(repo), name="idea")
     machine_floor.write_process("alpha", session_id, os.getpid(), cwd=str(repo), kind="interactive")
     reconcile(client)
     board = client.get("/api/projects/proj/board").json()
-    assert board["attention"]["in_discussion"] == 1
+    assert claim_count(board, "conversation") == 1
     talk = board["conversations"][0]
     assert talk["what"] == "Idea" and talk["short_id"] == short and talk["card_number"] is None
-    assert board["attention"]["in_flight"] == board_before["attention"]["in_flight"], (
+    assert claim_count(board, "lane working") == claim_count(board_before, "lane working"), (
         "a conversation is never hands on a tree"
     )
     assert all(
@@ -797,7 +796,7 @@ def test_two_lanes_in_one_file_collide_on_both_cards_know_each_other_and_the_fol
     machine_floor.write_process("alpha", session_id, os.getpid(), cwd=str(other))
     reconcile(client)
     board = client.get("/api/projects/proj/board").json()
-    assert board["attention"]["colliding"] == 0
+    assert claim_count(board, "colliding") == 0
     assert summary_of(client, 241)["colliding"] is None
 
     # Every lane's brief names the other live lanes with their footprints.
@@ -811,7 +810,7 @@ def test_two_lanes_in_one_file_collide_on_both_cards_know_each_other_and_the_fol
     (mine / "README.md").write_text("my edit\n")
     reconcile(client)
     board = client.get("/api/projects/proj/board").json()
-    assert board["attention"]["colliding"] == 2
+    assert claim_count(board, "colliding") == 2
     assert summary_of(client, CARD)["colliding"] == {
         "verdict": "collides",
         "sentence": "#241's lane is also editing README.md.",
@@ -1013,10 +1012,11 @@ def test_plan_opens_a_plan_writing_conversation_for_one_suggestion_or_several(
     project's checkout with the brief; over a selection it is one plan for
     all of them; the rail lists it once; a plan card refuses."""
     reconcile(client)
-    in_flight_before = client.get("/api/projects/proj/board").json()["attention"]["in_flight"]
+    in_flight_before = claim_count(client.get("/api/projects/proj/board").json(), "lane working")
     first, second = 252, 242
     for number in (first, second):
-        assert summary_of(client, number)["plan"]["offered"], f"#{number} offers Plan"
+        door = summary_of(client, number)["state"]["door"]
+        assert door["name"] == "plan" and door["label"] == "Create plan", f"#{number} offers Plan"
         assert detail(client, number)["doors"]["plan"]["offered"]
     paths = {n: summary_of(client, n)["document_path"] for n in (first, second)}
 
@@ -1052,9 +1052,9 @@ def test_plan_opens_a_plan_writing_conversation_for_one_suggestion_or_several(
     machine_floor.write_process("alpha", session_id, os.getpid(), cwd=str(repo), kind="interactive")
     reconcile(client)
     board = client.get("/api/projects/proj/board").json()
-    assert board["attention"]["in_discussion"] == 1
+    assert claim_count(board, "conversation") == 1
     assert board["conversations"][0]["what"] == f"Plan #{second}, #{first}"
-    assert board["attention"]["in_flight"] == in_flight_before, (
+    assert claim_count(board, "lane working") == in_flight_before, (
         "a conversation is never hands on a tree"
     )
 
