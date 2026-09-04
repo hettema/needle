@@ -1,5 +1,6 @@
 # Carrying a suggestion the way the README says parks the plan's card in Decision moment
 
+**Carried by:** docs/plans/done/2026-09-04-11-defects-fix-themselves.md — fixed in that lane (the reconcile emits no `Archived` for a card the same read relinks to a live document; a test lands a plan with its carried suggestion archived in one read and finds the card in Planned), found independently by the dial's own path minutes after this was filed.
 **Kind:** defect
 **Fix:** now
 **Found by:** the machine repo's Idea-door conversation (81c7301c), 2026-09-05
