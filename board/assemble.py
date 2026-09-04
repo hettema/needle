@@ -234,6 +234,20 @@ def _signal_line(signal: Signal) -> str:
     return f"Signal: {signal.what} — by {_due(signal)}"
 
 
+def _lane_is_spent(card: Card, lane: Lane) -> bool:
+    """A lane with nothing left to say about this card. Its work folded and
+    the card shipped on it: what matters now is whether the loop closed, not
+    that the session which did the work has since stopped. Without this every
+    card reads "stopped · <model> on <slot>" in amber the moment it closes,
+    because that is exactly when the session's turn ends — the owner is asked
+    to act on work that is already done."""
+    return (
+        lane.folded
+        and card.place.column in SHIPPED
+        and lane.state in {LaneState.STOPPED, LaneState.ENDED}
+    )
+
+
 def _lane_died(card: Card, lane: Lane) -> bool:
     """An ended lane that is broken rather than simply finished. A lane that
     folded is done: its worktree is still on disk and Start says so in one
@@ -382,7 +396,7 @@ def state_of(
             Meaning.BROKEN,
             detail=lane.colliding.sentence,
         )
-    if lane is not None and lane.state in WAITING_ON_YOU:
+    if lane is not None and lane.state in WAITING_ON_YOU and not _lane_is_spent(card, lane):
         answer = (
             _door(FaceDoorName.OPEN, doors.answer.label, doors.answer.why, primary=True)
             if doors.answer.offered
@@ -509,7 +523,7 @@ def claims_of(
     claims: list[Claim] = []
     if verdict is not None and card.folded_into is None:
         claims.append(Claim.VERDICT)
-    if lane is not None and lane.state in WAITING_ON_YOU:
+    if lane is not None and lane.state in WAITING_ON_YOU and not _lane_is_spent(card, lane):
         claims.append(Claim.LANE_ASKING)
     if signal_asks_owner(card, signal, last, now):
         claims.append(Claim.SIGNAL_ASKING)

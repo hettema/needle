@@ -9,7 +9,7 @@ cannot replace it.
 code commits: the language itself; what the served board showed and jsdom
 could not; the signal that could go unnoticed. The docs commit that follows
 carries this record and the archived plan).
-**Findings:** 12 — 11 fixed before this record, 1 filed.
+**Findings:** 13 — 12 fixed, 1 filed.
 
 ## The passes
 
@@ -53,7 +53,13 @@ lens, the fixes landed, and the next pass re-read the fixed work.
    asserts: six were reachable and unasserted. Writing their tests found the
    defect this record is most glad of (finding 8) and one more (finding 9).
    Findings 8 to 11 came from this pass.
-5. **Clean.** The suite re-run whole: 312 backend tests including the
+5. **The board itself, after the fold.** The trunk rebuilt and
+   `needle-serve.service` restarted, then Needle's own board read through the
+   new language. One wrong word, and the worst kind: card #26, shipped and
+   closed, read "stopped · opus on gmail" in amber (finding 13). Every card
+   would have, because a card closes at exactly the moment its session's turn
+   ends. Fixed, asserted, and folded again.
+6. **Clean.** The suite re-run whole: 312 backend tests including the
    ratchets, `tsc` clean, 55 page scenarios; the live check re-run against the
    rebuilt board with no findings; the four screenshots re-read. Nothing new.
 
@@ -129,6 +135,18 @@ lens, the fixes landed, and the next pass re-read the fixed work.
     two-step fix. Not fixed here — a formatting sweep across the repository is
     exactly the scope creep the effort gate warns about.
 
+13. **A shipped card whose lane folded asked the owner to act on finished
+    work.** Read straight off Needle's own board after the fold: #26 in
+    Executed, its lane folded and trunk-synced, its last words "Nothing
+    regressed — card #26 is in **Executed**" — and the card said "stopped ·
+    opus on gmail" in amber, with its loop hidden behind it. The close is what
+    causes it: `needle close` moves the card to Executed and the session's
+    turn ends in the same breath, so the state that means "answer me" lands on
+    every card at the moment it no longer needs answering. FIXED: on a shipped
+    card, a folded lane that has stopped or ended says nothing and the loop is
+    the state; a lane that has *not* folded still asks, wherever its card sits
+    (plan ruling 11).
+
 ## What was checked
 
 - **The suite**: 312 backend tests including the ratchets, `npx tsc --noEmit`
@@ -143,6 +161,11 @@ lens, the fixes landed, and the next pass re-read the fixed work.
   triage lens's `current → target` and which classes have an accept-all.
   Screenshots at rest, filtered, with the archive unfurled, and on the triage
   lens.
+- **Needle's own board, after the fold**: the trunk levelled, `dist` rebuilt,
+  the service restarted, and every card's state word read back from the served
+  API against what the card actually is. This is what found finding 13, which
+  no fixture would have: the synthetic project has no card that shipped with
+  its lane still stopped, because nothing ever closed on it.
 - **The rule against its own source**: every `_state(...)` word in
   `board/assemble.py` listed and matched to a test or a fixture case.
 

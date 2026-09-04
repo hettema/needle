@@ -251,6 +251,60 @@ def test_a_lane_that_died_before_the_fold_is_broken_but_after_it_is_the_loop():
     assert s.word == "loop open · you read it 11 Sep" and s.meaning == Meaning.QUIET
 
 
+def test_a_folded_lane_on_a_shipped_card_gives_way_to_the_loop():
+    """Every card closes with its session's turn ending, so without this the
+    board reads "stopped · <model> on <slot>" in amber on the very cards whose
+    work is finished — asking the owner to act on what is already done."""
+    shipped = card(column=Column.EXECUTED, archived=True)
+    record = LaneRecord(
+        project="proj",
+        card_number=7,
+        name="card-7-the-thing",
+        path=LANE,
+        branch="card-7-the-thing",
+        birth=None,
+        tip=None,
+        first_seen=NOW - timedelta(hours=2),
+        last_seen=NOW - timedelta(minutes=51),
+        gone_at=None,
+        folded_at=NOW - timedelta(minutes=51),
+        trunk_synced_at=NOW - timedelta(minutes=51),
+        main_synced_at=None,
+    )
+    stopped = lane_for(
+        shipped,
+        facts(
+            records=[record],
+            sessions=[session(state=SessionState.DONE, recorded="done")],
+            events=[event(HookKind.STOP, "Nothing regressed; the lane is folded.")],
+        ),
+    )
+    assert stopped.state == LaneState.STOPPED and stopped.folded
+    s = state(shipped, lane=stopped, signal=SESSION_SIGNAL)
+    assert s.word == "loop open · a session reads it 11 Sep" and s.loop is not None
+    assert Claim.LANE_ASKING not in claims_of(
+        shipped,
+        document_state=DocumentState.ARCHIVED,
+        lane=stopped,
+        standing=TRUSTED,
+        signal=SESSION_SIGNAL,
+        last=None,
+        reading=None,
+        verdict=None,
+        now=NOW,
+    )
+    # A lane that has not folded still asks, wherever its card sits.
+    unfolded = lane_for(
+        shipped,
+        facts(
+            records=[record.model_copy(update={"folded_at": None})],
+            sessions=[session(state=SessionState.DONE, recorded="done")],
+            events=[event(HookKind.STOP, "I could not push.")],
+        ),
+    )
+    assert state(shipped, lane=unfolded, signal=SESSION_SIGNAL).word.startswith("stopped · ")
+
+
 def test_a_document_nowhere_is_broken_before_anything_else():
     c = card(column=Column.DECISION_MOMENT)
     s = state(c, document_state=DocumentState.GONE, standing=DOUBTED)

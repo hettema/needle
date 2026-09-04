@@ -120,7 +120,18 @@ Recorded as the build makes them, each with the alternative rejected. The design
     tree. Every design decision is unchanged; only the sample text moved to
     Harbourmaster's vocabulary. A signed comp is signed for its decisions, and
     a real project's titles stay in that project's repository.
-11. **The page test reads the rule back from the backend, not from a copy of
+11. **A lane with nothing left to say is silent.** Two states of an ended or
+    stopped lane are not the card's state: a lane that *folded* is finished,
+    so an ended one is broken only when nothing folded (the work is what was
+    lost, not the ending); and on a shipped card a folded lane that has
+    stopped gives way to the loop. The second was found by reading the real
+    board after the fold — card #26 sat in Executed reading "stopped · opus on
+    gmail" in amber, asking the owner to act on work that was already done,
+    because a card closes at exactly the moment its session's turn ends. Every
+    card would have done it. Rejected: painting every `LaneState.ENDED` red,
+    which is what the first build did and what the comp implies by drawing
+    only the lane that died.
+12. **The page test reads the rule back from the backend, not from a copy of
     it.** `tools/board_fixture.py` grows `language_cases()`: one `CardSummary`
     per state, produced by the real `state_of`, written into
     `frontend/tests/fixture.json` and held current by the existing ratchet.
