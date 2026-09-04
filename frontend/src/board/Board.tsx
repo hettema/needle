@@ -4,8 +4,8 @@ import type { BoardState, CardSummary } from "../types/board";
 import type { Place } from "../types/card";
 import type { Column } from "../types/column";
 import type { Project } from "../types/project";
-import { openDoor } from "../api";
-import { AppHead, AskList, AskRow, Att, AttentionLine, BoardStrip, CardShell, CorpusLine, HeadTools, Lens, List, Notice, Off, ProjectSwitcher, Rail, Strong, Wordmark } from "../components/ui";
+import { openDoor, openIdea } from "../api";
+import { AppHead, AskList, AskRow, Att, AttentionLine, BoardStrip, CardShell, CorpusLine, HeadTools, IdeaDoor, Lens, List, Notice, Off, ProjectSwitcher, Rail, Strong, TalkList, TalkRow, Wordmark } from "../components/ui";
 import type { BoardStore } from "../state/board";
 import { CardBody } from "./CardView";
 import { ColumnBlock, FOLD_AT } from "./ColumnBlock";
@@ -60,6 +60,9 @@ export function Board({ slug, store, projects, onSwitch }: { slug: string; store
   const [asksOpen, setAsksOpen] = useState(false);
   const [reading, setReading] = useState<number | null>(null);
   const [readSaid, setReadSaid] = useState<string | null>(null);
+  const [talksOpen, setTalksOpen] = useState(false);
+  const [ideaOpening, setIdeaOpening] = useState(false);
+  const [ideaSaid, setIdeaSaid] = useState<string | null>(null);
   const pointerY = useRef(0);
   const liftRef = useRef<Lift | null>(null);
   liftRef.current = lift;
@@ -191,6 +194,24 @@ export function Board({ slug, store, projects, onSwitch }: { slug: string; store
     [slug, store],
   );
 
+  // The Idea door opens through the runtime like every door and answers with
+  // its evidence, or fails by name; the board's stream then lists the conversation.
+  const openAnIdea = useCallback(
+    async (text: string) => {
+      setIdeaOpening(true);
+      setIdeaSaid("Opening…");
+      try {
+        const result = await openIdea(slug, text);
+        setIdeaSaid(result.said);
+      } catch (e) {
+        setIdeaSaid(`Idea did not open: ${e instanceof Error ? e.message : String(e)}`);
+      } finally {
+        setIdeaOpening(false);
+      }
+    },
+    [slug],
+  );
+
   if (!board) {
     return (
       <>
@@ -208,8 +229,10 @@ export function Board({ slug, store, projects, onSwitch }: { slug: string; store
   const corpusState = board.corpus.watching ? <Strong>watching</Strong> : <Off>not watching{board.corpus.watch_note ? ` — ${board.corpus.watch_note}` : ""}</Off>;
   const streamState = store.connected ? null : <Off> · page not connected, showing the board as read {ago(board.generated_at)}</Off>;
 
+  const heard = board.watercooler.length ? (board.watercooler[board.watercooler.length - 1] ?? null) : null;
+
   return (
-    <ProjectContext.Provider value={{ slug, path: board.project.path }}>
+    <ProjectContext.Provider value={{ slug, path: board.project.path, heard }}>
     <LiftContext.Provider value={controller}>
       <AppHead>
         <Wordmark />
@@ -220,11 +243,14 @@ export function Board({ slug, store, projects, onSwitch }: { slug: string; store
         </CorpusLine>
         <HeadTools>
           <Lens value={lens} options={LENSES} onChange={setLens} title="A lens, never a write: sorting changes what you see, never the rank. Drag needs Rank." />
+          <IdeaDoor onOpen={(text) => void openAnIdea(text)} disabled={ideaOpening} said={ideaSaid} />
         </HeadTools>
       </AppHead>
       <AttentionLine quiet={board.machine.missing.length ? `the runtime cannot find: ${board.machine.missing.join(", ")}` : board.trunk.level === null ? "the trunk has not been read yet" : `trunk ${board.trunk.level ? "level with" : `${board.trunk.behind} behind`} origin/develop`}>
         <Att n={board.attention.asking_you} label="asking you" tone="you" />
         <Att n={board.attention.in_flight} label="in flight" />
+        {board.attention.colliding > 0 ? <Att n={board.attention.colliding} label={board.attention.colliding === 1 ? "lane colliding — editing another lane's file" : "lanes colliding — editing each other's files"} tone="bad" /> : null}
+        {board.attention.in_discussion > 0 ? <Att n={board.attention.in_discussion} label="in discussion" onClick={() => setTalksOpen((v) => !v)} on={talksOpen} /> : null}
         {board.attention.lanes_ended > 0 ? <Att n={board.attention.lanes_ended} label={board.attention.lanes_ended === 1 ? "lane ended — Resume or Look" : "lanes ended — Resume or Look"} tone="bad" /> : null}
         {board.attention.signals_asking > 0 ? <Att n={board.attention.signals_asking} label={board.attention.signals_asking === 1 ? "shipped card waits on your reading" : "shipped cards wait on your reading"} tone="you" onClick={() => setAsksOpen((v) => !v)} on={asksOpen} /> : null}
         {board.attention.signals_due > 0 ? <Att n={board.attention.signals_due} label={board.attention.signals_due === 1 ? "signal past due" : "signals past due"} tone="you" /> : null}
@@ -242,6 +268,13 @@ export function Board({ slug, store, projects, onSwitch }: { slug: string; store
           ))}
           {readSaid ? <Notice quiet>{readSaid}</Notice> : null}
         </AskList>
+      ) : null}
+      {talksOpen && board.conversations.length ? (
+        <TalkList title={`${board.conversations.length} conversation${board.conversations.length === 1 ? "" : "s"} alive — never hands on a tree`}>
+          {board.conversations.map((c) => (
+            <TalkRow key={c.short_id} what={c.what} shortId={c.short_id} slot={c.slot} since={ago(c.started_at)} />
+          ))}
+        </TalkList>
       ) : null}
       {store.error ? <Notice>The board could not be re-read: {store.error}. Showing it as last read, {ago(board.generated_at)}.</Notice> : null}
       {board.trunk.note ? <Notice>The main checkout is not level with origin/develop: {board.trunk.note}</Notice> : null}

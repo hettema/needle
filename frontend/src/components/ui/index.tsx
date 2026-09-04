@@ -116,6 +116,32 @@ export function Lens<T extends string>({
   );
 }
 
+/**
+ * The Idea door in the head (plan 07, item 1): one click opens a conversation
+ * about nothing yet, and the optional line beside it lands as the session's
+ * opening prompt. Empty means the session asks.
+ */
+export function IdeaDoor({ onOpen, disabled, said }: { onOpen: (text: string) => void; disabled: boolean; said: string | null }) {
+  return (
+    <form
+      className="idea"
+      title="Opens a conversation in this project's checkout, about nothing yet. What it writes into the corpus becomes a card."
+      onSubmit={(e) => {
+        e.preventDefault();
+        const field = e.currentTarget.elements.namedItem("idea") as HTMLInputElement | null;
+        onOpen(field?.value.trim() ?? "");
+        if (field) field.value = "";
+      }}
+    >
+      <input name="idea" type="text" aria-label="Your first line" title="One line that lands as the session's opening prompt; empty means the session asks" disabled={disabled} autoComplete="off" />
+      <button type="submit" className="btn" disabled={disabled}>
+        Idea
+      </button>
+      {said ? <span className="said">{said}</span> : null}
+    </form>
+  );
+}
+
 // ── the attention line ────────────────────────────────────────────────
 
 export function AttentionLine({ children, quiet }: { children: ReactNode; quiet: string }) {
@@ -168,6 +194,28 @@ export function AskRow({ number, title, what, due, onRead, disabled }: { number:
           Not delivered
         </button>
       </span>
+    </div>
+  );
+}
+
+/** Every conversation alive right now — an idea, or a card's Discuss — as the rail lists them (plan 07, item 1). */
+export function TalkList({ children, title }: { children: ReactNode; title: string }) {
+  return (
+    <section className="talks" aria-label={title}>
+      <div className="talks-h">{title}</div>
+      {children}
+    </section>
+  );
+}
+
+export function TalkRow({ what, shortId, slot, since }: { what: string; shortId: string; slot: string; since: string }) {
+  return (
+    <div className="talk-row" role="listitem">
+      <span className="talk-what">{what}</span>
+      <span className="talk-where">
+        {shortId} on {slot}
+      </span>
+      <span className="talk-since">since {since}</span>
     </div>
   );
 }
@@ -616,6 +664,26 @@ export function Doubt({ children }: { children: ReactNode }) {
     <div className="doubt" role="status">
       <span className="bstate">Doubted</span>
       <span className="bsay">{children}</span>
+    </div>
+  );
+}
+
+/** Two live lanes are editing the same file: named on both cards, before the fold (plan 07, item 2). */
+export function Clash({ children }: { children: ReactNode }) {
+  return (
+    <div className="clash" role="status">
+      <span className="bstate">Colliding</span>
+      <span className="bsay">{children}</span>
+    </div>
+  );
+}
+
+/** The watercooler's last line, on every card with hands on it: what the lanes last said to each other. */
+export function Heard({ who, children }: { who: string; children: ReactNode }) {
+  return (
+    <div className="heard" role="note">
+      <span className="hwho">{who}</span>
+      <span className="hsay">{children}</span>
     </div>
   );
 }

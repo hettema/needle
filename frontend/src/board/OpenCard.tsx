@@ -11,6 +11,7 @@ import {
   Ask,
   Band,
   Button,
+  Clash,
   ClosedDoor,
   ClosedDoors,
   Doubt,
@@ -229,8 +230,25 @@ export function OpenCard({ card, onMoveTo }: { card: CardSummary; onMoveTo: (num
           <Band state={lane.state}>{lane.sentence}</Band>
           {lane.state === "asking" && lane.question ? <Ask>{lane.question}</Ask> : null}
           {doors.answer.offered ? <AnswerBox onSend={(text) => void through("answer", { text })} disabled={opening !== null} hint="One sentence resumes the lane with it" /> : null}
+          {lane.colliding ? <Clash>{lane.colliding.sentence}</Clash> : null}
           {lane.died ? <Quiet>{lane.died}</Quiet> : null}
           {lane.moved ? <Quiet>{lane.moved}</Quiet> : null}
+          {lane.edits.length ? <Quiet>Touching: {lane.edits.join(", ")}</Quiet> : null}
+          {lane.declared.length ? <Quiet>Its plan names: {lane.declared.join(", ")}</Quiet> : null}
+        </Section>
+      ) : null}
+
+      {lane && lane.state !== "none" ? (
+        <Section title="The watercooler" from={detail.watercooler.length ? "what the lanes on this project say to each other; every lane reads it at start and before its fold" : "nothing said yet"}>
+          {detail.watercooler.length ? (
+            <Hist>
+              {detail.watercooler.map((line) => (
+                <HistRow key={line.id} when={when(line.at)} what={line.text} who={line.card_number === null ? "board" : `#${line.card_number}`} owner={false} />
+              ))}
+            </Hist>
+          ) : (
+            <Quiet>No lane has said anything yet. A lane says something when it touches a file outside its footprint or changes a seam another lane depends on.</Quiet>
+          )}
         </Section>
       ) : null}
 

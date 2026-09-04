@@ -73,6 +73,15 @@ export function openDoor(slug: string, number: number, door: DoorName, body: obj
   });
 }
 
+/** The head's Idea door: a conversation about nothing yet, with the owner's first line when he typed one (plan 07, item 1). */
+export function openIdea(slug: string, text: string): Promise<DoorResult> {
+  return call<DoorResult>(`/api/projects/${encodeURIComponent(slug)}/idea`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ text }),
+  });
+}
+
 /** Accept every unread verdict in one class, each as its own act; the answer counts and names refusals. */
 export function acceptClass(slug: string, evidenceClass: EvidenceClass): Promise<VerdictsRuled> {
   return call<VerdictsRuled>(`/api/projects/${encodeURIComponent(slug)}/triage/accept`, {

@@ -1,10 +1,12 @@
 import type { KeyboardEvent, MouseEvent, PointerEventHandler } from "react";
 import { useDraggable } from "@dnd-kit/core";
 import type { CardSummary } from "../types/board";
-import { Band, CardFoot, CardShell, CardTitle, CardTop, Chip, Cid, DocState, Doubt, Essence, FailNote, Grow, KbdHint, Points, Rank, StandingMark, type DragProps } from "../components/ui";
+import { HANDS_ON } from "../types/lane";
+import { Band, CardFoot, CardShell, CardTitle, CardTop, Chip, Cid, Clash, DocState, Doubt, Essence, FailNote, Grow, Heard, KbdHint, Points, Rank, StandingMark, type DragProps } from "../components/ui";
 import type { MoveStatus } from "../state/board";
 import { useLift } from "./LiftContext";
 import { OpenCard } from "./OpenCard";
+import { useProject } from "./ProjectContext";
 
 const GATE_LABEL: Record<string, string> = { low: "Low", medium: "Medium", high: "High", xhigh: "Xhigh" };
 
@@ -23,6 +25,7 @@ export interface CardViewProps {
 }
 
 export function CardBody({ card, rank, open, onClose }: { card: CardSummary; rank: number | null; open: boolean; onClose?: (() => void) | undefined }) {
+  const { heard } = useProject();
   return (
     <>
       <CardTop>
@@ -54,6 +57,8 @@ export function CardBody({ card, rank, open, onClose }: { card: CardSummary; ran
             <Points n={card.points} />
           </CardFoot>
           {card.lane_state !== "none" && card.lane_sentence ? <Band state={card.lane_state}>{card.lane_sentence}</Band> : null}
+          {HANDS_ON.includes(card.lane_state) && heard ? <Heard who={heard.card_number === null ? "the board" : `#${heard.card_number}`}>{heard.text}</Heard> : null}
+          {card.colliding ? <Clash>{card.colliding.sentence}</Clash> : null}
           {card.standing.state === "doubted" && card.standing.words ? <Doubt>{card.standing.words}</Doubt> : null}
         </>
       ) : null}

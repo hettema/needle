@@ -44,6 +44,16 @@
 .lens button.on { background: var(--surface); color: var(--accent); font-weight: 500; }
 .lens button:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
 
+/* ── the Idea door ─────────────────────────────────────────────────── */
+
+.idea { display: inline-flex; align-items: center; gap: 6px; margin-left: 14px; }
+.idea input {
+  width: 220px; font: inherit; font-size: 12px; padding: 4px 9px;
+  border: 1px solid var(--line); border-radius: 20px; background: var(--surface); color: var(--ink);
+}
+.idea input:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.idea .said { font-size: 11px; color: var(--ink-2); max-width: 420px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
 /* ── the attention line ────────────────────────────────────────────── */
 
 .attn-line {
@@ -308,13 +318,31 @@ button.chip:focus-visible { outline: 2px solid var(--accent); outline-offset: 1p
   background: var(--wrong-2); color: var(--wrong);
   font-size: 11.5px; line-height: 1.4;
 }
-.band + .doubt { margin-top: 9px; }
-.card.open .doubt { margin: 0; border-radius: 0; border-top: none; border-bottom: 1px solid var(--wrong); }
-.doubt .bstate {
+.clash {
+  display: flex; align-items: baseline; gap: 7px;
+  margin: 7px -11px -9px; padding: 5px 11px 6px;
+  border-top: 1px solid var(--wrong);
+  border-radius: 0 0 var(--r-card) var(--r-card);
+  background: var(--wrong-2); color: var(--wrong);
+  font-size: 11.5px; line-height: 1.4;
+}
+.band + .doubt, .band + .clash, .heard + .clash, .heard + .doubt, .clash + .doubt { margin-top: 9px; }
+.card.open .doubt, .card.open .clash { margin: 0; border-radius: 0; border-top: none; border-bottom: 1px solid var(--wrong); }
+.doubt .bstate, .clash .bstate {
   flex: none; font-family: var(--mono); font-size: 9px; letter-spacing: .09em; text-transform: uppercase;
   padding-top: 2px;
 }
-.doubt .bsay { min-width: 0; }
+.doubt .bsay, .clash .bsay { min-width: 0; }
+.heard {
+  display: flex; align-items: baseline; gap: 7px;
+  margin: 7px -11px -9px; padding: 4px 11px 5px;
+  border-top: 1px dashed var(--line);
+  background: var(--surface);
+  font-size: 11px; line-height: 1.4; color: var(--ink-2);
+}
+.band + .heard { margin-top: 9px; }
+.heard .hwho { flex: none; font-family: var(--mono); font-size: 9px; letter-spacing: .09em; text-transform: uppercase; color: var(--ink-3); padding-top: 2px; }
+.heard .hsay { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .standing {
   font-family: var(--mono); font-size: 9px; letter-spacing: .07em; text-transform: uppercase;
   padding: 2.5px 6px; border-radius: var(--r-chip); white-space: nowrap;

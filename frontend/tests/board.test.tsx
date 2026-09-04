@@ -16,6 +16,7 @@ const api = vi.hoisted(() => ({
   getFile: vi.fn(),
   getProjects: vi.fn<() => Promise<Project[]>>(),
   openDoor: vi.fn<(slug: string, number: number, door: DoorName, body?: object) => Promise<DoorResult>>(),
+  openIdea: vi.fn<(slug: string, text: string) => Promise<DoorResult>>(),
   acceptClass: vi.fn<(slug: string, evidenceClass: EvidenceClass) => Promise<VerdictsRuled>>(),
   streamUrl: (slug: string) => `/api/projects/${slug}/stream`,
 }));
@@ -43,6 +44,7 @@ beforeEach(() => {
   api.getCard.mockReset().mockImplementation((_slug: string, number: number) => Promise.resolve(detail(number)));
   api.moveCard.mockReset();
   api.openDoor.mockReset();
+  api.openIdea.mockReset();
   api.acceptClass.mockReset();
   window.history.replaceState(null, "", "/");
 });
@@ -90,6 +92,9 @@ function withLane(state: Lane["state"], sentence: string, question: string | nul
     folded: false,
     trunk_synced: false,
     main_synced: false,
+    edits: [],
+    declared: [],
+    colliding: null,
   };
   d.summary.lane_state = state;
   d.summary.lane_sentence = sentence;
@@ -547,5 +552,76 @@ describe("the triage lens", () => {
 
     await userEvent.click(screen.getByRole("button", { name: "Rank" }));
     expect(screen.getByRole("heading", { name: "Backlog" })).toBeInTheDocument();
+  });
+});
+
+describe("conversations and lanes that know each other", () => {
+  it("opens an idea from the head with the first line typed into the door, and lists the conversations alive", async () => {
+    const b = board();
+    b.attention = { ...b.attention, in_discussion: 1 };
+    b.conversations = [{ short_id: "a1b2c3d4", slot: "alpha", card_number: null, what: "Idea", started_at: "2026-09-04T08:20:00+00:00" }];
+    api.getBoard.mockResolvedValue(b);
+    api.openIdea.mockResolvedValue({ door: "idea", said: "Talking in org.omarchy.board-idea-harbourmaster, fable on alpha; a conversation about nothing yet (a1b2c3d4), never hands on a tree." });
+    await renderBoard();
+    const line = screen.getByRole("textbox", { name: "Your first line" });
+    await userEvent.type(line, "should berths be priced by the metre?{enter}");
+    await waitFor(() => expect(api.openIdea).toHaveBeenCalledWith(SLUG, "should berths be priced by the metre?"));
+    expect(await screen.findByText(/a conversation about nothing yet \(a1b2c3d4\)/)).toBeInTheDocument();
+    expect(line).toHaveValue("");
+    await userEvent.click(screen.getByRole("button", { name: "Idea" }));
+    await waitFor(() => expect(api.openIdea).toHaveBeenLastCalledWith(SLUG, ""));
+
+    expect(screen.queryByRole("region", { name: /conversation.*alive/ })).not.toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "1 in discussion" }));
+    const talks = screen.getByRole("region", { name: "1 conversation alive — never hands on a tree" });
+    expect(within(talks).getByRole("listitem")).toHaveTextContent("Idea");
+    expect(within(talks).getByRole("listitem")).toHaveTextContent("a1b2c3d4 on alpha");
+  });
+
+  it("marks two lanes in one file as colliding on both cards and the rail, and shows the watercooler's last line on every live card", async () => {
+    const b = board();
+    const upNext = b.columns.find((c) => c.definition.column === "Up next")?.groups[0];
+    const mine = upNext?.cards.find((c) => c.number === 253);
+    const theirs = upNext?.cards.find((c) => c.number === 241);
+    if (!mine || !theirs) throw new Error("no #253 or #241");
+    for (const card of [mine, theirs]) {
+      card.lane_state = "working";
+      card.lane_sentence = "Working, fable on alpha, hands on for 12 min.";
+    }
+    mine.colliding = { verdict: "collides", sentence: "#241's lane is also editing engine/metering.py.", files: ["engine/metering.py"] };
+    theirs.colliding = { verdict: "collides", sentence: "#253's lane is also editing engine/metering.py.", files: ["engine/metering.py"] };
+    b.attention = { ...b.attention, colliding: 2 };
+    b.watercooler = [
+      { id: 1, project: SLUG, card_number: 241, actor: "session", at: "2026-09-04T08:10:00+00:00", text: "touching engine/metering.py for the tariff; leave it" },
+      { id: 2, project: SLUG, card_number: null, actor: "machine", at: "2026-09-04T08:25:00+00:00", text: "#241 folded over #253's edits in engine/metering.py" },
+    ];
+    api.getBoard.mockResolvedValue(b);
+    const d = withLane("working", "Working, fable on alpha, hands on for 12 min.");
+    if (d.lane) {
+      d.lane.edits = ["engine/metering.py", "engine/tariff.py"];
+      d.lane.declared = ["engine/metering.py"];
+      d.lane.colliding = mine.colliding;
+    }
+    d.watercooler = b.watercooler;
+    api.getCard.mockResolvedValue(d);
+    await renderBoard();
+    expect(screen.getByText("lanes colliding — editing each other's files", { exact: false })).toBeInTheDocument();
+    const resting = screen.getByText("#253").closest("article") as HTMLElement;
+    expect(within(resting).getByText("#241's lane is also editing engine/metering.py.")).toBeInTheDocument();
+    expect(within(resting).getByRole("note")).toHaveTextContent("the board#241 folded over #253's edits in engine/metering.py");
+    const other = screen.getByText("#241").closest("article") as HTMLElement;
+    expect(within(other).getByText("#253's lane is also editing engine/metering.py.")).toBeInTheDocument();
+    // A card with no hands on it carries no watercooler line.
+    const still = screen.getByText("#228").closest("article") as HTMLElement;
+    expect(within(still).queryByRole("note")).not.toBeInTheDocument();
+
+    await userEvent.click(screen.getByText("Every metered kilowatt is billed"));
+    await screen.findByRole("button", { name: "Watch" });
+    expect(screen.getByText("Touching: engine/metering.py, engine/tariff.py")).toBeInTheDocument();
+    expect(screen.getByText("Its plan names: engine/metering.py")).toBeInTheDocument();
+    const cooler = screen.getByText("The watercooler").closest(".sec") as HTMLElement;
+    expect(cooler).toHaveTextContent("touching engine/metering.py for the tariff; leave it");
+    expect(cooler).toHaveTextContent("#241");
+    expect(cooler).toHaveTextContent("board");
   });
 });
