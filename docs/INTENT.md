@@ -120,14 +120,12 @@ status.
 
 ## Sequence
 
-1. **The map** — the kanban over a project's plans, with the owner's moves,
-   card detail, and the first project (Hello Revenue) on it read-only from
-   its written record. `docs/plans/2026-09-03-01-the-map.md`.
-2. **The runtime** — sessions as one list across subscriptions, the model
-   rule, launching a lane in its own scope, a window into any session that
-   the owner can close without ending it.
-3. **The doors and the loops** — Start, Discuss, Answer, Watch; the machine
-   moves; the done signal read and acted on.
-
-Needle replaces 0.1 for Hello Revenue when the third slice lands. Until then
-0.1 keeps running and every lesson it teaches is added above.
+The founding sequence was three slices: the map, the runtime, and the doors
+and the loops. All three shipped on 2026-09-04, Needle replaced the first
+board for Hello Revenue that afternoon, and the first board was retired the
+same day by a card Needle ran from Start to Done on its own. What came after
+is on Needle's own board, where every slice since has been a card: the
+cleanup by evidence, the loops moving in, the board at a glance,
+conversations and lanes, a session reading the signal, identity and the
+record. The plans and their rulings are under `docs/plans/done/` as they
+land; the board says which are live.
