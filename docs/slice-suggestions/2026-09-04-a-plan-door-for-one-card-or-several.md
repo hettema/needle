@@ -2,7 +2,7 @@
 
 **Found by:** the owner, 2026-09-04: "cards that live without a plan cannot
 be executed. I think we should have a 'create plan' button on the card (also
-on the closed card)", and "do all the cards you created need to be separate
+on the card in its collapsed view)", and "do all the cards you created need to be separate
 cards or can some be folded? That feels like an efficiency gain."
 **Kind:** idea
 

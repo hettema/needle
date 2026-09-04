@@ -7,7 +7,7 @@
 
 ## Intent
 
-The owner reads the board without opening cards: each closed card says whether it can start and lets him start it or plan it from there; defects and ideas are two scans, not one; the head and the column names never leave the screen; and a card's document event — archived, or a plan written for it — moves the card by the machine, with the reason on its history.
+The owner reads the board without opening cards: each collapsed card says whether it can start and lets him start it or plan it from there; defects and ideas are two scans, not one; the head and the column names never leave the screen; and a card's document event — archived, or a plan written for it — moves the card by the machine, with the reason on its history.
 
 ### 1. An archived document moves its card
 As its suggestion says. Done means: on the corpus's archived effect, a card outside a shipped column with no live lane moves to Executed when it carries DELIVERED and a readable WATCH, otherwise to Decision moment with "its plan was archived, but no session wrote it up on the board"; an audit row names the document; a test archives an Up next card's document and finds it in Decision moment on the next read.
