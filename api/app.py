@@ -59,6 +59,11 @@ class ClassBody(BaseModel):
     evidence_class: EvidenceClass
 
 
+class PlanBody(BaseModel):
+    numbers: list[int]
+    """The suggestion cards one plan is to carry; one number is the single Plan door."""
+
+
 class HooksReceived(BaseModel):
     received: int
     attributed: int
@@ -224,6 +229,11 @@ def create_app(store: Store | None = None, *, dist: Path | None = FRONTEND_DIST)
     async def idea(slug: str, body: IdeaBody, request: Request) -> DoorResult:
         """The head's Idea door: a conversation about nothing yet (plan 07, item 1)."""
         return await through_door(request, slug, lambda doors: doors.idea(slug, body.text))
+
+    @app.post("/api/projects/{slug}/plan", response_model=DoorResult)
+    async def plan(slug: str, body: PlanBody, request: Request) -> DoorResult:
+        """The Plan door, for one suggestion card or several (plan 06, item 5)."""
+        return await through_door(request, slug, lambda doors: doors.plan(slug, body.numbers))
 
     @app.post("/api/projects/{slug}/triage/accept", response_model=VerdictsRuled)
     async def accept_class(slug: str, body: ClassBody, request: Request) -> VerdictsRuled:

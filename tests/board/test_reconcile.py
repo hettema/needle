@@ -32,6 +32,8 @@ def doc(
         sequencing=None,
         found_by=None,
         card_ref=card_ref,
+        suggestion_kind=None,
+        cites=[],
         head_fields=[],
         intent_heading=None,
         intent="",
@@ -175,3 +177,116 @@ def test_an_archived_plan_naming_a_card_links_to_it_archived_and_is_never_born()
         [card(7, planned)],
     )
     assert effects.relinked == [] and effects.born == []
+
+
+# ── plan 06, item 5: a card follows its plan; item 2: the defects rail ─
+
+
+def _plan(stem: str, *cites: str, archived: bool = False, card_ref: int | None = None) -> Document:
+    return doc(DocumentKind.PLAN, stem, stem.title(), archived=archived, card_ref=card_ref).model_copy(
+        update={"cites": list(cites)}
+    )
+
+
+def _suggestion(stem: str, kind: str = "idea", *, archived: bool = False) -> Document:
+    from domain.document import SuggestionKind
+
+    return doc(DocumentKind.SUGGESTION, stem, stem, archived=archived).model_copy(
+        update={"suggestion_kind": SuggestionKind(kind)}
+    )
+
+
+def _slink(stem: str, archived: bool = False) -> DocumentLink:
+    return DocumentLink(kind=DocumentKind.SUGGESTION, stem=stem, title=stem, archived=archived)
+
+
+def _plink(stem: str, archived: bool = False) -> DocumentLink:
+    return DocumentLink(kind=DocumentKind.PLAN, stem=stem, title=stem.title(), archived=archived)
+
+
+def test_a_plan_citing_suggestions_takes_the_first_card_and_folds_the_rest_and_nothing_is_born():
+    cards = [
+        card(7, _slink("a"), Column.BACKLOG),
+        card(8, _slink("b"), Column.BACKLOG),
+        card(9, _slink("c"), Column.BACKLOG),
+    ]
+    corpus = index(_plan("p", "a", "b", "c"), _suggestion("a"), _suggestion("b"), _suggestion("c"))
+    effects = reconcile(corpus, cards)
+    assert [(r.card_number, r.document.stem, r.promote, r.why) for r in effects.relinked] == [
+        (7, "p", True, "which carries this card's suggestion")
+    ]
+    assert [(f.card_number, f.into, f.plan.stem) for f in effects.folded] == [(8, 7, "p"), (9, 7, "p")]
+    assert effects.born == [], "neither the plan nor the suggestions it carries are born"
+    # The next read, with the store's work done, changes nothing: the suggestions
+    # stay live in their folder and are carried, not without a card.
+    after = [
+        card(7, _plink("p"), Column.PLANNED),
+        card(8, _slink("b"), Column.PLANNED).model_copy(update={"folded_into": 7}),
+        card(9, _slink("c"), Column.PLANNED).model_copy(update={"folded_into": 7}),
+    ]
+    assert reconcile(corpus, after).empty()
+
+
+def test_a_plan_that_already_has_a_card_folds_what_it_cites_under_that_card():
+    cards = [
+        card(16, _plink("p"), Column.EXECUTING),
+        card(7, _slink("a", archived=True), Column.NOT_NOW),
+    ]
+    effects = reconcile(index(_plan("p", "a"), _suggestion("a", archived=True)), cards)
+    assert effects.relinked == []
+    assert [(f.card_number, f.into) for f in effects.folded] == [(7, 16)]
+
+
+def test_a_carried_suggestion_with_no_card_is_never_born_and_a_shipped_card_is_not_carried():
+    effects = reconcile(
+        index(_plan("p", "a", "b"), _suggestion("a"), _suggestion("b")),
+        [card(3, _slink("b"), Column.DONE)],
+    )
+    assert [b.document.stem for b in effects.born] == ["p"]
+    assert effects.folded == [] and effects.relinked == []
+
+
+def test_a_live_plan_carries_a_suggestion_before_an_archived_one_does():
+    cards = [
+        card(8, _slink("a", archived=True), Column.NOT_NOW),
+        card(17, _plink("old", archived=True), Column.EXECUTED),
+        card(20, _plink("new"), Column.UP_NEXT),
+    ]
+    corpus = index(
+        _plan("old", "a", archived=True), _plan("new", "a"), _suggestion("a", archived=True)
+    )
+    assert [(f.card_number, f.into) for f in reconcile(corpus, cards).folded] == [(8, 20)]
+
+
+def test_a_plan_naming_a_card_by_number_still_folds_the_other_suggestions_it_cites():
+    cards = [card(7, None, Column.PLANNED), card(8, _slink("b"), Column.BACKLOG)]
+    effects = reconcile(index(_plan("p", "b", card_ref=7), _suggestion("b")), cards)
+    assert [(r.card_number, r.why) for r in effects.relinked] == [(7, "which names this card")]
+    assert [(f.card_number, f.into) for f in effects.folded] == [(8, 7)]
+
+
+def test_a_backlog_card_follows_its_documents_kind_onto_and_off_the_rail():
+    from domain.card import Place
+    from domain.column import DEFECTS_RAIL
+
+    on_rail = card(5, _slink("d"), Column.BACKLOG).model_copy(
+        update={"place": Place(column=Column.BACKLOG, group=DEFECTS_RAIL, position=0)}
+    )
+    below = card(6, _slink("i"), Column.BACKLOG)
+    effects = reconcile(index(_suggestion("d", "idea"), _suggestion("i", "defect")), [on_rail, below])
+    assert [(r.card_number, r.into_rail, r.kind.value) for r in effects.rehomed] == [
+        (5, False, "idea"),
+        (6, True, "defect"),
+    ]
+    settled = reconcile(index(_suggestion("d", "defect"), _suggestion("i", "idea")), [on_rail, below])
+    assert settled.rehomed == []
+    elsewhere = reconcile(index(_suggestion("i", "defect")), [card(6, _slink("i"), Column.UP_NEXT)])
+    assert elsewhere.rehomed == [], "the rail is Backlog's; a defect queued by the owner stays queued"
+
+
+def test_a_suggestion_is_born_with_its_kind():
+    effects = reconcile(index(_suggestion("d", "defect"), _suggestion("i", "idea")), [])
+    assert [(b.document.stem, b.kind.value if b.kind else None) for b in effects.born] == [
+        ("d", "defect"),
+        ("i", "idea"),
+    ]

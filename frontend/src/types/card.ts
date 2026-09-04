@@ -23,6 +23,7 @@ export interface Card {
   origin: CardOrigin;
   born_at: string;
   rows: Row[];
+  folded_into?: number | null;
 }
 
 export interface DocumentLink {

@@ -89,7 +89,10 @@ def test_verdicts_proposes_what_the_boards_facts_settle_and_writes_them_on_reque
     assert main(["verdicts", "harbourmaster"]) == 0
     out = capsys.readouterr().out
     # 0.1's file put #259 and #223 in Executing with no lane: doubted on the first read.
-    assert "#259  Executing        doubted — no lane exists for it" in out
+    # #259's plan is archived, so the read itself moved it (plan 06, item 1); #223's
+    # suggestion is live, so it stays and the verdict says why.
+    assert "#223  Executing        doubted — no lane exists for it" in out
+    assert "#259  Decision moment" in out
     assert "→ Decision moment" in out
     assert "(the corpus decides)" in out
     assert "proposed (doubted: " in out
@@ -105,8 +108,8 @@ def test_verdicts_proposes_what_the_boards_facts_settle_and_writes_them_on_reque
         for c in store.cards("harbourmaster")
         if any(r.kind.value == "VERDICT" for r in c.rows)
     }
-    assert {259, 223} <= written
+    assert 223 in written
     store.close()
     # A card carrying a verdict is not proposed again.
     assert main(["verdicts", "harbourmaster"]) == 0
-    assert "#259 " not in capsys.readouterr().out
+    assert "#223 " not in capsys.readouterr().out

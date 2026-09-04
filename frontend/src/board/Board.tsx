@@ -4,8 +4,8 @@ import type { BoardState, CardSummary } from "../types/board";
 import type { Place } from "../types/card";
 import type { Column } from "../types/column";
 import type { Project } from "../types/project";
-import { openDoor, openIdea } from "../api";
-import { AppHead, AskList, AskRow, Att, AttentionLine, BoardStrip, CardShell, CorpusLine, HeadTools, IdeaDoor, Lens, List, Notice, Off, ProjectSwitcher, Rail, Strong, TalkList, TalkRow, Wordmark } from "../components/ui";
+import { openDoor, openIdea, openPlan } from "../api";
+import { AppHead, AskList, AskRow, Att, AttentionLine, BoardStrip, CardShell, CorpusLine, HeadFrame, HeadTools, IdeaDoor, Lens, List, Notice, Off, ProjectSwitcher, Rail, Strong, TalkList, TalkRow, TogetherBar, Wordmark } from "../components/ui";
 import type { BoardStore } from "../state/board";
 import { CardBody } from "./CardView";
 import { ColumnBlock, FOLD_AT } from "./ColumnBlock";
@@ -41,6 +41,10 @@ function cardBoxes(groupEl: Element): { number: number; top: number; height: num
   });
 }
 
+function isWide(): boolean {
+  return typeof window.matchMedia === "function" && window.matchMedia(WIDE_SCREEN).matches;
+}
+
 const collision: CollisionDetection = (args) => {
   const within = pointerWithin(args);
   return within.length ? within : rectIntersection(args);
@@ -52,10 +56,7 @@ export function Board({ slug, store, projects, onSwitch }: { slug: string; store
   const [open, setOpenState] = useState<number | null>(() => cardFromHash());
   const [focused, setFocused] = useState<number | null>(null);
   const [lift, setLift] = useState<Lift | null>(null);
-  const [furled, setFurled] = useState<Set<Column>>(() => {
-    const wide = typeof window.matchMedia === "function" && window.matchMedia(WIDE_SCREEN).matches;
-    return new Set<Column>(wide ? [] : ["Executed", "Done", "Not now"]);
-  });
+  const [furled, setFurled] = useState<Set<Column>>(() => new Set<Column>(isWide() ? [] : ["Executed", "Done", "Not now"]));
   const [unfurledMore, setUnfurledMore] = useState<Set<Column>>(new Set());
   const [asksOpen, setAsksOpen] = useState(false);
   const [reading, setReading] = useState<number | null>(null);
@@ -63,6 +64,12 @@ export function Board({ slug, store, projects, onSwitch }: { slug: string; store
   const [talksOpen, setTalksOpen] = useState(false);
   const [ideaOpening, setIdeaOpening] = useState(false);
   const [ideaSaid, setIdeaSaid] = useState<string | null>(null);
+  // Which columns are scrolled away from their top: on a laptop the head folds to one line while any is.
+  const [scrolled, setScrolled] = useState<Set<Column>>(new Set());
+  // Suggestion cards picked for one plan (plan 06, item 5).
+  const [selected, setSelected] = useState<Set<number>>(new Set());
+  const [planning, setPlanning] = useState(false);
+  const [planSaid, setPlanSaid] = useState<string | null>(null);
   const pointerY = useRef(0);
   const liftRef = useRef<Lift | null>(null);
   liftRef.current = lift;
@@ -112,6 +119,25 @@ export function Board({ slug, store, projects, onSwitch }: { slug: string; store
   const openColumns = useMemo<Column[]>(() => (board ? board.columns.map((c) => c.definition.column).filter((c) => !furled.has(c)) : []), [board, furled]);
 
   const unfurlMore = useCallback((column: Column) => setUnfurledMore((s) => new Set(s).add(column)), []);
+
+  const onScrolled = useCallback((column: Column, isScrolled: boolean) => {
+    setScrolled((s) => {
+      if (s.has(column) === isScrolled) return s;
+      const next = new Set(s);
+      if (isScrolled) next.add(column);
+      else next.delete(column);
+      return next;
+    });
+  }, []);
+
+  const onSelect = useCallback((number: number, picked: boolean) => {
+    setSelected((s) => {
+      const next = new Set(s);
+      if (picked) next.add(number);
+      else next.delete(number);
+      return next;
+    });
+  }, []);
 
   const controller = useMemo<LiftController>(() => {
     const retarget = (target: Place) => {
@@ -212,6 +238,22 @@ export function Board({ slug, store, projects, onSwitch }: { slug: string; store
     [slug],
   );
 
+  // One Plan door for every picked suggestion: the brief lists them all and the plan carries them all.
+  const planTogether = useCallback(async () => {
+    const numbers = Array.from(selected).sort((a, b) => a - b);
+    setPlanning(true);
+    setPlanSaid("Opening…");
+    try {
+      const result = await openPlan(slug, numbers);
+      setPlanSaid(result.said);
+      setSelected(new Set());
+    } catch (e) {
+      setPlanSaid(`Plan did not open: ${e instanceof Error ? e.message : String(e)}`);
+    } finally {
+      setPlanning(false);
+    }
+  }, [slug, selected]);
+
   if (!board) {
     return (
       <>
@@ -230,10 +272,12 @@ export function Board({ slug, store, projects, onSwitch }: { slug: string; store
   const streamState = store.connected ? null : <Off> · page not connected, showing the board as read {ago(board.generated_at)}</Off>;
 
   const heard = board.watercooler.length ? (board.watercooler[board.watercooler.length - 1] ?? null) : null;
+  const folded = scrolled.size > 0 && !isWide();
 
   return (
     <ProjectContext.Provider value={{ slug, path: board.project.path, heard }}>
     <LiftContext.Provider value={controller}>
+      <HeadFrame folded={folded}>
       <AppHead>
         <Wordmark />
         <ProjectSwitcher projects={listed} current={slug} onSwitch={onSwitch} />
@@ -256,11 +300,14 @@ export function Board({ slug, store, projects, onSwitch }: { slug: string; store
         {board.attention.signals_due > 0 ? <Att n={board.attention.signals_due} label={board.attention.signals_due === 1 ? "signal past due" : "signals past due"} tone="you" /> : null}
         {board.attention.doubted > 0 ? <Att n={board.attention.doubted} label={board.attention.doubted === 1 ? "status doubted — its evidence is gone" : "statuses doubted — their evidence is gone"} tone="bad" /> : null}
         {board.attention.verdicts_unread > 0 ? <Att n={board.attention.verdicts_unread} label={board.attention.verdicts_unread === 1 ? "card carries a verdict you have not read" : "cards carry a verdict you have not read"} tone="you" onClick={() => setLens(lens === "triage" ? "rank" : "triage")} on={lens === "triage"} /> : null}
+        {board.attention.unplanned_defects > 0 ? <Att n={board.attention.unplanned_defects} label={board.attention.unplanned_defects === 1 ? "defect unplanned" : "defects unplanned"} tone="bad" /> : null}
+        <Att n={board.attention.unplanned_ideas} label={board.attention.unplanned_ideas === 1 ? "idea unplanned" : "ideas unplanned"} />
         <Att n={board.attention.arrived_today} label="arrived today" />
         {board.attention.documents_gone > 0 ? <Att n={board.attention.documents_gone} label={board.attention.documents_gone === 1 ? "card cites a document that is nowhere" : "cards cite documents that are nowhere"} tone="bad" /> : null}
         {board.attention.documents_without_card > 0 ? <Att n={board.attention.documents_without_card} label="documents have no card" tone="bad" /> : null}
         {Object.values(store.statuses).filter((s) => s.kind === "failed").length > 0 ? <Att n={Object.values(store.statuses).filter((s) => s.kind === "failed").length} label="write failed" tone="bad" /> : null}
       </AttentionLine>
+      </HeadFrame>
       {asksOpen && board.asks.length ? (
         <AskList title={`${board.asks.length} shipped card${board.asks.length === 1 ? "" : "s"} wait${board.asks.length === 1 ? "s" : ""} on your reading — only you can read these signals`}>
           {board.asks.map((a) => (
@@ -276,6 +323,7 @@ export function Board({ slug, store, projects, onSwitch }: { slug: string; store
           ))}
         </TalkList>
       ) : null}
+      {selected.size > 0 || planSaid ? <TogetherBar count={selected.size} onPlan={() => void planTogether()} onClear={() => { setSelected(new Set()); setPlanSaid(null); }} disabled={planning} said={planSaid} /> : null}
       {store.error ? <Notice>The board could not be re-read: {store.error}. Showing it as last read, {ago(board.generated_at)}.</Notice> : null}
       {board.trunk.note ? <Notice>The main checkout is not level with origin/develop: {board.trunk.note}</Notice> : null}
       {board.documents_without_card.length ? (
@@ -315,12 +363,18 @@ export function Board({ slug, store, projects, onSwitch }: { slug: string; store
                 focused={focused}
                 statuses={store.statuses}
                 unfurled={unfurledMore.has(column.definition.column)}
+                selected={selected}
                 onUnfurl={() => unfurlMore(column.definition.column)}
-                onFurl={() => setFurled((f) => new Set(f).add(column.definition.column))}
+                onFurl={() => {
+                  onScrolled(column.definition.column, false);
+                  setFurled((f) => new Set(f).add(column.definition.column));
+                }}
                 onOpen={setOpen}
                 onRetry={(n) => void store.retry(n)}
                 onFocus={setFocused}
                 onMoveTo={moveTo}
+                onSelect={onSelect}
+                onScrolled={onScrolled}
               />
             ),
           )}

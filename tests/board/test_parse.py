@@ -128,3 +128,48 @@ def test_status_word_is_the_first_word_without_punctuation():
         parse("# T\n\n**Status:** DONE — 2026-09-02, main synced\n\n## Intent\n\nx\n").status_word
         == "DONE"
     )
+
+
+# ── plan 06: a suggestion's kind, and what a plan carries ──────────────
+
+
+def test_a_suggestions_kind_is_its_line_else_read_from_its_text_where_it_can_tell():
+    from domain.document import SuggestionKind
+
+    kind, path = DocumentKind.SUGGESTION, "docs/slice-suggestions/2026-09-04-x.md"
+
+    def sugg(text: str):
+        return parse(text, kind, path).suggestion_kind
+
+    assert sugg("# A thing\n\n**Kind:** defect\n\n## Observation\n\nx\n") == SuggestionKind.DEFECT
+    # The line wins over a defect-shaped title.
+    assert (
+        sugg("# The raw-button ratchet does not see a button\n\n**Kind:** idea\n\n## O\n\nx\n")
+        == SuggestionKind.IDEA
+    )
+    assert sugg("# A brighter pontoon\n\n**Found by:** the owner\n\n## O\n\nx\n") == (
+        SuggestionKind.IDEA
+    )
+    # No line: a review filed it, or the title says what went wrong.
+    assert (
+        sugg("# A brighter pontoon\n\n**Found by:** the code review of card #222\n\n## O\n\nx\n")
+        == SuggestionKind.DEFECT
+    )
+    assert sugg("# The gate code does not reach the skipper\n\n## O\n\nx\n") == (
+        SuggestionKind.DEFECT
+    )
+    assert sugg("# A brighter pontoon\n\n## O\n\nx\n") == SuggestionKind.IDEA
+    # A plan has no kind, whatever its head says.
+    assert parse("# A plan\n\n**Kind:** defect\n\n## Intent\n\nx\n").suggestion_kind is None
+
+
+def test_a_plans_head_names_the_suggestions_it_carries_and_its_body_does_not():
+    document = parse(
+        "# 06 — The board\n\n"
+        "**Written:** 2026-09-04, folding `docs/slice-suggestions/2026-09-04-a.md` and "
+        "`docs/slice-suggestions/2026-09-04-b.md`.\n"
+        "**Carries:** docs/slice-suggestions/done/2026-09-04-a.md\n\n"
+        "## Intent\n\nSee docs/slice-suggestions/2026-09-04-c.md for the neighbour.\n"
+    )
+    assert document.cites == ["2026-09-04-a", "2026-09-04-b"]
+    assert parse("# A plan\n\n## Intent\n\nx\n").cites == []

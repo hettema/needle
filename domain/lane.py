@@ -16,6 +16,7 @@ from pydantic import BaseModel
 
 from domain.session import Session
 from domain.slot import Placement
+from domain.window import WindowKind
 
 
 class LaneState(StrEnum):
@@ -77,6 +78,10 @@ class Discussion(BaseModel):
     project: str
     card_number: int | None
     """The card discussed; None for an idea, which is about no card yet."""
+    kind: WindowKind
+    """The door it was opened through: a card's Discuss, the head's Idea, or
+    a card's Plan (plan 06, item 5). A Plan for several cards is one row per
+    card, all under one session."""
     session_id: str
     slot: str
     started_at: datetime
@@ -89,7 +94,7 @@ class Conversation(BaseModel):
     slot: str
     card_number: int | None
     what: str
-    """`Idea`, or `#N` for a card's Discuss."""
+    """`Idea`, `#N` for a card's Discuss, or `Plan #N, #M` for a plan-writing conversation."""
     started_at: datetime
 
 
@@ -167,11 +172,48 @@ class Collision(BaseModel):
     sentence: str
     files: list[str]
     """The overlapping files, when there are any."""
+    cards: list[int]
+    """The other lanes' cards, when there are any: what the collapsed card names."""
+
+
+class StartState(StrEnum):
+    """Whether the card can start now, in one word: what the collapsed card's
+    pill says (plan 06, item 3). Computed from the same facts as the Start
+    door, by the same function, never a second judgment."""
+
+    FREE = "free"
+    """Gated, no collision, somewhere to run: Start is open."""
+    COLLIDES = "collides"
+    """Another live lane is on this plan's files; Start anyway is on the open face."""
+    NO_GATE = "no gate"
+    """A suggestion, or a plan without an effort gate; Discuss it to write one."""
+    NOWHERE = "nowhere to run"
+    """Every subscription is spent."""
+    TAKEN = "lane exists"
+    """A lane already holds the card: live, or a worktree left on disk."""
+    ELSEWHERE = "elsewhere"
+    """Not in a column Start is offered in."""
+    UNREAD = "unread"
+    """The runtime has not read this board yet."""
+
+
+class Readiness(BaseModel):
+    """The pill: the Start door's verdict in one word, with what it rests on."""
+
+    state: StartState
+    why: str
+    """The Start door's own reason, or where it would run."""
+    cards: list[int]
+    """The colliding lanes' cards, when the state is `collides`."""
+    files: list[str]
+    """The files they are on, shown on hover."""
 
 
 class Doors(BaseModel):
     start: Door
     start_anyway: Door
+    readiness: Readiness
+    """What the collapsed card says about Start (plan 06, item 3)."""
     placement: Placement | None
     """Where Start would run, from the one rule; None when the rule found nowhere."""
     placement_note: str
@@ -179,6 +221,8 @@ class Doors(BaseModel):
     watch: Door
     answer: Door
     discuss: Door
+    plan: Door
+    """A plan-writing conversation for this suggestion (plan 06, item 5)."""
     look: Door
     resume: Door
     stop: Door

@@ -87,6 +87,11 @@ def missing_fact(
         if last.delivered:
             return f"the last reading says delivered: {last.words}"
         return None
+    if evidence == Evidence.DOCUMENT_ARCHIVED:
+        if card.link is None:
+            return "no document is written behind it any more"
+        if not card.link.archived:
+            return f"its document is live again ({card.link.stem})"
     if lane is not None and lane.state in HANDS_ON:
         return f"a session has hands on it again: {lane.sentence}"
     return None

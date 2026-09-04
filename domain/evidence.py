@@ -31,6 +31,10 @@ class Evidence(StrEnum):
     """Decision moment: the last reading said not delivered, or could not read, past due."""
     LANE_ENDED = "lane-ended"
     """Decision moment, or back where the card came from: no session has hands on it."""
+    DOCUMENT_ARCHIVED = "document-archived"
+    """Decision moment: the card's document was archived with no lane on the
+    card and nothing written up (plan 06, item 1). Holds while the document
+    stays archived and no session has hands on the card."""
 
 
 class EvidenceState(StrEnum):

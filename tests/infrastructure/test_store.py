@@ -137,6 +137,8 @@ def test_births_land_last_in_the_unnamed_group_and_number_onward(
     effects = Effects(
         renamed=[],
         relinked=[],
+        folded=[],
+        rehomed=[],
         archived=[],
         born=[
             Born(
@@ -148,6 +150,7 @@ def test_births_land_last_in_the_unnamed_group_and_number_onward(
                 ),
                 column=Column.PLANNED,
                 found_by=None,
+                kind=None,
             ),
             Born(
                 document=DocumentRef(
@@ -158,6 +161,7 @@ def test_births_land_last_in_the_unnamed_group_and_number_onward(
                 ),
                 column=Column.BACKLOG,
                 found_by=None,
+                kind=None,
             ),
         ],
     )
@@ -178,6 +182,8 @@ def test_births_land_last_in_the_unnamed_group_and_number_onward(
         Effects(
             renamed=[],
             relinked=[],
+            folded=[],
+            rehomed=[],
             archived=[],
             born=[
                 Born(
@@ -186,6 +192,7 @@ def test_births_land_last_in_the_unnamed_group_and_number_onward(
                     ),
                     column=Column.PLANNED,
                     found_by=None,
+                    kind=None,
                 )
             ],
         ),
@@ -223,8 +230,12 @@ def test_renames_relinks_and_archives_move_the_link_and_leave_a_row(
                     title="The skipper is told what the office decided",
                 ),
                 archived=False,
+                why="which names this card",
+                promote=False,
             )
         ],
+        folded=[],
+        rehomed=[],
         archived=[
             Archived(
                 card_number=253,

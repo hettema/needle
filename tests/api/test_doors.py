@@ -816,6 +816,7 @@ def test_two_lanes_in_one_file_collide_on_both_cards_know_each_other_and_the_fol
         "verdict": "collides",
         "sentence": "#241's lane is also editing README.md.",
         "files": ["README.md"],
+        "cards": [241],
     }
     assert summary_of(client, 241)["colliding"]["sentence"] == (
         "#253's lane is also editing README.md."
@@ -856,3 +857,178 @@ def test_two_lanes_in_one_file_collide_on_both_cards_know_each_other_and_the_fol
     last = client.get("/api/projects/proj/board").json()["watercooler"][-1]
     assert last["card_number"] is None
     assert last["text"] == "#253 folded over #241's edits in README.md"
+
+
+# ── plan 06: the board at a glance ─────────────────────────────────────
+
+
+def test_an_archived_document_moves_its_card_when_nothing_has_hands_on_it(
+    client: TestClient, repo: Path
+):
+    """Item 1: an Up next card's plan is archived with no lane on the card;
+    on the next read it is in Decision moment with the reason and the
+    document on its history; with DELIVERED and a readable WATCH it is
+    Executed instead."""
+    assert column_of(client, CARD) == "Up next"
+    done = archive_plan(repo)
+    live = client.app.state.loops.live
+    live.rescan("proj")
+    reconcile(client)
+    assert column_of(client, CARD) == "Decision moment"
+    history = detail(client)["history"]
+    assert history[0]["kind"] == "moved" and history[0]["evidence"] == "document-archived"
+    assert history[0]["actor"] == "machine"
+    assert f"its plan was archived (docs/plans/done/{done.name})" in history[0]["detail"]
+    assert "no session wrote it up on the board" in history[0]["detail"]
+    assert history[1]["kind"] == "archived" and done.name in history[1]["detail"]
+    assert summary_of(client)["standing"]["state"] == "held"
+    # Nothing moves it again, and Decision moment is where it waits for the owner.
+    reconcile(client)
+    assert column_of(client, CARD) == "Decision moment"
+
+    # A card with its close written up, and a plan archived by hand: Executed.
+    other = 241
+    path = repo / summary_of(client, other)["document_path"]
+    from domain.card import Actor
+    from domain.row import Row, RowKind
+
+    live.add_row("proj", other, Row(kind=RowKind.DELIVERED, text="the metre"), Actor.SESSION)
+    live.add_row(
+        "proj",
+        other,
+        Row(kind=RowKind.WATCH, text="the tariff page — file docs/tariff.md by 2026-09-30"),
+        Actor.SESSION,
+    )
+    shutil.move(path, repo / "docs" / "plans" / "done" / path.name)
+    live.rescan("proj")
+    reconcile(client)
+    assert column_of(client, other) == "Executed"
+    row = detail(client, other)["history"][0]
+    assert row["evidence"] == "close-landed" and "the close landed" in row["detail"]
+
+
+def test_plan_opens_a_plan_writing_conversation_for_one_suggestion_or_several(
+    client: TestClient, machine_floor: Floor, repo: Path
+):
+    """Item 5: Plan on a suggestion card opens a conversation in the
+    project's checkout with the brief; over a selection it is one plan for
+    all of them; the rail lists it once; a plan card refuses."""
+    reconcile(client)
+    in_flight_before = client.get("/api/projects/proj/board").json()["attention"]["in_flight"]
+    first, second = 252, 242
+    for number in (first, second):
+        assert summary_of(client, number)["plan"]["offered"], f"#{number} offers Plan"
+        assert detail(client, number)["doors"]["plan"]["offered"]
+    paths = {n: summary_of(client, n)["document_path"] for n in (first, second)}
+
+    one = client.post("/api/projects/proj/plan", json={"numbers": [first]})
+    assert one.status_code == 200, one.text
+    assert one.json()["said"].startswith(f"Planning #{first} in org.omarchy.board-plan-card-{first}-")
+    command = machine_floor.state()["spawned"][0]["command"][-1]
+    assert command.startswith(f"cd {repo} &&"), "the conversation runs in the project's checkout"
+    assert "--effort xhigh" in command and "--session-id" in command
+    assert "**Carries:**" in command and paths[first] in command
+    # The brief travels shell-quoted, so the phrases checked carry no apostrophe.
+    assert f"#{first} becomes the plan" in command and "same number and history" in command
+    assert "docs/plans/README.md describes" in command, "no skill: the README's shape"
+    assert "never writes into it" in command and "Ask the owner in this window" in command
+    assert detail(client, first)["history"][0]["kind"] == "discussed"
+
+    # Several, with the project's own plan-writing skill.
+    (repo / ".claude" / "skills" / "hm-plan-write").mkdir(parents=True)
+    together = client.post("/api/projects/proj/plan", json={"numbers": [first, second]})
+    assert together.status_code == 200, together.text
+    assert together.json()["said"].startswith(
+        f"Planning #{first}, #{second} in org.omarchy.board-plan-cards-{first}-{second}"
+    )
+    command = machine_floor.state()["spawned"][1]["command"][-1]
+    assert "/hm-plan-write" in command and "these 2 suggestions together" in command
+    assert paths[first] in command and paths[second] in command
+    assert "the other cards fold under it" in command
+    session_id = command.split("--session-id ")[1].split()[0]
+    short = session_id[:8]
+    machine_floor.write_job("alpha", short, session_id=session_id, cwd=str(repo), name="plan")
+    machine_floor.write_process("alpha", session_id, os.getpid(), cwd=str(repo), kind="interactive")
+    reconcile(client)
+    board = client.get("/api/projects/proj/board").json()
+    assert board["attention"]["in_discussion"] == 1
+    assert board["conversations"][0]["what"] == f"Plan #{second}, #{first}"
+    assert board["attention"]["in_flight"] == in_flight_before, "a conversation is never hands on a tree"
+
+    refused = client.post("/api/projects/proj/plan", json={"numbers": [CARD]})
+    assert refused.status_code == 409 and "not behind a live suggestion" in refused.json()["detail"]
+    empty = client.post("/api/projects/proj/plan", json={"numbers": []})
+    assert empty.status_code == 409
+
+
+def test_a_plan_that_lands_citing_suggestions_takes_the_first_card_and_folds_the_rest(
+    client: TestClient, repo: Path
+):
+    """Item 5: when a plan citing three live suggestions lands, the first
+    suggestion's card is the plan's card (same number, in Planned), the other
+    two fold under it and follow it; nothing is retyped and no second card
+    is born; the brief and the page say what the card carries."""
+    from tests.conftest import write_suggestion
+
+    live = client.app.state.loops.live
+    first, second = 252, 242
+    write_suggestion(repo, "2026-09-04-a-third-idea", title="A third idea")
+    live.rescan("proj")
+    third = next(
+        c["number"]
+        for col in client.get("/api/projects/proj/board").json()["columns"]
+        for g in col["groups"]
+        for c in g["cards"]
+        if c["title"] == "A third idea"
+    )
+    paths = [summary_of(client, n)["document_path"] for n in (first, second, third)]
+    before = client.get("/api/projects/proj/board").json()
+    unplanned_before = before["attention"]["unplanned_ideas"] + before["attention"]["unplanned_defects"]
+
+    plan = repo / "docs" / "plans" / "2026-09-04-three-together.md"
+    plan.write_text(
+        "# Three together\n\n**Status:** PENDING\n**Effort gate:** high — three at once.\n"
+        "**Carries:** " + ", ".join(paths) + "\n\n## Intent\n\nOne slice carries three.\n",
+        encoding="utf-8",
+    )
+    effects = live.rescan("proj")
+    assert [r.card_number for r in effects.relinked] == [first]
+    assert [(f.card_number, f.into) for f in effects.folded] == [(second, first), (third, first)]
+    assert effects.born == [], "no second card for a plan that carries a suggestion"
+
+    leader = summary_of(client, first)
+    assert leader["place"]["column"] == "Planned"
+    assert leader["document_state"] == "plan"
+    assert leader["document_path"] == "docs/plans/2026-09-04-three-together.md"
+    assert [f["number"] for f in leader["folded"]] == [second, third]
+    board = client.get("/api/projects/proj/board").json()
+    shown = {c["number"] for col in board["columns"] for g in col["groups"] for c in g["cards"]}
+    assert second not in shown and third not in shown, "folded cards sit under their leader"
+    assert board["documents_without_card"] == [], "carried suggestions are not without a card"
+    after = board["attention"]["unplanned_ideas"] + board["attention"]["unplanned_defects"]
+    assert after == unplanned_before - 3
+    history = detail(client, first)["history"]
+    assert history[0]["kind"] == "moved" and "a plan appeared for it" in history[0]["detail"]
+    assert history[1]["kind"] == "linked" and "carries this card's suggestion" in history[1]["detail"]
+    folded_row = detail(client, second)["history"][0]
+    assert folded_row["kind"] == "folded-into" and f"Folded into #{first}" in folded_row["detail"]
+    brief = client.get(f"/api/projects/proj/cards/{first}/brief").text
+    assert f"carries: #{second} " in brief and f"carries: #{third} " in brief
+    assert f"folded: into #{first}" in client.get(f"/api/projects/proj/cards/{second}/brief").text
+
+    # The leader moves; the folded cards go with it. A folded card is not moved alone.
+    moved = client.post(
+        f"/api/projects/proj/cards/{first}/move",
+        json={"to": {"column": "Up next", "group": None, "position": 0}},
+    )
+    assert moved.status_code == 200, moved.text
+    cards = {c.number: c for c in live.store.cards("proj")}
+    assert cards[second].place.column.value == "Up next" and cards[third].folded_into == first
+    assert "followed #252" in detail(client, second)["history"][0]["detail"]
+    alone = client.post(
+        f"/api/projects/proj/cards/{second}/move",
+        json={"to": {"column": "Backlog", "group": None, "position": 0}},
+    )
+    assert alone.status_code == 409 and f"folded into #{first}" in alone.json()["detail"]
+    # The next read changes nothing more.
+    assert live.rescan("proj").empty()

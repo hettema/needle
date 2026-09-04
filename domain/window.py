@@ -23,6 +23,9 @@ class WindowKind(StrEnum):
     IDEA = "board-idea"
     """A fresh conversation about nothing yet, in the project's checkout; what
     it writes into the corpus becomes a card (plan 07, item 1)."""
+    PLAN = "board-plan"
+    """A plan-writing conversation for one suggestion or several, in the
+    project's checkout; the plan it writes carries them (plan 06, item 5)."""
 
 
 class Window(BaseModel):

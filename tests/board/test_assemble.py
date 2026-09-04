@@ -43,6 +43,8 @@ def doc(
         sequencing=None,
         found_by=None,
         card_ref=None,
+        suggestion_kind=None,
+        cites=[],
         head_fields=[],
         intent_heading=None,
         intent="",
@@ -176,6 +178,8 @@ def test_the_board_always_has_eight_columns_each_with_a_group_and_counts_attenti
         "documents_gone": 1,
         "documents_without_card": 1,
         "verdicts_unread": 0,
+        "unplanned_defects": 0,
+        "unplanned_ideas": 0,
     }
     assert [d.stem for d in board.documents_without_card] == ["unlinked"]
     assert board.corpus.watching is False and board.corpus.watch_note == "inotify limit"

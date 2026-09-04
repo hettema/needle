@@ -76,6 +76,75 @@ def idea_brief(project: Project, session_id: str, first_line: str | None, today:
     )
 
 
+def plan_skill(project_path: Path) -> str | None:
+    """The project's own plan-writing skill, when its `.claude/skills/` has
+    one (Hello Revenue's is `hr-plan-write`); None means the shape in
+    docs/plans/README.md is the plan shape."""
+    skills = project_path / ".claude" / "skills"
+    if not skills.is_dir():
+        return None
+    for found in sorted(skills.iterdir()):
+        if found.is_dir() and "plan" in found.name and "write" in found.name:
+            return f"/{found.name}"
+    return None
+
+
+def plan_brief(project: Project, details: list[CardDetail], skill: str | None, today: str) -> str:
+    """What a plan-writing conversation opens with (plan 06, item 5): the
+    suggestions as their cards read, the plan shape to write in, the head
+    line that lets the board follow the plan, and what to write and what not.
+    The session moves the carried suggestions to done/ itself: the board reads
+    the repository and never writes into it."""
+    several = len(details) > 1
+    paths = [d.summary.document_path for d in details if d.summary.document_path]
+    shape = (
+        f"use the project's own plan-writing skill, {skill}"
+        if skill
+        else "the shape docs/plans/README.md describes: a `**Status:**` line, a `**Written:**` "
+        "line, an `**Effort gate:** <low|medium|high|xhigh> — <why>` line, `**Sequencing:**` "
+        "when it depends on another plan, an Intent section, and numbered items each ending "
+        'with what "done means" as a behaviour someone can observe'
+    )
+    cards = "\n\n".join(render(d, project) for d in details)
+    return (
+        f"A plan to write, opened from the board's Plan door on {project.name} ({project.path}), "
+        f"{today}: "
+        + (
+            f"one plan that carries these {len(details)} suggestions together, as one slice's "
+            "worth of work."
+            if several
+            else "the plan for this suggestion."
+        )
+        + " This window is a conversation in the project's checkout, never hands on any "
+        "tree.\n\n"
+        + cards
+        + "\n\nWrite the plan into docs/plans/ in the project's plan shape — "
+        + shape
+        + ". Head it with a `**Carries:**` line naming "
+        + ("each suggestion's path:\n" if several else "the suggestion's path:\n")
+        + "".join(f"  {p}\n" for p in paths)
+        + "That line is how the board follows the plan: when the plan lands, "
+        + (
+            f"#{details[0].card.number} becomes the plan's card (same number, same history) and "
+            "the other cards fold under it"
+            if several
+            else f"#{details[0].card.number} becomes the plan's card, same number and history"
+        )
+        + ", so nothing is retyped and no second card is born. In the same commit move each "
+        "carried suggestion to docs/slice-suggestions/done/ and add a `**Carried by:** <the "
+        "plan's path>` line under its title; the board reads the repository and never writes "
+        "into it. Ask the owner in this window where the intent is unclear; he holds the "
+        "market and the priorities, you hold the code. Write nothing else to the repository. "
+        "Commit the plan and the moved suggestions in this checkout on develop with a body "
+        "that says what prompted them, and push (`git push origin develop`); the board "
+        "follows the plan the moment it lands.\n\n"
+        "Your FIRST message is two or three short plain sentences — no headers, no file "
+        "paths: what you read the "
+        + ("suggestions" if several else "suggestion")
+        + " as asking for, and the one question that most sharpens the intent."
+    )
+
+
 def needle_command() -> str:
     # `--project`, never `--directory`: the latter changes directory to
     # Needle's checkout before the verb runs, so a lane's `needle fold` read
@@ -393,7 +462,9 @@ class Doors:
             )
         except WindowRefused as refusal:
             raise DoorFailed(f"Idea did not open: {refusal}") from refusal
-        self.live.store.record_discussion(slug, None, session_id, placement.slot, clock.now())
+        self.live.store.record_discussion(
+            slug, None, session_id, placement.slot, clock.now(), kind=WindowKind.IDEA
+        )
         self.live.bump()
         self.loops.reconcile_now()
         return DoorResult(
@@ -404,6 +475,55 @@ class Doors:
                 "hands on a tree. What it writes into the corpus becomes a card."
             ),
         )
+
+    # ── Plan ───────────────────────────────────────────────────────────
+
+    def plan(self, slug: str, numbers: list[int]) -> DoorResult:
+        """A plan-writing conversation for one suggestion or several (plan
+        06, item 5), in the project's checkout like an Idea: the plan it
+        writes cites the suggestions, and the watcher then makes the first
+        one's card the plan's and folds the rest under it."""
+        if not numbers:
+            raise DoorRefused("Plan needs at least one suggestion card.")
+        details = [self._detail(slug, n) for n in numbers]
+        for detail in details:
+            if not detail.doors.plan.offered:
+                raise DoorRefused(f"#{detail.card.number}: {detail.doors.plan.why}")
+        project = self.live.projects[slug].project
+        skill = plan_skill(Path(project.path))
+        brief = plan_brief(project, details, skill, clock.now().date().isoformat())
+        numbered = ", ".join(f"#{n}" for n in numbers)
+        what = f"Planning {numbered}" + (" together" if len(numbers) > 1 else "")
+        card = (
+            lane_name(details[0].card.number, details[0].card.title)
+            if len(numbers) == 1
+            else "cards-" + "-".join(str(n) for n in numbers)
+        )
+        try:
+            opened, session_id, placement = self.runtime.discuss(
+                repo=project.path,
+                card=card,
+                brief=brief,
+                effort=DISCUSS_EFFORT,
+                what=what,
+                kind=WindowKind.PLAN,
+            )
+        except WindowRefused as refusal:
+            raise DoorFailed(f"Plan did not open: {refusal}") from refusal
+        now = clock.now()
+        said = (
+            f"Planning {numbered} in {opened.window.app_id}, {placement.model.value} on "
+            f"{placement.slot}; the plan it writes carries "
+            + ("this card" if len(numbers) == 1 else "these cards, the first keeping its number")
+            + "."
+        )
+        for number in numbers:
+            self.live.store.record_discussion(
+                slug, number, session_id, placement.slot, now, kind=WindowKind.PLAN
+            )
+            self.live.note(slug, number, AuditKind.DISCUSSED, Actor.OWNER, said)
+        self.loops.reconcile_now()
+        return DoorResult(door="plan", said=said)
 
     # ── the owner reads a signal ───────────────────────────────────────
 

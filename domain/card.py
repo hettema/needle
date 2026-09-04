@@ -11,7 +11,7 @@ from enum import StrEnum
 from pydantic import BaseModel, Field
 
 from domain.column import Column
-from domain.document import DocumentKind
+from domain.document import DOCUMENT_FOLDER, DocumentKind
 from domain.gate import Gate
 from domain.row import Row
 
@@ -53,6 +53,11 @@ class DocumentLink(BaseModel):
     title: str
     archived: bool
 
+    def path(self) -> str:
+        """The path the link names, whether or not the file is there."""
+        folder = DOCUMENT_FOLDER[self.kind] + ("/done" if self.archived else "")
+        return f"{folder}/{self.stem}.md"
+
 
 class Card(BaseModel):
     number: int
@@ -71,6 +76,10 @@ class Card(BaseModel):
     origin: CardOrigin
     born_at: datetime
     rows: list[Row]
+    folded_into: int | None = None
+    """The card whose plan carries this card's suggestion (plan 06, item 5):
+    this card sits under that one, follows it from column to column, and
+    closes when it closes. None for every card that stands on its own."""
 
 
 class Move(BaseModel):

@@ -9,10 +9,10 @@ from domain.audit import AuditEntry
 from domain.card import Card, Place
 from domain.column import ColumnDefinition
 from domain.corpus import CorpusSummary
-from domain.document import Document, DocumentRef, DocumentState
+from domain.document import Document, DocumentRef, DocumentState, SuggestionKind
 from domain.evidence import Standing
 from domain.gate import Gate
-from domain.lane import Collision, Conversation, Doors, Lane, LaneState
+from domain.lane import Collision, Conversation, Door, Doors, Lane, LaneState, Readiness
 from domain.project import Project
 from domain.row import Row
 from domain.signal import Reading, Signal
@@ -27,6 +27,14 @@ class EssenceSource(StrEnum):
     """The first sentence of the document's intent, standing in."""
 
 
+class FoldedCard(BaseModel):
+    """A card carried under another: its suggestion is in that card's plan (plan 06, item 5)."""
+
+    number: int
+    title: str
+    document_path: str | None
+
+
 class CardSummary(BaseModel):
     """A card at rest: what the column shows."""
 
@@ -39,6 +47,16 @@ class CardSummary(BaseModel):
     document_state: DocumentState
     document_path: str | None
     """The cited path, whether or not it exists."""
+    kind: SuggestionKind | None
+    """A suggestion's kind, from its document; None behind a plan or a note."""
+    readiness: Readiness | None
+    """Whether the card can start now, in Planned and Up next; None elsewhere (plan 06, item 3)."""
+    start: Door | None
+    """The Start door, on the collapsed face where it is open; None outside Planned and Up next."""
+    plan: Door | None
+    """The Plan door, on every suggestion card; None behind a plan or a note (plan 06, item 5)."""
+    folded: list[FoldedCard]
+    """The cards folded under this one: the suggestions its plan carries."""
     points: int
     """Rows on the card, the essence aside."""
     is_new: bool
@@ -58,6 +76,9 @@ class CardSummary(BaseModel):
 class GroupView(BaseModel):
     name: str | None
     cards: list[CardSummary]
+    rail: bool
+    """Backlog's defects rail: pinned at the column's top, above the idea
+    groups, with its own count (plan 06, item 2)."""
 
 
 class ColumnView(BaseModel):
@@ -87,6 +108,10 @@ class Attention(BaseModel):
     """Machine-placed cards whose evidence is gone on this read."""
     verdicts_unread: int
     """Cards carrying a verdict the owner has not yet accepted or overturned (plan 05)."""
+    unplanned_defects: int
+    """Defects written up as suggestions that no plan carries yet (plan 06, item 2)."""
+    unplanned_ideas: int
+    """Ideas written up as suggestions that no plan carries yet: the size of the unplanned pile."""
     arrived_today: int
     documents_gone: int
     documents_without_card: int

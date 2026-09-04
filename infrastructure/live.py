@@ -19,15 +19,15 @@ from collections.abc import Awaitable, Callable
 from datetime import datetime
 from pathlib import Path
 
-from watchfiles import Change, awatch
-
-from board.assemble import assemble_board, assemble_detail
+from board.assemble import assemble_board, assemble_detail, folded_under
 from board.lane import nothing_read
 from board.reconcile import Effects, reconcile
 from domain.audit import AuditKind
 from domain.board import BoardState, CardDetail, MachineState
 from domain.card import Actor, Card, CardOrigin, Place
+from domain.column import DEFECTS_RAIL, Column
 from domain.corpus import CorpusIndex
+from domain.document import DocumentKind, SuggestionKind
 from domain.evidence import Evidence
 from domain.lane import Doors, Lane, LaneSnapshot
 from domain.project import Project
@@ -42,6 +42,10 @@ log = logging.getLogger("needle")
 WATERCOOLER_SHOWN = 20
 """How many of the newest watercooler lines the page and a brief carry; the
 whole file is `needle watercooler SLUG`."""
+
+WRITE_POLL_SECONDS = 1.0
+"""How often the server asks the store whether another process committed
+(plan 06, item 6): a session's `needle row` is on the page within this."""
 
 
 def sweep(
@@ -75,9 +79,10 @@ class Live:
         """Set once the server was told to stop; every open stream ends on it."""
         self.machine = MachineState(missing=[])
         """What the runtime cannot reach, as the loop last found; shown on the page."""
-        self.on_store_change: Callable[[], Awaitable[None]] | None = None
-        """What to run when the store's file changes under the server: the
-        loops set it, so a row written from the command line is read at once."""
+        self.on_change: Callable[[], Awaitable[None]] | None = None
+        """What to run when another process wrote to the store, or the corpus
+        changed a card: the loops set it, so a row written from the command
+        line and a plan that landed are acted on at once, not at the floor."""
         self._stop = asyncio.Event()
         self._store_task: asyncio.Task[None] | None = None
         self._waiters: list[asyncio.Future[int]] = []
@@ -99,12 +104,12 @@ class Live:
         return added
 
     async def start_watching(self) -> None:
-        """An ear on every project's corpus, and one on the store's own file."""
+        """An ear on every project's corpus, and one on the store's writes."""
         for live in self.projects.values():
             if live.task is None:
                 live.task = asyncio.create_task(self._watch_loop(live))
         if self._store_task is None:
-            self._store_task = asyncio.create_task(self._watch_store_loop())
+            self._store_task = asyncio.create_task(self._hear_writes_loop())
 
     async def sync_projects(self) -> list[str]:
         """Pick up projects registered since the last look; watch them from now on."""
@@ -136,7 +141,11 @@ class Live:
             live.watch_note = None
             self.bump()
             async for _changes in watch(Path(live.project.path), self._stop):
-                self.rescan(live.project.slug)
+                effects = self.rescan(live.project.slug)
+                # A card born, relinked or archived changes what the loops
+                # would move and which doors it has: read the machine now.
+                if not effects.empty() and self.on_change is not None:
+                    await self.on_change()
         except asyncio.CancelledError:
             raise
         except Exception as error:  # noqa: BLE001 — the reason is shown, never swallowed
@@ -144,37 +153,44 @@ class Live:
             live.watch_note = f"{type(error).__name__}: {error}"
             self.bump()
 
-    async def _watch_store_loop(self) -> None:
-        """The store's file is how `needle add` reaches a running server: a
-        write to it is heard here and the project list re-read. A project
-        whose own watcher has failed is rescanned on the same signal, so a
-        `needle add` re-read from the command line still lands on the page."""
-        path = self.store.path
-
-        def is_store_file(change: Change, changed: str) -> bool:
-            return Path(changed).name.startswith(path.name)
-
+    async def _hear_writes_loop(self) -> None:
+        """Every second, ask the store's write stamp whether a process other
+        than this one committed (plan 06, item 6): a session's `needle row`,
+        a `needle close`, a `needle add`. The server's own commits are
+        subtracted, so it never re-reads itself — the file watcher this
+        replaces heard the lane loop's own lane records land, re-read, wrote
+        again, and turned the page over twice a second (measured 2026-09-04).
+        On a foreign write the project list is re-read, a project whose own
+        corpus watcher has failed is rescanned, the page is told, and the
+        loops act."""
+        seq, _ = await asyncio.to_thread(self.store.write_stamp)
+        self.store.own_commits_upto(seq)
+        last = seq
         try:
-            async for _changes in awatch(
-                path.parent, stop_event=self._stop, recursive=False, watch_filter=is_store_file
-            ):
+            while not self._stop.is_set():
+                with contextlib.suppress(TimeoutError):
+                    await asyncio.wait_for(self._stop.wait(), WRITE_POLL_SECONDS)
+                if self._stop.is_set():
+                    return
+                seq, _ = await asyncio.to_thread(self.store.write_stamp)
+                own = self.store.own_commits_upto(seq)
+                foreign = (seq - last) - own
+                last = seq
+                if foreign <= 0:
+                    continue
                 await self.sync_projects()
                 for live in list(self.projects.values()):
                     if not live.watching:
                         self.rescan(live.project.slug)
-                # A write from outside the server — a session's `needle row`,
-                # a `needle close` — is a change the page has to see and the
-                # loops have to act on; the server's own writes bumped already
-                # and cost one more read here.
                 self.bump()
-                if self.on_store_change is not None:
-                    await self.on_store_change()
+                if self.on_change is not None:
+                    await self.on_change()
         except asyncio.CancelledError:
             raise
         except Exception as error:  # noqa: BLE001 — the reason is logged, never swallowed
             log.warning(
-                "The board stopped hearing the store change (%s: %s); a project added from now "
-                "on is on the page at the next reload, not before.",
+                "The board stopped hearing other processes write (%s: %s); a row written from "
+                "the command line is on the page at the next reload, not before.",
                 type(error).__name__,
                 error,
             )
@@ -260,6 +276,7 @@ class Live:
             readings=self.store.readings(slug, number),
             read=live.snapshot is not None,
             watercooler=self.store.watercooler(slug, limit=WATERCOOLER_SHOWN),
+            folded=folded_under(self.store.cards(slug)).get(number),
         )
 
     def lane_and_doors(self, slug: str, card: Card) -> tuple[Lane | None, Doors]:
@@ -282,11 +299,36 @@ class Live:
         evidence: Evidence | None = None,
     ) -> BoardState:
         live = self._live(slug)
+        self._refuse_a_move_against_the_rail(live, number, to)
         self.store.move(
             live.project.slug, number, to, actor, self.now(), detail=detail, evidence=evidence
         )
         self.bump()
         return self.board(slug)
+
+    def _refuse_a_move_against_the_rail(self, live: LiveProject, number: int, to: Place) -> None:
+        """Backlog's defects rail is a lens on the document's `Kind:` line
+        (plan 06, item 2): the corpus puts a defect on it and an idea below
+        it on every read, so a hand move that disagrees with the line would
+        be undone at the next read. It is refused now instead, with the line
+        to edit named, so the board never fights the owner later in silence."""
+        if to.column != Column.BACKLOG:
+            return
+        card = self.store.card(live.project.slug, number)
+        if card is None or card.link is None or card.link.kind != DocumentKind.SUGGESTION:
+            return
+        document = live.index.find(card.link.kind, card.link.stem)
+        if document is None or document.suggestion_kind is None:
+            return
+        is_defect = document.suggestion_kind == SuggestionKind.DEFECT
+        if (to.group == DEFECTS_RAIL) == is_defect:
+            return
+        word = document.suggestion_kind.value
+        raise StoreRefusal(
+            f"#{number}'s document says Kind: {word}, so it reads "
+            + ("on the defects rail" if is_defect else "below the rail")
+            + f"; to move it, change the `**Kind:**` line in {document.path}."
+        )
 
     def add_row(self, slug: str, number: int, row: Row, actor: Actor) -> Card:
         self._live(slug)

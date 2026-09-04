@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { getCard, getFile, openDoor, type DoorName } from "../api";
+import { getCard, getFile, openDoor, openPlan, type DoorName } from "../api";
 import type { CardDetail, CardSummary } from "../types/board";
 import type { Column } from "../types/column";
 import { COLUMN_VALUES } from "../types/column";
@@ -11,6 +11,7 @@ import {
   Ask,
   Band,
   Button,
+  Carries,
   Clash,
   ClosedDoor,
   ClosedDoors,
@@ -58,7 +59,7 @@ export function OpenCard({ card, onMoveTo }: { card: CardSummary; onMoveTo: (num
   const [wholeFile, setWholeFile] = useState<{ path: string; text: string } | null>(null);
   const [said, setSaid] = useState<{ text: string; bad: boolean } | null>(null);
   const [intentOpen, setIntentOpen] = useState(true);
-  const [opening, setOpening] = useState<DoorName | null>(null);
+  const [opening, setOpening] = useState<DoorName | "plan" | null>(null);
 
   useEffect(() => {
     let live = true;
@@ -133,11 +134,11 @@ export function OpenCard({ card, onMoveTo }: { card: CardSummary; onMoveTo: (num
 
   // A door opens through the runtime and answers with its evidence, or fails by name;
   // the board's own stream then brings the card's new state.
-  const through = async (door: DoorName, body: object = {}) => {
+  const through = async (door: DoorName | "plan", body: object = {}) => {
     setOpening(door);
     setSaid({ text: `${door === "signal" ? "Reading" : door[0]?.toUpperCase() + door.slice(1)}…`, bad: false });
     try {
-      const result = await openDoor(slug, card.number, door, body);
+      const result = door === "plan" ? await openPlan(slug, [card.number]) : await openDoor(slug, card.number, door, body);
       setSaid({ text: result.said, bad: false });
     } catch (e) {
       setSaid({ text: `${door[0]?.toUpperCase() + door.slice(1)} did not open: ${e instanceof Error ? e.message : String(e)}`, bad: true });
@@ -169,6 +170,9 @@ export function OpenCard({ card, onMoveTo }: { card: CardSummary; onMoveTo: (num
     for (const d of [doors.watch, doors.answer, doors.look, doors.resume, doors.stop]) if (!d.offered) expected.push({ label: d.label, why: d.why });
   }
   if (!doors.discuss.offered) expected.push({ label: doors.discuss.label, why: doors.discuss.why });
+  if (card.document_state === "suggestion" && !doors.plan.offered) expected.push({ label: doors.plan.label, why: doors.plan.why });
+  // A gateless document in the queue shows Start closed with its reason, like every other closed door (plan 06, item 3).
+  const startable = card.place.column === "Up next" || card.place.column === "Planned";
 
   return (
     <OpenBody>
@@ -184,7 +188,7 @@ export function OpenCard({ card, onMoveTo }: { card: CardSummary; onMoveTo: (num
               {doors.start_anyway.label}
             </Button>
           </>
-        ) : card.gate && (card.place.column === "Up next" || card.place.column === "Planned") ? (
+        ) : startable && detail.card.folded_into === null ? (
           <ClosedDoor why={doors.start.why}>Start</ClosedDoor>
         ) : null}
         {door("watch", doors.watch)}
@@ -192,6 +196,11 @@ export function OpenCard({ card, onMoveTo }: { card: CardSummary; onMoveTo: (num
         {door("resume", doors.resume)}
         {door("stop", doors.stop)}
         {door("discuss", doors.discuss)}
+        {doors.plan.offered ? (
+          <Button ghost onClick={() => void through("plan")} disabled={opening !== null} title={doors.plan.why}>
+            Plan
+          </Button>
+        ) : null}
         {doors.collision && doors.collision.verdict !== "clear" && (doors.start.offered || doors.start_anyway.offered) ? <Quiet>{doors.collision.sentence}</Quiet> : null}
         {docPath && document ? <Button ghost onClick={() => void openFile(docPath, document.kind === "plan" ? "the plan" : "the suggestion")}>{wholeFile?.path === docPath ? "Close the file" : document.kind === "plan" ? "Open the plan" : "Open the suggestion"}</Button> : null}
         {docPath ? (
@@ -208,7 +217,14 @@ export function OpenCard({ card, onMoveTo }: { card: CardSummary; onMoveTo: (num
         <MoveTo value={card.place.column} options={COLUMN_VALUES} onChange={(c) => void moveTo(c)} />
       </Acts>
       <ClosedDoors doors={expected} />
+      {startable && !doors.start.offered && !doors.start_anyway.offered && detail.card.folded_into === null ? <Quiet>Start is closed: {doors.start.why}</Quiet> : null}
       {detail.summary.standing.state === "doubted" && detail.summary.standing.words ? <Doubt>{detail.summary.standing.words}</Doubt> : null}
+      {detail.card.folded_into !== null ? <Quiet>Folded into #{detail.card.folded_into}: that card's plan carries this suggestion; this card follows it and closes with it.</Quiet> : null}
+      {detail.summary.folded.length ? (
+        <Section title="What it carries" from={`${detail.summary.folded.length} suggestion${detail.summary.folded.length === 1 ? "" : "s"} folded under this card; they follow it and close with it`}>
+          <Carries cards={detail.summary.folded} open />
+        </Section>
+      ) : null}
 
       <Section title="What it makes true" from={essenceFrom}>
         {detail.summary.essence ? (

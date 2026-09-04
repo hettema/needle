@@ -28,27 +28,33 @@ def _shown(files: list[str]) -> str:
     return ", ".join(files[:3]) + ("…" if len(files) > 3 else "")
 
 
+def _lane(number: int) -> str:
+    return f"#{number}'s lane"
+
+
 def verdict(
     mine: set[str],
     *,
-    editing: dict[str, set[str]],
-    declared: dict[str, set[str]],
+    editing: dict[int, set[str]],
+    declared: dict[int, set[str]],
 ) -> Collision:
-    """`editing` and `declared` map a lane's label (its card, or 'the trunk')
-    to the files it is changing now, and to the files its plan names."""
+    """`editing` and `declared` map a live lane's card to the files it is
+    changing now, and to the files its plan names."""
     if not mine:
         return Collision(
             verdict=CollisionVerdict.UNKNOWN,
             sentence="The plan names no files, so nothing can prove it runs beside the others.",
             files=[],
+            cards=[],
         )
     for who, files in editing.items():
         overlap = sorted(mine & files)
         if overlap:
             return Collision(
                 verdict=CollisionVerdict.COLLIDES,
-                sentence=f"{who} is editing {_shown(overlap)} right now.",
+                sentence=f"{_lane(who)} is editing {_shown(overlap)} right now.",
                 files=overlap,
+                cards=[who],
             )
     for who, files in declared.items():
         overlap = sorted(mine & files)
@@ -56,39 +62,44 @@ def verdict(
             return Collision(
                 verdict=CollisionVerdict.COLLIDES,
                 sentence=(
-                    f"{who} has not opened {_shown(overlap)} yet, but its plan names the "
-                    "same ground."
+                    f"{_lane(who)} has not opened {_shown(overlap)} yet, but its plan names "
+                    "the same ground."
                 ),
                 files=overlap,
+                cards=[who],
             )
     return Collision(
         verdict=CollisionVerdict.CLEAR,
         sentence="No running lane or trunk session touches this plan's files.",
         files=[],
+        cards=[],
     )
 
 
-def drift(editing: dict[str, set[str]]) -> dict[str, Collision | None]:
+def drift(editing: dict[int, set[str]]) -> dict[int, Collision | None]:
     """For every live lane, the other live lanes editing a file it is also
-    editing, or None when nothing overlaps. `editing` maps a lane's label to
+    editing, or None when nothing overlaps. `editing` maps a lane's card to
     the files its worktree has changed right now. Every pair is named on
     both sides, so each card says who it collides with and on what."""
-    out: dict[str, Collision | None] = {}
+    out: dict[int, Collision | None] = {}
     for who, files in editing.items():
         clauses: list[str] = []
         overlapping: set[str] = set()
+        others: list[int] = []
         for other, theirs in editing.items():
             if other == who:
                 continue
             overlap = sorted(files & theirs)
             if overlap:
-                clauses.append(f"{other} is also editing {_shown(overlap)}")
+                clauses.append(f"{_lane(other)} is also editing {_shown(overlap)}")
                 overlapping |= set(overlap)
+                others.append(other)
         if clauses:
             out[who] = Collision(
                 verdict=CollisionVerdict.COLLIDES,
                 sentence="; ".join(clauses) + ".",
                 files=sorted(overlapping),
+                cards=sorted(others),
             )
         else:
             out[who] = None

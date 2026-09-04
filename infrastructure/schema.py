@@ -81,6 +81,8 @@ class CardRow(Base):
     link_archived: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
     origin: Mapped[str] = mapped_column(String(20))
     born_at: Mapped[datetime] = mapped_column(UtcDateTime)
+    folded_into: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    """The card this one is folded under (plan 06, item 5); its group follows that card's."""
 
 
 class CardRowRow(Base):
@@ -182,9 +184,27 @@ class DiscussionRow(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     project_slug: Mapped[str] = mapped_column(String(80))
     card_number: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    kind: Mapped[str] = mapped_column(String(20))
+    """The window kind it was opened through: board-discuss, board-idea or board-plan."""
     session_id: Mapped[str] = mapped_column(String(36))
     slot: Mapped[str] = mapped_column(String(40))
     started_at: Mapped[datetime] = mapped_column(UtcDateTime)
+
+
+class WriteStampRow(Base):
+    """One row: how many transactions have committed to this store, from any
+    process, and who committed last. Every write stamps it, so the server
+    can tell a commit from another process (a session's `needle row`, a
+    `needle add`) from its own and act on it within a second, with no file
+    watching and no change to the writers (plan 06, item 6)."""
+
+    __tablename__ = "writes"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    seq: Mapped[int] = mapped_column(Integer)
+    origin: Mapped[str] = mapped_column(String(36))
+    """The writing `Store`'s own id, one per process."""
+    at: Mapped[datetime] = mapped_column(UtcDateTime)
 
 
 class WatercoolerRow(Base):

@@ -9,8 +9,9 @@ file with nobody syncing anything.
 from datetime import datetime, timedelta
 
 from board.evidence import placement_from, standing_for
+from board.lane import STARTABLE_COLUMNS, nothing_read
 from board.moves import GroupLayout
-from board.reconcile import ref
+from board.reconcile import carried_stems, ref
 from board.signals import is_due, past_due, read_or_decline
 from board.verdicts import read_or_decline as read_verdict_or_decline
 from domain.audit import AuditEntry
@@ -21,15 +22,16 @@ from domain.board import (
     CardSummary,
     ColumnView,
     EssenceSource,
+    FoldedCard,
     GroupView,
     MachineState,
     OwnerAsk,
     TrunkState,
 )
 from domain.card import Card, CardOrigin
-from domain.column import COLUMN_DEFINITIONS, Column
+from domain.column import COLUMN_DEFINITIONS, DEFECTS_RAIL, Column
 from domain.corpus import CorpusIndex, CorpusSummary
-from domain.document import Document, DocumentKind, DocumentRef, DocumentState
+from domain.document import Document, DocumentKind, DocumentRef, DocumentState, SuggestionKind
 from domain.evidence import EvidenceState
 from domain.gate import Gate
 from domain.lane import HANDS_ON, Doors, Lane, LaneSnapshot, LaneState
@@ -41,10 +43,8 @@ from domain.watercooler import WatercoolerLine
 
 NEW_FOR = timedelta(days=1)
 
-_FOLDER: dict[DocumentKind, str] = {
-    DocumentKind.PLAN: "docs/plans",
-    DocumentKind.SUGGESTION: "docs/slice-suggestions",
-}
+UNPLANNED_OUTSIDE: frozenset[Column] = frozenset({Column.DONE, Column.NOT_NOW})
+"""A suggestion parked or shipped is not on the unplanned pile."""
 
 
 def document_of(card: Card, index: CorpusIndex) -> Document | None:
@@ -65,10 +65,7 @@ def document_state(card: Card, document: Document | None) -> DocumentState:
 
 def cited_path(card: Card) -> str | None:
     """The path the card cites for its document, whether or not it exists."""
-    if card.link is None:
-        return None
-    folder = _FOLDER[card.link.kind] + ("/done" if card.link.archived else "")
-    return f"{folder}/{card.link.stem}.md"
+    return card.link.path() if card.link is not None else None
 
 
 def card_gate(card: Card, document: Document | None) -> Gate | None:
@@ -103,15 +100,30 @@ def card_verdict(card: Card) -> tuple[Verdict | None, str | None]:
 
 
 def verdict_lines(cards: list[Card]) -> list[VerdictLine]:
-    """Every card carrying a verdict the owner has not yet ruled on, by number."""
+    """Every card standing on its own that carries a verdict the owner has
+    not yet ruled on, by number."""
     lines: list[VerdictLine] = []
     for card in sorted(cards, key=lambda c: c.number):
+        if card.folded_into is not None:
+            continue
         verdict, _ = card_verdict(card)
         if verdict is not None:
             lines.append(
                 VerdictLine(number=card.number, title=card.title, place=card.place, verdict=verdict)
             )
     return lines
+
+
+def folded_under(cards: list[Card]) -> dict[int, list[FoldedCard]]:
+    """Each card's folded cards, by the leader's number (plan 06, item 5)."""
+    out: dict[int, list[FoldedCard]] = {}
+    for card in sorted(cards, key=lambda c: c.number):
+        if card.folded_into is None:
+            continue
+        out.setdefault(card.folded_into, []).append(
+            FoldedCard(number=card.number, title=card.title, document_path=cited_path(card))
+        )
+    return out
 
 
 def signal_asks_owner(
@@ -156,14 +168,19 @@ def summarize(
     now: datetime,
     lane: Lane | None = None,
     *,
+    doors: Doors | None = None,
     placement: AuditEntry | None = None,
     last: Reading | None = None,
     read: bool = False,
+    folded: list[FoldedCard] | None = None,
 ) -> CardSummary:
+    """`doors` is the card's doors as the loop last read them; the collapsed
+    face shows the Start door's verdict and Plan from them (plan 06)."""
     document = document_of(card, index)
     text, source = essence(card, document)
     state = document_state(card, document)
     path = document.path if document is not None else cited_path(card)
+    startable = card.place.column in STARTABLE_COLUMNS and card.folded_into is None
     return CardSummary(
         number=card.number,
         title=card.title,
@@ -173,6 +190,11 @@ def summarize(
         tags=card.tags,
         document_state=state,
         document_path=path,
+        kind=document.suggestion_kind if document is not None else None,
+        readiness=doors.readiness if doors is not None and startable else None,
+        start=doors.start if doors is not None and startable else None,
+        plan=doors.plan if doors is not None and state == DocumentState.SUGGESTION else None,
+        folded=folded or [],
         points=sum(1 for r in card.rows if r.kind != RowKind.SERVES),
         is_new=is_new(card, now),
         age_date=document.date if document is not None and document.date else card.born_at.date(),
@@ -191,8 +213,16 @@ def split_rows(rows: list[Row]) -> tuple[list[Row], list[Row]]:
 
 
 def documents_without_card(index: CorpusIndex, cards: list[Card]) -> list[DocumentRef]:
+    """Live documents no card stands for. A suggestion a plan's head cites
+    is carried by that plan's card and is not one of them."""
     linked = {(c.link.kind, c.link.stem) for c in cards if c.link}
-    return [ref(d) for d in index.live() if (d.kind, d.stem) not in linked]
+    carried = carried_stems(index)
+    return [
+        ref(d)
+        for d in index.live()
+        if (d.kind, d.stem) not in linked
+        and not (d.kind == DocumentKind.SUGGESTION and d.stem in carried)
+    ]
 
 
 def corpus_summary(index: CorpusIndex, *, watching: bool, watch_note: str | None) -> CorpusSummary:
@@ -234,16 +264,26 @@ def assemble_board(
     trunk = trunk or TrunkState(level=None, behind=0, note=None, read_at=None)
     machine = machine or MachineState(missing=[])
     by_number = {c.number: c for c in cards}
+    standing = [c for c in cards if c.folded_into is None]
     lanes = snapshot.lanes if snapshot is not None else {}
+    doors = snapshot.doors if snapshot is not None else {}
+    folded = folded_under(cards)
+
+    def doors_of(card: Card) -> Doors:
+        found = doors.get(card.number)
+        return found if found is not None else nothing_read(card, project.path, now)[1]
+
     summaries = {
         n: summarize(
             c,
             index,
             now,
             lanes.get(n),
+            doors=doors_of(c),
             placement=placements.get(n),
             last=readings.get(n),
             read=snapshot is not None,
+            folded=folded.get(n),
         )
         for n, c in by_number.items()
     }
@@ -252,12 +292,16 @@ def assemble_board(
     columns: list[ColumnView] = []
     for definition in COLUMN_DEFINITIONS:
         groups = [
-            GroupView(name=g.name, cards=[summaries[n] for n in g.numbers])
+            GroupView(
+                name=g.name,
+                cards=[summaries[n] for n in g.numbers],
+                rail=definition.column == Column.BACKLOG and g.name == DEFECTS_RAIL,
+            )
             for g in layout
             if g.column == definition.column
         ]
         if not groups:
-            groups = [GroupView(name=None, cards=[])]
+            groups = [GroupView(name=None, cards=[], rail=False)]
         columns.append(
             ColumnView(
                 definition=definition,
@@ -267,7 +311,16 @@ def assemble_board(
         )
 
     def count(column: Column) -> int:
-        return sum(1 for c in cards if c.place.column == column)
+        return sum(1 for c in standing if c.place.column == column)
+
+    def unplanned(kind: SuggestionKind) -> int:
+        return sum(
+            1
+            for c in standing
+            if c.place.column not in UNPLANNED_OUTSIDE
+            and summaries[c.number].document_state == DocumentState.SUGGESTION
+            and summaries[c.number].kind == kind
+        )
 
     without_card = documents_without_card(index, cards)
     asking_lanes = sum(1 for lane in lanes.values() if lane.state == LaneState.ASKING)
@@ -278,26 +331,30 @@ def assemble_board(
     ]
     verdicts = verdict_lines(cards)
     conversations = snapshot.conversations if snapshot is not None else []
+    shown = [summaries[c.number] for c in standing]
     attention = Attention(
         asking_you=count(Column.DECISION_MOMENT) + asking_lanes + len(asks),
         in_flight=count(Column.EXECUTING),
-        colliding=sum(1 for s in summaries.values() if s.colliding is not None),
+        colliding=sum(1 for s in shown if s.colliding is not None),
         in_discussion=len(conversations),
         lanes_ended=sum(
             1
             for n, lane in lanes.items()
             if lane.state == LaneState.ENDED
             and n in by_number
+            and by_number[n].folded_into is None
             and by_number[n].place.column not in {Column.EXECUTED, Column.DONE, Column.NOT_NOW}
         ),
         signals_due=sum(
             1 for n, c in by_number.items() if signal_overdue(c, signals[n], readings.get(n), now)
         ),
         signals_asking=len(asks),
-        doubted=sum(1 for s in summaries.values() if s.standing.state == EvidenceState.DOUBTED),
+        doubted=sum(1 for s in shown if s.standing.state == EvidenceState.DOUBTED),
         verdicts_unread=len(verdicts),
-        arrived_today=sum(1 for s in summaries.values() if s.is_new),
-        documents_gone=sum(1 for s in summaries.values() if s.document_state == DocumentState.GONE),
+        unplanned_defects=unplanned(SuggestionKind.DEFECT),
+        unplanned_ideas=unplanned(SuggestionKind.IDEA),
+        arrived_today=sum(1 for s in shown if s.is_new),
+        documents_gone=sum(1 for s in shown if s.document_state == DocumentState.GONE),
         documents_without_card=len(without_card),
     )
     return BoardState(
@@ -328,8 +385,10 @@ def assemble_detail(
     readings: list[Reading],
     read: bool = False,
     watercooler: list[WatercoolerLine] | None = None,
+    folded: list[FoldedCard] | None = None,
 ) -> CardDetail:
-    """`readings` newest first; `read` is whether the loop has read the machine."""
+    """`readings` newest first; `read` is whether the loop has read the
+    machine; `folded` the cards folded under this one."""
     document = document_of(card, index)
     brief, record = split_rows(card.rows)
     own = cited_path(card)
@@ -342,9 +401,11 @@ def assemble_detail(
             index,
             now,
             lane,
+            doors=doors,
             placement=placement_from(history),
             last=readings[0] if readings else None,
             read=read,
+            folded=folded,
         ),
         brief=brief,
         record=record,

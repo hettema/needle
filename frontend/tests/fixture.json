@@ -26,6 +26,8 @@
       "signals_asking": 0,
       "doubted": 0,
       "verdicts_unread": 0,
+      "unplanned_defects": 1,
+      "unplanned_ideas": 7,
       "arrived_today": 1,
       "documents_gone": 2,
       "documents_without_card": 0
@@ -55,6 +57,48 @@
         },
         "groups": [
           {
+            "name": "Defects",
+            "cards": [
+              {
+                "number": 232,
+                "title": "The night audit re-reads the whole harbour log",
+                "essence": "The night audit reads only what changed since the last one.",
+                "essence_source": "card",
+                "gate": null,
+                "tags": [],
+                "document_state": "suggestion",
+                "document_path": "docs/slice-suggestions/2026-09-01-the-night-audit-re-reads-the-whole-harbour-log.md",
+                "kind": "defect",
+                "readiness": null,
+                "start": null,
+                "plan": {
+                  "offered": false,
+                  "label": "Plan",
+                  "why": "The rule found nowhere to run: the runtime has not read this board yet"
+                },
+                "folded": [],
+                "points": 2,
+                "is_new": false,
+                "age_date": "2026-09-01",
+                "place": {
+                  "column": "Backlog",
+                  "group": "Defects",
+                  "position": 0
+                },
+                "lane_state": "none",
+                "lane_sentence": null,
+                "colliding": null,
+                "standing": {
+                  "actor": "corpus",
+                  "evidence": null,
+                  "state": "trusted",
+                  "words": null
+                }
+              }
+            ],
+            "rail": true
+          },
+          {
             "name": "Next to plan",
             "cards": [
               {
@@ -66,6 +110,15 @@
                 "tags": [],
                 "document_state": "suggestion",
                 "document_path": "docs/slice-suggestions/2026-09-03-the-quay-display-polls-the-office-all-night.md",
+                "kind": "idea",
+                "readiness": null,
+                "start": null,
+                "plan": {
+                  "offered": false,
+                  "label": "Plan",
+                  "why": "The rule found nowhere to run: the runtime has not read this board yet"
+                },
+                "folded": [],
                 "points": 2,
                 "is_new": false,
                 "age_date": "2026-09-03",
@@ -93,6 +146,15 @@
                 "tags": [],
                 "document_state": "suggestion",
                 "document_path": "docs/slice-suggestions/2026-09-02-the-welcome-board-shows-one-boats-whole-stay.md",
+                "kind": "idea",
+                "readiness": null,
+                "start": null,
+                "plan": {
+                  "offered": false,
+                  "label": "Plan",
+                  "why": "The rule found nowhere to run: the runtime has not read this board yet"
+                },
+                "folded": [],
                 "points": 2,
                 "is_new": false,
                 "age_date": "2026-09-02",
@@ -100,33 +162,6 @@
                   "column": "Backlog",
                   "group": "Next to plan",
                   "position": 1
-                },
-                "lane_state": "none",
-                "lane_sentence": null,
-                "colliding": null,
-                "standing": {
-                  "actor": "import",
-                  "evidence": null,
-                  "state": "trusted",
-                  "words": null
-                }
-              },
-              {
-                "number": 232,
-                "title": "The night audit re-reads the whole harbour log",
-                "essence": "The night audit reads only what changed since the last one.",
-                "essence_source": "card",
-                "gate": null,
-                "tags": [],
-                "document_state": "suggestion",
-                "document_path": "docs/slice-suggestions/2026-09-01-the-night-audit-re-reads-the-whole-harbour-log.md",
-                "points": 2,
-                "is_new": false,
-                "age_date": "2026-09-01",
-                "place": {
-                  "column": "Backlog",
-                  "group": "Next to plan",
-                  "position": 2
                 },
                 "lane_state": "none",
                 "lane_sentence": null,
@@ -147,13 +182,18 @@
                 "tags": [],
                 "document_state": "gone",
                 "document_path": "docs/slice-suggestions/2026-07-12-berth-list-keys.md · 2026-08-19-office-screen-refresh.md",
+                "kind": null,
+                "readiness": null,
+                "start": null,
+                "plan": null,
+                "folded": [],
                 "points": 0,
                 "is_new": false,
                 "age_date": "2026-09-04",
                 "place": {
                   "column": "Backlog",
                   "group": "Next to plan",
-                  "position": 3
+                  "position": 2
                 },
                 "lane_state": "none",
                 "lane_sentence": null,
@@ -165,11 +205,13 @@
                   "words": null
                 }
               }
-            ]
+            ],
+            "rail": false
           },
           {
             "name": "Season opening",
-            "cards": []
+            "cards": [],
+            "rail": false
           },
           {
             "name": "Skipper-facing quality",
@@ -185,6 +227,11 @@
                 ],
                 "document_state": "note",
                 "document_path": null,
+                "kind": null,
+                "readiness": null,
+                "start": null,
+                "plan": null,
+                "folded": [],
                 "points": 0,
                 "is_new": false,
                 "age_date": "2026-09-04",
@@ -203,7 +250,8 @@
                   "words": null
                 }
               }
-            ]
+            ],
+            "rail": false
           },
           {
             "name": null,
@@ -217,6 +265,15 @@
                 "tags": [],
                 "document_state": "suggestion",
                 "document_path": "docs/slice-suggestions/2026-08-29-two-meters-on-one-pontoon-disagree.md",
+                "kind": "idea",
+                "readiness": null,
+                "start": null,
+                "plan": {
+                  "offered": false,
+                  "label": "Plan",
+                  "why": "The rule found nowhere to run: the runtime has not read this board yet"
+                },
+                "folded": [],
                 "points": 0,
                 "is_new": false,
                 "age_date": "2026-08-29",
@@ -244,6 +301,15 @@
                 "tags": [],
                 "document_state": "suggestion",
                 "document_path": "docs/slice-suggestions/2026-08-31-the-same-slip-is-mailed-twice.md",
+                "kind": "idea",
+                "readiness": null,
+                "start": null,
+                "plan": {
+                  "offered": false,
+                  "label": "Plan",
+                  "why": "The rule found nowhere to run: the runtime has not read this board yet"
+                },
+                "folded": [],
                 "points": 0,
                 "is_new": false,
                 "age_date": "2026-08-31",
@@ -271,6 +337,15 @@
                 "tags": [],
                 "document_state": "suggestion",
                 "document_path": "docs/slice-suggestions/2026-09-01-the-waiting-list-forgets-who-asked-first.md",
+                "kind": "idea",
+                "readiness": null,
+                "start": null,
+                "plan": {
+                  "offered": false,
+                  "label": "Plan",
+                  "why": "The rule found nowhere to run: the runtime has not read this board yet"
+                },
+                "folded": [],
                 "points": 0,
                 "is_new": false,
                 "age_date": "2026-09-01",
@@ -298,6 +373,15 @@
                 "tags": [],
                 "document_state": "suggestion",
                 "document_path": "docs/slice-suggestions/2026-09-04-a-boat-longer-than-its-berth-is-accepted.md",
+                "kind": "idea",
+                "readiness": null,
+                "start": null,
+                "plan": {
+                  "offered": false,
+                  "label": "Plan",
+                  "why": "The rule found nowhere to run: the runtime has not read this board yet"
+                },
+                "folded": [],
                 "points": 0,
                 "is_new": false,
                 "age_date": "2026-09-04",
@@ -316,7 +400,8 @@
                   "words": null
                 }
               }
-            ]
+            ],
+            "rail": false
           }
         ],
         "count": 9
@@ -349,6 +434,20 @@
                 ],
                 "document_state": "plan",
                 "document_path": "docs/plans/2026-09-01-the-waiting-list-offers-every-berth-that-fits.md",
+                "kind": null,
+                "readiness": {
+                  "state": "unread",
+                  "why": "The rule found nowhere to run: the runtime has not read this board yet",
+                  "cards": [],
+                  "files": []
+                },
+                "start": {
+                  "offered": false,
+                  "label": "Start",
+                  "why": "The rule found nowhere to run: the runtime has not read this board yet"
+                },
+                "plan": null,
+                "folded": [],
                 "points": 2,
                 "is_new": false,
                 "age_date": "2026-09-01",
@@ -367,7 +466,8 @@
                   "words": null
                 }
               }
-            ]
+            ],
+            "rail": false
           },
           {
             "name": "Skipper-facing quality",
@@ -383,6 +483,20 @@
                 ],
                 "document_state": "plan",
                 "document_path": "docs/plans/2026-09-02-the-skipper-sees-the-price-before-the-berth.md",
+                "kind": null,
+                "readiness": {
+                  "state": "unread",
+                  "why": "The rule found nowhere to run: the runtime has not read this board yet",
+                  "cards": [],
+                  "files": []
+                },
+                "start": {
+                  "offered": false,
+                  "label": "Start",
+                  "why": "The rule found nowhere to run: the runtime has not read this board yet"
+                },
+                "plan": null,
+                "folded": [],
                 "points": 1,
                 "is_new": false,
                 "age_date": "2026-09-02",
@@ -401,7 +515,8 @@
                   "words": null
                 }
               }
-            ]
+            ],
+            "rail": false
           },
           {
             "name": "Trust — from the winter review",
@@ -417,6 +532,20 @@
                 ],
                 "document_state": "plan",
                 "document_path": "docs/plans/2026-08-26-a-screen-nobody-opens-is-removed.md",
+                "kind": null,
+                "readiness": {
+                  "state": "unread",
+                  "why": "The rule found nowhere to run: the runtime has not read this board yet",
+                  "cards": [],
+                  "files": []
+                },
+                "start": {
+                  "offered": false,
+                  "label": "Start",
+                  "why": "The rule found nowhere to run: the runtime has not read this board yet"
+                },
+                "plan": null,
+                "folded": [],
                 "points": 2,
                 "is_new": false,
                 "age_date": "2026-08-26",
@@ -435,7 +564,8 @@
                   "words": null
                 }
               }
-            ]
+            ],
+            "rail": false
           },
           {
             "name": null,
@@ -449,6 +579,20 @@
                 "tags": [],
                 "document_state": "plan",
                 "document_path": "docs/plans/2026-09-04-the-tide-table-is-the-harbours-own.md",
+                "kind": null,
+                "readiness": {
+                  "state": "unread",
+                  "why": "The rule found nowhere to run: the runtime has not read this board yet",
+                  "cards": [],
+                  "files": []
+                },
+                "start": {
+                  "offered": false,
+                  "label": "Start",
+                  "why": "The rule found nowhere to run: the runtime has not read this board yet"
+                },
+                "plan": null,
+                "folded": [],
                 "points": 0,
                 "is_new": false,
                 "age_date": "2026-09-04",
@@ -476,6 +620,20 @@
                 "tags": [],
                 "document_state": "plan",
                 "document_path": "docs/plans/2026-09-04-a-storm-warning-reaches-every-skipper.md",
+                "kind": null,
+                "readiness": {
+                  "state": "unread",
+                  "why": "The rule found nowhere to run: the runtime has not read this board yet",
+                  "cards": [],
+                  "files": []
+                },
+                "start": {
+                  "offered": false,
+                  "label": "Start",
+                  "why": "The rule found nowhere to run: the runtime has not read this board yet"
+                },
+                "plan": null,
+                "folded": [],
                 "points": 0,
                 "is_new": true,
                 "age_date": "2026-09-04",
@@ -494,7 +652,8 @@
                   "words": null
                 }
               }
-            ]
+            ],
+            "rail": false
           }
         ],
         "count": 5
@@ -525,6 +684,20 @@
                 "tags": [],
                 "document_state": "plan",
                 "document_path": "docs/plans/2026-09-03-every-metered-kilowatt-is-billed.md",
+                "kind": null,
+                "readiness": {
+                  "state": "unread",
+                  "why": "The rule found nowhere to run: the runtime has not read this board yet",
+                  "cards": [],
+                  "files": []
+                },
+                "start": {
+                  "offered": false,
+                  "label": "Start",
+                  "why": "The rule found nowhere to run: the runtime has not read this board yet"
+                },
+                "plan": null,
+                "folded": [],
                 "points": 3,
                 "is_new": false,
                 "age_date": "2026-09-03",
@@ -552,6 +725,20 @@
                 "tags": [],
                 "document_state": "plan",
                 "document_path": "docs/plans/2026-09-02-a-gate-code-arrives-before-the-boat-does.md",
+                "kind": null,
+                "readiness": {
+                  "state": "unread",
+                  "why": "The rule found nowhere to run: the runtime has not read this board yet",
+                  "cards": [],
+                  "files": []
+                },
+                "start": {
+                  "offered": false,
+                  "label": "Start",
+                  "why": "The rule found nowhere to run: the runtime has not read this board yet"
+                },
+                "plan": null,
+                "folded": [],
                 "points": 4,
                 "is_new": false,
                 "age_date": "2026-09-02",
@@ -579,6 +766,20 @@
                 "tags": [],
                 "document_state": "note",
                 "document_path": null,
+                "kind": null,
+                "readiness": {
+                  "state": "unread",
+                  "why": "The rule found nowhere to run: the runtime has not read this board yet",
+                  "cards": [],
+                  "files": []
+                },
+                "start": {
+                  "offered": false,
+                  "label": "Start",
+                  "why": "The rule found nowhere to run: the runtime has not read this board yet"
+                },
+                "plan": null,
+                "folded": [],
                 "points": 3,
                 "is_new": false,
                 "age_date": "2026-09-04",
@@ -606,6 +807,20 @@
                 "tags": [],
                 "document_state": "plan",
                 "document_path": "docs/plans/2026-08-28-a-berth-is-never-let-twice.md",
+                "kind": null,
+                "readiness": {
+                  "state": "unread",
+                  "why": "The rule found nowhere to run: the runtime has not read this board yet",
+                  "cards": [],
+                  "files": []
+                },
+                "start": {
+                  "offered": false,
+                  "label": "Start",
+                  "why": "The rule found nowhere to run: the runtime has not read this board yet"
+                },
+                "plan": null,
+                "folded": [],
                 "points": 3,
                 "is_new": false,
                 "age_date": "2026-08-28",
@@ -635,6 +850,20 @@
                 ],
                 "document_state": "plan",
                 "document_path": "docs/plans/2026-08-30-the-booking-office-stops-growing-into-one-file.md",
+                "kind": null,
+                "readiness": {
+                  "state": "unread",
+                  "why": "The rule found nowhere to run: the runtime has not read this board yet",
+                  "cards": [],
+                  "files": []
+                },
+                "start": {
+                  "offered": false,
+                  "label": "Start",
+                  "why": "The rule found nowhere to run: the runtime has not read this board yet"
+                },
+                "plan": null,
+                "folded": [],
                 "points": 2,
                 "is_new": false,
                 "age_date": "2026-08-30",
@@ -653,7 +882,8 @@
                   "words": null
                 }
               }
-            ]
+            ],
+            "rail": false
           }
         ],
         "count": 5
@@ -684,6 +914,11 @@
                 "tags": [],
                 "document_state": "archived",
                 "document_path": "docs/plans/done/2026-08-25-the-fuel-pontoon-takes-cards.md",
+                "kind": null,
+                "readiness": null,
+                "start": null,
+                "plan": null,
+                "folded": [],
                 "points": 4,
                 "is_new": false,
                 "age_date": "2026-08-25",
@@ -711,6 +946,15 @@
                 "tags": [],
                 "document_state": "suggestion",
                 "document_path": "docs/slice-suggestions/2026-08-20-the-gate-code-goes-out-in-plain-text.md",
+                "kind": "idea",
+                "readiness": null,
+                "start": null,
+                "plan": {
+                  "offered": false,
+                  "label": "Plan",
+                  "why": "The rule found nowhere to run: the runtime has not read this board yet"
+                },
+                "folded": [],
                 "points": 3,
                 "is_new": false,
                 "age_date": "2026-08-20",
@@ -729,7 +973,8 @@
                   "words": "imported from Needle 0.1; evidence unknown until the first read"
                 }
               }
-            ]
+            ],
+            "rail": false
           }
         ],
         "count": 2
@@ -762,6 +1007,11 @@
                 ],
                 "document_state": "plan",
                 "document_path": "docs/plans/2026-09-02-the-pricing-rule-judged-against-a-real-season.md",
+                "kind": null,
+                "readiness": null,
+                "start": null,
+                "plan": null,
+                "folded": [],
                 "points": 5,
                 "is_new": false,
                 "age_date": "2026-09-02",
@@ -792,6 +1042,11 @@
                 ],
                 "document_state": "note",
                 "document_path": null,
+                "kind": null,
+                "readiness": null,
+                "start": null,
+                "plan": null,
+                "folded": [],
                 "points": 3,
                 "is_new": false,
                 "age_date": "2026-09-04",
@@ -810,7 +1065,8 @@
                   "words": null
                 }
               }
-            ]
+            ],
+            "rail": false
           },
           {
             "name": "Rulings that unblock lanes",
@@ -826,6 +1082,11 @@
                 ],
                 "document_state": "plan",
                 "document_path": "docs/plans/2026-08-18-berth-first-booking.md",
+                "kind": null,
+                "readiness": null,
+                "start": null,
+                "plan": null,
+                "folded": [],
                 "points": 3,
                 "is_new": false,
                 "age_date": "2026-08-18",
@@ -844,7 +1105,8 @@
                   "words": null
                 }
               }
-            ]
+            ],
+            "rail": false
           },
           {
             "name": "Actions & sign-offs elsewhere",
@@ -860,6 +1122,11 @@
                 ],
                 "document_state": "note",
                 "document_path": null,
+                "kind": null,
+                "readiness": null,
+                "start": null,
+                "plan": null,
+                "folded": [],
                 "points": 3,
                 "is_new": false,
                 "age_date": "2026-09-04",
@@ -878,7 +1145,8 @@
                   "words": null
                 }
               }
-            ]
+            ],
+            "rail": false
           }
         ],
         "count": 4
@@ -911,6 +1179,11 @@
                 ],
                 "document_state": "archived",
                 "document_path": "docs/plans/done/2026-08-30-the-office-runs-its-own-checks.md",
+                "kind": null,
+                "readiness": null,
+                "start": null,
+                "plan": null,
+                "folded": [],
                 "points": 2,
                 "is_new": false,
                 "age_date": "2026-08-30",
@@ -929,7 +1202,8 @@
                   "words": "imported from Needle 0.1; evidence unknown until the first read"
                 }
               }
-            ]
+            ],
+            "rail": false
           }
         ],
         "count": 1
@@ -950,7 +1224,8 @@
         "groups": [
           {
             "name": null,
-            "cards": []
+            "cards": [],
+            "rail": false
           }
         ],
         "count": 0
@@ -981,6 +1256,11 @@
                 "tags": [],
                 "document_state": "gone",
                 "document_path": "docs/plans/done/2026-09-01-a-confirmed-booking-waits-for-the-tide.md",
+                "kind": null,
+                "readiness": null,
+                "start": null,
+                "plan": null,
+                "folded": [],
                 "points": 1,
                 "is_new": false,
                 "age_date": "2026-09-04",
@@ -999,7 +1279,8 @@
                   "words": null
                 }
               }
-            ]
+            ],
+            "rail": false
           }
         ],
         "count": 1
@@ -1012,6 +1293,258 @@
     "watercooler": []
   },
   "details": {
+    "232": {
+      "card": {
+        "number": 232,
+        "project": "harbourmaster",
+        "place": {
+          "column": "Backlog",
+          "group": "Defects",
+          "position": 0
+        },
+        "title": "The night audit re-reads the whole harbour log",
+        "gate": null,
+        "tags": [],
+        "deep": "",
+        "citations": [
+          "docs/slice-suggestions/2026-09-01-the-night-audit-re-reads-the-whole-harbour-log.md"
+        ],
+        "link": {
+          "kind": "suggestion",
+          "stem": "2026-09-01-the-night-audit-re-reads-the-whole-harbour-log",
+          "title": "The night audit re-reads the whole harbour log",
+          "archived": false
+        },
+        "origin": "imported",
+        "born_at": "2026-09-04T08:30:00Z",
+        "rows": [
+          {
+            "kind": "SERVES",
+            "text": "The night audit reads only what changed since the last one."
+          },
+          {
+            "kind": "TODAY",
+            "text": "It reads all 14,000 log lines every night."
+          },
+          {
+            "kind": "COST",
+            "text": "Half a day."
+          }
+        ],
+        "folded_into": null
+      },
+      "summary": {
+        "number": 232,
+        "title": "The night audit re-reads the whole harbour log",
+        "essence": "The night audit reads only what changed since the last one.",
+        "essence_source": "card",
+        "gate": null,
+        "tags": [],
+        "document_state": "suggestion",
+        "document_path": "docs/slice-suggestions/2026-09-01-the-night-audit-re-reads-the-whole-harbour-log.md",
+        "kind": "defect",
+        "readiness": null,
+        "start": null,
+        "plan": {
+          "offered": false,
+          "label": "Plan",
+          "why": "The rule found nowhere to run: the runtime has not read this board yet"
+        },
+        "folded": [],
+        "points": 2,
+        "is_new": false,
+        "age_date": "2026-09-01",
+        "place": {
+          "column": "Backlog",
+          "group": "Defects",
+          "position": 0
+        },
+        "lane_state": "none",
+        "lane_sentence": null,
+        "colliding": null,
+        "standing": {
+          "actor": "corpus",
+          "evidence": null,
+          "state": "trusted",
+          "words": null
+        }
+      },
+      "brief": [
+        {
+          "kind": "TODAY",
+          "text": "It reads all 14,000 log lines every night."
+        },
+        {
+          "kind": "COST",
+          "text": "Half a day."
+        }
+      ],
+      "record": [],
+      "document": {
+        "kind": "suggestion",
+        "stem": "2026-09-01-the-night-audit-re-reads-the-whole-harbour-log",
+        "path": "docs/slice-suggestions/2026-09-01-the-night-audit-re-reads-the-whole-harbour-log.md",
+        "archived": false,
+        "title": "The night audit re-reads the whole harbour log",
+        "date": "2026-09-01",
+        "status": null,
+        "status_word": null,
+        "gate": null,
+        "gate_why": null,
+        "sequencing": null,
+        "found_by": "the cost review of 2026-09-01.",
+        "card_ref": null,
+        "suggestion_kind": "defect",
+        "cites": [],
+        "head_fields": [
+          {
+            "key": "Found by",
+            "value": "the cost review of 2026-09-01."
+          }
+        ],
+        "intent_heading": "Observation",
+        "intent": "The night audit reads only what changed since the last one. Today it reads all 14,000 log lines every night, and the log grows by the season.",
+        "essence": "The night audit reads only what changed since the last one.",
+        "read_at": "2026-09-04T08:30:00Z"
+      },
+      "other_citations": [],
+      "history": [
+        {
+          "id": 41,
+          "at": "2026-09-04T08:30:00Z",
+          "actor": "corpus",
+          "kind": "moved",
+          "card_number": 232,
+          "from_place": {
+            "column": "Backlog",
+            "group": "Next to plan",
+            "position": 2
+          },
+          "to_place": {
+            "column": "Backlog",
+            "group": "Defects",
+            "position": 0
+          },
+          "detail": "Moved Backlog · Next to plan → Backlog · Defects — its document says Kind: defect; a defect reads on the defects rail",
+          "evidence": null
+        },
+        {
+          "id": 6,
+          "at": "2026-09-04T08:30:00Z",
+          "actor": "import",
+          "kind": "linked",
+          "card_number": 232,
+          "from_place": null,
+          "to_place": null,
+          "detail": "Linked to docs/slice-suggestions/2026-09-01-the-night-audit-re-reads-the-whole-harbour-log.md, cited on the 0.1 card.",
+          "evidence": null
+        },
+        {
+          "id": 5,
+          "at": "2026-09-04T08:30:00Z",
+          "actor": "import",
+          "kind": "born",
+          "card_number": 232,
+          "from_place": null,
+          "to_place": {
+            "column": "Backlog",
+            "group": "Next to plan",
+            "position": 2
+          },
+          "detail": "Born from Needle 0.1's card file — column, position and 3 rows.",
+          "evidence": null
+        }
+      ],
+      "lane": {
+        "card_number": 232,
+        "name": "card-232-the-night-audit-re-reads-the-who",
+        "path": null,
+        "state": "none",
+        "sentence": "",
+        "session": null,
+        "question": null,
+        "said": null,
+        "said_at": null,
+        "discussing": [],
+        "window_open": false,
+        "hands_on_since": null,
+        "died": null,
+        "moved": null,
+        "folded": false,
+        "trunk_synced": false,
+        "main_synced": false,
+        "edits": [],
+        "declared": [],
+        "colliding": null
+      },
+      "doors": {
+        "start": {
+          "offered": false,
+          "label": "Start",
+          "why": "Start is offered in Up next and Planned; this card is in Backlog."
+        },
+        "start_anyway": {
+          "offered": false,
+          "label": "Start anyway",
+          "why": "There is no collision to override."
+        },
+        "readiness": {
+          "state": "elsewhere",
+          "why": "Start is offered in Up next and Planned; this card is in Backlog.",
+          "cards": [],
+          "files": []
+        },
+        "placement": null,
+        "placement_note": "the runtime has not read this board yet",
+        "collision": null,
+        "watch": {
+          "offered": false,
+          "label": "Watch",
+          "why": "No live session to watch."
+        },
+        "answer": {
+          "offered": false,
+          "label": "Answer",
+          "why": "No live session to answer."
+        },
+        "discuss": {
+          "offered": false,
+          "label": "Discuss",
+          "why": "The rule found nowhere to run: the runtime has not read this board yet"
+        },
+        "plan": {
+          "offered": false,
+          "label": "Plan",
+          "why": "The rule found nowhere to run: the runtime has not read this board yet"
+        },
+        "look": {
+          "offered": false,
+          "label": "Look",
+          "why": "No session to look at."
+        },
+        "resume": {
+          "offered": false,
+          "label": "Resume",
+          "why": "No session to look at."
+        },
+        "stop": {
+          "offered": false,
+          "label": "Stop",
+          "why": "No background session to stop."
+        },
+        "signal": {
+          "offered": false,
+          "label": "Delivered?",
+          "why": "No signal waits on your reading."
+        }
+      },
+      "signal": null,
+      "signal_note": "no WATCH row names a signal",
+      "readings": [],
+      "verdict": null,
+      "verdict_note": "no VERDICT row is written",
+      "watercooler": []
+    },
     "252": {
       "card": {
         "number": 252,
@@ -1049,7 +1582,8 @@
             "kind": "COST",
             "text": "Small."
           }
-        ]
+        ],
+        "folded_into": null
       },
       "summary": {
         "number": 252,
@@ -1060,6 +1594,15 @@
         "tags": [],
         "document_state": "suggestion",
         "document_path": "docs/slice-suggestions/2026-09-03-the-quay-display-polls-the-office-all-night.md",
+        "kind": "idea",
+        "readiness": null,
+        "start": null,
+        "plan": {
+          "offered": false,
+          "label": "Plan",
+          "why": "The rule found nowhere to run: the runtime has not read this board yet"
+        },
+        "folded": [],
         "points": 2,
         "is_new": false,
         "age_date": "2026-09-03",
@@ -1103,6 +1646,8 @@
         "sequencing": null,
         "found_by": "the close of card #249, carried out.",
         "card_ref": null,
+        "suggestion_kind": "idea",
+        "cites": [],
         "head_fields": [
           {
             "key": "Found by",
@@ -1176,6 +1721,12 @@
           "label": "Start anyway",
           "why": "There is no collision to override."
         },
+        "readiness": {
+          "state": "elsewhere",
+          "why": "Start is offered in Up next and Planned; this card is in Backlog.",
+          "cards": [],
+          "files": []
+        },
         "placement": null,
         "placement_note": "the runtime has not read this board yet",
         "collision": null,
@@ -1192,6 +1743,11 @@
         "discuss": {
           "offered": false,
           "label": "Discuss",
+          "why": "The rule found nowhere to run: the runtime has not read this board yet"
+        },
+        "plan": {
+          "offered": false,
+          "label": "Plan",
           "why": "The rule found nowhere to run: the runtime has not read this board yet"
         },
         "look": {
@@ -1259,7 +1815,8 @@
             "kind": "COST",
             "text": "A day."
           }
-        ]
+        ],
+        "folded_into": null
       },
       "summary": {
         "number": 242,
@@ -1270,6 +1827,15 @@
         "tags": [],
         "document_state": "suggestion",
         "document_path": "docs/slice-suggestions/2026-09-02-the-welcome-board-shows-one-boats-whole-stay.md",
+        "kind": "idea",
+        "readiness": null,
+        "start": null,
+        "plan": {
+          "offered": false,
+          "label": "Plan",
+          "why": "The rule found nowhere to run: the runtime has not read this board yet"
+        },
+        "folded": [],
         "points": 2,
         "is_new": false,
         "age_date": "2026-09-02",
@@ -1313,6 +1879,8 @@
         "sequencing": null,
         "found_by": "the owner, walking the pontoon on 2026-09-02.",
         "card_ref": null,
+        "suggestion_kind": "idea",
+        "cites": [],
         "head_fields": [
           {
             "key": "Found by",
@@ -1386,6 +1954,12 @@
           "label": "Start anyway",
           "why": "There is no collision to override."
         },
+        "readiness": {
+          "state": "elsewhere",
+          "why": "Start is offered in Up next and Planned; this card is in Backlog.",
+          "cards": [],
+          "files": []
+        },
         "placement": null,
         "placement_note": "the runtime has not read this board yet",
         "collision": null,
@@ -1404,214 +1978,9 @@
           "label": "Discuss",
           "why": "The rule found nowhere to run: the runtime has not read this board yet"
         },
-        "look": {
+        "plan": {
           "offered": false,
-          "label": "Look",
-          "why": "No session to look at."
-        },
-        "resume": {
-          "offered": false,
-          "label": "Resume",
-          "why": "No session to look at."
-        },
-        "stop": {
-          "offered": false,
-          "label": "Stop",
-          "why": "No background session to stop."
-        },
-        "signal": {
-          "offered": false,
-          "label": "Delivered?",
-          "why": "No signal waits on your reading."
-        }
-      },
-      "signal": null,
-      "signal_note": "no WATCH row names a signal",
-      "readings": [],
-      "verdict": null,
-      "verdict_note": "no VERDICT row is written",
-      "watercooler": []
-    },
-    "232": {
-      "card": {
-        "number": 232,
-        "project": "harbourmaster",
-        "place": {
-          "column": "Backlog",
-          "group": "Next to plan",
-          "position": 2
-        },
-        "title": "The night audit re-reads the whole harbour log",
-        "gate": null,
-        "tags": [],
-        "deep": "",
-        "citations": [
-          "docs/slice-suggestions/2026-09-01-the-night-audit-re-reads-the-whole-harbour-log.md"
-        ],
-        "link": {
-          "kind": "suggestion",
-          "stem": "2026-09-01-the-night-audit-re-reads-the-whole-harbour-log",
-          "title": "The night audit re-reads the whole harbour log",
-          "archived": false
-        },
-        "origin": "imported",
-        "born_at": "2026-09-04T08:30:00Z",
-        "rows": [
-          {
-            "kind": "SERVES",
-            "text": "The night audit reads only what changed since the last one."
-          },
-          {
-            "kind": "TODAY",
-            "text": "It reads all 14,000 log lines every night."
-          },
-          {
-            "kind": "COST",
-            "text": "Half a day."
-          }
-        ]
-      },
-      "summary": {
-        "number": 232,
-        "title": "The night audit re-reads the whole harbour log",
-        "essence": "The night audit reads only what changed since the last one.",
-        "essence_source": "card",
-        "gate": null,
-        "tags": [],
-        "document_state": "suggestion",
-        "document_path": "docs/slice-suggestions/2026-09-01-the-night-audit-re-reads-the-whole-harbour-log.md",
-        "points": 2,
-        "is_new": false,
-        "age_date": "2026-09-01",
-        "place": {
-          "column": "Backlog",
-          "group": "Next to plan",
-          "position": 2
-        },
-        "lane_state": "none",
-        "lane_sentence": null,
-        "colliding": null,
-        "standing": {
-          "actor": "import",
-          "evidence": null,
-          "state": "trusted",
-          "words": null
-        }
-      },
-      "brief": [
-        {
-          "kind": "TODAY",
-          "text": "It reads all 14,000 log lines every night."
-        },
-        {
-          "kind": "COST",
-          "text": "Half a day."
-        }
-      ],
-      "record": [],
-      "document": {
-        "kind": "suggestion",
-        "stem": "2026-09-01-the-night-audit-re-reads-the-whole-harbour-log",
-        "path": "docs/slice-suggestions/2026-09-01-the-night-audit-re-reads-the-whole-harbour-log.md",
-        "archived": false,
-        "title": "The night audit re-reads the whole harbour log",
-        "date": "2026-09-01",
-        "status": null,
-        "status_word": null,
-        "gate": null,
-        "gate_why": null,
-        "sequencing": null,
-        "found_by": "the cost review of 2026-09-01.",
-        "card_ref": null,
-        "head_fields": [
-          {
-            "key": "Found by",
-            "value": "the cost review of 2026-09-01."
-          }
-        ],
-        "intent_heading": "Observation",
-        "intent": "The night audit reads only what changed since the last one. Today it reads all 14,000 log lines every night, and the log grows by the season.",
-        "essence": "The night audit reads only what changed since the last one.",
-        "read_at": "2026-09-04T08:30:00Z"
-      },
-      "other_citations": [],
-      "history": [
-        {
-          "id": 6,
-          "at": "2026-09-04T08:30:00Z",
-          "actor": "import",
-          "kind": "linked",
-          "card_number": 232,
-          "from_place": null,
-          "to_place": null,
-          "detail": "Linked to docs/slice-suggestions/2026-09-01-the-night-audit-re-reads-the-whole-harbour-log.md, cited on the 0.1 card.",
-          "evidence": null
-        },
-        {
-          "id": 5,
-          "at": "2026-09-04T08:30:00Z",
-          "actor": "import",
-          "kind": "born",
-          "card_number": 232,
-          "from_place": null,
-          "to_place": {
-            "column": "Backlog",
-            "group": "Next to plan",
-            "position": 2
-          },
-          "detail": "Born from Needle 0.1's card file — column, position and 3 rows.",
-          "evidence": null
-        }
-      ],
-      "lane": {
-        "card_number": 232,
-        "name": "card-232-the-night-audit-re-reads-the-who",
-        "path": null,
-        "state": "none",
-        "sentence": "",
-        "session": null,
-        "question": null,
-        "said": null,
-        "said_at": null,
-        "discussing": [],
-        "window_open": false,
-        "hands_on_since": null,
-        "died": null,
-        "moved": null,
-        "folded": false,
-        "trunk_synced": false,
-        "main_synced": false,
-        "edits": [],
-        "declared": [],
-        "colliding": null
-      },
-      "doors": {
-        "start": {
-          "offered": false,
-          "label": "Start",
-          "why": "Start is offered in Up next and Planned; this card is in Backlog."
-        },
-        "start_anyway": {
-          "offered": false,
-          "label": "Start anyway",
-          "why": "There is no collision to override."
-        },
-        "placement": null,
-        "placement_note": "the runtime has not read this board yet",
-        "collision": null,
-        "watch": {
-          "offered": false,
-          "label": "Watch",
-          "why": "No live session to watch."
-        },
-        "answer": {
-          "offered": false,
-          "label": "Answer",
-          "why": "No live session to answer."
-        },
-        "discuss": {
-          "offered": false,
-          "label": "Discuss",
+          "label": "Plan",
           "why": "The rule found nowhere to run: the runtime has not read this board yet"
         },
         "look": {
@@ -1649,7 +2018,7 @@
         "place": {
           "column": "Backlog",
           "group": "Next to plan",
-          "position": 3
+          "position": 2
         },
         "title": "Two small office-screen fixes",
         "gate": null,
@@ -1671,7 +2040,8 @@
             "kind": "SERVES",
             "text": "Screens refresh."
           }
-        ]
+        ],
+        "folded_into": null
       },
       "summary": {
         "number": 120,
@@ -1682,13 +2052,18 @@
         "tags": [],
         "document_state": "gone",
         "document_path": "docs/slice-suggestions/2026-07-12-berth-list-keys.md · 2026-08-19-office-screen-refresh.md",
+        "kind": null,
+        "readiness": null,
+        "start": null,
+        "plan": null,
+        "folded": [],
         "points": 0,
         "is_new": false,
         "age_date": "2026-09-04",
         "place": {
           "column": "Backlog",
           "group": "Next to plan",
-          "position": 3
+          "position": 2
         },
         "lane_state": "none",
         "lane_sentence": null,
@@ -1765,6 +2140,12 @@
           "label": "Start anyway",
           "why": "There is no collision to override."
         },
+        "readiness": {
+          "state": "elsewhere",
+          "why": "Start is offered in Up next and Planned; this card is in Backlog.",
+          "cards": [],
+          "files": []
+        },
         "placement": null,
         "placement_note": "the runtime has not read this board yet",
         "collision": null,
@@ -1781,6 +2162,11 @@
         "discuss": {
           "offered": false,
           "label": "Discuss",
+          "why": "The rule found nowhere to run: the runtime has not read this board yet"
+        },
+        "plan": {
+          "offered": false,
+          "label": "Plan",
           "why": "The rule found nowhere to run: the runtime has not read this board yet"
         },
         "look": {
@@ -1835,7 +2221,8 @@
             "kind": "SERVES",
             "text": "Saying yes to a berth takes one tap."
           }
-        ]
+        ],
+        "folded_into": null
       },
       "summary": {
         "number": 105,
@@ -1848,6 +2235,11 @@
         ],
         "document_state": "note",
         "document_path": null,
+        "kind": null,
+        "readiness": null,
+        "start": null,
+        "plan": null,
+        "folded": [],
         "points": 0,
         "is_new": false,
         "age_date": "2026-09-04",
@@ -1920,6 +2312,12 @@
           "label": "Start anyway",
           "why": "There is no collision to override."
         },
+        "readiness": {
+          "state": "elsewhere",
+          "why": "Start is offered in Up next and Planned; this card is in Backlog.",
+          "cards": [],
+          "files": []
+        },
         "placement": null,
         "placement_note": "the runtime has not read this board yet",
         "collision": null,
@@ -1937,6 +2335,11 @@
           "offered": false,
           "label": "Discuss",
           "why": "The rule found nowhere to run: the runtime has not read this board yet"
+        },
+        "plan": {
+          "offered": false,
+          "label": "Plan",
+          "why": "Plan writes the plan for a suggestion; this card is not behind a live suggestion."
         },
         "look": {
           "offered": false,
@@ -1990,7 +2393,8 @@
         },
         "origin": "founding",
         "born_at": "2026-09-04T08:30:00Z",
-        "rows": []
+        "rows": [],
+        "folded_into": null
       },
       "summary": {
         "number": 263,
@@ -2001,6 +2405,15 @@
         "tags": [],
         "document_state": "suggestion",
         "document_path": "docs/slice-suggestions/2026-08-29-two-meters-on-one-pontoon-disagree.md",
+        "kind": "idea",
+        "readiness": null,
+        "start": null,
+        "plan": {
+          "offered": false,
+          "label": "Plan",
+          "why": "The rule found nowhere to run: the runtime has not read this board yet"
+        },
+        "folded": [],
         "points": 0,
         "is_new": false,
         "age_date": "2026-08-29",
@@ -2035,6 +2448,8 @@
         "sequencing": null,
         "found_by": "the meter reconcile of 2026-08-29.",
         "card_ref": null,
+        "suggestion_kind": "idea",
+        "cites": [],
         "head_fields": [
           {
             "key": "Found by",
@@ -2049,7 +2464,7 @@
       "other_citations": [],
       "history": [
         {
-          "id": 42,
+          "id": 43,
           "at": "2026-09-04T08:30:00Z",
           "actor": "corpus",
           "kind": "born",
@@ -2097,6 +2512,12 @@
           "label": "Start anyway",
           "why": "There is no collision to override."
         },
+        "readiness": {
+          "state": "elsewhere",
+          "why": "Start is offered in Up next and Planned; this card is in Backlog.",
+          "cards": [],
+          "files": []
+        },
         "placement": null,
         "placement_note": "the runtime has not read this board yet",
         "collision": null,
@@ -2113,6 +2534,11 @@
         "discuss": {
           "offered": false,
           "label": "Discuss",
+          "why": "The rule found nowhere to run: the runtime has not read this board yet"
+        },
+        "plan": {
+          "offered": false,
+          "label": "Plan",
           "why": "The rule found nowhere to run: the runtime has not read this board yet"
         },
         "look": {
@@ -2167,7 +2593,8 @@
         },
         "origin": "founding",
         "born_at": "2026-09-04T08:30:00Z",
-        "rows": []
+        "rows": [],
+        "folded_into": null
       },
       "summary": {
         "number": 264,
@@ -2178,6 +2605,15 @@
         "tags": [],
         "document_state": "suggestion",
         "document_path": "docs/slice-suggestions/2026-08-31-the-same-slip-is-mailed-twice.md",
+        "kind": "idea",
+        "readiness": null,
+        "start": null,
+        "plan": {
+          "offered": false,
+          "label": "Plan",
+          "why": "The rule found nowhere to run: the runtime has not read this board yet"
+        },
+        "folded": [],
         "points": 0,
         "is_new": false,
         "age_date": "2026-08-31",
@@ -2212,6 +2648,8 @@
         "sequencing": null,
         "found_by": "a skipper's reply, 2026-08-31.",
         "card_ref": null,
+        "suggestion_kind": "idea",
+        "cites": [],
         "head_fields": [
           {
             "key": "Found by",
@@ -2226,7 +2664,7 @@
       "other_citations": [],
       "history": [
         {
-          "id": 43,
+          "id": 44,
           "at": "2026-09-04T08:30:00Z",
           "actor": "corpus",
           "kind": "born",
@@ -2274,6 +2712,12 @@
           "label": "Start anyway",
           "why": "There is no collision to override."
         },
+        "readiness": {
+          "state": "elsewhere",
+          "why": "Start is offered in Up next and Planned; this card is in Backlog.",
+          "cards": [],
+          "files": []
+        },
         "placement": null,
         "placement_note": "the runtime has not read this board yet",
         "collision": null,
@@ -2290,6 +2734,11 @@
         "discuss": {
           "offered": false,
           "label": "Discuss",
+          "why": "The rule found nowhere to run: the runtime has not read this board yet"
+        },
+        "plan": {
+          "offered": false,
+          "label": "Plan",
           "why": "The rule found nowhere to run: the runtime has not read this board yet"
         },
         "look": {
@@ -2344,7 +2793,8 @@
         },
         "origin": "founding",
         "born_at": "2026-09-04T08:30:00Z",
-        "rows": []
+        "rows": [],
+        "folded_into": null
       },
       "summary": {
         "number": 265,
@@ -2355,6 +2805,15 @@
         "tags": [],
         "document_state": "suggestion",
         "document_path": "docs/slice-suggestions/2026-09-01-the-waiting-list-forgets-who-asked-first.md",
+        "kind": "idea",
+        "readiness": null,
+        "start": null,
+        "plan": {
+          "offered": false,
+          "label": "Plan",
+          "why": "The rule found nowhere to run: the runtime has not read this board yet"
+        },
+        "folded": [],
         "points": 0,
         "is_new": false,
         "age_date": "2026-09-01",
@@ -2389,6 +2848,8 @@
         "sequencing": null,
         "found_by": "the owner, 2026-09-01.",
         "card_ref": null,
+        "suggestion_kind": "idea",
+        "cites": [],
         "head_fields": [
           {
             "key": "Found by",
@@ -2403,7 +2864,7 @@
       "other_citations": [],
       "history": [
         {
-          "id": 44,
+          "id": 45,
           "at": "2026-09-04T08:30:00Z",
           "actor": "corpus",
           "kind": "born",
@@ -2451,6 +2912,12 @@
           "label": "Start anyway",
           "why": "There is no collision to override."
         },
+        "readiness": {
+          "state": "elsewhere",
+          "why": "Start is offered in Up next and Planned; this card is in Backlog.",
+          "cards": [],
+          "files": []
+        },
         "placement": null,
         "placement_note": "the runtime has not read this board yet",
         "collision": null,
@@ -2467,6 +2934,11 @@
         "discuss": {
           "offered": false,
           "label": "Discuss",
+          "why": "The rule found nowhere to run: the runtime has not read this board yet"
+        },
+        "plan": {
+          "offered": false,
+          "label": "Plan",
           "why": "The rule found nowhere to run: the runtime has not read this board yet"
         },
         "look": {
@@ -2521,7 +2993,8 @@
         },
         "origin": "founding",
         "born_at": "2026-09-04T08:30:00Z",
-        "rows": []
+        "rows": [],
+        "folded_into": null
       },
       "summary": {
         "number": 266,
@@ -2532,6 +3005,15 @@
         "tags": [],
         "document_state": "suggestion",
         "document_path": "docs/slice-suggestions/2026-09-04-a-boat-longer-than-its-berth-is-accepted.md",
+        "kind": "idea",
+        "readiness": null,
+        "start": null,
+        "plan": {
+          "offered": false,
+          "label": "Plan",
+          "why": "The rule found nowhere to run: the runtime has not read this board yet"
+        },
+        "folded": [],
         "points": 0,
         "is_new": false,
         "age_date": "2026-09-04",
@@ -2566,6 +3048,8 @@
         "sequencing": null,
         "found_by": "the harbourmaster, 2026-09-04.",
         "card_ref": null,
+        "suggestion_kind": "idea",
+        "cites": [],
         "head_fields": [
           {
             "key": "Found by",
@@ -2580,7 +3064,7 @@
       "other_citations": [],
       "history": [
         {
-          "id": 45,
+          "id": 46,
           "at": "2026-09-04T08:30:00Z",
           "actor": "corpus",
           "kind": "born",
@@ -2628,6 +3112,12 @@
           "label": "Start anyway",
           "why": "There is no collision to override."
         },
+        "readiness": {
+          "state": "elsewhere",
+          "why": "Start is offered in Up next and Planned; this card is in Backlog.",
+          "cards": [],
+          "files": []
+        },
         "placement": null,
         "placement_note": "the runtime has not read this board yet",
         "collision": null,
@@ -2644,6 +3134,11 @@
         "discuss": {
           "offered": false,
           "label": "Discuss",
+          "why": "The rule found nowhere to run: the runtime has not read this board yet"
+        },
+        "plan": {
+          "offered": false,
+          "label": "Plan",
           "why": "The rule found nowhere to run: the runtime has not read this board yet"
         },
         "look": {
@@ -2713,7 +3208,8 @@
             "kind": "WAITS",
             "text": "#139 — the four berth-first rulings."
           }
-        ]
+        ],
+        "folded_into": null
       },
       "summary": {
         "number": 196,
@@ -2726,6 +3222,20 @@
         ],
         "document_state": "plan",
         "document_path": "docs/plans/2026-09-01-the-waiting-list-offers-every-berth-that-fits.md",
+        "kind": null,
+        "readiness": {
+          "state": "unread",
+          "why": "The rule found nowhere to run: the runtime has not read this board yet",
+          "cards": [],
+          "files": []
+        },
+        "start": {
+          "offered": false,
+          "label": "Start",
+          "why": "The rule found nowhere to run: the runtime has not read this board yet"
+        },
+        "plan": null,
+        "folded": [],
         "points": 2,
         "is_new": false,
         "age_date": "2026-09-01",
@@ -2769,6 +3279,8 @@
         "sequencing": "after #139, the four berth-first rulings.",
         "found_by": null,
         "card_ref": null,
+        "suggestion_kind": null,
+        "cites": [],
         "head_fields": [
           {
             "key": "Status",
@@ -2854,6 +3366,12 @@
           "label": "Start anyway",
           "why": "There is no collision to override."
         },
+        "readiness": {
+          "state": "unread",
+          "why": "The rule found nowhere to run: the runtime has not read this board yet",
+          "cards": [],
+          "files": []
+        },
         "placement": null,
         "placement_note": "the runtime has not read this board yet",
         "collision": null,
@@ -2871,6 +3389,11 @@
           "offered": false,
           "label": "Discuss",
           "why": "The rule found nowhere to run: the runtime has not read this board yet"
+        },
+        "plan": {
+          "offered": false,
+          "label": "Plan",
+          "why": "Plan writes the plan for a suggestion; this card is not behind a live suggestion."
         },
         "look": {
           "offered": false,
@@ -2935,7 +3458,8 @@
             "kind": "TODAY",
             "text": "The price appears on the confirmation."
           }
-        ]
+        ],
+        "folded_into": null
       },
       "summary": {
         "number": 109,
@@ -2948,6 +3472,20 @@
         ],
         "document_state": "plan",
         "document_path": "docs/plans/2026-09-02-the-skipper-sees-the-price-before-the-berth.md",
+        "kind": null,
+        "readiness": {
+          "state": "unread",
+          "why": "The rule found nowhere to run: the runtime has not read this board yet",
+          "cards": [],
+          "files": []
+        },
+        "start": {
+          "offered": false,
+          "label": "Start",
+          "why": "The rule found nowhere to run: the runtime has not read this board yet"
+        },
+        "plan": null,
+        "folded": [],
         "points": 1,
         "is_new": false,
         "age_date": "2026-09-02",
@@ -2987,6 +3525,8 @@
         "sequencing": "independent of every open card.",
         "found_by": null,
         "card_ref": null,
+        "suggestion_kind": null,
+        "cites": [],
         "head_fields": [
           {
             "key": "Status",
@@ -3072,6 +3612,12 @@
           "label": "Start anyway",
           "why": "There is no collision to override."
         },
+        "readiness": {
+          "state": "unread",
+          "why": "The rule found nowhere to run: the runtime has not read this board yet",
+          "cards": [],
+          "files": []
+        },
         "placement": null,
         "placement_note": "the runtime has not read this board yet",
         "collision": null,
@@ -3089,6 +3635,11 @@
           "offered": false,
           "label": "Discuss",
           "why": "The rule found nowhere to run: the runtime has not read this board yet"
+        },
+        "plan": {
+          "offered": false,
+          "label": "Plan",
+          "why": "Plan writes the plan for a suggestion; this card is not behind a live suggestion."
         },
         "look": {
           "offered": false,
@@ -3157,7 +3708,8 @@
             "kind": "COST",
             "text": "A day."
           }
-        ]
+        ],
+        "folded_into": null
       },
       "summary": {
         "number": 172,
@@ -3170,6 +3722,20 @@
         ],
         "document_state": "plan",
         "document_path": "docs/plans/2026-08-26-a-screen-nobody-opens-is-removed.md",
+        "kind": null,
+        "readiness": {
+          "state": "unread",
+          "why": "The rule found nowhere to run: the runtime has not read this board yet",
+          "cards": [],
+          "files": []
+        },
+        "start": {
+          "offered": false,
+          "label": "Start",
+          "why": "The rule found nowhere to run: the runtime has not read this board yet"
+        },
+        "plan": null,
+        "folded": [],
         "points": 2,
         "is_new": false,
         "age_date": "2026-08-26",
@@ -3213,6 +3779,8 @@
         "sequencing": "independent of every open card.",
         "found_by": null,
         "card_ref": null,
+        "suggestion_kind": null,
+        "cites": [],
         "head_fields": [
           {
             "key": "Status",
@@ -3298,6 +3866,12 @@
           "label": "Start anyway",
           "why": "There is no collision to override."
         },
+        "readiness": {
+          "state": "unread",
+          "why": "The rule found nowhere to run: the runtime has not read this board yet",
+          "cards": [],
+          "files": []
+        },
         "placement": null,
         "placement_note": "the runtime has not read this board yet",
         "collision": null,
@@ -3315,6 +3889,11 @@
           "offered": false,
           "label": "Discuss",
           "why": "The rule found nowhere to run: the runtime has not read this board yet"
+        },
+        "plan": {
+          "offered": false,
+          "label": "Plan",
+          "why": "Plan writes the plan for a suggestion; this card is not behind a live suggestion."
         },
         "look": {
           "offered": false,
@@ -3368,7 +3947,8 @@
         },
         "origin": "founding",
         "born_at": "2026-09-04T08:30:00Z",
-        "rows": []
+        "rows": [],
+        "folded_into": null
       },
       "summary": {
         "number": 262,
@@ -3379,6 +3959,20 @@
         "tags": [],
         "document_state": "plan",
         "document_path": "docs/plans/2026-09-04-the-tide-table-is-the-harbours-own.md",
+        "kind": null,
+        "readiness": {
+          "state": "unread",
+          "why": "The rule found nowhere to run: the runtime has not read this board yet",
+          "cards": [],
+          "files": []
+        },
+        "start": {
+          "offered": false,
+          "label": "Start",
+          "why": "The rule found nowhere to run: the runtime has not read this board yet"
+        },
+        "plan": null,
+        "folded": [],
         "points": 0,
         "is_new": false,
         "age_date": "2026-09-04",
@@ -3413,6 +4007,8 @@
         "sequencing": "independent of every open card.",
         "found_by": null,
         "card_ref": null,
+        "suggestion_kind": null,
+        "cites": [],
         "head_fields": [
           {
             "key": "Status",
@@ -3439,7 +4035,7 @@
       "other_citations": [],
       "history": [
         {
-          "id": 41,
+          "id": 42,
           "at": "2026-09-04T08:30:00Z",
           "actor": "corpus",
           "kind": "born",
@@ -3487,6 +4083,12 @@
           "label": "Start anyway",
           "why": "There is no collision to override."
         },
+        "readiness": {
+          "state": "unread",
+          "why": "The rule found nowhere to run: the runtime has not read this board yet",
+          "cards": [],
+          "files": []
+        },
         "placement": null,
         "placement_note": "the runtime has not read this board yet",
         "collision": null,
@@ -3504,6 +4106,11 @@
           "offered": false,
           "label": "Discuss",
           "why": "The rule found nowhere to run: the runtime has not read this board yet"
+        },
+        "plan": {
+          "offered": false,
+          "label": "Plan",
+          "why": "Plan writes the plan for a suggestion; this card is not behind a live suggestion."
         },
         "look": {
           "offered": false,
@@ -3557,7 +4164,8 @@
         },
         "origin": "arrived",
         "born_at": "2026-09-04T08:30:00Z",
-        "rows": []
+        "rows": [],
+        "folded_into": null
       },
       "summary": {
         "number": 267,
@@ -3568,6 +4176,20 @@
         "tags": [],
         "document_state": "plan",
         "document_path": "docs/plans/2026-09-04-a-storm-warning-reaches-every-skipper.md",
+        "kind": null,
+        "readiness": {
+          "state": "unread",
+          "why": "The rule found nowhere to run: the runtime has not read this board yet",
+          "cards": [],
+          "files": []
+        },
+        "start": {
+          "offered": false,
+          "label": "Start",
+          "why": "The rule found nowhere to run: the runtime has not read this board yet"
+        },
+        "plan": null,
+        "folded": [],
         "points": 0,
         "is_new": true,
         "age_date": "2026-09-04",
@@ -3602,6 +4224,8 @@
         "sequencing": "independent of every open card.",
         "found_by": null,
         "card_ref": null,
+        "suggestion_kind": null,
+        "cites": [],
         "head_fields": [
           {
             "key": "Status",
@@ -3628,7 +4252,7 @@
       "other_citations": [],
       "history": [
         {
-          "id": 46,
+          "id": 47,
           "at": "2026-09-04T08:30:00Z",
           "actor": "corpus",
           "kind": "born",
@@ -3676,6 +4300,12 @@
           "label": "Start anyway",
           "why": "There is no collision to override."
         },
+        "readiness": {
+          "state": "unread",
+          "why": "The rule found nowhere to run: the runtime has not read this board yet",
+          "cards": [],
+          "files": []
+        },
         "placement": null,
         "placement_note": "the runtime has not read this board yet",
         "collision": null,
@@ -3693,6 +4323,11 @@
           "offered": false,
           "label": "Discuss",
           "why": "The rule found nowhere to run: the runtime has not read this board yet"
+        },
+        "plan": {
+          "offered": false,
+          "label": "Plan",
+          "why": "Plan writes the plan for a suggestion; this card is not behind a live suggestion."
         },
         "look": {
           "offered": false,
@@ -3763,7 +4398,8 @@
             "kind": "PLAN",
             "text": "Written 3 Sep."
           }
-        ]
+        ],
+        "folded_into": null
       },
       "summary": {
         "number": 253,
@@ -3774,6 +4410,20 @@
         "tags": [],
         "document_state": "plan",
         "document_path": "docs/plans/2026-09-03-every-metered-kilowatt-is-billed.md",
+        "kind": null,
+        "readiness": {
+          "state": "unread",
+          "why": "The rule found nowhere to run: the runtime has not read this board yet",
+          "cards": [],
+          "files": []
+        },
+        "start": {
+          "offered": false,
+          "label": "Start",
+          "why": "The rule found nowhere to run: the runtime has not read this board yet"
+        },
+        "plan": null,
+        "folded": [],
         "points": 3,
         "is_new": false,
         "age_date": "2026-09-03",
@@ -3821,6 +4471,8 @@
         "sequencing": "independent of every open card.",
         "found_by": null,
         "card_ref": 253,
+        "suggestion_kind": null,
+        "cites": [],
         "head_fields": [
           {
             "key": "Status",
@@ -3910,6 +4562,12 @@
           "label": "Start anyway",
           "why": "There is no collision to override."
         },
+        "readiness": {
+          "state": "unread",
+          "why": "The rule found nowhere to run: the runtime has not read this board yet",
+          "cards": [],
+          "files": []
+        },
         "placement": null,
         "placement_note": "the runtime has not read this board yet",
         "collision": null,
@@ -3927,6 +4585,11 @@
           "offered": false,
           "label": "Discuss",
           "why": "The rule found nowhere to run: the runtime has not read this board yet"
+        },
+        "plan": {
+          "offered": false,
+          "label": "Plan",
+          "why": "Plan writes the plan for a suggestion; this card is not behind a live suggestion."
         },
         "look": {
           "offered": false,
@@ -4001,7 +4664,8 @@
             "kind": "PLAN",
             "text": "Written 2 Sep."
           }
-        ]
+        ],
+        "folded_into": null
       },
       "summary": {
         "number": 241,
@@ -4012,6 +4676,20 @@
         "tags": [],
         "document_state": "plan",
         "document_path": "docs/plans/2026-09-02-a-gate-code-arrives-before-the-boat-does.md",
+        "kind": null,
+        "readiness": {
+          "state": "unread",
+          "why": "The rule found nowhere to run: the runtime has not read this board yet",
+          "cards": [],
+          "files": []
+        },
+        "start": {
+          "offered": false,
+          "label": "Start",
+          "why": "The rule found nowhere to run: the runtime has not read this board yet"
+        },
+        "plan": null,
+        "folded": [],
         "points": 4,
         "is_new": false,
         "age_date": "2026-09-02",
@@ -4063,6 +4741,8 @@
         "sequencing": "independent of every open card.",
         "found_by": null,
         "card_ref": 241,
+        "suggestion_kind": null,
+        "cites": [],
         "head_fields": [
           {
             "key": "Status",
@@ -4152,6 +4832,12 @@
           "label": "Start anyway",
           "why": "There is no collision to override."
         },
+        "readiness": {
+          "state": "unread",
+          "why": "The rule found nowhere to run: the runtime has not read this board yet",
+          "cards": [],
+          "files": []
+        },
         "placement": null,
         "placement_note": "the runtime has not read this board yet",
         "collision": null,
@@ -4169,6 +4855,11 @@
           "offered": false,
           "label": "Discuss",
           "why": "The rule found nowhere to run: the runtime has not read this board yet"
+        },
+        "plan": {
+          "offered": false,
+          "label": "Plan",
+          "why": "Plan writes the plan for a suggestion; this card is not behind a live suggestion."
         },
         "look": {
           "offered": false,
@@ -4232,7 +4923,8 @@
             "kind": "WAITS",
             "text": "A plan."
           }
-        ]
+        ],
+        "folded_into": null
       },
       "summary": {
         "number": 228,
@@ -4243,6 +4935,20 @@
         "tags": [],
         "document_state": "note",
         "document_path": null,
+        "kind": null,
+        "readiness": {
+          "state": "unread",
+          "why": "The rule found nowhere to run: the runtime has not read this board yet",
+          "cards": [],
+          "files": []
+        },
+        "start": {
+          "offered": false,
+          "label": "Start",
+          "why": "The rule found nowhere to run: the runtime has not read this board yet"
+        },
+        "plan": null,
+        "folded": [],
         "points": 3,
         "is_new": false,
         "age_date": "2026-09-04",
@@ -4328,6 +5034,12 @@
           "label": "Start anyway",
           "why": "There is no collision to override."
         },
+        "readiness": {
+          "state": "unread",
+          "why": "The rule found nowhere to run: the runtime has not read this board yet",
+          "cards": [],
+          "files": []
+        },
         "placement": null,
         "placement_note": "the runtime has not read this board yet",
         "collision": null,
@@ -4345,6 +5057,11 @@
           "offered": false,
           "label": "Discuss",
           "why": "The rule found nowhere to run: the runtime has not read this board yet"
+        },
+        "plan": {
+          "offered": false,
+          "label": "Plan",
+          "why": "Plan writes the plan for a suggestion; this card is not behind a live suggestion."
         },
         "look": {
           "offered": false,
@@ -4415,7 +5132,8 @@
             "kind": "STAKES",
             "text": "A double-let is a boat turned away at the pontoon at dusk."
           }
-        ]
+        ],
+        "folded_into": null
       },
       "summary": {
         "number": 237,
@@ -4426,6 +5144,20 @@
         "tags": [],
         "document_state": "plan",
         "document_path": "docs/plans/2026-08-28-a-berth-is-never-let-twice.md",
+        "kind": null,
+        "readiness": {
+          "state": "unread",
+          "why": "The rule found nowhere to run: the runtime has not read this board yet",
+          "cards": [],
+          "files": []
+        },
+        "start": {
+          "offered": false,
+          "label": "Start",
+          "why": "The rule found nowhere to run: the runtime has not read this board yet"
+        },
+        "plan": null,
+        "folded": [],
         "points": 3,
         "is_new": false,
         "age_date": "2026-08-28",
@@ -4473,6 +5205,8 @@
         "sequencing": "independent of every open card.",
         "found_by": null,
         "card_ref": null,
+        "suggestion_kind": null,
+        "cites": [],
         "head_fields": [
           {
             "key": "Status",
@@ -4558,6 +5292,12 @@
           "label": "Start anyway",
           "why": "There is no collision to override."
         },
+        "readiness": {
+          "state": "unread",
+          "why": "The rule found nowhere to run: the runtime has not read this board yet",
+          "cards": [],
+          "files": []
+        },
         "placement": null,
         "placement_note": "the runtime has not read this board yet",
         "collision": null,
@@ -4575,6 +5315,11 @@
           "offered": false,
           "label": "Discuss",
           "why": "The rule found nowhere to run: the runtime has not read this board yet"
+        },
+        "plan": {
+          "offered": false,
+          "label": "Plan",
+          "why": "Plan writes the plan for a suggestion; this card is not behind a live suggestion."
         },
         "look": {
           "offered": false,
@@ -4643,7 +5388,8 @@
             "kind": "COST",
             "text": "A week."
           }
-        ]
+        ],
+        "folded_into": null
       },
       "summary": {
         "number": 174,
@@ -4656,6 +5402,20 @@
         ],
         "document_state": "plan",
         "document_path": "docs/plans/2026-08-30-the-booking-office-stops-growing-into-one-file.md",
+        "kind": null,
+        "readiness": {
+          "state": "unread",
+          "why": "The rule found nowhere to run: the runtime has not read this board yet",
+          "cards": [],
+          "files": []
+        },
+        "start": {
+          "offered": false,
+          "label": "Start",
+          "why": "The rule found nowhere to run: the runtime has not read this board yet"
+        },
+        "plan": null,
+        "folded": [],
         "points": 2,
         "is_new": false,
         "age_date": "2026-08-30",
@@ -4699,6 +5459,8 @@
         "sequencing": "independent of every open card.",
         "found_by": null,
         "card_ref": null,
+        "suggestion_kind": null,
+        "cites": [],
         "head_fields": [
           {
             "key": "Status",
@@ -4784,6 +5546,12 @@
           "label": "Start anyway",
           "why": "There is no collision to override."
         },
+        "readiness": {
+          "state": "unread",
+          "why": "The rule found nowhere to run: the runtime has not read this board yet",
+          "cards": [],
+          "files": []
+        },
         "placement": null,
         "placement_note": "the runtime has not read this board yet",
         "collision": null,
@@ -4801,6 +5569,11 @@
           "offered": false,
           "label": "Discuss",
           "why": "The rule found nowhere to run: the runtime has not read this board yet"
+        },
+        "plan": {
+          "offered": false,
+          "label": "Plan",
+          "why": "Plan writes the plan for a suggestion; this card is not behind a live suggestion."
         },
         "look": {
           "offered": false,
@@ -4875,7 +5648,8 @@
             "kind": "WATCH",
             "text": "The first card payment."
           }
-        ]
+        ],
+        "folded_into": null
       },
       "summary": {
         "number": 259,
@@ -4886,6 +5660,11 @@
         "tags": [],
         "document_state": "archived",
         "document_path": "docs/plans/done/2026-08-25-the-fuel-pontoon-takes-cards.md",
+        "kind": null,
+        "readiness": null,
+        "start": null,
+        "plan": null,
+        "folded": [],
         "points": 4,
         "is_new": false,
         "age_date": "2026-08-25",
@@ -4938,6 +5717,8 @@
         "sequencing": "independent of every open card.",
         "found_by": null,
         "card_ref": null,
+        "suggestion_kind": null,
+        "cites": [],
         "head_fields": [
           {
             "key": "Status",
@@ -5023,6 +5804,12 @@
           "label": "Start anyway",
           "why": "There is no collision to override."
         },
+        "readiness": {
+          "state": "elsewhere",
+          "why": "Start is offered in Up next and Planned; this card is in Executing.",
+          "cards": [],
+          "files": []
+        },
         "placement": null,
         "placement_note": "the runtime has not read this board yet",
         "collision": null,
@@ -5040,6 +5827,11 @@
           "offered": false,
           "label": "Discuss",
           "why": "The rule found nowhere to run: the runtime has not read this board yet"
+        },
+        "plan": {
+          "offered": false,
+          "label": "Plan",
+          "why": "Plan writes the plan for a suggestion; this card is not behind a live suggestion."
         },
         "look": {
           "offered": false,
@@ -5110,7 +5902,8 @@
             "kind": "STAKES",
             "text": "Anyone with the email opens the gate."
           }
-        ]
+        ],
+        "folded_into": null
       },
       "summary": {
         "number": 223,
@@ -5121,6 +5914,15 @@
         "tags": [],
         "document_state": "suggestion",
         "document_path": "docs/slice-suggestions/2026-08-20-the-gate-code-goes-out-in-plain-text.md",
+        "kind": "idea",
+        "readiness": null,
+        "start": null,
+        "plan": {
+          "offered": false,
+          "label": "Plan",
+          "why": "The rule found nowhere to run: the runtime has not read this board yet"
+        },
+        "folded": [],
         "points": 3,
         "is_new": false,
         "age_date": "2026-08-20",
@@ -5168,6 +5970,8 @@
         "sequencing": null,
         "found_by": "the security read of 2026-08-20.",
         "card_ref": null,
+        "suggestion_kind": "idea",
+        "cites": [],
         "head_fields": [
           {
             "key": "Found by",
@@ -5241,6 +6045,12 @@
           "label": "Start anyway",
           "why": "There is no collision to override."
         },
+        "readiness": {
+          "state": "elsewhere",
+          "why": "Start is offered in Up next and Planned; this card is in Executing.",
+          "cards": [],
+          "files": []
+        },
         "placement": null,
         "placement_note": "the runtime has not read this board yet",
         "collision": null,
@@ -5257,6 +6067,11 @@
         "discuss": {
           "offered": false,
           "label": "Discuss",
+          "why": "The rule found nowhere to run: the runtime has not read this board yet"
+        },
+        "plan": {
+          "offered": false,
+          "label": "Plan",
           "why": "The rule found nowhere to run: the runtime has not read this board yet"
         },
         "look": {
@@ -5338,7 +6153,8 @@
             "kind": "REVIEW",
             "text": "`docs/reviews/2026-09-02-the-pricing-rule-judged.md`"
           }
-        ]
+        ],
+        "folded_into": null
       },
       "summary": {
         "number": 219,
@@ -5351,6 +6167,11 @@
         ],
         "document_state": "plan",
         "document_path": "docs/plans/2026-09-02-the-pricing-rule-judged-against-a-real-season.md",
+        "kind": null,
+        "readiness": null,
+        "start": null,
+        "plan": null,
+        "folded": [],
         "points": 5,
         "is_new": false,
         "age_date": "2026-09-02",
@@ -5407,6 +6228,8 @@
         "sequencing": "independent of every open card.",
         "found_by": null,
         "card_ref": null,
+        "suggestion_kind": null,
+        "cites": [],
         "head_fields": [
           {
             "key": "Status",
@@ -5492,6 +6315,12 @@
           "label": "Start anyway",
           "why": "There is no collision to override."
         },
+        "readiness": {
+          "state": "elsewhere",
+          "why": "Start is offered in Up next and Planned; this card is in Decision moment.",
+          "cards": [],
+          "files": []
+        },
         "placement": null,
         "placement_note": "the runtime has not read this board yet",
         "collision": null,
@@ -5509,6 +6338,11 @@
           "offered": false,
           "label": "Discuss",
           "why": "The rule found nowhere to run: the runtime has not read this board yet"
+        },
+        "plan": {
+          "offered": false,
+          "label": "Plan",
+          "why": "Plan writes the plan for a suggestion; this card is not behind a live suggestion."
         },
         "look": {
           "offered": false,
@@ -5571,7 +6405,8 @@
             "kind": "STAKES",
             "text": "The season's deposits sit in the wrong ledger."
           }
-        ]
+        ],
+        "folded_into": null
       },
       "summary": {
         "number": 147,
@@ -5585,6 +6420,11 @@
         ],
         "document_state": "note",
         "document_path": null,
+        "kind": null,
+        "readiness": null,
+        "start": null,
+        "plan": null,
+        "folded": [],
         "points": 3,
         "is_new": false,
         "age_date": "2026-09-04",
@@ -5670,6 +6510,12 @@
           "label": "Start anyway",
           "why": "There is no collision to override."
         },
+        "readiness": {
+          "state": "elsewhere",
+          "why": "Start is offered in Up next and Planned; this card is in Decision moment.",
+          "cards": [],
+          "files": []
+        },
         "placement": null,
         "placement_note": "the runtime has not read this board yet",
         "collision": null,
@@ -5687,6 +6533,11 @@
           "offered": false,
           "label": "Discuss",
           "why": "The rule found nowhere to run: the runtime has not read this board yet"
+        },
+        "plan": {
+          "offered": false,
+          "label": "Plan",
+          "why": "Plan writes the plan for a suggestion; this card is not behind a live suggestion."
         },
         "look": {
           "offered": false,
@@ -5759,7 +6610,8 @@
             "kind": "PLAN",
             "text": "Written 18 Aug."
           }
-        ]
+        ],
+        "folded_into": null
       },
       "summary": {
         "number": 139,
@@ -5772,6 +6624,11 @@
         ],
         "document_state": "plan",
         "document_path": "docs/plans/2026-08-18-berth-first-booking.md",
+        "kind": null,
+        "readiness": null,
+        "start": null,
+        "plan": null,
+        "folded": [],
         "points": 3,
         "is_new": false,
         "age_date": "2026-08-18",
@@ -5819,6 +6676,8 @@
         "sequencing": "independent of every open card.",
         "found_by": null,
         "card_ref": null,
+        "suggestion_kind": null,
+        "cites": [],
         "head_fields": [
           {
             "key": "Status",
@@ -5904,6 +6763,12 @@
           "label": "Start anyway",
           "why": "There is no collision to override."
         },
+        "readiness": {
+          "state": "elsewhere",
+          "why": "Start is offered in Up next and Planned; this card is in Decision moment.",
+          "cards": [],
+          "files": []
+        },
         "placement": null,
         "placement_note": "the runtime has not read this board yet",
         "collision": null,
@@ -5921,6 +6786,11 @@
           "offered": false,
           "label": "Discuss",
           "why": "The rule found nowhere to run: the runtime has not read this board yet"
+        },
+        "plan": {
+          "offered": false,
+          "label": "Plan",
+          "why": "Plan writes the plan for a suggestion; this card is not behind a live suggestion."
         },
         "look": {
           "offered": false,
@@ -5982,7 +6852,8 @@
             "kind": "COST",
             "text": "An hour of yours."
           }
-        ]
+        ],
+        "folded_into": null
       },
       "summary": {
         "number": 149,
@@ -5995,6 +6866,11 @@
         ],
         "document_state": "note",
         "document_path": null,
+        "kind": null,
+        "readiness": null,
+        "start": null,
+        "plan": null,
+        "folded": [],
         "points": 3,
         "is_new": false,
         "age_date": "2026-09-04",
@@ -6080,6 +6956,12 @@
           "label": "Start anyway",
           "why": "There is no collision to override."
         },
+        "readiness": {
+          "state": "elsewhere",
+          "why": "Start is offered in Up next and Planned; this card is in Decision moment.",
+          "cards": [],
+          "files": []
+        },
         "placement": null,
         "placement_note": "the runtime has not read this board yet",
         "collision": null,
@@ -6097,6 +6979,11 @@
           "offered": false,
           "label": "Discuss",
           "why": "The rule found nowhere to run: the runtime has not read this board yet"
+        },
+        "plan": {
+          "offered": false,
+          "label": "Plan",
+          "why": "Plan writes the plan for a suggestion; this card is not behind a live suggestion."
         },
         "look": {
           "offered": false,
@@ -6166,7 +7053,8 @@
             "kind": "WATCH",
             "text": "The first overdue review runs by itself."
           }
-        ]
+        ],
+        "folded_into": null
       },
       "summary": {
         "number": 134,
@@ -6179,6 +7067,11 @@
         ],
         "document_state": "archived",
         "document_path": "docs/plans/done/2026-08-30-the-office-runs-its-own-checks.md",
+        "kind": null,
+        "readiness": null,
+        "start": null,
+        "plan": null,
+        "folded": [],
         "points": 2,
         "is_new": false,
         "age_date": "2026-08-30",
@@ -6222,6 +7115,8 @@
         "sequencing": "independent of every open card.",
         "found_by": null,
         "card_ref": null,
+        "suggestion_kind": null,
+        "cites": [],
         "head_fields": [
           {
             "key": "Status",
@@ -6309,6 +7204,12 @@
           "label": "Start anyway",
           "why": "There is no collision to override."
         },
+        "readiness": {
+          "state": "elsewhere",
+          "why": "Start is offered in Up next and Planned; this card is in Executed.",
+          "cards": [],
+          "files": []
+        },
         "placement": null,
         "placement_note": "the runtime has not read this board yet",
         "collision": null,
@@ -6326,6 +7227,11 @@
           "offered": false,
           "label": "Discuss",
           "why": "The rule found nowhere to run: the runtime has not read this board yet"
+        },
+        "plan": {
+          "offered": false,
+          "label": "Plan",
+          "why": "Plan writes the plan for a suggestion; this card is not behind a live suggestion."
         },
         "look": {
           "offered": false,
@@ -6388,7 +7294,8 @@
             "kind": "RULED",
             "text": "Parked 2026-09-02."
           }
-        ]
+        ],
+        "folded_into": null
       },
       "summary": {
         "number": 201,
@@ -6399,6 +7306,11 @@
         "tags": [],
         "document_state": "gone",
         "document_path": "docs/plans/done/2026-09-01-a-confirmed-booking-waits-for-the-tide.md",
+        "kind": null,
+        "readiness": null,
+        "start": null,
+        "plan": null,
+        "folded": [],
         "points": 1,
         "is_new": false,
         "age_date": "2026-09-04",
@@ -6487,6 +7399,12 @@
           "label": "Start anyway",
           "why": "There is no collision to override."
         },
+        "readiness": {
+          "state": "elsewhere",
+          "why": "Start is offered in Up next and Planned; this card is in Not now.",
+          "cards": [],
+          "files": []
+        },
         "placement": null,
         "placement_note": "the runtime has not read this board yet",
         "collision": null,
@@ -6504,6 +7422,11 @@
           "offered": false,
           "label": "Discuss",
           "why": "The rule found nowhere to run: the runtime has not read this board yet"
+        },
+        "plan": {
+          "offered": false,
+          "label": "Plan",
+          "why": "Plan writes the plan for a suggestion; this card is not behind a live suggestion."
         },
         "look": {
           "offered": false,

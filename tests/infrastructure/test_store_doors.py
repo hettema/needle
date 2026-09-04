@@ -304,6 +304,8 @@ def test_a_document_naming_its_conversation_is_born_from_it(board: Store):
         return Effects(
             renamed=[],
             relinked=[],
+            folded=[],
+            rehomed=[],
             archived=[],
             born=[
                 Born(
@@ -315,6 +317,7 @@ def test_a_document_naming_its_conversation_is_born_from_it(board: Store):
                     ),
                     column=Column.BACKLOG,
                     found_by=found_by,
+                    kind=None,
                 )
             ],
         )

@@ -18,6 +18,23 @@ class DocumentKind(StrEnum):
     SUGGESTION = "suggestion"
 
 
+DOCUMENT_FOLDER: dict[DocumentKind, str] = {
+    DocumentKind.PLAN: "docs/plans",
+    DocumentKind.SUGGESTION: "docs/slice-suggestions",
+}
+"""Where each kind lives while live; `done/` under it once archived."""
+
+
+class SuggestionKind(StrEnum):
+    """What a suggestion is: an idea (what we might build) or a defect (what
+    we built and got wrong). Declared on the document's `**Kind:**` line; a
+    suggestion with no line reads as an idea unless its text says otherwise
+    (plan 06, item 2)."""
+
+    IDEA = "idea"
+    DEFECT = "defect"
+
+
 class DocumentState(StrEnum):
     """What is written behind a card — five states, and a card always shows one."""
 
@@ -57,6 +74,11 @@ class Document(BaseModel):
     found_by: str | None
     card_ref: int | None
     """A `**Card:** #N` line names the card this document belongs to."""
+    suggestion_kind: SuggestionKind | None
+    """A suggestion's kind; None for a plan."""
+    cites: list[str]
+    """The suggestion stems the document's head names, in order: the
+    suggestions a plan carries (plan 06, item 5)."""
     head_fields: list[HeadField]
     intent_heading: str | None
     intent: str

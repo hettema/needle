@@ -82,6 +82,15 @@ export function openIdea(slug: string, text: string): Promise<DoorResult> {
   });
 }
 
+/** The Plan door: a plan-writing conversation for one suggestion card, or one plan for several (plan 06, item 5). */
+export function openPlan(slug: string, numbers: number[]): Promise<DoorResult> {
+  return call<DoorResult>(`/api/projects/${encodeURIComponent(slug)}/plan`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ numbers }),
+  });
+}
+
 /** Accept every unread verdict in one class, each as its own act; the answer counts and names refusals. */
 export function acceptClass(slug: string, evidenceClass: EvidenceClass): Promise<VerdictsRuled> {
   return call<VerdictsRuled>(`/api/projects/${encodeURIComponent(slug)}/triage/accept`, {

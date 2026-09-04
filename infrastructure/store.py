@@ -9,24 +9,26 @@ own words, which the page shows verbatim.
 
 import re
 import sqlite3
-from datetime import datetime
+import threading
+import uuid
+from datetime import UTC, datetime
 from pathlib import Path
 
 from alembic import command
 from alembic.config import Config
-from sqlalchemy import create_engine, delete, event, select
+from sqlalchemy import create_engine, delete, event, select, text
 from sqlalchemy.engine import Engine
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, sessionmaker
 
 from board.import_01 import Import01
 from board.moves import GroupLayout, MoveRefused, MoveResult, apply_move
-from board.reconcile import Effects
+from board.reconcile import PROMOTED_FROM, Effects
 from board.signals import read_or_decline
 from domain.audit import AuditEntry, AuditKind
 from domain.board import TrunkState
 from domain.card import Actor, Card, CardOrigin, DocumentLink, Place
-from domain.column import COLUMN_DEFINITIONS, Column
-from domain.document import DocumentKind, DocumentRef
+from domain.column import COLUMN_DEFINITIONS, DEFECTS_RAIL, DEFECTS_RAIL_POSITION, Column
+from domain.document import DocumentKind, DocumentRef, SuggestionKind
 from domain.evidence import Evidence
 from domain.gate import Gate
 from domain.hook import HookEvent, HookKind, HookPosted
@@ -54,6 +56,7 @@ from infrastructure.schema import (
     TrunkRow,
     WatercoolerRow,
     WindowRow,
+    WriteStampRow,
 )
 
 _COLUMN_ORDER: dict[str, int] = {d.column.value: i for i, d in enumerate(COLUMN_DEFINITIONS)}
@@ -65,6 +68,8 @@ ONE_PER_CARD: frozenset[RowKind] = frozenset(
 close written twice never says two things about what shipped, and a card
 never carries two verdicts."""
 ROW_DETAIL_LENGTH = 140
+_END = 1_000_000
+"""A position past any group's end: the move clamps it to the last slot."""
 _CONVERSATION = re.compile(r"conversation\s+([0-9a-f]{8})\b", re.I)
 """How a document names the conversation it was born from: the Idea door's
 brief asks the session to write `conversation <short id>` on its `Found by`
@@ -99,20 +104,75 @@ def migrate(engine: Engine) -> None:
         command.upgrade(config, "head")
 
 
+_STAMP = text(
+    "UPDATE writes SET seq = seq + 1, origin = :origin, at = :at WHERE id = 1 RETURNING seq"
+)
+
+
 class Store:
     def __init__(self, path: Path | str):
         self.path = Path(path)
         self.engine = open_engine(self.path)
         migrate(self.engine)
+        self.origin = str(uuid.uuid4())
+        """This store's own id, stamped on every commit it makes."""
+        self._own_seqs: list[int] = []
+        """The stamp of every commit this store made, until the poller has counted it."""
+        self._own_lock = threading.Lock()
+        self._session = sessionmaker(self.engine)
+        event.listen(self._session, "before_commit", self._stamp)
+        event.listen(self._session, "after_commit", self._count_own)
 
     def close(self) -> None:
         """Release every pooled connection. A store is closed by whoever opened it."""
         self.engine.dispose()
 
+    # ── the write stamp ────────────────────────────────────────────────
+    # Every commit, from any process, bumps one counter and names its
+    # writer (plan 06, item 6). The server polls the counter once a second
+    # and subtracts its own commits, so a `needle row` from a lane's process
+    # is on the page within a second and the server's own writes never make
+    # it re-read itself: the file watcher this replaces heard its own lane
+    # loop write lane records, re-read, wrote again, and bumped the page's
+    # version twice a second for as long as it ran (measured 2026-09-04).
+
+    def _stamp(self, session: Session) -> None:
+        now = datetime.now(UTC).isoformat()
+        seq = session.execute(_STAMP, {"origin": self.origin, "at": now}).scalar_one_or_none()
+        if seq is None:
+            # The row is made by the migration; a store that lost it is not a
+            # store that cannot be written, so it is made again here.
+            session.execute(
+                text("INSERT INTO writes (id, seq, origin, at) VALUES (1, 1, :origin, :at)"),
+                {"origin": self.origin, "at": now},
+            )
+            seq = 1
+        session.info["stamp"] = int(seq)
+
+    def _count_own(self, session: Session) -> None:
+        seq = session.info.pop("stamp", None)
+        if seq is not None:
+            with self._own_lock:
+                self._own_seqs.append(seq)
+
+    def write_stamp(self) -> tuple[int, str]:
+        """How many commits the store has taken, and who made the last one."""
+        with self._session() as session:
+            row = session.get(WriteStampRow, 1)
+            return (row.seq, row.origin) if row is not None else (0, "")
+
+    def own_commits_upto(self, seq: int) -> int:
+        """How many of this store's own commits carry a stamp at or below
+        `seq`; those are forgotten, so each is counted once."""
+        with self._own_lock:
+            counted = sum(1 for s in self._own_seqs if s <= seq)
+            self._own_seqs = [s for s in self._own_seqs if s > seq]
+        return counted
+
     # ── projects ───────────────────────────────────────────────────────
 
     def add_project(self, project: Project) -> None:
-        with Session(self.engine) as session, session.begin():
+        with self._session() as session, session.begin():
             existing = session.get(ProjectRow, project.slug)
             if existing is not None:
                 raise StoreRefusal(
@@ -134,30 +194,30 @@ class Store:
             )
 
     def projects(self) -> list[Project]:
-        with Session(self.engine) as session:
+        with self._session() as session:
             rows = session.scalars(select(ProjectRow).order_by(ProjectRow.registered_at)).all()
             return [_project(r) for r in rows]
 
     def project(self, slug: str) -> Project:
-        with Session(self.engine) as session:
+        with self._session() as session:
             row = session.get(ProjectRow, slug)
             if row is None:
                 raise StoreRefusal(f'No project "{slug}" is on the board.')
             return _project(row)
 
     def has_import(self, slug: str) -> bool:
-        with Session(self.engine) as session:
+        with self._session() as session:
             row = session.get(ProjectRow, slug)
             return row is not None and row.imported_01_at is not None
 
     # ── reading ────────────────────────────────────────────────────────
 
     def layout(self, slug: str) -> list[GroupLayout]:
-        with Session(self.engine) as session:
+        with self._session() as session:
             return _layout(session, slug)
 
     def cards(self, slug: str) -> list[Card]:
-        with Session(self.engine) as session:
+        with self._session() as session:
             groups = {
                 g.id: g
                 for g in session.scalars(select(GroupRow).where(GroupRow.project_slug == slug))
@@ -167,7 +227,7 @@ class Store:
             return [_card(c, groups[c.group_id], rows.get(c.number, [])) for c in cards]
 
     def card(self, slug: str, number: int) -> Card | None:
-        with Session(self.engine) as session:
+        with self._session() as session:
             row = session.get(CardRow, (slug, number))
             if row is None:
                 return None
@@ -177,7 +237,7 @@ class Store:
             return _card(row, group, rows)
 
     def history(self, slug: str, number: int) -> list[AuditEntry]:
-        with Session(self.engine) as session:
+        with self._session() as session:
             rows = session.scalars(
                 select(AuditRow)
                 .where(AuditRow.project_slug == slug, AuditRow.card_number == number)
@@ -188,7 +248,7 @@ class Store:
     def placements(self, slug: str) -> dict[int, AuditEntry]:
         """Each card's placement: the audit row that last put it in its column
         (a move, else its birth), in one query. What a read re-tests."""
-        with Session(self.engine) as session:
+        with self._session() as session:
             rows = session.scalars(
                 select(AuditRow)
                 .where(
@@ -224,9 +284,15 @@ class Store:
             raise StoreRefusal("A machine move must say why, in one sentence.")
         if actor == Actor.MACHINE and evidence is None:
             raise StoreRefusal("A machine move must name the evidence it rests on.")
-        with Session(self.engine) as session, session.begin():
+        with self._session() as session, session.begin():
             if session.get(ProjectRow, slug) is None:
                 raise StoreRefusal(f'No project "{slug}" is on the board.')
+            card = session.get(CardRow, (slug, number))
+            if card is not None and card.folded_into is not None:
+                raise StoreRefusal(
+                    f"#{number} is folded into #{card.folded_into}; move that card and this "
+                    "one follows."
+                )
             _move(session, slug, number, to, actor, at, detail=detail, evidence=evidence)
             session.flush()
             return _card_now(session, slug, number)
@@ -249,7 +315,7 @@ class Store:
         stays by the owner's own hand, so a placement the board doubted
         becomes his word and is trusted from here — that is what accepting
         "stays" on a doubted card means."""
-        with Session(self.engine) as session, session.begin():
+        with self._session() as session, session.begin():
             card = session.get(CardRow, (slug, number))
             if card is None:
                 raise StoreRefusal(f"There is no card #{number} on this board.")
@@ -315,7 +381,7 @@ class Store:
     ) -> list[int]:
         """Make the corpus read true in the store. Returns the numbers born."""
         born: list[int] = []
-        with Session(self.engine) as session, session.begin():
+        with self._session() as session, session.begin():
             project = session.get(ProjectRow, slug)
             if project is None:
                 raise StoreRefusal(f'No project "{slug}" is on the board.')
@@ -357,7 +423,62 @@ class Store:
                     kind=AuditKind.LINKED,
                     from_place=None,
                     to_place=None,
-                    detail=f"Linked to {relinked.document.path}, which names this card.",
+                    detail=f"Linked to {relinked.document.path}, {relinked.why}.",
+                )
+                if card.folded_into is not None:
+                    # A plan naming a folded card by number wants that card
+                    # to carry it: the card stands on its own again.
+                    was = card.folded_into
+                    card.folded_into = None
+                    session.flush()
+                    _audit(
+                        session,
+                        slug,
+                        card.number,
+                        at=at,
+                        actor=Actor.CORPUS,
+                        kind=AuditKind.FOLDED_INTO,
+                        from_place=None,
+                        to_place=None,
+                        detail=f"Unfolded from #{was}: {relinked.document.path} names this card.",
+                    )
+                group = session.get(GroupRow, card.group_id)
+                assert group is not None
+                if relinked.promote and Column(group.column) in PROMOTED_FROM:
+                    _move(
+                        session,
+                        slug,
+                        card.number,
+                        Place(column=Column.PLANNED, group=None, position=_END),
+                        Actor.CORPUS,
+                        at,
+                        detail=f"a plan appeared for it ({relinked.document.path}); a plan "
+                        "appearing is what promotes a card",
+                        evidence=None,
+                    )
+            for folded in effects.folded:
+                _fold(session, slug, folded.card_number, folded.into, folded.plan, at)
+            for rehomed in effects.rehomed:
+                if rehomed.into_rail:
+                    _landing_group(session, slug, Column.BACKLOG, rail=True)
+                _move(
+                    session,
+                    slug,
+                    rehomed.card_number,
+                    Place(
+                        column=Column.BACKLOG,
+                        group=DEFECTS_RAIL if rehomed.into_rail else None,
+                        position=_END,
+                    ),
+                    Actor.CORPUS,
+                    at,
+                    detail=f"its document says Kind: {rehomed.kind.value}; "
+                    + (
+                        "a defect reads on the defects rail"
+                        if rehomed.into_rail
+                        else "an idea reads below the rail"
+                    ),
+                    evidence=None,
                 )
             for archived in effects.archived:
                 card = session.get(CardRow, (slug, archived.card_number))
@@ -375,7 +496,12 @@ class Store:
                     detail=f"Its document was archived to {archived.document.path}.",
                 )
             for birth in effects.born:
-                group = _landing_group(session, slug, birth.column)
+                group = _landing_group(
+                    session,
+                    slug,
+                    birth.column,
+                    rail=birth.column == Column.BACKLOG and birth.kind == SuggestionKind.DEFECT,
+                )
                 position = _group_size(session, group.id)
                 number = project.next_card_number
                 conversation = _conversation_named(session, slug, birth.found_by)
@@ -399,9 +525,11 @@ class Store:
                         born_at=at,
                     )
                 )
-                place = Place(column=birth.column, group=None, position=position)
+                place = Place(column=birth.column, group=group.name, position=position)
                 how = "at registration" if origin == CardOrigin.FOUNDING else "after registration"
                 detail = f"Born from {birth.document.path}, {how}."
+                if group.name == DEFECTS_RAIL:
+                    detail += " Its document says Kind: defect, so it reads on the defects rail."
                 if conversation is not None:
                     day = conversation.started_at.date().isoformat()
                     detail += (
@@ -423,7 +551,7 @@ class Store:
         return born
 
     def import_01(self, slug: str, imported: Import01, at: datetime) -> None:
-        with Session(self.engine) as session, session.begin():
+        with self._session() as session, session.begin():
             project = session.get(ProjectRow, slug)
             if project is None:
                 raise StoreRefusal(f'No project "{slug}" is on the board.')
@@ -521,7 +649,7 @@ class Store:
     def add_row(self, slug: str, number: int, row: Row, actor: Actor, at: datetime) -> Card:
         """Write a row on the card, with its audit row. DELIVERED, WATCH and
         REVIEW are one per card and a second write replaces the first."""
-        with Session(self.engine) as session, session.begin():
+        with self._session() as session, session.begin():
             card = session.get(CardRow, (slug, number))
             if card is None:
                 raise StoreRefusal(f"There is no card #{number} on this board.")
@@ -582,7 +710,7 @@ class Store:
         signal read. The card's history is where the machine says what it did."""
         if not detail:
             raise StoreRefusal("A note on a card must say something.")
-        with Session(self.engine) as session, session.begin():
+        with self._session() as session, session.begin():
             if session.get(CardRow, (slug, number)) is None:
                 raise StoreRefusal(f"There is no card #{number} on this board.")
             _audit(
@@ -605,7 +733,7 @@ class Store:
         """Keep every event a hook posted, attributed to (project, card) as
         the caller resolved it from the working directory."""
         out: list[HookEvent] = []
-        with Session(self.engine) as session, session.begin():
+        with self._session() as session, session.begin():
             for posted, slug, number in events:
                 row = HookEventRow(
                     at=posted.at,
@@ -626,14 +754,14 @@ class Store:
         return out
 
     def hook_events(self, slug: str, number: int | None = None) -> list[HookEvent]:
-        with Session(self.engine) as session:
+        with self._session() as session:
             query = select(HookEventRow).where(HookEventRow.project_slug == slug)
             if number is not None:
                 query = query.where(HookEventRow.card_number == number)
             return [_hook_event(r) for r in session.scalars(query.order_by(HookEventRow.id))]
 
     def hook_events_of_session(self, session_id: str) -> list[HookEvent]:
-        with Session(self.engine) as session:
+        with self._session() as session:
             rows = session.scalars(
                 select(HookEventRow)
                 .where(HookEventRow.session_id == session_id)
@@ -642,13 +770,21 @@ class Store:
             return [_hook_event(r) for r in rows]
 
     def record_discussion(
-        self, slug: str, number: int | None, session_id: str, slot: str, at: datetime
+        self,
+        slug: str,
+        number: int | None,
+        session_id: str,
+        slot: str,
+        at: datetime,
+        kind: WindowKind = WindowKind.DISCUSS,
     ) -> Discussion:
-        """A conversation opened from the board; `number` is None for an idea."""
-        with Session(self.engine) as session, session.begin():
+        """A conversation opened from the board; `number` is None for an idea,
+        and `kind` is the door it came through."""
+        with self._session() as session, session.begin():
             row = DiscussionRow(
                 project_slug=slug,
                 card_number=number,
+                kind=kind.value,
                 session_id=session_id,
                 slot=slot,
                 started_at=at,
@@ -658,7 +794,7 @@ class Store:
             return _discussion(row)
 
     def discussions(self, slug: str) -> list[Discussion]:
-        with Session(self.engine) as session:
+        with self._session() as session:
             rows = session.scalars(
                 select(DiscussionRow)
                 .where(DiscussionRow.project_slug == slug)
@@ -675,7 +811,7 @@ class Store:
         text = text.strip()
         if not text:
             raise StoreRefusal("A watercooler line must say something.")
-        with Session(self.engine) as session, session.begin():
+        with self._session() as session, session.begin():
             if session.get(ProjectRow, slug) is None:
                 raise StoreRefusal(f'No project "{slug}" is on the board.')
             if number is not None and session.get(CardRow, (slug, number)) is None:
@@ -689,7 +825,7 @@ class Store:
 
     def watercooler(self, slug: str, *, limit: int | None = None) -> list[WatercoolerLine]:
         """The project's lines, oldest first; with `limit`, the newest that many."""
-        with Session(self.engine) as session:
+        with self._session() as session:
             query = select(WatercoolerRow).where(WatercoolerRow.project_slug == slug)
             if limit is not None:
                 rows = session.scalars(query.order_by(WatercoolerRow.id.desc()).limit(limit)).all()
@@ -701,7 +837,7 @@ class Store:
     # ── the board's record of each lane ────────────────────────────────
 
     def record_lane(self, record: LaneRecord) -> None:
-        with Session(self.engine) as session, session.begin():
+        with self._session() as session, session.begin():
             row = session.get(LaneRow, (record.project, record.card_number))
             if row is None:
                 row = LaneRow(project_slug=record.project, card_number=record.card_number)
@@ -719,20 +855,20 @@ class Store:
             row.main_synced_at = record.main_synced_at
 
     def lanes(self, slug: str) -> list[LaneRecord]:
-        with Session(self.engine) as session:
+        with self._session() as session:
             rows = session.scalars(
                 select(LaneRow).where(LaneRow.project_slug == slug).order_by(LaneRow.card_number)
             )
             return [_lane_record(r) for r in rows]
 
     def lane(self, slug: str, number: int) -> LaneRecord | None:
-        with Session(self.engine) as session:
+        with self._session() as session:
             row = session.get(LaneRow, (slug, number))
             return None if row is None else _lane_record(row)
 
     def forget_lane(self, slug: str, number: int) -> None:
         """The card is being launched again: its lane record starts over."""
-        with Session(self.engine) as session, session.begin():
+        with self._session() as session, session.begin():
             row = session.get(LaneRow, (slug, number))
             if row is not None:
                 session.delete(row)
@@ -748,7 +884,7 @@ class Store:
         words: str,
         actor: Actor,
     ) -> Reading:
-        with Session(self.engine) as session, session.begin():
+        with self._session() as session, session.begin():
             row = ReadingRow(
                 project_slug=slug, card_number=number, at=at, delivered=delivered, words=words
             )
@@ -769,7 +905,7 @@ class Store:
             return _reading(row)
 
     def readings(self, slug: str, number: int) -> list[Reading]:
-        with Session(self.engine) as session:
+        with self._session() as session:
             rows = session.scalars(
                 select(ReadingRow)
                 .where(ReadingRow.project_slug == slug, ReadingRow.card_number == number)
@@ -778,7 +914,7 @@ class Store:
             return [_reading(r) for r in rows]
 
     def last_readings(self, slug: str) -> dict[int, Reading]:
-        with Session(self.engine) as session:
+        with self._session() as session:
             rows = session.scalars(
                 select(ReadingRow).where(ReadingRow.project_slug == slug).order_by(ReadingRow.id)
             )
@@ -790,7 +926,7 @@ class Store:
     # ── the trunk ──────────────────────────────────────────────────────
 
     def record_trunk(self, slug: str, state: TrunkState) -> None:
-        with Session(self.engine) as session, session.begin():
+        with self._session() as session, session.begin():
             row = session.get(TrunkRow, slug)
             if row is None:
                 row = TrunkRow(project_slug=slug, behind=0)
@@ -801,7 +937,7 @@ class Store:
             row.read_at = state.read_at
 
     def trunk(self, slug: str) -> TrunkState:
-        with Session(self.engine) as session:
+        with self._session() as session:
             row = session.get(TrunkRow, slug)
             if row is None:
                 return TrunkState(level=None, behind=0, note=None, read_at=None)
@@ -816,7 +952,7 @@ class Store:
 
     def record_session_slot(self, record: SessionSlot) -> None:
         """Where a session runs, written only by the thing that started or moved it."""
-        with Session(self.engine) as session, session.begin():
+        with self._session() as session, session.begin():
             row = session.get(SessionSlotRow, record.session_id)
             if row is None:
                 session.add(
@@ -835,19 +971,19 @@ class Store:
                 row.recorded_at = record.recorded_at
 
     def session_slot(self, session_id: str) -> SessionSlot | None:
-        with Session(self.engine) as session:
+        with self._session() as session:
             row = session.get(SessionSlotRow, session_id)
             return None if row is None else _session_slot(row)
 
     def session_slots(self) -> list[SessionSlot]:
-        with Session(self.engine) as session:
+        with self._session() as session:
             rows = session.scalars(select(SessionSlotRow).order_by(SessionSlotRow.recorded_at))
             return [_session_slot(r) for r in rows]
 
     def record_rescue(
         self, session_id: str, from_rung: Rung | None, to_rung: Rung, reason: str, at: datetime
     ) -> Rescue:
-        with Session(self.engine) as session, session.begin():
+        with self._session() as session, session.begin():
             row = RescueRow(
                 session_id=session_id,
                 from_slot=from_rung.slot if from_rung else None,
@@ -862,7 +998,7 @@ class Store:
             return _rescue(row)
 
     def rescues(self, session_id: str) -> list[Rescue]:
-        with Session(self.engine) as session:
+        with self._session() as session:
             rows = session.scalars(
                 select(RescueRow).where(RescueRow.session_id == session_id).order_by(RescueRow.id)
             )
@@ -870,14 +1006,14 @@ class Store:
 
     def clear_rescues(self, session_id: str) -> int:
         """Forget a session's rescue history. Its slot record is untouched."""
-        with Session(self.engine) as session, session.begin():
+        with self._session() as session, session.begin():
             result = session.execute(delete(RescueRow).where(RescueRow.session_id == session_id))
             return int(result.rowcount or 0)
 
     def record_window(
         self, session_id: str, kind: WindowKind, app_id: str, address: str, at: datetime
     ) -> Window:
-        with Session(self.engine) as session, session.begin():
+        with self._session() as session, session.begin():
             row = WindowRow(
                 session_id=session_id,
                 kind=kind.value,
@@ -891,7 +1027,7 @@ class Store:
             return _window(row)
 
     def windows(self, session_id: str | None = None, *, open_only: bool = False) -> list[Window]:
-        with Session(self.engine) as session:
+        with self._session() as session:
             query = select(WindowRow).order_by(WindowRow.id)
             if session_id is not None:
                 query = query.where(WindowRow.session_id == session_id)
@@ -901,7 +1037,7 @@ class Store:
 
     def window_closed(self, window_id: int, at: datetime) -> None:
         """The runtime found the window gone. It records the close; it never causes one."""
-        with Session(self.engine) as session, session.begin():
+        with self._session() as session, session.begin():
             row = session.get(WindowRow, window_id)
             if row is not None and row.closed_at is None:
                 row.closed_at = at
@@ -995,6 +1131,7 @@ def _discussion(row: DiscussionRow) -> Discussion:
         id=row.id,
         project=row.project_slug,
         card_number=row.card_number,
+        kind=WindowKind(row.kind),
         session_id=row.session_id,
         slot=row.slot,
         started_at=row.started_at,
@@ -1054,6 +1191,7 @@ def _card(row: CardRow, group: GroupRow, rows: list[Row]) -> Card:
         origin=CardOrigin(row.origin),
         born_at=row.born_at,
         rows=rows,
+        folded_into=row.folded_into,
     )
 
 
@@ -1122,14 +1260,100 @@ def _move(
             detail=f"{said} — {detail}" if detail else said,
             evidence=evidence,
         )
+        session.flush()
+        _follow(session, slug, number, at, actor, evidence)
     return result
 
 
+def _follow(
+    session: Session,
+    slug: str,
+    number: int,
+    at: datetime,
+    actor: Actor,
+    evidence: Evidence | None,
+) -> None:
+    """The cards folded under a card go where it goes, by the same hand and on
+    the same evidence: their work is its plan's (plan 06, item 5)."""
+    leader = session.get(CardRow, (slug, number))
+    assert leader is not None
+    group = session.get(GroupRow, leader.group_id)
+    assert group is not None
+    to = Place(column=Column(group.column), group=group.name, position=leader.position)
+    followers = session.scalars(
+        select(CardRow).where(CardRow.project_slug == slug, CardRow.folded_into == number)
+    ).all()
+    for follower in followers:
+        was_group = session.get(GroupRow, follower.group_id)
+        assert was_group is not None
+        was = Place(
+            column=Column(was_group.column), group=was_group.name, position=follower.position
+        )
+        if was.column == to.column and was.group == to.group:
+            follower.position = leader.position
+            continue
+        follower.group_id = leader.group_id
+        follower.position = leader.position
+        _audit(
+            session,
+            slug,
+            follower.number,
+            at=at,
+            actor=actor,
+            kind=AuditKind.MOVED,
+            from_place=was,
+            to_place=to,
+            detail=f"{_describe_move(was, to)} — followed #{number}, into which it is folded",
+            evidence=evidence,
+        )
+
+
+def _fold(
+    session: Session, slug: str, number: int, into: int, plan: DocumentRef, at: datetime
+) -> None:
+    """Fold a card under the card whose plan carries its suggestion: it leaves
+    its group, sits with that card and follows it from here."""
+    card = session.get(CardRow, (slug, number))
+    leader = session.get(CardRow, (slug, into))
+    assert card is not None and leader is not None
+    was_group = session.get(GroupRow, card.group_id)
+    to_group = session.get(GroupRow, leader.group_id)
+    assert was_group is not None and to_group is not None
+    was = Place(column=Column(was_group.column), group=was_group.name, position=card.position)
+    to = Place(column=Column(to_group.column), group=to_group.name, position=leader.position)
+    card.folded_into = into
+    card.group_id = leader.group_id
+    card.position = leader.position
+    session.flush()
+    layout = _layout(session, slug)
+    old = next((g for g in layout if g.column == was.column and g.name == was.group), None)
+    if old is not None:
+        _write_positions(session, slug, old)
+    _audit(
+        session,
+        slug,
+        number,
+        at=at,
+        actor=Actor.CORPUS,
+        kind=AuditKind.FOLDED_INTO,
+        from_place=was,
+        to_place=to,
+        detail=f"Folded into #{into}: its suggestion is carried by {plan.path}, whose card "
+        f"that is; it follows #{into} and closes with it.",
+    )
+
+
 def _layout(session: Session, slug: str) -> list[GroupLayout]:
+    """The columns' groups and the cards that stand in them, in position
+    order. A folded card is not in the layout: it sits under its leader and
+    takes no position of its own, so a move cannot land between it and the
+    cards the page shows."""
     groups = session.scalars(select(GroupRow).where(GroupRow.project_slug == slug)).all()
     groups = sorted(groups, key=lambda g: (_COLUMN_ORDER[g.column], g.position))
     cards = session.scalars(
-        select(CardRow).where(CardRow.project_slug == slug).order_by(CardRow.position)
+        select(CardRow)
+        .where(CardRow.project_slug == slug, CardRow.folded_into.is_(None))
+        .order_by(CardRow.position)
     ).all()
     numbers: dict[int, list[int]] = {g.id: [] for g in groups}
     for card in cards:
@@ -1139,17 +1363,21 @@ def _layout(session: Session, slug: str) -> list[GroupLayout]:
     ]
 
 
-def _landing_group(session: Session, slug: str, column: Column) -> GroupRow:
-    """The column's unnamed group, made at the column's end when it has none.
+def _landing_group(session: Session, slug: str, column: Column, *, rail: bool = False) -> GroupRow:
+    """The column's unnamed group, made at the column's end when it has none;
+    with `rail`, Backlog's defects rail, made before every named group when
+    it has none (plan 06, item 2).
 
     A card born from the corpus, or moved to a column without naming a group,
-    lands here: below the owner's named groups, never above them.
+    lands here: below the owner's named groups, never above them — except a
+    defect, which reads on the rail above them.
     """
+    name = DEFECTS_RAIL if rail else None
     existing = session.scalar(
         select(GroupRow).where(
             GroupRow.project_slug == slug,
             GroupRow.column == column.value,
-            GroupRow.name.is_(None),
+            GroupRow.name.is_(None) if name is None else GroupRow.name == name,
         )
     )
     if existing is not None:
@@ -1157,8 +1385,10 @@ def _landing_group(session: Session, slug: str, column: Column) -> GroupRow:
     siblings = session.scalars(
         select(GroupRow).where(GroupRow.project_slug == slug, GroupRow.column == column.value)
     ).all()
-    position = max([g.position for g in siblings], default=-1) + 1
-    group = GroupRow(project_slug=slug, column=column.value, name=None, position=position)
+    position = (
+        DEFECTS_RAIL_POSITION if rail else max([g.position for g in siblings], default=-1) + 1
+    )
+    group = GroupRow(project_slug=slug, column=column.value, name=name, position=position)
     session.add(group)
     session.flush()
     return group

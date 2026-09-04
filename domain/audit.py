@@ -33,6 +33,10 @@ class AuditKind(StrEnum):
     SIGNAL = "signal"
     """A reading of the card's WATCH signal, or the owner's answer to it."""
     FOLDED = "folded"
+    """The lane's work is in the trunk."""
+    FOLDED_INTO = "folded-into"
+    """The card's suggestion is carried by a plan whose card is another: this
+    card is folded under it (plan 06, item 5)."""
     SYNCED = "synced"
     """The trunk or main checkout was brought level after a fold."""
 

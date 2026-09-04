@@ -4,7 +4,29 @@
  * composes those components. Colours are tokens from tokens.css only.
  */
 
+/* ── the page frame ────────────────────────────────────────────────── */
+/* The page never scrolls: the head and the attention line are pinned and
+ * each column scrolls on its own (plan 06, item 4), so a board left
+ * scrolled down still names every column and the attention line. */
+
+body { overflow: hidden; }
+#root { display: flex; flex-direction: column; height: 100vh; }
+#root > * { flex: none; }
+#root > .board { flex: 1 1 auto; }
+#root > .triage { flex: 1 1 auto; min-height: 0; overflow-y: auto; }
+
 /* ── the head ──────────────────────────────────────────────────────── */
+
+.head { flex: none; }
+.head.folded { display: flex; align-items: center; background: var(--surface); border-bottom: 1px solid var(--line); }
+.head.folded .app-head { flex: none; border-bottom: none; padding: 6px 14px 6px 20px; gap: 10px; }
+.head.folded .corpus, .head.folded .lens, .head.folded .idea input, .head.folded .idea .said { display: none; }
+.head.folded .app-head .grow { margin-left: 0; }
+.head.folded .idea { margin-left: 0; }
+.head.folded .attn-line { flex: 1 1 auto; min-width: 0; border-bottom: none; background: transparent; padding: 6px 20px 6px 0; flex-wrap: nowrap; overflow: hidden; }
+.head.folded .att { padding: 2px 7px; gap: 4px; }
+.head.folded .att .alabel { display: none; }
+.head.folded .attn-line .quiet { display: none; }
 
 .app-head {
   display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap;
@@ -99,6 +121,16 @@ button.att:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px
 .ask-row .ask-due { font-family: var(--mono); font-size: 10px; color: var(--ink-3); white-space: nowrap; }
 .ask-row .ask-acts { display: flex; gap: 6px; }
 
+/* ── plan these together ───────────────────────────────────────────── */
+
+.together {
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+  margin: 12px 20px 0; padding: 8px 13px; border-radius: var(--r-card);
+  border: 1px solid var(--accent); background: var(--accent-2); font-size: 12.5px; color: var(--ink);
+}
+.together .together-n b { font-weight: 700; }
+.together .said { font-family: var(--mono); font-size: 10px; color: var(--ink-2); }
+
 /* ── the triage lens ───────────────────────────────────────────────── */
 
 .triage {
@@ -134,20 +166,37 @@ button.att:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px
 /* ── the board ─────────────────────────────────────────────────────── */
 
 .board {
-  display: flex; align-items: flex-start; gap: 14px;
-  padding: 16px 20px 30px;
-  overflow-x: auto;
+  display: flex; align-items: stretch; gap: 14px;
+  padding: 12px 20px 0;
+  overflow-x: auto; overflow-y: hidden;
   position: relative;
-  min-height: 60vh;
+  min-height: 0;
 }
 
-.col { flex: 0 0 var(--col-w); min-width: 0; transition: flex-basis .16s ease; }
+/* Each column scrolls on its own; its head stays pinned inside it, so a long
+ * Backlog never moves Executing and every column keeps its name. */
+.col {
+  flex: 0 0 var(--col-w); min-width: 0; transition: flex-basis .16s ease;
+  overflow-y: auto; overflow-x: hidden; padding: 0 4px 30px;
+  scrollbar-width: thin;
+}
 .col.wide { flex: 0 0 var(--col-w-open); }
+.col-top { position: sticky; top: 0; z-index: 30; background: var(--paper); padding-top: 4px; }
 .col-head {
   display: flex; align-items: baseline; gap: 8px;
   padding: 6px 2px 7px;
   position: relative;
 }
+.rail-group { display: flex; flex-direction: column; gap: 7px; }
+.rail-h {
+  display: flex; align-items: center; gap: 8px; width: 100%;
+  padding: 7px 10px; border-radius: var(--r-card); cursor: pointer; text-align: left;
+  border: 1px solid var(--wrong); background: var(--wrong-2); color: var(--wrong);
+}
+.rail-h .rail-name { font-size: 10.5px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; }
+.rail-h .count { font-family: var(--mono); font-size: 11px; color: var(--wrong); }
+.rail-h .rail-tw { margin-left: auto; font-family: var(--mono); font-size: 9.5px; letter-spacing: .05em; }
+.rail-h:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
 .col-head h2 {
   margin: 0; font-size: 11.5px; font-weight: 700;
   text-transform: uppercase; letter-spacing: .1em;
@@ -165,7 +214,7 @@ button.att:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px
 .col-note { padding: 0 2px 9px; font-size: 11.5px; line-height: 1.45; color: var(--ink-3); margin: 0; }
 
 .def {
-  position: absolute; top: 100%; left: -6px; width: 268px; z-index: 40;
+  position: absolute; top: 100%; left: 0; width: min(268px, 100%); z-index: 40;
   background: var(--surface); border: 1px solid var(--line-2); border-radius: var(--r-card);
   box-shadow: var(--shadow-2); padding: 11px 13px 12px;
   opacity: 0; visibility: hidden; transform: translateY(-3px);
@@ -174,7 +223,7 @@ button.att:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px
 .col-head:hover .def, .col-head:focus-within .def {
   opacity: 1; visibility: visible; transform: translateY(0);
 }
-.def.to-left { left: auto; right: -6px; }
+.def.to-left { left: auto; right: 0; }
 .def .dk {
   font-family: var(--mono); font-size: 9px; letter-spacing: .12em; text-transform: uppercase;
   color: var(--ink-3); margin-bottom: 5px;
@@ -242,6 +291,33 @@ button.att:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px
 }
 .card-foot .grow { margin-left: auto; }
 .points { font-family: var(--mono); font-size: 9.5px; color: var(--ink-3); letter-spacing: .04em; }
+
+/* The pill: can this card start now? One word, from the Start door's verdict. */
+.pill {
+  font-family: var(--mono); font-size: 9px; letter-spacing: .07em; text-transform: uppercase;
+  padding: 2.5px 6px; border-radius: 20px; white-space: nowrap;
+  border: 1px solid var(--line); color: var(--ink-2); background: var(--surface-2);
+}
+.pill.free { border-color: var(--landed); color: var(--landed); background: var(--landed-2); font-weight: 500; }
+.pill.collides { border-color: var(--attn); color: var(--attn); background: var(--attn-2); }
+.pill.nowhere-to-run { border-color: var(--wrong); color: var(--wrong); background: var(--wrong-2); }
+.pill.unread { border-style: dashed; color: var(--ink-3); background: transparent; }
+.btn.small { font-size: 10.5px; padding: 3px 9px; }
+.pick { display: inline-flex; align-items: center; }
+.pick input { margin: 0; width: 14px; height: 14px; accent-color: var(--accent); cursor: pointer; }
+.card-foot .said { font-family: var(--mono); font-size: 9.5px; color: var(--ink-3); flex-basis: 100%; }
+.card-foot .said.bad { color: var(--wrong); }
+
+/* What a card carries: the suggestions folded under it. */
+.carries {
+  display: flex; align-items: baseline; gap: 6px; flex-wrap: wrap;
+  margin-top: 6px; font-size: 11px; color: var(--ink-2);
+}
+.carries .clbl { font-family: var(--mono); font-size: 9px; letter-spacing: .09em; text-transform: uppercase; color: var(--ink-3); }
+.carries .carried { display: inline-flex; gap: 4px; align-items: baseline; }
+.carries.open { flex-direction: column; align-items: stretch; gap: 3px; }
+.carries.open .carried { padding: 3px 0; border-top: 1px dotted var(--line); }
+.carries.open .ctitle { color: var(--ink); }
 
 .chip {
   font-family: var(--mono); font-size: 9px; letter-spacing: .07em; text-transform: uppercase;

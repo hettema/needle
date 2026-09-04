@@ -358,7 +358,11 @@ def verdicts(
     counts: dict[EvidenceClass, int] = {}
     undecided = 0
     for card in sorted(live.store.cards(slug), key=lambda c: c.number):
-        if card.place.column in CLOSED or has_row(card, RowKind.VERDICT):
+        if (
+            card.place.column in CLOSED
+            or card.folded_into is not None
+            or has_row(card, RowKind.VERDICT)
+        ):
             continue
         detail = live.detail(slug, card.number)
         ever = (

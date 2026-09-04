@@ -151,3 +151,12 @@ COLUMN_DEFINITIONS: list[ColumnDefinition] = [
 ]
 
 COLUMN_BY_NAME: dict[Column, ColumnDefinition] = {d.column: d for d in COLUMN_DEFINITIONS}
+
+DEFECTS_RAIL = "Defects"
+"""The name of Backlog's one machine-kept group: the defects rail (plan 06,
+item 2). A suggestion whose document says `Kind: defect` sits here and one
+that says idea does not; the corpus keeps it so on every read, so the rail
+is a lens on what is written, never a label somebody applied."""
+
+DEFECTS_RAIL_POSITION = -1
+"""Before every group the owner named, which start at 0."""

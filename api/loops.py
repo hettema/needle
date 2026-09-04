@@ -29,6 +29,7 @@ from board.lane import (
     HANDS_ON,
     STARTABLE_COLUMNS,
     LaneFacts,
+    after_archive,
     card_of_cwd,
     conversations_alive,
     doors_for,
@@ -43,6 +44,7 @@ from domain.audit import AuditKind
 from domain.board import MachineState, TrunkState
 from domain.card import Actor, Card, Place
 from domain.column import Column
+from domain.document import DocumentKind
 from domain.evidence import Evidence
 from domain.hook import HookEvent, HookPosted
 from domain.lane import Collision, Doors, Lane, LaneRecord, LaneSnapshot, LaneState
@@ -103,7 +105,7 @@ class Loops:
             asyncio.create_task(self._timer(TRUNK_SECONDS, self.level_trunks)),
             asyncio.create_task(self._watch_registries()),
         ]
-        self.live.on_store_change = self.reconcile
+        self.live.on_change = self.reconcile
 
     async def stop(self) -> None:
         self._stop.set()
@@ -403,39 +405,45 @@ class Loops:
         lanes: dict[int, Lane],
         records: list[LaneRecord],
     ) -> list[Card]:
-        """Into Executing on hands, out of it to where the work says."""
+        """Into Executing on hands, out of it to where the work says; and a
+        card whose document was archived while nothing had hands on it goes
+        where the write-up says (plan 06, item 1)."""
         by_record = {r.card_number: r for r in records}
         changed = False
         for card in cards:
+            if card.folded_into is not None:
+                continue
             lane = lanes[card.number]
-            if lane.state == LaneState.NONE:
-                continue
-            history = self.live.store.history(slug, card.number)
-            record = by_record.get(card.number)
-            since = (
-                record.first_seen
-                if record is not None
-                else lane.hands_on_since or entered_executing_at(history)
-            )
-            reason = should_enter_executing(card, lane, history)
-            if reason is not None:
-                self.live.move(
-                    slug,
-                    card.number,
-                    Place(column=Column.EXECUTING, group=None, position=0),
-                    actor=Actor.MACHINE,
-                    detail=reason,
-                    evidence=Evidence.HANDS_ON,
-                )
-                changed = True
-                continue
-            if card.place.column == Column.EXECUTING and lane.state in HANDS_ON:
-                continue
-            folded = record.folded_at is not None if record is not None else None
-            if folded is False and record is not None and record.tip is None:
-                folded = None
             signal, _ = watch_signal(card)
-            leaving = exit_for(card, lane, history, folded=folded, signal=signal, since=since)
+            leaving = None
+            if lane.state != LaneState.NONE:
+                history = self.live.store.history(slug, card.number)
+                record = by_record.get(card.number)
+                since = (
+                    record.first_seen
+                    if record is not None
+                    else lane.hands_on_since or entered_executing_at(history)
+                )
+                reason = should_enter_executing(card, lane, history)
+                if reason is not None:
+                    self.live.move(
+                        slug,
+                        card.number,
+                        Place(column=Column.EXECUTING, group=None, position=0),
+                        actor=Actor.MACHINE,
+                        detail=reason,
+                        evidence=Evidence.HANDS_ON,
+                    )
+                    changed = True
+                    continue
+                if card.place.column == Column.EXECUTING and lane.state in HANDS_ON:
+                    continue
+                folded = record.folded_at is not None if record is not None else None
+                if folded is False and record is not None and record.tip is None:
+                    folded = None
+                leaving = exit_for(card, lane, history, folded=folded, signal=signal, since=since)
+            if leaving is None:
+                leaving = after_archive(card, lane, signal)
             if leaving is None:
                 continue
             try:
@@ -454,7 +462,7 @@ class Loops:
                     card.number,
                     AuditKind.MOVED,
                     Actor.MACHINE,
-                    f"Could not move the card out of Executing: {error}",
+                    f"Could not move the card out of {card.place.column}: {error}",
                 )
         return self.live.store.cards(slug) if changed else cards
 
@@ -497,8 +505,8 @@ class Loops:
         now: datetime,
     ) -> dict[int, Doors]:
         live_lanes = [n for n, lane in lanes.items() if lane.state in HANDS_ON and lane.path]
-        editing = {f"#{n}'s lane": set(lanes[n].edits) for n in live_lanes}
-        declared = {f"#{n}'s lane": set(lanes[n].declared) for n in live_lanes}
+        editing = {n: set(lanes[n].edits) for n in live_lanes}
+        declared = {n: set(lanes[n].declared) for n in live_lanes}
         readings = self.live.store.last_readings(live.project.slug)
         doors: dict[int, Doors] = {}
         for card in cards:
@@ -526,6 +534,9 @@ class Loops:
                 collision=collision,
                 signal=signal,
                 signal_due_for_owner=asks_owner,
+                suggestion_live=document is not None
+                and document.kind == DocumentKind.SUGGESTION
+                and not document.archived,
             )
         return doors
 
@@ -539,6 +550,8 @@ class Loops:
             now = clock.now()
             readings = self.live.store.last_readings(slug)
             for card in self.live.store.cards(slug):
+                if card.folded_into is not None:
+                    continue  # a folded card's loop is its leader's
                 signal, _ = watch_signal(card)
                 if not signal_wants_reading(card, signal, readings.get(card.number), now):
                     continue

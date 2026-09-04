@@ -95,3 +95,84 @@ def test_closing_ends_a_wait_at_once(store: Store, project: Project):
         assert await live.wait_for_change(live.version, timeout=30) == live.version
 
     run(body)
+
+
+def test_a_write_from_another_process_is_heard_within_the_poll_and_the_servers_own_never_is(
+    store: Store, project: Project
+):
+    """Plan 06, item 6: a `needle row` from a lane's process is on the page
+    within a second and the loops act on it; the server's own writes — the
+    lane loop's records, a move — never make it re-read itself."""
+    from domain.card import Actor
+    from domain.row import Row, RowKind
+
+    store.add_project(project)
+    sweep(store, project, origin=CardOrigin.FOUNDING, at=NOW)
+    number = store.cards("proj")[0].number
+
+    async def body() -> None:
+        live = Live(store)
+        live.load()
+        heard: list[int] = []
+
+        async def on_change() -> None:
+            heard.append(live.version)
+
+        live.on_change = on_change
+        await live.start_watching()
+        await watching(live, "proj")
+        await asyncio.sleep(1.5)
+        before = live.version
+        heard.clear()
+        live.add_row("proj", number, Row(kind=RowKind.REVIEW, text="own"), Actor.SESSION)
+        await asyncio.sleep(2.5)
+        assert live.version == before + 1, "an own write bumps once, at the write"
+        assert heard == [], "the server never re-reads its own write"
+        other = Store(store.path)
+        other.add_row("proj", number, Row(kind=RowKind.REVIEW, text="theirs"), Actor.SESSION, NOW)
+        other.close()
+        assert await until(lambda: len(heard) >= 1, 3.0), "the other process's write was not heard"
+        assert live.version > before + 1
+        assert any(r.text == "theirs" for r in live.card("proj", number).rows)
+        await live.stop()
+
+    run(body)
+
+
+def test_a_hand_move_against_the_documents_kind_is_refused_with_the_line_to_edit(
+    store: Store, project: Project, corpus: Path
+):
+    """Plan 06, item 2: the rail is a lens on the `Kind:` line, kept by the
+    corpus on every read; a drag that disagrees with the line is refused now
+    rather than undone later."""
+    import pytest
+
+    from domain.card import Place
+    from domain.column import DEFECTS_RAIL, Column
+    from infrastructure.store import StoreRefusal
+
+    # The conftest suggestion is filed by a review, so it reads as a defect.
+    write_suggestion(corpus, "2026-09-04-a-found-defect", title="The berth count is off by one")
+    store.add_project(project)
+    sweep(store, project, origin=CardOrigin.FOUNDING, at=NOW)
+    live = Live(store)
+    live.load()
+    defect = next(c for c in store.cards("proj") if c.title == "The berth count is off by one")
+    assert defect.place.group == DEFECTS_RAIL
+    with pytest.raises(StoreRefusal, match="Kind: defect") as refused:
+        live.move("proj", defect.number, Place(column=Column.BACKLOG, group=None, position=0))
+    assert "docs/slice-suggestions/2026-09-04-a-found-defect.md" in str(refused.value)
+    idea = next(
+        c
+        for c in store.cards("proj")
+        if c.link is not None
+        and c.link.kind.value == "suggestion"
+        and c.place.column == Column.BACKLOG
+        and c.place.group != DEFECTS_RAIL
+    )
+    with pytest.raises(StoreRefusal, match="Kind: idea"):
+        live.move("proj", idea.number, Place(column=Column.BACKLOG, group=DEFECTS_RAIL, position=0))
+    # Out of Backlog is the owner's move as ever, and back into Backlog lands below the rail.
+    live.move("proj", defect.number, Place(column=Column.UP_NEXT, group=None, position=0))
+    live.move("proj", defect.number, Place(column=Column.BACKLOG, group=DEFECTS_RAIL, position=0))
+    assert store.card("proj", defect.number).place.group == DEFECTS_RAIL  # type: ignore[union-attr]

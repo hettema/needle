@@ -10,7 +10,7 @@ document with no recognisable head is still a document with a title.
 import re
 from datetime import date, datetime
 
-from domain.document import Document, DocumentKind, HeadField
+from domain.document import Document, DocumentKind, HeadField, SuggestionKind
 from domain.gate import Gate
 
 _H1 = re.compile(r"^#\s+(.+?)\s*$", re.M)
@@ -27,6 +27,16 @@ _EMPH = re.compile(r"(?<!\w)(\*|_)(.+?)\1(?!\w)")
 _LINK = re.compile(r"\[([^\]]+)\]\([^)]+\)")
 _LIST_MARKER = re.compile(r"^(?:[-*+>]|\d+[.)])\s+")
 _SENTENCE_END = re.compile(r"(?<=[.!?])\s+(?=[A-Z0-9\"'(`*])")
+_SUGGESTION_PATH = re.compile(r"docs/slice-suggestions/(?:done/)?([\w.-]+?)\.md")
+_KIND = re.compile(r"^\W*(defect|idea)\b", re.I)
+_DEFECT_TITLE = re.compile(
+    r"\b(?:does not|doesn'?t|do not|cannot|can'?t|never fires?|no longer|misses|is wrong|"
+    r"fails?|escapes?|race|blind\w*|hole|bypass|broken|wrong|regression|crash\w*|bug|defect)\b",
+    re.I,
+)
+"""A defect-shaped title, for a suggestion written before the `Kind:` line
+existed (plan 06, item 2): what was built and got wrong, in the words such
+titles use. Only read when no `Kind:` line says otherwise."""
 
 ESSENCE_MAX = 280
 
@@ -140,6 +150,38 @@ def _first_paragraph(body: str) -> str | None:
     return None
 
 
+def suggestion_kind_of(
+    kind: DocumentKind, kind_line: str | None, title: str, found_by: str | None
+) -> SuggestionKind | None:
+    """A suggestion's kind: its `Kind:` line when it has one; otherwise a
+    guess from its text where the text can tell — a `Found by` naming a
+    review (the rings rule files defects from reviews) or a defect-shaped
+    title — and idea otherwise. A plan has no kind."""
+    if kind != DocumentKind.SUGGESTION:
+        return None
+    if kind_line:
+        match = _KIND.match(kind_line)
+        if match:
+            return SuggestionKind(match.group(1).lower())
+    if found_by and re.search(r"\breview", found_by, re.I):
+        return SuggestionKind.DEFECT
+    if _DEFECT_TITLE.search(title):
+        return SuggestionKind.DEFECT
+    return SuggestionKind.IDEA
+
+
+def cites_of(fields: list[HeadField]) -> list[str]:
+    """The suggestion stems a document's head names, in order, each once:
+    what a plan carries (plan 06, item 5). The head only — a plan's body
+    names neighbouring suggestions in prose without carrying them."""
+    seen: list[str] = []
+    for field in fields:
+        for stem in _SUGGESTION_PATH.findall(field.value):
+            if stem not in seen:
+                seen.append(stem)
+    return seen
+
+
 def essence_of(intent: str) -> str | None:
     """The first sentence of a document's intent, as plain text."""
     paragraph = _first_paragraph(intent)
@@ -167,6 +209,7 @@ def parse_document(
     card_value = _field(fields, "Card")
     card_match = _CARD_REF.search(card_value) if card_value else None
     heading, intent = _intent(text)
+    found_by = _field(fields, "Found by")
     return Document(
         kind=kind,
         stem=stem,
@@ -179,8 +222,10 @@ def parse_document(
         gate=gate,
         gate_why=gate_why,
         sequencing=_field(fields, "Sequencing"),
-        found_by=_field(fields, "Found by"),
+        found_by=found_by,
         card_ref=int(card_match.group(1)) if card_match else None,
+        suggestion_kind=suggestion_kind_of(kind, _field(fields, "Kind"), title, found_by),
+        cites=cites_of(fields),
         head_fields=fields,
         intent_heading=heading,
         intent=intent,

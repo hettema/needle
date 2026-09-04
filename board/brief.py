@@ -56,6 +56,16 @@ def render(detail: CardDetail, project: Project) -> str:
         lines.append("   open: (no document — the card text is the whole brief)")
     for other in detail.other_citations:
         lines.append(f"   also: {other}")
+    if card.folded_into is not None:
+        lines.append(
+            f" folded: into #{card.folded_into} — that card's plan carries this suggestion; "
+            "it follows that card and closes with it"
+        )
+    for folded in summary.folded:
+        lines.append(
+            f"carries: #{folded.number} {folded.title}"
+            + (f" ({folded.document_path})" if folded.document_path else "")
+        )
     lines.append(
         f"   lane: {lane_name(card.number, card.title)} — the worktree under "
         f".claude/worktrees/ named so the board sees hands on the card"

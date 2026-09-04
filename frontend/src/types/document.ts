@@ -7,6 +7,9 @@ export type DocumentKind = (typeof DOCUMENT_KIND_VALUES)[number];
 export const DOCUMENT_STATE_VALUES = ["plan", "suggestion", "archived", "note", "gone"] as const;
 export type DocumentState = (typeof DOCUMENT_STATE_VALUES)[number];
 
+export const SUGGESTION_KIND_VALUES = ["idea", "defect"] as const;
+export type SuggestionKind = (typeof SUGGESTION_KIND_VALUES)[number];
+
 export interface Document {
   kind: DocumentKind;
   stem: string;
@@ -21,6 +24,8 @@ export interface Document {
   sequencing: string | null;
   found_by: string | null;
   card_ref: number | null;
+  suggestion_kind: SuggestionKind | null;
+  cites: string[];
   head_fields: HeadField[];
   intent_heading: string | null;
   intent: string;

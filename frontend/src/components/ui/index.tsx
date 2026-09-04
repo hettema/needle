@@ -4,9 +4,10 @@ import type { FocusEventHandler, KeyboardEvent, MouseEvent, PointerEventHandler,
 import type { DraggableAttributes } from "@dnd-kit/core";
 import { marked } from "marked";
 import DOMPurify from "dompurify";
+import type { FoldedCard } from "../../types/board";
 import type { DocumentState } from "../../types/document";
 import type { Standing } from "../../types/evidence";
-import type { LaneState } from "../../types/lane";
+import type { LaneState, Readiness, StartState } from "../../types/lane";
 import type { RowKind } from "../../types/row";
 import { ASK_ROWS, LANDED_ROWS, LEAD_ROWS } from "../../types/row";
 
@@ -41,6 +42,20 @@ export function Markdown({ text }: { text: string }) {
 }
 
 // ── the head ──────────────────────────────────────────────────────────
+
+/**
+ * The head and the attention line, pinned above the columns (plan 06, item
+ * 4). `folded` is the laptop's one-line head once a column has scrolled: the
+ * wordmark, the project and the attention counts stay, the rest steps aside
+ * so the columns keep their height.
+ */
+export function HeadFrame({ children, folded }: { children: ReactNode; folded: boolean }) {
+  return (
+    <div className={`head${folded ? " folded" : ""}`} data-folded={folded ? "true" : "false"}>
+      {children}
+    </div>
+  );
+}
 
 export function AppHead({ children }: { children: ReactNode }) {
   return <header className="app-head">{children}</header>;
@@ -155,17 +170,41 @@ export function AttentionLine({ children, quiet }: { children: ReactNode; quiet:
 
 export function Att({ n, label, tone = "plain", onClick, on }: { n: number; label: string; tone?: "plain" | "you" | "bad"; onClick?: (() => void) | undefined; on?: boolean }) {
   const className = `att ${tone === "plain" ? "" : tone}${on ? " on" : ""}`;
+  // The label is its own span so the folded head can keep the count and drop the words.
+  const body = (
+    <>
+      <b>{n}</b> <span className="alabel">{label}</span>
+    </>
+  );
   if (onClick) {
     return (
-      <button type="button" className={className} onClick={onClick} aria-pressed={on ?? false}>
-        <b>{n}</b> {label}
+      <button type="button" className={className} onClick={onClick} aria-pressed={on ?? false} title={label}>
+        {body}
       </button>
     );
   }
   return (
-    <span className={className}>
-      <b>{n}</b> {label}
+    <span className={className} title={label}>
+      {body}
     </span>
+  );
+}
+
+/** The bar over a selection of suggestion cards: one Plan door for all of them (plan 06, item 5). */
+export function TogetherBar({ count, onPlan, onClear, disabled, said }: { count: number; onPlan: () => void; onClear: () => void; disabled: boolean; said: string | null }) {
+  return (
+    <section className="together" aria-label={`${count} suggestion${count === 1 ? "" : "s"} selected for one plan`}>
+      <span className="together-n">
+        <b>{count}</b> suggestion{count === 1 ? "" : "s"} selected for one plan
+      </span>
+      <button type="button" className="btn" onClick={onPlan} disabled={disabled || count === 0}>
+        Plan these together
+      </button>
+      <button type="button" className="btn ghost" onClick={onClear} disabled={disabled}>
+        Clear
+      </button>
+      {said ? <span className="said">{said}</span> : null}
+    </section>
   );
 }
 
@@ -226,21 +265,43 @@ export function BoardStrip({ children }: { children: ReactNode }) {
   return <main className="board">{children}</main>;
 }
 
+/** A column scrolls on its own (plan 06, item 4); `onScroll` says whether it is scrolled away from its top. */
 export function ColumnBox({
   children,
   wide,
   yours,
   column,
+  onScroll,
 }: {
   children: ReactNode;
   wide: boolean;
   yours: boolean;
   column: string;
+  onScroll?: ((scrolled: boolean) => void) | undefined;
 }) {
   return (
-    <section className={`col${wide ? " wide" : ""}${yours ? " yours" : ""}`} data-column={column}>
+    <section className={`col${wide ? " wide" : ""}${yours ? " yours" : ""}`} data-column={column} onScroll={onScroll ? (e) => onScroll(e.currentTarget.scrollTop > 0) : undefined}>
       {children}
     </section>
+  );
+}
+
+/** The column's head and note, pinned at its top while its cards scroll under them. */
+export function ColumnTop({ children }: { children: ReactNode }) {
+  return <div className="col-top">{children}</div>;
+}
+
+/** Backlog's defects rail: pinned at the column's top with its count, furled to that line by default so ideas are one scan and defects another (plan 06, item 2). */
+export function RailGroup({ count, open, onToggle, children }: { count: number; open: boolean; onToggle: () => void; children: ReactNode }) {
+  return (
+    <div className="rail-group" data-rail="defects">
+      <button type="button" className="rail-h" aria-expanded={open} onClick={onToggle} title={open ? "Furl the defects rail" : "Show the defects"}>
+        <span className="rail-name">Defects</span>
+        <span className="count">{count}</span>
+        <span className="rail-tw">{open ? "▾ furl" : "▸ show"}</span>
+      </button>
+      {open ? children : null}
+    </div>
   );
 }
 
@@ -436,6 +497,53 @@ export function Points({ n }: { n: number }) {
   );
 }
 
+const START_LABEL: Record<StartState, string> = {
+  free: "free",
+  collides: "collides",
+  "no gate": "no gate",
+  "nowhere to run": "nowhere to run",
+  "lane exists": "lane exists",
+  elsewhere: "",
+  unread: "not read yet",
+};
+
+/** The pill: whether the card can start now, from the Start door's own verdict (plan 06, item 3). */
+export function Pill({ readiness }: { readiness: Readiness }) {
+  const label = readiness.state === "collides" ? `collides with ${readiness.cards.map((n) => `#${n}`).join(", ")}` : START_LABEL[readiness.state];
+  if (!label) return null;
+  const title = readiness.state === "collides" && readiness.files.length ? `${readiness.why} On: ${readiness.files.join(", ")}` : readiness.why;
+  return (
+    <span className={`pill ${readiness.state.replace(/ /g, "-")}`} title={title} data-start={readiness.state}>
+      {label}
+    </span>
+  );
+}
+
+/** A checkbox on the collapsed face, for planning several suggestions together. */
+export function Pick({ checked, onChange, label }: { checked: boolean; onChange: (checked: boolean) => void; label: string }) {
+  return (
+    <label className="pick" title={label}>
+      <input type="checkbox" checked={checked} onChange={(e) => onChange(e.target.checked)} aria-label={label} />
+    </label>
+  );
+}
+
+/** The cards folded under this one: the suggestions its plan carries (plan 06, item 5). */
+export function Carries({ cards, open }: { cards: readonly FoldedCard[]; open: boolean }) {
+  if (!cards.length) return null;
+  return (
+    <div className={`carries${open ? " open" : ""}`} role="list" aria-label={`carries ${cards.length}`}>
+      <span className="clbl">carries</span>
+      {cards.map((c) => (
+        <span key={c.number} role="listitem" className="carried" title={c.document_path ?? c.title}>
+          <span className="cid">#{c.number}</span>
+          {open ? <span className="ctitle">{c.title}</span> : null}
+        </span>
+      ))}
+    </div>
+  );
+}
+
 export function Chip({
   kind = "plain",
   children,
@@ -621,9 +729,9 @@ export function Acts({ children }: { children: ReactNode }) {
   return <div className="acts">{children}</div>;
 }
 
-export function Button({ ghost, onClick, children, disabled, title }: { ghost?: boolean; onClick: () => void; children: ReactNode; disabled?: boolean; title?: string | undefined }) {
+export function Button({ ghost, small, onClick, children, disabled, title, label }: { ghost?: boolean; small?: boolean; onClick: () => void; children: ReactNode; disabled?: boolean; title?: string | undefined; label?: string | undefined }) {
   return (
-    <button type="button" className={`btn${ghost ? " ghost" : ""}`} onClick={onClick} disabled={disabled ?? false} title={title}>
+    <button type="button" className={`btn${ghost ? " ghost" : ""}${small ? " small" : ""}`} onClick={onClick} disabled={disabled ?? false} title={title} aria-label={label}>
       {children}
     </button>
   );

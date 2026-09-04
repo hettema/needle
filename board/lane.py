@@ -18,6 +18,7 @@ from board.collision import drift
 from domain.audit import AuditEntry, AuditKind
 from domain.card import Actor, Card
 from domain.column import Column
+from domain.document import DocumentKind
 from domain.evidence import Evidence
 from domain.hook import HookEvent, HookKind
 from domain.lane import (
@@ -31,13 +32,15 @@ from domain.lane import (
     Lane,
     LaneRecord,
     LaneState,
+    Readiness,
+    StartState,
 )
 from domain.launch import Rescue
 from domain.row import RowKind
 from domain.session import Session, SessionKind, SessionState
 from domain.signal import Signal
 from domain.slot import Placement
-from domain.window import Window
+from domain.window import Window, WindowKind
 
 _LANE_DIR = re.compile(r"/\.claude/worktrees/card-(\d+)-[^/]*(?:/|$)")
 HOOK_SLACK_SECONDS = 60.0
@@ -357,15 +360,14 @@ def with_footprints(
     another live lane's files named on both (plan 07, item 2). `edits` is
     what each live worktree has changed, read from git by the caller;
     `declared` is what each card's plan names."""
-    editing = {f"#{number}'s lane": files for number, files in edits.items()}
-    colliding = drift(editing)
+    colliding = drift(edits)
     out: dict[int, Lane] = {}
     for number, lane in lanes.items():
         out[number] = lane.model_copy(
             update={
                 "edits": sorted(edits.get(number, set())),
                 "declared": sorted(declared.get(number, set())),
-                "colliding": colliding.get(f"#{number}'s lane"),
+                "colliding": colliding.get(number),
             }
         )
     return out
@@ -374,20 +376,32 @@ def with_footprints(
 def conversations_alive(
     sessions: list[Session], discussions: list[Discussion]
 ) -> list[Conversation]:
-    """Every discussion whose session has a live process, for the rail."""
-    by_id = {d.session_id: d for d in discussions}
+    """Every discussion whose session has a live process, for the rail. A
+    plan-writing conversation for several cards is one row per card under
+    one session, and one line on the rail."""
+    by_id: dict[str, list[Discussion]] = {}
+    for discussion in discussions:
+        by_id.setdefault(discussion.session_id, []).append(discussion)
     alive: list[Conversation] = []
     for session in sessions:
-        record = by_id.get(session.session_id)
-        if record is None or session.pid is None or session.stale:
+        records = by_id.get(session.session_id)
+        if not records or session.pid is None or session.stale:
             continue
+        first = records[0]
+        numbers = sorted({r.card_number for r in records if r.card_number is not None})
+        if first.kind == WindowKind.IDEA or not numbers:
+            what = "Idea"
+        elif first.kind == WindowKind.PLAN:
+            what = "Plan " + ", ".join(f"#{n}" for n in numbers)
+        else:
+            what = f"#{numbers[0]}"
         alive.append(
             Conversation(
                 short_id=session.short_id,
                 slot=session.slot,
-                card_number=record.card_number,
-                what="Idea" if record.card_number is None else f"#{record.card_number}",
-                started_at=record.started_at,
+                card_number=first.card_number,
+                what=what,
+                started_at=first.started_at,
             )
         )
     return sorted(alive, key=lambda c: c.started_at)
@@ -544,6 +558,46 @@ def exit_for(
     )
 
 
+ARCHIVE_MOVES_FROM: frozenset[Column] = frozenset(
+    {Column.BACKLOG, Column.PLANNED, Column.UP_NEXT, Column.EXECUTING}
+)
+"""The columns that call a card pending: an archived document there is
+shipped work the board is still calling pending (plan 06, item 1). Decision
+moment already has the owner's eye; Not now is his ruling; Executed and Done
+are where the rule sends things."""
+
+
+def after_archive(card: Card, lane: Lane, signal: Signal | None) -> Exit | None:
+    """Where a card goes when its document is archived and no lane has hands
+    on it, or None to leave it. Shipped means archived (INTENT.md): to
+    Executed when the close was written up, to Decision moment when nobody
+    wrote it up. A live lane's close decides for itself, and a card folded
+    under another follows that one."""
+    if card.folded_into is not None or card.place.column not in ARCHIVE_MOVES_FROM:
+        return None
+    if card.link is None or not card.link.archived or lane.state in HANDS_ON:
+        return None
+    what = f"its {card.link.kind.value} was archived ({card.link.path()})"
+    if has_row(card, RowKind.DELIVERED):
+        if signal is not None:
+            return Exit(
+                column=Column.EXECUTED,
+                reason=f"{what} and DELIVERED is written: the close landed",
+                evidence=Evidence.CLOSE_LANDED,
+            )
+        return Exit(
+            column=Column.DECISION_MOMENT,
+            reason=f"{what} and DELIVERED is written, but the WATCH row names no signal the "
+            "board can read",
+            evidence=Evidence.DOCUMENT_ARCHIVED,
+        )
+    return Exit(
+        column=Column.DECISION_MOMENT,
+        reason=f"{what}, but no session wrote it up on the board",
+        evidence=Evidence.DOCUMENT_ARCHIVED,
+    )
+
+
 # ── the doors ──────────────────────────────────────────────────────────
 
 STARTABLE_COLUMNS: frozenset[Column] = frozenset({Column.UP_NEXT, Column.PLANNED})
@@ -577,6 +631,9 @@ def nothing_read(card: Card, project_path: str, now: datetime) -> tuple[Lane, "D
         collision=None,
         signal=None,
         signal_due_for_owner=False,
+        suggestion_live=card.link is not None
+        and card.link.kind == DocumentKind.SUGGESTION
+        and not card.link.archived,
     )
     return lane, doors
 
@@ -599,35 +656,54 @@ def doors_for(
     collision: Collision | None,
     signal: Signal | None,
     signal_due_for_owner: bool,
+    suggestion_live: bool,
 ) -> Doors:
+    """`suggestion_live`: the card's document is a suggestion still in its
+    live folder, so Plan may write the plan that carries it."""
     live = lane.session is not None and lane.session.pid is not None and lane.state in HANDS_ON
     background = live and lane.session is not None and lane.session.kind == SessionKind.BACKGROUND
+    collides = collision is not None and collision.verdict == CollisionVerdict.COLLIDES
 
+    # Start and the pill are one judgment: each branch names both.
     if not gate_named:
         start = _closed(
             "Start", "This card names no effort gate; only a planned card is startable."
         )
+        state = StartState.NO_GATE
     elif live:
         start = _closed("Start", f"A session already has hands on it: {lane.sentence}")
+        state = StartState.TAKEN
     elif lane.path is not None:
         start = _closed(
             "Start",
             f"The lane {lane.name} already exists at {lane.path}; Resume or Look at it instead.",
         )
+        state = StartState.TAKEN
     elif card.place.column not in STARTABLE_COLUMNS:
         start = _closed(
             "Start",
             f"Start is offered in Up next and Planned; this card is in {card.place.column}.",
         )
+        state = StartState.ELSEWHERE
     elif placement is None:
         start = _closed("Start", f"The rule found nowhere to run: {placement_note}")
-    elif collision is not None and collision.verdict == CollisionVerdict.COLLIDES:
+        state = StartState.UNREAD if placement_note == UNREAD else StartState.NOWHERE
+    elif collides:
+        assert collision is not None
         start = _closed("Start", f"Lane collision — {collision.sentence}")
+        state = StartState.COLLIDES
     else:
         start = _open(
             f"Start · {placement.model.value} on {placement.slot}",
             placement.why,
         )
+        state = StartState.FREE
+    readiness = Readiness(
+        state=state,
+        why=start.why,
+        cards=collision.cards if collision is not None and collides else [],
+        files=collision.files if collision is not None and collides else [],
+    )
     start_anyway = (
         _open(
             f"Start anyway · {placement.model.value} on {placement.slot}",
@@ -673,6 +749,19 @@ def doors_for(
         if placement is not None
         else _closed("Discuss", f"The rule found nowhere to run: {placement_note}")
     )
+    if not suggestion_live:
+        plan = _closed(
+            "Plan",
+            "Plan writes the plan for a suggestion; this card is not behind a live suggestion.",
+        )
+    elif placement is None:
+        plan = _closed("Plan", f"The rule found nowhere to run: {placement_note}")
+    else:
+        plan = _open(
+            "Plan",
+            "Opens a plan-writing conversation for this suggestion; the plan it writes "
+            "carries the card.",
+        )
     if lane.state == LaneState.ENDED and lane.session is not None and lane.path is None:
         gone = "The lane's worktree is gone; Start opens a fresh one."
         look, resume = _closed("Look", gone), _closed("Resume", gone)
@@ -709,12 +798,14 @@ def doors_for(
     return Doors(
         start=start,
         start_anyway=start_anyway,
+        readiness=readiness,
         placement=placement,
         placement_note=placement_note,
         collision=collision,
         watch=watch,
         answer=answer,
         discuss=discuss,
+        plan=plan,
         look=look,
         resume=resume,
         stop=stop,

@@ -3,10 +3,10 @@ import type { AuditEntry } from "./audit";
 import type { Card, Place } from "./card";
 import type { ColumnDefinition } from "./column";
 import type { CorpusSummary } from "./corpus";
-import type { Document, DocumentRef, DocumentState } from "./document";
+import type { Document, DocumentRef, DocumentState, SuggestionKind } from "./document";
 import type { Standing } from "./evidence";
 import type { Gate } from "./gate";
-import type { Collision, Conversation, Doors, Lane, LaneState } from "./lane";
+import type { Collision, Conversation, Door, Doors, Lane, LaneState, Readiness } from "./lane";
 import type { Project } from "./project";
 import type { Row } from "./row";
 import type { Reading, Signal } from "./signal";
@@ -26,6 +26,8 @@ export interface Attention {
   signals_asking: number;
   doubted: number;
   verdicts_unread: number;
+  unplanned_defects: number;
+  unplanned_ideas: number;
   arrived_today: number;
   documents_gone: number;
   documents_without_card: number;
@@ -74,6 +76,11 @@ export interface CardSummary {
   tags: string[];
   document_state: DocumentState;
   document_path: string | null;
+  kind: SuggestionKind | null;
+  readiness: Readiness | null;
+  start: Door | null;
+  plan: Door | null;
+  folded: FoldedCard[];
   points: number;
   is_new: boolean;
   age_date: string;
@@ -90,9 +97,16 @@ export interface ColumnView {
   count: number;
 }
 
+export interface FoldedCard {
+  number: number;
+  title: string;
+  document_path: string | null;
+}
+
 export interface GroupView {
   name: string | null;
   cards: CardSummary[];
+  rail: boolean;
 }
 
 export interface MachineState {

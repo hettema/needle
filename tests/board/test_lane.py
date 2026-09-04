@@ -326,6 +326,7 @@ def test_a_session_with_no_process_is_an_ended_lane_with_the_machines_reason():
 
 def test_a_discussion_is_never_hands_on_but_is_said():
     talk = Discussion(
+        kind=WindowKind.DISCUSS,
         id=1,
         project="proj",
         card_number=7,
@@ -477,6 +478,7 @@ def doors(c: Card, lane, **changes):
         collision=None,
         signal=None,
         signal_due_for_owner=False,
+        suggestion_live=False,
     )
     base.update(changes)
     return doors_for(c, lane, **base)
@@ -504,6 +506,7 @@ def test_a_collision_closes_start_and_opens_start_anyway_with_the_reason():
         verdict=CollisionVerdict.COLLIDES,
         sentence="#9's lane is editing api/app.py right now.",
         files=["api/app.py"],
+        cards=[9],
     )
     fresh = lane_for(card(), facts(worktrees={}))
     offered = doors(card(), fresh, collision=collision)
@@ -602,3 +605,105 @@ def test_entered_executing_at_reads_the_last_entry_into_executing():
     ]
     assert entered_executing_at(history) == since
     assert entered_executing_at([]) is None
+
+
+# ── plan 06: the archived rule, the pill, the Plan door ────────────────
+
+
+def test_an_archived_document_moves_a_card_nobody_has_hands_on():
+    from datetime import date
+
+    from board.lane import after_archive
+    from domain.evidence import Evidence
+    from domain.signal import Signal, SignalKind
+
+    none = lane_for(card(), facts(worktrees={}))
+    assert after_archive(card(), none, None) is None, "a live document moves nothing"
+    moved = after_archive(card(archived=True), none, None)
+    assert moved is not None
+    assert moved.column == Column.DECISION_MOMENT and moved.evidence == Evidence.DOCUMENT_ARCHIVED
+    assert "its plan was archived (docs/plans/done/p.md)" in moved.reason
+    assert "no session wrote it up on the board" in moved.reason
+    signal = Signal(
+        what="x", kind=SignalKind.FILE, target="a", expect=None, due=date(2026, 9, 10), every_hours=24
+    )
+    written = card(
+        archived=True,
+        rows=[Row(kind=RowKind.DELIVERED, text="x"), Row(kind=RowKind.WATCH, text="x — file a by 2026-09-10")],
+    )
+    landed = after_archive(written, none, signal)
+    assert landed is not None and landed.column == Column.EXECUTED
+    assert landed.evidence == Evidence.CLOSE_LANDED
+    unreadable = after_archive(written, none, None)
+    assert unreadable is not None and unreadable.column == Column.DECISION_MOMENT
+    assert "names no signal the board can read" in unreadable.reason
+    # A live lane's close decides for itself.
+    working = lane_for(card(column=Column.EXECUTING, archived=True), facts(sessions=[session()]))
+    assert after_archive(card(column=Column.EXECUTING, archived=True), working, None) is None
+    # Decision moment has the owner's eye, Not now is his ruling, Executed and Done are shipped.
+    for column in (Column.DECISION_MOMENT, Column.NOT_NOW, Column.EXECUTED, Column.DONE):
+        assert after_archive(card(column=column, archived=True), none, None) is None
+    # A folded card follows its leader instead.
+    folded = card(archived=True).model_copy(update={"folded_into": 3})
+    assert after_archive(folded, none, None) is None
+    # An Executing card with a lane that ended and an archived plan: the exit rule
+    # runs first in the loop; this rule still answers for it.
+    ended = lane_for(card(column=Column.EXECUTING, archived=True), facts(sessions=[session(pid=None)]))
+    assert ended.state == LaneState.ENDED
+    late = after_archive(card(column=Column.EXECUTING, archived=True), ended, None)
+    assert late is not None and late.column == Column.DECISION_MOMENT
+
+
+def test_the_pill_is_the_start_doors_verdict_in_one_word():
+    from board.lane import UNREAD
+    from domain.lane import Collision, StartState
+
+    fresh = lane_for(card(), facts(worktrees={}))
+    assert doors(card(), fresh).readiness.state == StartState.FREE
+    assert doors(card(), fresh).readiness.why == PLACEMENT.why
+    assert doors(card(gate=None), fresh, gate_named=False).readiness.state == StartState.NO_GATE
+    assert doors(card(column=Column.BACKLOG), fresh).readiness.state == StartState.ELSEWHERE
+    nowhere = doors(card(), fresh, placement=None, placement_note="every slot is spent")
+    assert nowhere.readiness.state == StartState.NOWHERE and "spent" in nowhere.readiness.why
+    unread = doors(card(), fresh, placement=None, placement_note=UNREAD)
+    assert unread.readiness.state == StartState.UNREAD
+    collision = Collision(
+        verdict=CollisionVerdict.COLLIDES,
+        sentence="#9's lane is editing api/app.py right now.",
+        files=["api/app.py"],
+        cards=[9],
+    )
+    collides = doors(card(), fresh, collision=collision).readiness
+    assert collides.state == StartState.COLLIDES and collides.cards == [9]
+    assert collides.files == ["api/app.py"] and collides.why.startswith("Lane collision")
+    on_disk = lane_for(card(), facts())
+    assert doors(card(), on_disk).readiness.state == StartState.TAKEN
+    working = lane_for(card(column=Column.EXECUTING), facts(sessions=[session()]))
+    assert doors(card(column=Column.EXECUTING), working).readiness.state == StartState.TAKEN
+    # One judgment: the pill's word and the door's state never disagree.
+    for offered in (doors(card(), fresh), nowhere, unread, doors(card(), fresh, collision=collision)):
+        assert offered.start.offered == (offered.readiness.state == StartState.FREE)
+        assert offered.readiness.why == offered.start.why
+
+
+def test_plan_is_offered_on_a_live_suggestion_with_somewhere_to_run():
+    fresh = lane_for(card(), facts(worktrees={}))
+    closed = doors(card(), fresh).plan
+    assert not closed.offered and "not behind a live suggestion" in closed.why
+    assert doors(card(), fresh, suggestion_live=True).plan.offered
+    nowhere = doors(card(), fresh, suggestion_live=True, placement=None, placement_note="spent")
+    assert not nowhere.plan.offered and "nowhere to run" in nowhere.plan.why
+
+
+def test_a_plan_conversation_for_several_cards_is_one_line_on_the_rail():
+    from board.lane import conversations_alive
+
+    sid = "aaaa0001-0000-4000-8000-000000000000"
+    rows = [
+        Discussion(id=1, project="proj", card_number=8, kind=WindowKind.PLAN, session_id=sid, slot="alpha", started_at=NOW),
+        Discussion(id=2, project="proj", card_number=7, kind=WindowKind.PLAN, session_id=sid, slot="alpha", started_at=NOW),
+    ]
+    alive = conversations_alive([session()], rows)
+    assert [(c.what, c.card_number) for c in alive] == [("Plan #7, #8", 8)]
+    idea = [Discussion(id=3, project="proj", card_number=None, kind=WindowKind.IDEA, session_id=sid, slot="alpha", started_at=NOW)]
+    assert [c.what for c in conversations_alive([session()], idea)] == ["Idea"]

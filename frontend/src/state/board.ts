@@ -60,7 +60,14 @@ export function useBoard(slug: string): BoardStore {
         if (typeof v === "number" && v !== version.current) void refresh();
       }
     });
-    source.onopen = () => setConnected(true);
+    // A reconnect — the server restarted, the page slept — forgets the version
+    // it knew, so the first message re-reads the board exactly once: a new
+    // server's counter can land on the old number and say nothing changed.
+    let opened = 0;
+    source.onopen = () => {
+      setConnected(true);
+      if (opened++ > 0) version.current = -1;
+    };
     source.onerror = () => setConnected(false);
     return () => source.close();
   }, [slug, refresh]);

@@ -17,6 +17,7 @@ const api = vi.hoisted(() => ({
   getProjects: vi.fn<() => Promise<Project[]>>(),
   openDoor: vi.fn<(slug: string, number: number, door: DoorName, body?: object) => Promise<DoorResult>>(),
   openIdea: vi.fn<(slug: string, text: string) => Promise<DoorResult>>(),
+  openPlan: vi.fn<(slug: string, numbers: number[]) => Promise<DoorResult>>(),
   acceptClass: vi.fn<(slug: string, evidenceClass: EvidenceClass) => Promise<VerdictsRuled>>(),
   streamUrl: (slug: string) => `/api/projects/${slug}/stream`,
 }));
@@ -45,6 +46,7 @@ beforeEach(() => {
   api.moveCard.mockReset();
   api.openDoor.mockReset();
   api.openIdea.mockReset();
+  api.openPlan.mockReset();
   api.acceptClass.mockReset();
   window.history.replaceState(null, "", "/");
 });
@@ -266,7 +268,7 @@ describe("the doors", () => {
       start: { offered: true, label: "Start · fable on alpha", why: "Fable headroom on alpha (12% of Fable used)" },
       discuss: { offered: true, label: "Discuss", why: "A fresh conversation about this card, never hands on its tree." },
       placement: { slot: "alpha", model: "fable", config_dir: "/x", why: "Fable headroom on alpha (12% of Fable used)" },
-      collision: { verdict: "clear", sentence: "No running lane or trunk session touches this plan's files.", files: [] },
+      collision: { verdict: "clear", sentence: "No running lane or trunk session touches this plan's files.", files: [], cards: [] },
     };
     api.getCard.mockResolvedValue(d);
     api.openDoor.mockResolvedValue({ door: "start", said: "Started aaaa0001, fable on alpha, at medium, in card-253-every-metered-kilowatt-is-billed, in needle-card-253.scope" });
@@ -287,7 +289,7 @@ describe("the doors", () => {
       ...d.doors,
       start: { offered: false, label: "Start", why: `Lane collision — ${sentence}` },
       start_anyway: { offered: true, label: "Start anyway · fable on alpha", why: `Overrides the collision with its reason in front of you: ${sentence}` },
-      collision: { verdict: "collides", sentence, files: ["engine/metering.py"] },
+      collision: { verdict: "collides", sentence, files: ["engine/metering.py"], cards: [241] },
     };
     api.getCard.mockResolvedValue(d);
     api.openDoor.mockResolvedValue({ door: "start", said: "Started; collision overridden" });
@@ -588,8 +590,8 @@ describe("conversations and lanes that know each other", () => {
       card.lane_state = "working";
       card.lane_sentence = "Working, fable on alpha, hands on for 12 min.";
     }
-    mine.colliding = { verdict: "collides", sentence: "#241's lane is also editing engine/metering.py.", files: ["engine/metering.py"] };
-    theirs.colliding = { verdict: "collides", sentence: "#253's lane is also editing engine/metering.py.", files: ["engine/metering.py"] };
+    mine.colliding = { verdict: "collides", sentence: "#241's lane is also editing engine/metering.py.", files: ["engine/metering.py"], cards: [241] };
+    theirs.colliding = { verdict: "collides", sentence: "#253's lane is also editing engine/metering.py.", files: ["engine/metering.py"], cards: [253] };
     b.attention = { ...b.attention, colliding: 2 };
     b.watercooler = [
       { id: 1, project: SLUG, card_number: 241, actor: "session", at: "2026-09-04T08:10:00+00:00", text: "touching engine/metering.py for the tariff; leave it" },
@@ -623,5 +625,185 @@ describe("conversations and lanes that know each other", () => {
     expect(cooler).toHaveTextContent("touching engine/metering.py for the tariff; leave it");
     expect(cooler).toHaveTextContent("#241");
     expect(cooler).toHaveTextContent("board");
+  });
+});
+
+describe("the board at a glance (plan 06)", () => {
+  const free = { state: "free" as const, why: "Fable headroom on alpha (12% of Fable used)", cards: [], files: [] };
+
+  it("shows the pill on every queued card and starts a free card from its collapsed face", async () => {
+    const b = board();
+    const upNext = b.columns.find((c) => c.definition.column === "Up next")?.groups[0];
+    const mine = upNext?.cards.find((c) => c.number === 253);
+    const theirs = upNext?.cards.find((c) => c.number === 241);
+    const note = upNext?.cards.find((c) => c.number === 228);
+    if (!mine || !theirs || !note) throw new Error("no #253, #241 or #228");
+    mine.readiness = free;
+    mine.start = { offered: true, label: "Start · fable on alpha", why: free.why };
+    theirs.readiness = { state: "collides", why: "Lane collision — #253's lane is editing engine/metering.py right now.", cards: [253], files: ["engine/metering.py"] };
+    note.readiness = { state: "no gate", why: "This card names no effort gate; only a planned card is startable.", cards: [], files: [] };
+    api.getBoard.mockResolvedValue(b);
+    api.openDoor.mockResolvedValue({ door: "start", said: "Started aaaa0001, fable on alpha, at medium, in card-253-every-metered-kilowatt-is-billed" });
+    await renderBoard();
+    const resting = screen.getByText("#253").closest("article") as HTMLElement;
+    expect(within(resting).getByText("free")).toHaveAttribute("title", free.why);
+    const colliding = screen.getByText("#241").closest("article") as HTMLElement;
+    expect(within(colliding).getByText("collides with #253")).toHaveAttribute("title", expect.stringContaining("On: engine/metering.py"));
+    expect(within(colliding).queryByRole("button", { name: /Start/ })).not.toBeInTheDocument();
+    const gateless = screen.getByText("#228").closest("article") as HTMLElement;
+    expect(within(gateless).getByText("no gate")).toBeInTheDocument();
+    // A Backlog card carries no pill.
+    const backlog = screen.getByText("#252").closest("article") as HTMLElement;
+    expect(backlog.querySelector(".pill")).toBeNull();
+    // Start on the collapsed face, the same door as the open card's, and the card does not open on the click.
+    await userEvent.click(within(resting).getByRole("button", { name: "Start · fable on alpha" }));
+    await waitFor(() => expect(api.openDoor).toHaveBeenCalledWith(SLUG, 253, "start"));
+    expect(await within(resting).findByText(/Started aaaa0001/)).toBeInTheDocument();
+    expect(resting.className).not.toContain("open");
+  });
+
+  it("shows a gateless queued card's Start closed with its reason on the open face", async () => {
+    const d = detail(228);
+    d.doors = { ...d.doors, start: { offered: false, label: "Start", why: "This card names no effort gate; only a planned card is startable." } };
+    api.getCard.mockResolvedValue(d);
+    await renderBoard();
+    await userEvent.click(screen.getByText("The skipper is told what the office decided"));
+    const card = await waitFor(() => {
+      const el = screen.getByText("#228").closest("article") as HTMLElement;
+      expect(el.className).toContain("open");
+      return el;
+    });
+    const start = await within(card).findByText("Start");
+    expect(start).toHaveAttribute("aria-disabled", "true");
+    expect(within(card).getByText(/Start is closed: This card names no effort gate/)).toBeInTheDocument();
+  });
+
+  it("offers Plan on a suggestion card, collapsed and open, and plans several together from a selection", async () => {
+    const b = board();
+    const backlog = b.columns.find((c) => c.definition.column === "Backlog");
+    const suggestions = backlog?.groups.flatMap((g) => g.cards).filter((c) => c.document_state === "suggestion") ?? [];
+    for (const card of suggestions) card.plan = { offered: true, label: "Plan", why: "Opens a plan-writing conversation for this suggestion; the plan it writes carries the card." };
+    api.getBoard.mockResolvedValue(b);
+    const d = detail(252);
+    d.doors = { ...d.doors, plan: { offered: true, label: "Plan", why: "Opens a plan-writing conversation for this suggestion; the plan it writes carries the card." } };
+    api.getCard.mockResolvedValue(d);
+    api.openPlan.mockResolvedValue({ door: "plan", said: "Planning #252 in org.omarchy.board-plan-card-252-x, fable on alpha; the plan it writes carries this card." });
+    await renderBoard();
+    const one = screen.getByText("#252").closest("article") as HTMLElement;
+    await userEvent.click(within(one).getByRole("button", { name: "Plan" }));
+    await waitFor(() => expect(api.openPlan).toHaveBeenCalledWith(SLUG, [252]));
+    expect(await within(one).findByText(/Planning #252/)).toBeInTheDocument();
+    // A selection: + on the first, then a checkbox on every suggestion card, then one door for all.
+    expect(screen.queryByRole("checkbox")).not.toBeInTheDocument();
+    await userEvent.click(within(one).getByRole("button", { name: "Plan #252 together with others" }));
+    const other = screen.getByText("#242").closest("article") as HTMLElement;
+    expect(within(one).getByRole("checkbox", { name: "Plan #252 together" })).toBeChecked();
+    await userEvent.click(within(other).getByRole("checkbox", { name: "Plan #242 together" }));
+    const bar = screen.getByRole("region", { name: "2 suggestions selected for one plan" });
+    api.openPlan.mockResolvedValue({ door: "plan", said: "Planning #242, #252 in org.omarchy.board-plan-cards-242-252, fable on alpha; the plan it writes carries these cards, the first keeping its number." });
+    await userEvent.click(within(bar).getByRole("button", { name: "Plan these together" }));
+    await waitFor(() => expect(api.openPlan).toHaveBeenLastCalledWith(SLUG, [242, 252]));
+    expect(await screen.findByText(/Planning #242, #252/)).toBeInTheDocument();
+    expect(screen.queryByRole("checkbox")).not.toBeInTheDocument();
+    // The open card offers Plan too.
+    await userEvent.click(screen.getByText("The quay display polls the office all night"));
+    const opened = await waitFor(() => {
+      const el = screen.getByText("#252").closest("article") as HTMLElement;
+      expect(el.className).toContain("open");
+      return el;
+    });
+    expect(await within(opened).findByRole("button", { name: "Plan" })).toHaveAttribute("title", expect.stringContaining("plan-writing conversation"));
+  });
+
+  it("pins the defects rail at the top of Backlog with its count, furled until asked", async () => {
+    await renderBoard();
+    const backlog = document.querySelector('[data-column="Backlog"]') as HTMLElement;
+    const rail = within(backlog).getByRole("button", { name: /Defects/ });
+    expect(rail).toHaveAttribute("aria-expanded", "false");
+    expect(rail).toHaveTextContent("Defects1");
+    expect(within(backlog).queryByText("#232")).not.toBeInTheDocument();
+    expect(backlog.querySelector(".stack")?.firstElementChild?.getAttribute("data-rail")).toBe("defects");
+    await userEvent.click(rail);
+    expect(rail).toHaveAttribute("aria-expanded", "true");
+    expect(within(backlog).getByText("#232")).toBeInTheDocument();
+    expect(screen.getByText("defect unplanned")).toBeInTheDocument();
+    expect(screen.getByText("ideas unplanned").closest(".att")).toHaveTextContent("7 ideas unplanned");
+  });
+
+  it("shows what a card carries on both faces", async () => {
+    const b = board();
+    const upNext = b.columns.find((c) => c.definition.column === "Up next")?.groups[0];
+    const mine = upNext?.cards.find((c) => c.number === 253);
+    if (!mine) throw new Error("no #253");
+    mine.folded = [
+      { number: 7, title: "An archived document moves its card", document_path: "docs/slice-suggestions/done/a.md" },
+      { number: 10, title: "Defects are their own rail", document_path: null },
+    ];
+    api.getBoard.mockResolvedValue(b);
+    const d = detail(253);
+    d.summary.folded = mine.folded;
+    api.getCard.mockResolvedValue(d);
+    await renderBoard();
+    const resting = screen.getByText("#253").closest("article") as HTMLElement;
+    const carries = within(resting).getByRole("list", { name: "carries 2" });
+    expect(carries).toHaveTextContent("carries#7#10");
+    await userEvent.click(screen.getByText("Every metered kilowatt is billed"));
+    const section = await screen.findByText("What it carries");
+    expect(section.closest(".sec")).toHaveTextContent("An archived document moves its card");
+  });
+
+  it("folds the head to one line on a laptop once a column scrolls, and unfolds at the top", async () => {
+    await renderBoard();
+    const head = document.querySelector(".head") as HTMLElement;
+    expect(head.dataset["folded"]).toBe("false");
+    const column = document.querySelector('[data-column="Backlog"]') as HTMLElement;
+    Object.defineProperty(column, "scrollTop", { value: 240, configurable: true });
+    fireEvent.scroll(column);
+    await waitFor(() => expect(head.dataset["folded"]).toBe("true"));
+    // The counts stay in the folded line; the words step aside by style, not by removal.
+    expect(within(head).getByText("in flight").closest(".att")).toBeInTheDocument();
+    Object.defineProperty(column, "scrollTop", { value: 0, configurable: true });
+    fireEvent.scroll(column);
+    await waitFor(() => expect(head.dataset["folded"]).toBe("false"));
+  });
+
+  it("re-reads the board once when the stream reconnects", async () => {
+    const sources: FakeEventSource[] = [];
+    class FakeEventSource {
+      onopen: (() => void) | null = null;
+      onerror: (() => void) | null = null;
+      private listeners: ((event: MessageEvent<string>) => void)[] = [];
+      constructor(public url: string) {
+        sources.push(this);
+      }
+      addEventListener(_name: string, listener: (event: MessageEvent<string>) => void) {
+        this.listeners.push(listener);
+      }
+      close() {
+        return undefined;
+      }
+      say(version: number) {
+        for (const listener of this.listeners) listener({ data: JSON.stringify({ version }) } as MessageEvent<string>);
+      }
+    }
+    (window as unknown as { EventSource: typeof FakeEventSource }).EventSource = FakeEventSource;
+    try {
+      await renderBoard();
+      const source = sources[0];
+      if (!source) throw new Error("the page opened no stream");
+      const reads = api.getBoard.mock.calls.length;
+      act(() => source.onopen?.());
+      act(() => source.say(board().version));
+      expect(api.getBoard.mock.calls.length).toBe(reads);
+      // The server restarted: the stream reconnects and the first message re-reads, even at the same version.
+      act(() => source.onerror?.());
+      act(() => source.onopen?.());
+      act(() => source.say(board().version));
+      await waitFor(() => expect(api.getBoard.mock.calls.length).toBe(reads + 1));
+      act(() => source.say(board().version));
+      expect(api.getBoard.mock.calls.length).toBe(reads + 1);
+    } finally {
+      delete (window as unknown as { EventSource?: unknown }).EventSource;
+    }
   });
 });
