@@ -1,7 +1,19 @@
 # Needle
 
-A kanban over a corpus of plans, for a team made of one owner and many AI
-sessions that share no memory. The board is the memory.
+A board for one person and their AI team. Intent goes in as plans, work runs
+as lanes, the machine keeps the board true, and every loop closes by
+evidence. No second human in the loop: one person holds the intent, the
+sessions hold everything else, and the work moves at the speed the intent
+allows.
+
+Needle is the instrument; the way of working is the product. Read
+`docs/HOW-WE-WORK.md` first — without it the board is an empty page over an
+empty folder.
+
+Written by Dennis Hettema together with Claude, in the way it describes: the
+intent is Dennis's, the plans, rulings and reviews are the sessions', and the
+board ran its own construction from the second day. Licensed AGPL-3.0: use it,
+change it, run it for anyone — and publish what you changed.
 
 - `docs/INTENT.md` — why this exists and what it must be true about. Start there.
 - `docs/plans/` — the slices, with the folder as their status; `docs/plans/done/` is the archive.
