@@ -229,7 +229,13 @@ def lane_for(card: Card, facts: LaneFacts) -> Lane:
         )
         and winner.state != SessionState.WORKING
     )
-    if winner is not None and winner.pid is not None:
+    # A session cannot have hands on a worktree that is not on disk. Four
+    # cards sat in Executing on 2026-09-04 because their sessions' claimed
+    # spare processes were still alive hours after 0.1 had torn the worktrees
+    # down — the process record said "hands", the disk said "gone". The disk
+    # wins: such a lane has ended, whatever /proc says about the process.
+    gone = winner is not None and not on_disk
+    if winner is not None and winner.pid is not None and not gone:
         where = f"{winner.model.value if winner.model else 'fable'} on {winner.slot}"
         if winner.wall is not None:
             state = LaneState.MOVING
@@ -275,6 +281,8 @@ def lane_for(card: Card, facts: LaneFacts) -> Lane:
         state = LaneState.ENDED
         session_id = winner.session_id if winner is not None else None
         died = facts.deaths.get(session_id) if session_id else None
+        if died is None and gone:
+            died = "its worktree is gone from disk"
         if died is None:
             end = next(
                 (
@@ -448,7 +456,12 @@ def exit_for(
             reason="the work folded into origin/develop, but no session wrote it up",
         )
     if has_row(card, RowKind.DELIVERED):
-        return None
+        if close_is_current(card, history, since):
+            return None  # a close still landing: DELIVERED is this life's word
+        return Exit(
+            column=Column.DECISION_MOMENT,
+            reason="the lane ended; DELIVERED is from a previous life and the close never landed",
+        )
     if folded is None and lane.session is None:
         return None
     return Exit(

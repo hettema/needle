@@ -123,7 +123,9 @@ def facts(**changes) -> LaneFacts:
         windows=[],
         rescues={},
         deaths={},
-        worktrees={},
+        # A live lane has its worktree on disk; a test about a card with no
+        # trace, or a worktree that is gone, says `worktrees={}` itself.
+        worktrees={LANE: "card-7-the-thing"},
         now=NOW,
     )
     base.update(changes)
@@ -162,7 +164,7 @@ def row_written(kind: RowKind, at: datetime, id: int = 2) -> AuditEntry:
 
 
 def test_a_card_with_no_trace_has_no_lane_and_a_closed_watch():
-    lane = lane_for(card(), facts())
+    lane = lane_for(card(), facts(worktrees={}))
     assert lane.state == LaneState.NONE and lane.sentence == "" and lane.path is None
 
 
@@ -203,7 +205,8 @@ def test_a_stop_the_hook_pushed_wins_over_the_registrys_stale_word():
     older = lane_for(
         card(),
         facts(
-            sessions=[stale], events=[event(HookKind.STOP, "THANKS", at=NOW - timedelta(minutes=5))]
+            sessions=[stale],
+            events=[event(HookKind.STOP, "THANKS", at=NOW - timedelta(minutes=5))],
         ),
     )
     assert older.state == LaneState.BLOCKED, (
@@ -266,6 +269,7 @@ def test_a_wall_reads_as_moving_and_a_rescue_is_said_on_the_card():
         card(),
         facts(
             sessions=[session()],
+            worktrees={LANE: "card-7-the-thing"},
             rescues={"aaaa0001-0000-4000-8000-000000000000": [rescue]},
             windows=[window],
         ),
@@ -348,7 +352,7 @@ def test_the_card_of_a_working_directory():
 
 
 def test_hands_on_moves_a_card_into_executing_unless_the_owner_took_it_out():
-    lane = lane_for(card(), facts(sessions=[session()]))
+    lane = lane_for(card(), facts(sessions=[session()], worktrees={LANE: "card-7-the-thing"}))
     assert (
         should_enter_executing(card(), lane, [])
         == "hands on: aaaa0001 on alpha in card-7-the-thing"
@@ -411,9 +415,13 @@ def test_folded_but_unwritten_goes_to_decision_moment_and_nothing_folded_goes_ba
     assert came_from([]) == Column.UP_NEXT
 
 
-def test_a_delivered_row_without_a_provable_fold_stays_and_a_previous_life_does_not_count():
+def test_a_delivered_row_from_this_life_stays_and_a_stale_one_goes_to_decision_moment():
+    """Two cards sat in Executing on 2026-09-04 with a DELIVERED row from 0.1's
+    close days earlier and a lane that had ended: the old guard kept them
+    there forever. A close still landing (DELIVERED in this life) waits; a
+    stale one is the owner's to judge."""
     since = NOW - timedelta(hours=1)
-    history = [
+    stale = [
         row_written(RowKind.DELIVERED, NOW - timedelta(days=2), id=1),
         moved(Column.UP_NEXT, Column.EXECUTING, Actor.MACHINE, since, id=2),
     ]
@@ -421,14 +429,23 @@ def test_a_delivered_row_without_a_provable_fold_stays_and_a_previous_life_does_
         column=Column.EXECUTING, archived=True, rows=[Row(kind=RowKind.DELIVERED, text="d")]
     )
     signal = parse_watch("x — file docs/plans/done/p.md by 2026-09-30")
+    out = exit_for(delivered, ended_lane(), stale, folded=False, signal=signal, since=since)
+    assert out is not None and out.column == Column.DECISION_MOMENT
+    assert "previous life" in out.reason
+    current = [
+        moved(Column.UP_NEXT, Column.EXECUTING, Actor.MACHINE, since, id=1),
+        row_written(RowKind.DELIVERED, NOW - timedelta(minutes=1), id=2),
+    ]
+    unarchived = card(column=Column.EXECUTING, rows=[Row(kind=RowKind.DELIVERED, text="d")])
     assert (
-        exit_for(delivered, ended_lane(), history, folded=False, signal=signal, since=since) is None
+        exit_for(unarchived, ended_lane(), current, folded=False, signal=signal, since=since)
+        is None
     )
 
 
 def test_a_hand_placed_card_with_no_lane_stays():
     placed = card(column=Column.EXECUTING)
-    lane = lane_for(placed, facts())
+    lane = lane_for(placed, facts(worktrees={}))
     assert exit_for(placed, lane, [], folded=None, signal=None, since=None) is None
 
 
@@ -478,7 +495,10 @@ def test_a_collision_closes_start_and_opens_start_anyway_with_the_reason():
 
 
 def test_a_live_lane_offers_watch_and_stop_and_answer_only_when_stopped():
-    working = lane_for(card(column=Column.EXECUTING), facts(sessions=[session()]))
+    working = lane_for(
+        card(column=Column.EXECUTING),
+        facts(sessions=[session()], worktrees={LANE: "card-7-the-thing"}),
+    )
     offered = doors(card(column=Column.EXECUTING), working)
     assert offered.watch.offered and offered.stop.offered and not offered.answer.offered
     assert not offered.start.offered and "hands on" in offered.start.why
@@ -505,7 +525,11 @@ def test_an_ended_lane_offers_look_and_resume_and_never_watch():
     assert offered.look.offered and offered.resume.offered
     assert not offered.watch.offered and not offered.stop.offered
     gone = lane_for(
-        card(), facts(sessions=[session(pid=None, state=SessionState.ENDED, recorded="stopped")])
+        card(),
+        facts(
+            sessions=[session(pid=None, state=SessionState.ENDED, recorded="stopped")],
+            worktrees={},
+        ),
     )
     after_removal = doors(card(), gone)
     assert after_removal.start.offered, "a removed worktree is a lane that can start again"
@@ -521,3 +545,17 @@ def test_the_owners_signal_question_opens_at_its_due_time():
     lane = lane_for(executed, facts())
     assert doors(executed, lane, signal=signal, signal_due_for_owner=True).signal.offered
     assert not doors(executed, lane, signal=signal, signal_due_for_owner=False).signal.offered
+
+
+def test_a_session_whose_worktree_is_gone_is_an_ended_lane_whatever_proc_says():
+    """Four cards sat in Executing on 2026-09-04: their sessions' spare
+    processes were alive, their worktrees were not. The disk wins."""
+    lane = lane_for(
+        card(),
+        facts(
+            sessions=[session(pid=4242, state=SessionState.DONE, recorded="done")],
+            worktrees={},
+        ),
+    )
+    assert lane.state == LaneState.ENDED and lane.hands_on_since is None
+    assert lane.died == "its worktree is gone from disk"
