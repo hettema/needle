@@ -1,12 +1,13 @@
 import "./tokens.css";
 import "./primitives.css";
-import type { FocusEventHandler, KeyboardEvent, MouseEvent, PointerEventHandler, ReactNode, Ref } from "react";
+import { useEffect, useState, type FocusEventHandler, type KeyboardEvent, type MouseEvent, type PointerEventHandler, type ReactNode, type Ref } from "react";
 import type { DraggableAttributes } from "@dnd-kit/core";
 import { marked } from "marked";
 import DOMPurify from "dompurify";
 import type { CardState, ClaimCount, FoldedCard, Meaning } from "../../types/board";
 import type { Column } from "../../types/column";
-import type { DocumentState, SuggestionKind } from "../../types/document";
+import type { DialState } from "../../types/dial";
+import type { DocumentState, Fix, SuggestionKind } from "../../types/document";
 import type { Standing } from "../../types/evidence";
 import type { RowKind } from "../../types/row";
 import { ASK_ROWS } from "../../types/row";
@@ -167,6 +168,53 @@ export function IdeaDoor({ onOpen, disabled, said }: { onOpen: (text: string) =>
       <button type="submit" className="btn" disabled={disabled}>
         Idea
       </button>
+      {said ? <span className="said">{said}</span> : null}
+    </form>
+  );
+}
+
+/**
+ * The dial in the head (plan 11, item 3): the owner's standing ruling that
+ * a defect its finder marked `Fix: now` enters execution without him — a
+ * toggle, the number of fix lanes that may run at once, and the fix lanes
+ * live against that number. One dial for the whole board, because its limit
+ * is the machine's slots and its one trunk. The number lands on blur or
+ * Enter, so a keystroke is not a turn; the count is the one part that can
+ * carry a meaning, and only while something runs.
+ */
+export function DialControl({ state, onTurn, disabled, said }: { state: DialState; onTurn: (on: boolean, lanes: number) => void; disabled: boolean; said: string | null }) {
+  const { dial, running, quiet } = state;
+  const [lanes, setLanes] = useState(String(dial.lanes));
+  useEffect(() => {
+    setLanes(String(dial.lanes));
+  }, [dial.lanes]);
+  const commit = () => {
+    const wanted = Number.parseInt(lanes, 10);
+    if (Number.isNaN(wanted) || wanted < 0) {
+      setLanes(String(dial.lanes));
+      return;
+    }
+    if (wanted !== dial.lanes) onTurn(dial.on, wanted);
+  };
+  return (
+    <form
+      className="dial"
+      role="group"
+      aria-label="Auto-fix"
+      title="Auto-fix: while on, the board plans and starts a defect marked Fix: now on its own, up to this many fix lanes at once, and the lane then runs like every other lane. One dial for the whole board. The board's own defects run only while no lane is live anywhere."
+      onSubmit={(e) => {
+        e.preventDefault();
+        commit();
+      }}
+    >
+      <label className="dial-on">
+        <input type="checkbox" checked={dial.on} disabled={disabled} onChange={(e) => onTurn(e.target.checked, dial.lanes)} aria-label="Auto-fix defects" />
+        <span>auto-fix</span>
+      </label>
+      <input className="dial-lanes" type="number" inputMode="numeric" min={0} value={lanes} disabled={disabled} aria-label="Fix lanes at once" onChange={(e) => setLanes(e.target.value)} onBlur={commit} />
+      <span className="dial-live" {...(running > 0 ? { "data-meaning": "live" as const } : {})} title={quiet ? "No lane has hands on any project: the board's own defects may run" : "A lane has hands on a project: the board's own defects wait"}>
+        {running} of {dial.lanes} live
+      </span>
       {said ? <span className="said">{said}</span> : null}
     </form>
   );
@@ -647,16 +695,28 @@ const DOC_WHY: Record<DocumentState, string> = {
   gone: "This card cites a document, and no such file exists",
 };
 
+const FIX_WHY: Record<Fix["mark"], string> = {
+  now: "its finder marked it a straight fix: the dial may plan and start it without the owner",
+  when: "its fix waits for a trigger the board reads; delivered makes it a now",
+  his: "its fix implies a decision the owner has to make first",
+};
+
 /**
  * What is written behind a card, right-aligned on its first line: a fact,
  * never a claim, so it is quiet monospace and never a hue. A suggestion says
- * which kind it is — defects and ideas are two rails, not two colours.
+ * which kind it is — defects and ideas are two rails, not two colours — and
+ * a defect says who fixes it, from its `Fix:` line (plan 11, item 2):
+ * `now`, `when`, `his`, or `unmarked` when the line is missing, which the
+ * dial reads as his.
  */
-export function Kind({ state, kind, path }: { state: DocumentState; kind: SuggestionKind | null; path: string | null }) {
+export function Kind({ state, kind, fix, path }: { state: DocumentState; kind: SuggestionKind | null; fix?: Fix | null; path: string | null }) {
+  const marked = state === "suggestion" && kind === "defect";
+  const mark = marked ? (fix ? fix.mark : "unmarked") : null;
   const word = state === "suggestion" && kind ? kind : DOC_LABEL[state];
+  const why = mark ? `; Fix: ${mark} — ${fix ? FIX_WHY[fix.mark] + (fix.trigger ? ` (${fix.trigger})` : fix.why ? ` (${fix.why})` : "") : "no Fix: line on its head; an unmarked defect reads as his"}` : "";
   return (
-    <span className="kind" data-doc={state} title={path ? `${DOC_WHY[state]}: ${path}` : DOC_WHY[state]}>
-      {word}
+    <span className="kind" data-doc={state} {...(mark ? { "data-fix": mark } : {})} title={(path ? `${DOC_WHY[state]}: ${path}` : DOC_WHY[state]) + why}>
+      {mark ? `${word} · ${mark}` : word}
     </span>
   );
 }

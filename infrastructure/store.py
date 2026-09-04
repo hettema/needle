@@ -28,6 +28,7 @@ from domain.audit import AuditEntry, AuditKind
 from domain.board import TrunkState
 from domain.card import Actor, Card, CardOrigin, DocumentLink, Place
 from domain.column import COLUMN_DEFINITIONS, DEFECTS_RAIL, DEFECTS_RAIL_POSITION, Column
+from domain.dial import Dial, DialChange, Filer, FixLane, FixStage, RailCount
 from domain.document import DocumentKind, DocumentRef, SuggestionKind
 from domain.evidence import Evidence
 from domain.gate import Gate
@@ -37,7 +38,7 @@ from domain.launch import Rescue
 from domain.project import Project
 from domain.row import Row, RowKind
 from domain.session import SessionSlot
-from domain.signal import Reading, ReadingSession
+from domain.signal import Reading, SessionWork, WindowlessSession
 from domain.slot import Model, Rung
 from domain.watercooler import WatercoolerLine
 from domain.window import Window, WindowKind
@@ -45,18 +46,22 @@ from infrastructure.schema import (
     AuditRow,
     CardRow,
     CardRowRow,
+    DialChangeRow,
+    DialRow,
     DiscussionRow,
+    FixLaneRow,
     GroupRow,
     HeardRow,
     HookEventRow,
     LaneRow,
     ProjectRow,
+    RailAtOnRow,
     ReadingRow,
-    ReadingSessionRow,
     RescueRow,
     SessionSlotRow,
     TrunkRow,
     WatercoolerRow,
+    WindowlessSessionRow,
     WindowRow,
     WriteStampRow,
 )
@@ -963,15 +968,22 @@ class Store:
                 out[row.card_number] = _reading(row)
             return out
 
-    # ── the sessions the board starts to read a signal (plan 09) ───────
+    # ── the windowless sessions the board starts (plans 09 and 11) ─────
 
-    def open_reading_session(
-        self, slug: str, number: int, session_id: str, slot: str, at: datetime
-    ) -> ReadingSession:
+    def open_windowless_session(
+        self,
+        slug: str,
+        number: int,
+        work: SessionWork,
+        session_id: str,
+        slot: str,
+        at: datetime,
+    ) -> WindowlessSession:
         with self._session() as session, session.begin():
-            row = ReadingSessionRow(
+            row = WindowlessSessionRow(
                 project_slug=slug,
                 card_number=number,
+                work=work.value,
                 session_id=session_id,
                 slot=slot,
                 started_at=at,
@@ -979,37 +991,156 @@ class Store:
             )
             session.add(row)
             session.flush()
-            return _reading_session(row)
+            return _windowless_session(row)
 
-    def end_reading_session(self, reading_session_id: int, at: datetime) -> None:
+    def end_windowless_session(self, windowless_id: int, at: datetime) -> None:
         with self._session() as session, session.begin():
-            row = session.get(ReadingSessionRow, reading_session_id)
+            row = session.get(WindowlessSessionRow, windowless_id)
             if row is not None and row.ended_at is None:
                 row.ended_at = at
 
-    def move_reading_session(self, reading_session_id: int, session_id: str, slot: str) -> None:
-        """The reading now runs as another session: a resume forks the id
-        (verified live 2026-09-04), so the record follows the one that lives."""
+    def move_windowless_session(self, windowless_id: int, session_id: str, slot: str) -> None:
+        """The session now runs as another: a resume forks the id (verified
+        live 2026-09-04), so the record follows the one that lives."""
         with self._session() as session, session.begin():
-            row = session.get(ReadingSessionRow, reading_session_id)
+            row = session.get(WindowlessSessionRow, windowless_id)
             if row is not None:
                 row.session_id = session_id
                 row.slot = slot
 
-    def reading_sessions(self, slug: str, *, open_only: bool = False) -> list[ReadingSession]:
-        """Every reading session of the project, oldest first; with
-        `open_only`, those whose finding has not landed and whose process
-        the loop has not yet found gone."""
+    def windowless_sessions(
+        self, slug: str, *, work: SessionWork | None = None, open_only: bool = False
+    ) -> list[WindowlessSession]:
+        """Every windowless session of the project, oldest first; with
+        `work`, those started for that work; with `open_only`, those whose
+        finding or plan has not landed and whose process the loop has not
+        yet found gone."""
         with self._session() as session:
-            query = select(ReadingSessionRow).where(ReadingSessionRow.project_slug == slug)
+            query = select(WindowlessSessionRow).where(WindowlessSessionRow.project_slug == slug)
+            if work is not None:
+                query = query.where(WindowlessSessionRow.work == work.value)
             if open_only:
-                query = query.where(ReadingSessionRow.ended_at.is_(None))
-            rows = session.scalars(query.order_by(ReadingSessionRow.id))
-            return [_reading_session(r) for r in rows]
+                query = query.where(WindowlessSessionRow.ended_at.is_(None))
+            rows = session.scalars(query.order_by(WindowlessSessionRow.id))
+            return [_windowless_session(r) for r in rows]
 
-    def open_reading_sessions(self, slug: str) -> dict[int, ReadingSession]:
-        """The reading in flight on each card, by card number."""
-        return {r.card_number: r for r in self.reading_sessions(slug, open_only=True)}
+    def open_windowless_sessions(
+        self, slug: str, work: SessionWork
+    ) -> dict[int, WindowlessSession]:
+        """The session of that work in flight on each card, by card number."""
+        open_now = self.windowless_sessions(slug, work=work, open_only=True)
+        return {r.card_number: r for r in open_now}
+
+    # ── the dial (plan 11) ─────────────────────────────────────────────
+
+    def dial(self) -> Dial:
+        with self._session() as session:
+            row = session.get(DialRow, 1)
+            if row is None:
+                return Dial(on=False, lanes=1, changed_at=None, first_on_at=None)
+            return _dial(row)
+
+    def turn_dial(self, *, on: bool, lanes: int, actor: Actor, at: datetime) -> Dial:
+        """The owner turns the dial: the setting, and one row of its record.
+        A turn that changes nothing writes nothing. The first turn to on
+        stamps `first_on_at`, the moment the rail is measured against."""
+        if lanes < 0:
+            raise StoreRefusal("The dial's number of fix lanes cannot be below zero.")
+        with self._session() as session, session.begin():
+            row = session.get(DialRow, 1)
+            if row is None:
+                row = DialRow(id=1, on=False, lanes=1, changed_at=None, first_on_at=None)
+                session.add(row)
+            if row.on == on and row.lanes == lanes:
+                return _dial(row)
+            row.on = on
+            row.lanes = lanes
+            row.changed_at = at
+            if on and row.first_on_at is None:
+                row.first_on_at = at
+            session.add(DialChangeRow(at=at, actor=actor.value, on=on, lanes=lanes))
+            session.flush()
+            return _dial(row)
+
+    def dial_changes(self) -> list[DialChange]:
+        with self._session() as session:
+            rows = session.scalars(select(DialChangeRow).order_by(DialChangeRow.id))
+            return [
+                DialChange(id=r.id, at=r.at, actor=Actor(r.actor), on=r.on, lanes=r.lanes)
+                for r in rows
+            ]
+
+    def record_rail_at_on(self, counts: list[RailCount]) -> bool:
+        """The rail as it stood when the dial was first turned on, once: a
+        second call writes nothing and answers False."""
+        with self._session() as session, session.begin():
+            if session.scalar(select(RailAtOnRow)) is not None:
+                return False
+            for rail in counts:
+                for filer, count in rail.counts.items():
+                    session.add(
+                        RailAtOnRow(project_slug=rail.project, filer=filer.value, count=count)
+                    )
+            return True
+
+    def rail_at_on(self) -> list[RailCount]:
+        with self._session() as session:
+            rows = session.scalars(select(RailAtOnRow).order_by(RailAtOnRow.id)).all()
+            by_project: dict[str, dict[Filer, int]] = {}
+            for row in rows:
+                by_project.setdefault(row.project_slug, {})[Filer(row.filer)] = row.count
+            return [
+                RailCount(project=slug, counts=counts, total=sum(counts.values()))
+                for slug, counts in by_project.items()
+            ]
+
+    # ── the fix lanes the dial ran (plan 11) ───────────────────────────
+
+    def open_fix_lane(self, slug: str, number: int, at: datetime) -> FixLane:
+        with self._session() as session, session.begin():
+            row = FixLaneRow(
+                project_slug=slug,
+                card_number=number,
+                stage=FixStage.PLANNING.value,
+                planning_started_at=at,
+                planned_at=None,
+                started_at=None,
+                ended_at=None,
+                note=None,
+            )
+            session.add(row)
+            session.flush()
+            return _fix_lane(row)
+
+    def stage_fix_lane(
+        self, fix_lane_id: int, stage: FixStage, at: datetime, *, note: str | None = None
+    ) -> FixLane:
+        """Move a fix lane to its next stage, stamping the stage's own time.
+        A note says why when the stage is one that ends the dial's part."""
+        with self._session() as session, session.begin():
+            row = session.get(FixLaneRow, fix_lane_id)
+            if row is None:
+                raise StoreRefusal(f"There is no fix lane {fix_lane_id}.")
+            row.stage = stage.value
+            if stage == FixStage.PLANNED:
+                row.planned_at = at
+            elif stage == FixStage.STARTED:
+                row.started_at = at
+            elif stage in (FixStage.FOLDED, FixStage.ASKED, FixStage.ENDED):
+                row.ended_at = at
+            if note is not None:
+                row.note = note
+            session.flush()
+            return _fix_lane(row)
+
+    def fix_lanes(self, slug: str | None = None) -> list[FixLane]:
+        """Every fix lane the dial ran, oldest first; of one project when named."""
+        with self._session() as session:
+            query = select(FixLaneRow)
+            if slug is not None:
+                query = query.where(FixLaneRow.project_slug == slug)
+            rows = session.scalars(query.order_by(FixLaneRow.id))
+            return [_fix_lane(r) for r in rows]
 
     # ── the trunk ──────────────────────────────────────────────────────
 
@@ -1266,15 +1397,36 @@ def _reading(row: ReadingRow) -> Reading:
     )
 
 
-def _reading_session(row: ReadingSessionRow) -> ReadingSession:
-    return ReadingSession(
+def _windowless_session(row: WindowlessSessionRow) -> WindowlessSession:
+    return WindowlessSession(
         id=row.id,
         project=row.project_slug,
         card_number=row.card_number,
+        work=SessionWork(row.work),
         session_id=row.session_id,
         slot=row.slot,
         started_at=row.started_at,
         ended_at=row.ended_at,
+    )
+
+
+def _dial(row: DialRow) -> Dial:
+    return Dial(
+        on=row.on, lanes=row.lanes, changed_at=row.changed_at, first_on_at=row.first_on_at
+    )
+
+
+def _fix_lane(row: FixLaneRow) -> FixLane:
+    return FixLane(
+        id=row.id,
+        project=row.project_slug,
+        card_number=row.card_number,
+        stage=FixStage(row.stage),
+        planning_started_at=row.planning_started_at,
+        planned_at=row.planned_at,
+        started_at=row.started_at,
+        ended_at=row.ended_at,
+        note=row.note,
     )
 
 

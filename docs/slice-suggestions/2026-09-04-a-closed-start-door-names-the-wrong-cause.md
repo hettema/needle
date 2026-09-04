@@ -1,6 +1,7 @@
 # A closed Start door names the wrong cause
 
 **Kind:** defect
+**Fix:** now
 **Found by:** work-0c on the Omarchy board (2026-09-04), when Dennis could not
 start card #7 and the card's own sentence sent us both to look at its column,
 which was not the problem.

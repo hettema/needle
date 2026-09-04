@@ -16,7 +16,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from domain.gate import Gate
-from domain.launch import Attempt, Launch, LaunchVerdict, ReadingStart, Start, Stopped
+from domain.launch import Attempt, Launch, LaunchVerdict, Start, Stopped, WindowlessStart
 from domain.session import Session, SessionKind, SessionSlot
 from domain.slot import Handoff, Model, Placement, Rung, Slot
 from infrastructure import clock
@@ -385,9 +385,10 @@ def start(store: Store, request: Start) -> Launch:
     )
 
 
-def read(store: Store, request: ReadingStart) -> Launch:
-    """Start a reading session in the repository's own checkout (plan 09,
-    item 1): the same walk as a lane's, with no worktree, so the board never
+def windowless(store: Store, request: WindowlessStart) -> Launch:
+    """Start a session in the repository's own checkout with no worktree — a
+    reading of a signal (plan 09, item 1) or the planning of a defect under
+    the dial (plan 11, item 4): the same walk as a lane's, so the board never
     reads it as hands on a tree."""
     return _walk(
         store,

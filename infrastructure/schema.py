@@ -279,22 +279,85 @@ class ReadingRow(Base):
     cannot-tell, never about a machine's unreadable."""
 
 
-class ReadingSessionRow(Base):
-    """A session the board started to read one card's signal (plan 09, item
-    1): open while it runs, ended when its finding lands or its process is
-    gone. The loop reads the open rows to list a reading on its card and to
-    start no second one."""
+class WindowlessSessionRow(Base):
+    """A session the board started with no window and no worktree: to read
+    one card's signal (plan 09, item 1) or to plan a marked defect under the
+    dial (plan 11, item 4). Open while it runs, ended when its finding or
+    its plan lands or its process is gone. The loops read the open rows to
+    list the session on its card and to start no second one."""
 
-    __tablename__ = "reading_sessions"
-    __table_args__ = (Index("ix_reading_sessions_card", "project_slug", "card_number"),)
+    __tablename__ = "windowless_sessions"
+    __table_args__ = (Index("ix_windowless_sessions_card", "project_slug", "card_number"),)
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     project_slug: Mapped[str] = mapped_column(String(80))
     card_number: Mapped[int] = mapped_column(Integer)
+    work: Mapped[str] = mapped_column(String(20))
+    """`reading` or `planning`: what the session was started to do."""
     session_id: Mapped[str] = mapped_column(String(36))
     slot: Mapped[str] = mapped_column(String(40))
     started_at: Mapped[datetime] = mapped_column(UtcDateTime)
     ended_at: Mapped[datetime | None] = mapped_column(UtcDateTime, nullable=True)
+
+
+class DialRow(Base):
+    """One row: the owner's standing ruling on defects (plan 11, item 3).
+    On or off and the number of fix lanes, kept here so a restart keeps his
+    setting; every turn is a row in `dial_changes`."""
+
+    __tablename__ = "dial"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    on: Mapped[bool] = mapped_column(Boolean)
+    lanes: Mapped[int] = mapped_column(Integer)
+    changed_at: Mapped[datetime | None] = mapped_column(UtcDateTime, nullable=True)
+    first_on_at: Mapped[datetime | None] = mapped_column(UtcDateTime, nullable=True)
+
+
+class DialChangeRow(Base):
+    """One turn of the dial: who, when, to what. The audit table is per card
+    and the dial is about no card, so its record is its own."""
+
+    __tablename__ = "dial_changes"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    at: Mapped[datetime] = mapped_column(UtcDateTime)
+    actor: Mapped[str] = mapped_column(String(20))
+    on: Mapped[bool] = mapped_column(Boolean)
+    lanes: Mapped[int] = mapped_column(Integer)
+
+
+class FixLaneRow(Base):
+    """One defect the dial took (plan 11, item 4): the stage it is at, from
+    its planning session to its fold, and when each stage began. What the
+    loop counts against the number, and what `needle fixes` reads."""
+
+    __tablename__ = "fix_lanes"
+    __table_args__ = (Index("ix_fix_lanes_card", "project_slug", "card_number"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    project_slug: Mapped[str] = mapped_column(String(80))
+    card_number: Mapped[int] = mapped_column(Integer)
+    stage: Mapped[str] = mapped_column(String(20))
+    planning_started_at: Mapped[datetime] = mapped_column(UtcDateTime)
+    planned_at: Mapped[datetime | None] = mapped_column(UtcDateTime, nullable=True)
+    started_at: Mapped[datetime | None] = mapped_column(UtcDateTime, nullable=True)
+    ended_at: Mapped[datetime | None] = mapped_column(UtcDateTime, nullable=True)
+    note: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+
+class RailAtOnRow(Base):
+    """The defects rail of each project at the moment the dial was first
+    turned on, by who filed each card (plan 11, item 6): the baseline the
+    thirty-lane look reads the rail against."""
+
+    __tablename__ = "rail_at_on"
+    __table_args__ = (UniqueConstraint("project_slug", "filer", name="uq_rail_at_on"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    project_slug: Mapped[str] = mapped_column(String(80))
+    filer: Mapped[str] = mapped_column(String(20))
+    count: Mapped[int] = mapped_column(Integer)
 
 
 class TrunkRow(Base):

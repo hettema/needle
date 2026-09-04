@@ -5,8 +5,8 @@ import type { Place } from "../types/card";
 import type { Claim } from "../types/board";
 import type { Column } from "../types/column";
 import type { Project } from "../types/project";
-import { openDoor, openIdea, openPlan } from "../api";
-import { AppHead, AskList, AskRow, BoardStrip, Breakdown, CardShell, CorpusLine, Fact, HeadFrame, HeadTools, IdeaDoor, Lens, List, Notice, Off, ProjectSwitcher, Rail, Strong, Sub, TalkList, TalkRow, TogetherBar, Word, Wordmark, Words } from "../components/ui";
+import { openDoor, openIdea, openPlan, turnDial } from "../api";
+import { AppHead, AskList, AskRow, BoardStrip, Breakdown, CardShell, CorpusLine, DialControl, Fact, HeadFrame, HeadTools, IdeaDoor, Lens, List, Notice, Off, ProjectSwitcher, Rail, Strong, Sub, TalkList, TalkRow, TogetherBar, Word, Wordmark, Words } from "../components/ui";
 import type { BoardStore } from "../state/board";
 import { CardBody } from "./CardView";
 import { ColumnBlock, FOLD_AT } from "./ColumnBlock";
@@ -65,6 +65,8 @@ export function Board({ slug, store, projects, onSwitch }: { slug: string; store
   const [readSaid, setReadSaid] = useState<string | null>(null);
   const [ideaOpening, setIdeaOpening] = useState(false);
   const [ideaSaid, setIdeaSaid] = useState<string | null>(null);
+  const [dialTurning, setDialTurning] = useState(false);
+  const [dialSaid, setDialSaid] = useState<string | null>(null);
   // Suggestion cards picked for one plan (plan 06, item 5).
   const [selected, setSelected] = useState<Set<number>>(new Set());
   const [planning, setPlanning] = useState(false);
@@ -227,6 +229,25 @@ export function Board({ slug, store, projects, onSwitch }: { slug: string; store
     [slug],
   );
 
+  // The dial is the owner's standing ruling (plan 11, item 3): a turn is
+  // persisted and audited as his before the head shows it, and the board is
+  // re-read so the count beside it is the store's, never the page's.
+  const turnTheDial = useCallback(
+    async (on: boolean, lanes: number) => {
+      setDialTurning(true);
+      try {
+        const state = await turnDial(on, lanes);
+        setDialSaid(`auto-fix ${state.dial.on ? "on" : "off"}, ${state.dial.lanes} fix lane${state.dial.lanes === 1 ? "" : "s"} at most`);
+      } catch (e) {
+        setDialSaid(`The dial did not turn: ${e instanceof Error ? e.message : String(e)}`);
+      } finally {
+        setDialTurning(false);
+        await store.refresh();
+      }
+    },
+    [store],
+  );
+
   // One Plan door for every picked suggestion: the brief lists them all and the plan carries them all.
   const planTogether = useCallback(async () => {
     const numbers = Array.from(selected).sort((a, b) => a - b);
@@ -330,6 +351,7 @@ export function Board({ slug, store, projects, onSwitch }: { slug: string; store
           ))}
         </Words>
         <HeadTools>
+          <DialControl state={board.dial} onTurn={(on, lanes) => void turnTheDial(on, lanes)} disabled={dialTurning} said={dialSaid} />
           <Lens value={lens} options={LENSES} onChange={setLens} title="A lens, never a write: sorting changes what you see, never the rank. Drag needs Rank." />
           <IdeaDoor onOpen={(text) => void openAnIdea(text)} disabled={ideaOpening} said={ideaSaid} />
         </HeadTools>

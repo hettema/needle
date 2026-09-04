@@ -7,6 +7,7 @@ long as the enquiring party remains sceptical and verifies rather than
 believes." And: "I guess it's a feature that needs some way to turn repos
 on/off to be included in cross repo knowledge sharing."
 **Kind:** idea
+**Fix:** his
 
 ## Observation
 

@@ -1,6 +1,7 @@
 # The board asks for a rescue on work it recorded as done
 
 **Kind:** defect
+**Fix:** now
 **Found by:** the owner, from the board's Idea door on 2026-09-04 (conversation
 56f7b05f), in the card history read while tracing why card #196's lane band was
 reporting a death.

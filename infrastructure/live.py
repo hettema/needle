@@ -20,6 +20,7 @@ from datetime import datetime
 from pathlib import Path
 
 from board.assemble import assemble_board, assemble_detail, folded_under
+from board.dial import dial_state
 from board.lane import nothing_read
 from board.reconcile import Effects, reconcile
 from domain.audit import AuditKind
@@ -27,11 +28,13 @@ from domain.board import BoardState, CardDetail, MachineState
 from domain.card import Actor, Card, CardOrigin, Place
 from domain.column import DEFECTS_RAIL, Column
 from domain.corpus import CorpusIndex
+from domain.dial import DialState
 from domain.document import DocumentKind, SuggestionKind
 from domain.evidence import Evidence
 from domain.lane import Doors, Lane, LaneSnapshot
 from domain.project import Project
 from domain.row import Row
+from domain.signal import SessionWork
 from domain.watercooler import WatercoolerLine
 from infrastructure import clock
 from infrastructure.corpus import scan, watch
@@ -253,8 +256,20 @@ class Live:
             machine=self.machine,
             placements=self.store.placements(slug),
             watercooler=self.store.watercooler(slug, limit=WATERCOOLER_SHOWN),
-            reading_sessions=self.store.open_reading_sessions(slug),
+            reading_sessions=self.store.open_windowless_sessions(slug, SessionWork.READING),
+            planning_sessions=self.store.open_windowless_sessions(slug, SessionWork.PLANNING),
+            dial=self.dial_state(),
         )
+
+    def dial_state(self) -> DialState:
+        """The dial with the fix lanes live against its number, and whether
+        the machine is quiet, from every project's last read (plan 11)."""
+        lanes = {
+            slug: live.snapshot.lanes
+            for slug, live in self.projects.items()
+            if live.snapshot is not None
+        }
+        return dial_state(self.store.dial(), self.store.fix_lanes(), lanes)
 
     def card(self, slug: str, number: int) -> Card:
         self._live(slug)
@@ -278,9 +293,10 @@ class Live:
             read=live.snapshot is not None,
             watercooler=self.store.watercooler(slug, limit=WATERCOOLER_SHOWN),
             folded=folded_under(self.store.cards(slug)).get(number),
-            reading=self.store.open_reading_sessions(slug).get(number),
+            reading=self.store.open_windowless_sessions(slug, SessionWork.READING).get(number),
             heard=self.store.heard_mark(slug, number),
             machine=self.machine,
+            planning=self.store.open_windowless_sessions(slug, SessionWork.PLANNING).get(number),
         )
 
     def lane_and_doors(self, slug: str, card: Card) -> tuple[Lane | None, Doors]:

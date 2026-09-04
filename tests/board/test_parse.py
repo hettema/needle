@@ -173,3 +173,51 @@ def test_a_plans_head_names_the_suggestions_it_carries_and_its_body_does_not():
     )
     assert document.cites == ["2026-09-04-a", "2026-09-04-b"]
     assert parse("# A plan\n\n## Intent\n\nx\n").cites == []
+
+
+# ── plan 11: who fixes a suggestion ────────────────────────────────────
+
+
+def test_a_suggestions_fix_mark_is_read_from_its_head_and_only_there():
+    from board.parse import FIX_NOT_A_MARK, NO_FIX_LINE, TWO_FIX_LINES
+    from domain.document import FixMark
+
+    kind, path = DocumentKind.SUGGESTION, "docs/slice-suggestions/2026-09-04-x.md"
+
+    def fix(text: str):
+        document = parse(text, kind, path)
+        return document.fix, document.fix_note
+
+    now, _ = fix("# A thing\n\n**Kind:** defect\n**Fix:** now\n\n## O\n\nx\n")
+    assert now is not None and now.mark == FixMark.NOW and now.why is None
+    now_why, _ = fix("# A thing\n\n**Fix:** Now — two one-line edits\n\n## O\n\nx\n")
+    assert now_why is not None and (now_why.mark, now_why.why) == (
+        FixMark.NOW,
+        "two one-line edits",
+    )
+    his, _ = fix("# A thing\n\n**Fix:** his: a product surface\n\n## O\n\nx\n")
+    assert his is not None and (his.mark, his.why) == (FixMark.HIS, "a product surface")
+    when, _ = fix(
+        "# A thing\n\n**Fix:** when one production row exists — session the ledger for a "
+        "row since the close by 2026-10-01 every 1d\n\n## O\n\nx\n"
+    )
+    assert when is not None and when.mark == FixMark.WHEN
+    assert when.trigger == (
+        "one production row exists — session the ledger for a row since the close by "
+        "2026-10-01 every 1d"
+    )
+    # The head only: a `Fix:` line under a section is prose that says what
+    # was fixed (Hello Revenue's 2026-07-07 platform guard), never a mark.
+    assert fix(
+        "# A thing\n\n**Kind:** defect\n\n## Instance 2 — fixed\n\n**Fix:** extracted the "
+        "resolver.\n"
+    ) == (None, NO_FIX_LINE)
+    none, note = fix(
+        "# A thing\n\n**Kind:** defect\n**Fix:** extracted the resolver\n\n## O\n\nx\n"
+    )
+    assert none is None and note == f"{FIX_NOT_A_MARK}: Fix: extracted the resolver"
+    two, note = fix("# A thing\n\n**Fix:** now\n**Fix:** his\n\n## O\n\nx\n")
+    assert two is None and note == f"{TWO_FIX_LINES}: Fix: now / Fix: his"
+    # A plan carries no mark, whatever its head says.
+    plan = parse("# A plan\n\n**Fix:** now\n\n## Intent\n\nx\n")
+    assert plan.fix is None and plan.fix_note is None

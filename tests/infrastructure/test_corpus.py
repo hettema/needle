@@ -23,7 +23,7 @@ def test_the_scan_reads_the_four_folders_and_skips_readmes(corpus: Path):
     assert (DocumentKind.PLAN, True, "2026-08-30-the-office-runs-its-own-checks") in kinds
     assert (DocumentKind.SUGGESTION, True, "2026-04-02-shared-mooring-lines") in kinds
     assert not any(d.stem == "README" for d in index.documents)
-    assert len(index.live()) == 19 and len(index.archived()) == 8
+    assert len(index.live()) == 20 and len(index.archived()) == 8
 
 
 def test_a_folder_without_plans_is_not_a_corpus(tmp_path: Path):
@@ -35,7 +35,7 @@ def test_a_folder_without_plans_is_not_a_corpus(tmp_path: Path):
 def test_the_registration_sweep_cards_every_live_document(store: Store, project, corpus: Path):
     store.add_project(project)
     index, effects = sweep(store, project, origin=CardOrigin.FOUNDING, at=NOW)
-    assert len(effects.born) == 19
+    assert len(effects.born) == 20
     cards = store.cards("proj")
     assert {c.place.column for c in cards} == {Column.PLANNED, Column.BACKLOG}
     assert all(c.origin == CardOrigin.FOUNDING for c in cards)

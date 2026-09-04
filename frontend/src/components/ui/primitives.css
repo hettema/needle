@@ -129,6 +129,26 @@ body { overflow: hidden; }
 .idea input:focus-visible { outline: 2px solid var(--ink); outline-offset: 1px; }
 .idea .said { font-size: 11px; color: var(--ink-2); max-width: 420px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
+/* The dial (plan 11): the owner's standing ruling on defects, one for the
+ * whole board. A control is a shape, never a colour; only the count of fix
+ * lanes live carries a meaning, and only while something runs. */
+.dial {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 3px 8px 3px 6px; border: 1px solid var(--line-2); border-radius: var(--r-ctrl);
+  background: var(--paper); font-family: var(--mono); font-size: 11px; letter-spacing: .03em;
+  color: var(--ink-2);
+}
+.dial-on { display: inline-flex; align-items: center; gap: 5px; cursor: pointer; }
+.dial-on input { margin: 0; width: 13px; height: 13px; accent-color: var(--ink); cursor: pointer; }
+.dial-lanes {
+  width: 38px; font: inherit; font-size: 11px; padding: 2px 4px; text-align: center;
+  border: 1px solid var(--line-2); border-radius: 3px; background: var(--surface); color: var(--ink);
+}
+.dial-lanes:focus-visible { outline: 2px solid var(--ink); outline-offset: 1px; }
+.dial-live { white-space: nowrap; color: var(--ink-3); }
+.dial-live[data-meaning] { color: var(--meaning); }
+.dial .said { font-size: 11px; color: var(--ink-2); max-width: 260px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
 /* ── the batched question ──────────────────────────────────────────── */
 
 .asks {

@@ -10,7 +10,7 @@
     "generated_at": "2026-09-04T08:30:00Z",
     "corpus": {
       "live_plans": 11,
-      "live_suggestions": 8,
+      "live_suggestions": 9,
       "archived": 8,
       "watching": true,
       "watch_note": null,
@@ -32,7 +32,7 @@
         }
       ],
       "live": [],
-      "unplanned_defects": 1,
+      "unplanned_defects": 2,
       "unplanned_ideas": 7,
       "arrived_today": 1
     },
@@ -50,6 +50,16 @@
         "execution",
         "search"
       ]
+    },
+    "dial": {
+      "dial": {
+        "on": false,
+        "lanes": 1,
+        "changed_at": null,
+        "first_on_at": null
+      },
+      "running": 0,
+      "quiet": true
     },
     "columns": [
       {
@@ -79,6 +89,7 @@
                 "document_state": "suggestion",
                 "document_path": "docs/slice-suggestions/2026-09-01-the-night-audit-re-reads-the-whole-harbour-log.md",
                 "kind": "defect",
+                "fix": null,
                 "state": {
                   "word": "no plan yet",
                   "meaning": "quiet",
@@ -104,7 +115,51 @@
                   "state": "trusted",
                   "words": null
                 },
-                "reading": null
+                "reading": null,
+                "planning": null
+              },
+              {
+                "number": 267,
+                "title": "The tide clock drifts a minute a day",
+                "essence": "The quay display shows high water from a clock it winds itself at boot.",
+                "essence_source": "document",
+                "gate": null,
+                "tags": [],
+                "document_state": "suggestion",
+                "document_path": "docs/slice-suggestions/2026-09-04-the-tide-clock-drifts-a-minute-a-day.md",
+                "kind": "defect",
+                "fix": {
+                  "mark": "now",
+                  "why": "the tide table plan says the harbour's own clock is the reference, and the quay display keeps its own",
+                  "trigger": null
+                },
+                "state": {
+                  "word": "no plan yet",
+                  "meaning": "quiet",
+                  "detail": null,
+                  "loop": null,
+                  "door": null,
+                  "hint": "open to see"
+                },
+                "claims": [],
+                "folded": [],
+                "is_new": false,
+                "age_date": "2026-09-04",
+                "place": {
+                  "column": "Backlog",
+                  "group": "Defects",
+                  "position": 1
+                },
+                "lane_state": "none",
+                "colliding": null,
+                "standing": {
+                  "actor": "corpus",
+                  "evidence": null,
+                  "state": "trusted",
+                  "words": null
+                },
+                "reading": null,
+                "planning": null
               }
             ],
             "rail": true
@@ -122,6 +177,7 @@
                 "document_state": "suggestion",
                 "document_path": "docs/slice-suggestions/2026-09-03-the-quay-display-polls-the-office-all-night.md",
                 "kind": "idea",
+                "fix": null,
                 "state": {
                   "word": "no plan yet",
                   "meaning": "quiet",
@@ -147,7 +203,8 @@
                   "state": "trusted",
                   "words": null
                 },
-                "reading": null
+                "reading": null,
+                "planning": null
               },
               {
                 "number": 242,
@@ -159,6 +216,7 @@
                 "document_state": "suggestion",
                 "document_path": "docs/slice-suggestions/2026-09-02-the-welcome-board-shows-one-boats-whole-stay.md",
                 "kind": "idea",
+                "fix": null,
                 "state": {
                   "word": "no plan yet",
                   "meaning": "quiet",
@@ -184,7 +242,8 @@
                   "state": "trusted",
                   "words": null
                 },
-                "reading": null
+                "reading": null,
+                "planning": null
               },
               {
                 "number": 120,
@@ -196,6 +255,7 @@
                 "document_state": "gone",
                 "document_path": "docs/slice-suggestions/2026-07-12-berth-list-keys.md · 2026-08-19-office-screen-refresh.md",
                 "kind": null,
+                "fix": null,
                 "state": {
                   "word": "document nowhere",
                   "meaning": "broken",
@@ -223,7 +283,8 @@
                   "state": "trusted",
                   "words": null
                 },
-                "reading": null
+                "reading": null,
+                "planning": null
               }
             ],
             "rail": false
@@ -248,6 +309,7 @@
                 "document_state": "note",
                 "document_path": null,
                 "kind": null,
+                "fix": null,
                 "state": {
                   "word": "no document",
                   "meaning": "quiet",
@@ -273,7 +335,8 @@
                   "state": "trusted",
                   "words": null
                 },
-                "reading": null
+                "reading": null,
+                "planning": null
               }
             ],
             "rail": false
@@ -291,6 +354,7 @@
                 "document_state": "suggestion",
                 "document_path": "docs/slice-suggestions/2026-08-29-two-meters-on-one-pontoon-disagree.md",
                 "kind": "idea",
+                "fix": null,
                 "state": {
                   "word": "no plan yet",
                   "meaning": "quiet",
@@ -316,7 +380,8 @@
                   "state": "trusted",
                   "words": null
                 },
-                "reading": null
+                "reading": null,
+                "planning": null
               },
               {
                 "number": 264,
@@ -328,6 +393,7 @@
                 "document_state": "suggestion",
                 "document_path": "docs/slice-suggestions/2026-08-31-the-same-slip-is-mailed-twice.md",
                 "kind": "idea",
+                "fix": null,
                 "state": {
                   "word": "no plan yet",
                   "meaning": "quiet",
@@ -353,7 +419,8 @@
                   "state": "trusted",
                   "words": null
                 },
-                "reading": null
+                "reading": null,
+                "planning": null
               },
               {
                 "number": 265,
@@ -365,6 +432,7 @@
                 "document_state": "suggestion",
                 "document_path": "docs/slice-suggestions/2026-09-01-the-waiting-list-forgets-who-asked-first.md",
                 "kind": "idea",
+                "fix": null,
                 "state": {
                   "word": "no plan yet",
                   "meaning": "quiet",
@@ -390,7 +458,8 @@
                   "state": "trusted",
                   "words": null
                 },
-                "reading": null
+                "reading": null,
+                "planning": null
               },
               {
                 "number": 266,
@@ -402,6 +471,7 @@
                 "document_state": "suggestion",
                 "document_path": "docs/slice-suggestions/2026-09-04-a-boat-longer-than-its-berth-is-accepted.md",
                 "kind": "idea",
+                "fix": null,
                 "state": {
                   "word": "no plan yet",
                   "meaning": "quiet",
@@ -427,13 +497,14 @@
                   "state": "trusted",
                   "words": null
                 },
-                "reading": null
+                "reading": null,
+                "planning": null
               }
             ],
             "rail": false
           }
         ],
-        "count": 9
+        "count": 10
       },
       {
         "definition": {
@@ -464,6 +535,7 @@
                 "document_state": "plan",
                 "document_path": "docs/plans/2026-09-01-the-waiting-list-offers-every-berth-that-fits.md",
                 "kind": null,
+                "fix": null,
                 "state": {
                   "word": "not read yet",
                   "meaning": "quiet",
@@ -489,7 +561,8 @@
                   "state": "trusted",
                   "words": null
                 },
-                "reading": null
+                "reading": null,
+                "planning": null
               }
             ],
             "rail": false
@@ -509,6 +582,7 @@
                 "document_state": "plan",
                 "document_path": "docs/plans/2026-09-02-the-skipper-sees-the-price-before-the-berth.md",
                 "kind": null,
+                "fix": null,
                 "state": {
                   "word": "not read yet",
                   "meaning": "quiet",
@@ -534,7 +608,8 @@
                   "state": "trusted",
                   "words": null
                 },
-                "reading": null
+                "reading": null,
+                "planning": null
               }
             ],
             "rail": false
@@ -554,6 +629,7 @@
                 "document_state": "plan",
                 "document_path": "docs/plans/2026-08-26-a-screen-nobody-opens-is-removed.md",
                 "kind": null,
+                "fix": null,
                 "state": {
                   "word": "not read yet",
                   "meaning": "quiet",
@@ -579,7 +655,8 @@
                   "state": "trusted",
                   "words": null
                 },
-                "reading": null
+                "reading": null,
+                "planning": null
               }
             ],
             "rail": false
@@ -597,6 +674,7 @@
                 "document_state": "plan",
                 "document_path": "docs/plans/2026-09-04-the-tide-table-is-the-harbours-own.md",
                 "kind": null,
+                "fix": null,
                 "state": {
                   "word": "not read yet",
                   "meaning": "quiet",
@@ -622,10 +700,11 @@
                   "state": "trusted",
                   "words": null
                 },
-                "reading": null
+                "reading": null,
+                "planning": null
               },
               {
-                "number": 267,
+                "number": 268,
                 "title": "A storm warning reaches every skipper in the harbour",
                 "essence": "Every boat in the harbour hears a gale warning the moment the office does.",
                 "essence_source": "document",
@@ -634,6 +713,7 @@
                 "document_state": "plan",
                 "document_path": "docs/plans/2026-09-04-a-storm-warning-reaches-every-skipper.md",
                 "kind": null,
+                "fix": null,
                 "state": {
                   "word": "not read yet",
                   "meaning": "quiet",
@@ -659,7 +739,8 @@
                   "state": "trusted",
                   "words": null
                 },
-                "reading": null
+                "reading": null,
+                "planning": null
               }
             ],
             "rail": false
@@ -694,6 +775,7 @@
                 "document_state": "plan",
                 "document_path": "docs/plans/2026-09-03-every-metered-kilowatt-is-billed.md",
                 "kind": null,
+                "fix": null,
                 "state": {
                   "word": "not read yet",
                   "meaning": "quiet",
@@ -719,7 +801,8 @@
                   "state": "trusted",
                   "words": null
                 },
-                "reading": null
+                "reading": null,
+                "planning": null
               },
               {
                 "number": 241,
@@ -731,6 +814,7 @@
                 "document_state": "plan",
                 "document_path": "docs/plans/2026-09-02-a-gate-code-arrives-before-the-boat-does.md",
                 "kind": null,
+                "fix": null,
                 "state": {
                   "word": "not read yet",
                   "meaning": "quiet",
@@ -756,7 +840,8 @@
                   "state": "trusted",
                   "words": null
                 },
-                "reading": null
+                "reading": null,
+                "planning": null
               },
               {
                 "number": 228,
@@ -768,6 +853,7 @@
                 "document_state": "note",
                 "document_path": null,
                 "kind": null,
+                "fix": null,
                 "state": {
                   "word": "not read yet",
                   "meaning": "quiet",
@@ -793,7 +879,8 @@
                   "state": "trusted",
                   "words": null
                 },
-                "reading": null
+                "reading": null,
+                "planning": null
               },
               {
                 "number": 237,
@@ -805,6 +892,7 @@
                 "document_state": "plan",
                 "document_path": "docs/plans/2026-08-28-a-berth-is-never-let-twice.md",
                 "kind": null,
+                "fix": null,
                 "state": {
                   "word": "not read yet",
                   "meaning": "quiet",
@@ -830,7 +918,8 @@
                   "state": "trusted",
                   "words": null
                 },
-                "reading": null
+                "reading": null,
+                "planning": null
               },
               {
                 "number": 174,
@@ -844,6 +933,7 @@
                 "document_state": "plan",
                 "document_path": "docs/plans/2026-08-30-the-booking-office-stops-growing-into-one-file.md",
                 "kind": null,
+                "fix": null,
                 "state": {
                   "word": "not read yet",
                   "meaning": "quiet",
@@ -869,7 +959,8 @@
                   "state": "trusted",
                   "words": null
                 },
-                "reading": null
+                "reading": null,
+                "planning": null
               }
             ],
             "rail": false
@@ -904,6 +995,7 @@
                 "document_state": "archived",
                 "document_path": "docs/plans/done/2026-08-25-the-fuel-pontoon-takes-cards.md",
                 "kind": null,
+                "fix": null,
                 "state": {
                   "word": "no hands on it",
                   "meaning": "quiet",
@@ -929,7 +1021,8 @@
                   "state": "unknown",
                   "words": "imported from Needle 0.1; evidence unknown until the first read"
                 },
-                "reading": null
+                "reading": null,
+                "planning": null
               },
               {
                 "number": 223,
@@ -941,6 +1034,7 @@
                 "document_state": "suggestion",
                 "document_path": "docs/slice-suggestions/2026-08-20-the-gate-code-goes-out-in-plain-text.md",
                 "kind": "idea",
+                "fix": null,
                 "state": {
                   "word": "no plan yet",
                   "meaning": "quiet",
@@ -966,7 +1060,8 @@
                   "state": "unknown",
                   "words": "imported from Needle 0.1; evidence unknown until the first read"
                 },
-                "reading": null
+                "reading": null,
+                "planning": null
               }
             ],
             "rail": false
@@ -1003,6 +1098,7 @@
                 "document_state": "plan",
                 "document_path": "docs/plans/2026-09-02-the-pricing-rule-judged-against-a-real-season.md",
                 "kind": null,
+                "fix": null,
                 "state": {
                   "word": "your move",
                   "meaning": "yours",
@@ -1035,7 +1131,8 @@
                   "state": "trusted",
                   "words": null
                 },
-                "reading": null
+                "reading": null,
+                "planning": null
               },
               {
                 "number": 147,
@@ -1050,6 +1147,7 @@
                 "document_state": "note",
                 "document_path": null,
                 "kind": null,
+                "fix": null,
                 "state": {
                   "word": "your move",
                   "meaning": "yours",
@@ -1082,7 +1180,8 @@
                   "state": "trusted",
                   "words": null
                 },
-                "reading": null
+                "reading": null,
+                "planning": null
               }
             ],
             "rail": false
@@ -1102,6 +1201,7 @@
                 "document_state": "plan",
                 "document_path": "docs/plans/2026-08-18-berth-first-booking.md",
                 "kind": null,
+                "fix": null,
                 "state": {
                   "word": "your move",
                   "meaning": "yours",
@@ -1134,7 +1234,8 @@
                   "state": "trusted",
                   "words": null
                 },
-                "reading": null
+                "reading": null,
+                "planning": null
               }
             ],
             "rail": false
@@ -1154,6 +1255,7 @@
                 "document_state": "note",
                 "document_path": null,
                 "kind": null,
+                "fix": null,
                 "state": {
                   "word": "your move",
                   "meaning": "yours",
@@ -1186,7 +1288,8 @@
                   "state": "trusted",
                   "words": null
                 },
-                "reading": null
+                "reading": null,
+                "planning": null
               }
             ],
             "rail": false
@@ -1223,6 +1326,7 @@
                 "document_state": "archived",
                 "document_path": "docs/plans/done/2026-08-30-the-office-runs-its-own-checks.md",
                 "kind": null,
+                "fix": null,
                 "state": {
                   "word": "no signal named",
                   "meaning": "quiet",
@@ -1248,7 +1352,8 @@
                   "state": "unknown",
                   "words": "imported from Needle 0.1; evidence unknown until the first read"
                 },
-                "reading": null
+                "reading": null,
+                "planning": null
               }
             ],
             "rail": false
@@ -1305,6 +1410,7 @@
                 "document_state": "gone",
                 "document_path": "docs/plans/done/2026-09-01-a-confirmed-booking-waits-for-the-tide.md",
                 "kind": null,
+                "fix": null,
                 "state": {
                   "word": "document nowhere",
                   "meaning": "broken",
@@ -1332,7 +1438,8 @@
                   "state": "trusted",
                   "words": null
                 },
-                "reading": null
+                "reading": null,
+                "planning": null
               }
             ],
             "rail": false
@@ -1398,6 +1505,7 @@
         "document_state": "suggestion",
         "document_path": "docs/slice-suggestions/2026-09-01-the-night-audit-re-reads-the-whole-harbour-log.md",
         "kind": "defect",
+        "fix": null,
         "state": {
           "word": "no plan yet",
           "meaning": "quiet",
@@ -1423,7 +1531,8 @@
           "state": "trusted",
           "words": null
         },
-        "reading": null
+        "reading": null,
+        "planning": null
       },
       "brief": [
         {
@@ -1451,6 +1560,8 @@
         "found_by": "the cost review of 2026-09-01.",
         "card_ref": null,
         "suggestion_kind": "defect",
+        "fix": null,
+        "fix_note": "no Fix: line",
         "cites": [],
         "handouts": [],
         "head_fields": [
@@ -1597,6 +1708,238 @@
       },
       "signal": null,
       "signal_note": "no WATCH row names a signal",
+      "trigger": null,
+      "trigger_note": null,
+      "readings": [],
+      "verdict": null,
+      "verdict_note": "no VERDICT row is written",
+      "watercooler": [],
+      "heard": null,
+      "handouts": {
+        "named": [],
+        "unknown": [],
+        "verdict": null
+      }
+    },
+    "267": {
+      "card": {
+        "number": 267,
+        "project": "harbourmaster",
+        "place": {
+          "column": "Backlog",
+          "group": "Defects",
+          "position": 1
+        },
+        "title": "The tide clock drifts a minute a day",
+        "gate": null,
+        "tags": [],
+        "deep": "",
+        "citations": [
+          "docs/slice-suggestions/2026-09-04-the-tide-clock-drifts-a-minute-a-day.md"
+        ],
+        "link": {
+          "kind": "suggestion",
+          "stem": "2026-09-04-the-tide-clock-drifts-a-minute-a-day",
+          "title": "The tide clock drifts a minute a day",
+          "archived": false
+        },
+        "origin": "founding",
+        "born_at": "2026-09-04T08:30:00Z",
+        "rows": [],
+        "folded_into": null
+      },
+      "summary": {
+        "number": 267,
+        "title": "The tide clock drifts a minute a day",
+        "essence": "The quay display shows high water from a clock it winds itself at boot.",
+        "essence_source": "document",
+        "gate": null,
+        "tags": [],
+        "document_state": "suggestion",
+        "document_path": "docs/slice-suggestions/2026-09-04-the-tide-clock-drifts-a-minute-a-day.md",
+        "kind": "defect",
+        "fix": {
+          "mark": "now",
+          "why": "the tide table plan says the harbour's own clock is the reference, and the quay display keeps its own",
+          "trigger": null
+        },
+        "state": {
+          "word": "no plan yet",
+          "meaning": "quiet",
+          "detail": null,
+          "loop": null,
+          "door": null,
+          "hint": "open to see"
+        },
+        "claims": [],
+        "folded": [],
+        "is_new": false,
+        "age_date": "2026-09-04",
+        "place": {
+          "column": "Backlog",
+          "group": "Defects",
+          "position": 1
+        },
+        "lane_state": "none",
+        "colliding": null,
+        "standing": {
+          "actor": "corpus",
+          "evidence": null,
+          "state": "trusted",
+          "words": null
+        },
+        "reading": null,
+        "planning": null
+      },
+      "brief": [],
+      "record": [],
+      "document": {
+        "kind": "suggestion",
+        "stem": "2026-09-04-the-tide-clock-drifts-a-minute-a-day",
+        "path": "docs/slice-suggestions/2026-09-04-the-tide-clock-drifts-a-minute-a-day.md",
+        "archived": false,
+        "title": "The tide clock drifts a minute a day",
+        "date": "2026-09-04",
+        "status": null,
+        "status_word": null,
+        "gate": null,
+        "gate_why": null,
+        "sequencing": null,
+        "found_by": "the review of card #241 (`docs/reviews/2026-09-03-the-deploy.md`, finding 2), carried out.",
+        "card_ref": null,
+        "suggestion_kind": "defect",
+        "fix": {
+          "mark": "now",
+          "why": "the tide table plan says the harbour's own clock is the reference, and the quay display keeps its own",
+          "trigger": null
+        },
+        "fix_note": null,
+        "cites": [],
+        "handouts": [],
+        "head_fields": [
+          {
+            "key": "Kind",
+            "value": "defect"
+          },
+          {
+            "key": "Fix",
+            "value": "now — the tide table plan says the harbour's own clock is the reference, and the quay display keeps its own"
+          },
+          {
+            "key": "Found by",
+            "value": "the review of card #241 (`docs/reviews/2026-09-03-the-deploy.md`, finding 2), carried out."
+          }
+        ],
+        "intent_heading": "Observation",
+        "intent": "The quay display shows high water from a clock it winds itself at boot. It gains about a minute a day, and after a fortnight the board on the pontoon disagrees with the office by a quarter of an hour.",
+        "essence": "The quay display shows high water from a clock it winds itself at boot.",
+        "read_at": "2026-09-04T08:30:00Z"
+      },
+      "other_citations": [],
+      "history": [
+        {
+          "id": 47,
+          "at": "2026-09-04T08:30:00Z",
+          "actor": "corpus",
+          "kind": "born",
+          "card_number": 267,
+          "from_place": null,
+          "to_place": {
+            "column": "Backlog",
+            "group": "Defects",
+            "position": 1
+          },
+          "detail": "Born from docs/slice-suggestions/2026-09-04-the-tide-clock-drifts-a-minute-a-day.md, at registration. Its document says Kind: defect, so it reads on the defects rail.",
+          "evidence": null
+        }
+      ],
+      "lane": {
+        "card_number": 267,
+        "name": "card-267-the-tide-clock-drifts-a-minute-a",
+        "path": null,
+        "state": "none",
+        "sentence": "",
+        "session": null,
+        "question": null,
+        "said": null,
+        "said_at": null,
+        "discussing": [],
+        "window_open": false,
+        "hands_on_since": null,
+        "died": null,
+        "moved": null,
+        "folded": false,
+        "trunk_synced": false,
+        "main_synced": false,
+        "edits": [],
+        "declared": [],
+        "colliding": null
+      },
+      "doors": {
+        "start": {
+          "offered": false,
+          "label": "Start",
+          "why": "Start is offered in Up next and Planned; this card is in Backlog."
+        },
+        "start_anyway": {
+          "offered": false,
+          "label": "Start anyway",
+          "why": "There is no collision to override."
+        },
+        "readiness": {
+          "state": "elsewhere",
+          "why": "Start is offered in Up next and Planned; this card is in Backlog.",
+          "cards": [],
+          "files": []
+        },
+        "placement": null,
+        "placement_note": "the runtime has not read this board yet",
+        "collision": null,
+        "watch": {
+          "offered": false,
+          "label": "Watch",
+          "why": "No live session to watch."
+        },
+        "answer": {
+          "offered": false,
+          "label": "Answer",
+          "why": "No live session to answer."
+        },
+        "discuss": {
+          "offered": false,
+          "label": "Discuss",
+          "why": "The rule found nowhere to run: the runtime has not read this board yet"
+        },
+        "plan": {
+          "offered": false,
+          "label": "Create plan",
+          "why": "The rule found nowhere to run: the runtime has not read this board yet"
+        },
+        "look": {
+          "offered": false,
+          "label": "Look",
+          "why": "No session to look at."
+        },
+        "resume": {
+          "offered": false,
+          "label": "Resume",
+          "why": "No session to look at."
+        },
+        "stop": {
+          "offered": false,
+          "label": "Stop",
+          "why": "No background session to stop."
+        },
+        "signal": {
+          "offered": false,
+          "label": "Delivered?",
+          "why": "No signal waits on your reading."
+        }
+      },
+      "signal": null,
+      "signal_note": "no WATCH row names a signal",
+      "trigger": null,
+      "trigger_note": null,
       "readings": [],
       "verdict": null,
       "verdict_note": "no VERDICT row is written",
@@ -1658,6 +2001,7 @@
         "document_state": "suggestion",
         "document_path": "docs/slice-suggestions/2026-09-03-the-quay-display-polls-the-office-all-night.md",
         "kind": "idea",
+        "fix": null,
         "state": {
           "word": "no plan yet",
           "meaning": "quiet",
@@ -1683,7 +2027,8 @@
           "state": "trusted",
           "words": null
         },
-        "reading": null
+        "reading": null,
+        "planning": null
       },
       "brief": [
         {
@@ -1711,6 +2056,8 @@
         "found_by": "the close of card #249, carried out.",
         "card_ref": null,
         "suggestion_kind": "idea",
+        "fix": null,
+        "fix_note": "no Fix: line",
         "cites": [],
         "handouts": [],
         "head_fields": [
@@ -1838,6 +2185,8 @@
       },
       "signal": null,
       "signal_note": "no WATCH row names a signal",
+      "trigger": null,
+      "trigger_note": null,
       "readings": [],
       "verdict": null,
       "verdict_note": "no VERDICT row is written",
@@ -1899,6 +2248,7 @@
         "document_state": "suggestion",
         "document_path": "docs/slice-suggestions/2026-09-02-the-welcome-board-shows-one-boats-whole-stay.md",
         "kind": "idea",
+        "fix": null,
         "state": {
           "word": "no plan yet",
           "meaning": "quiet",
@@ -1924,7 +2274,8 @@
           "state": "trusted",
           "words": null
         },
-        "reading": null
+        "reading": null,
+        "planning": null
       },
       "brief": [
         {
@@ -1952,6 +2303,8 @@
         "found_by": "the owner, walking the pontoon on 2026-09-02.",
         "card_ref": null,
         "suggestion_kind": "idea",
+        "fix": null,
+        "fix_note": "no Fix: line",
         "cites": [],
         "handouts": [],
         "head_fields": [
@@ -2079,6 +2432,8 @@
       },
       "signal": null,
       "signal_note": "no WATCH row names a signal",
+      "trigger": null,
+      "trigger_note": null,
       "readings": [],
       "verdict": null,
       "verdict_note": "no VERDICT row is written",
@@ -2132,6 +2487,7 @@
         "document_state": "gone",
         "document_path": "docs/slice-suggestions/2026-07-12-berth-list-keys.md · 2026-08-19-office-screen-refresh.md",
         "kind": null,
+        "fix": null,
         "state": {
           "word": "document nowhere",
           "meaning": "broken",
@@ -2159,7 +2515,8 @@
           "state": "trusted",
           "words": null
         },
-        "reading": null
+        "reading": null,
+        "planning": null
       },
       "brief": [],
       "record": [],
@@ -2278,6 +2635,8 @@
       },
       "signal": null,
       "signal_note": "no WATCH row names a signal",
+      "trigger": null,
+      "trigger_note": null,
       "readings": [],
       "verdict": null,
       "verdict_note": "no VERDICT row is written",
@@ -2328,6 +2687,7 @@
         "document_state": "note",
         "document_path": null,
         "kind": null,
+        "fix": null,
         "state": {
           "word": "no document",
           "meaning": "quiet",
@@ -2353,7 +2713,8 @@
           "state": "trusted",
           "words": null
         },
-        "reading": null
+        "reading": null,
+        "planning": null
       },
       "brief": [],
       "record": [],
@@ -2461,6 +2822,8 @@
       },
       "signal": null,
       "signal_note": "no WATCH row names a signal",
+      "trigger": null,
+      "trigger_note": null,
       "readings": [],
       "verdict": null,
       "verdict_note": "no VERDICT row is written",
@@ -2509,6 +2872,7 @@
         "document_state": "suggestion",
         "document_path": "docs/slice-suggestions/2026-08-29-two-meters-on-one-pontoon-disagree.md",
         "kind": "idea",
+        "fix": null,
         "state": {
           "word": "no plan yet",
           "meaning": "quiet",
@@ -2534,7 +2898,8 @@
           "state": "trusted",
           "words": null
         },
-        "reading": null
+        "reading": null,
+        "planning": null
       },
       "brief": [],
       "record": [],
@@ -2553,6 +2918,8 @@
         "found_by": "the meter reconcile of 2026-08-29.",
         "card_ref": null,
         "suggestion_kind": "idea",
+        "fix": null,
+        "fix_note": "no Fix: line",
         "cites": [],
         "handouts": [],
         "head_fields": [
@@ -2669,6 +3036,8 @@
       },
       "signal": null,
       "signal_note": "no WATCH row names a signal",
+      "trigger": null,
+      "trigger_note": null,
       "readings": [],
       "verdict": null,
       "verdict_note": "no VERDICT row is written",
@@ -2717,6 +3086,7 @@
         "document_state": "suggestion",
         "document_path": "docs/slice-suggestions/2026-08-31-the-same-slip-is-mailed-twice.md",
         "kind": "idea",
+        "fix": null,
         "state": {
           "word": "no plan yet",
           "meaning": "quiet",
@@ -2742,7 +3112,8 @@
           "state": "trusted",
           "words": null
         },
-        "reading": null
+        "reading": null,
+        "planning": null
       },
       "brief": [],
       "record": [],
@@ -2761,6 +3132,8 @@
         "found_by": "a skipper's reply, 2026-08-31.",
         "card_ref": null,
         "suggestion_kind": "idea",
+        "fix": null,
+        "fix_note": "no Fix: line",
         "cites": [],
         "handouts": [],
         "head_fields": [
@@ -2877,6 +3250,8 @@
       },
       "signal": null,
       "signal_note": "no WATCH row names a signal",
+      "trigger": null,
+      "trigger_note": null,
       "readings": [],
       "verdict": null,
       "verdict_note": "no VERDICT row is written",
@@ -2925,6 +3300,7 @@
         "document_state": "suggestion",
         "document_path": "docs/slice-suggestions/2026-09-01-the-waiting-list-forgets-who-asked-first.md",
         "kind": "idea",
+        "fix": null,
         "state": {
           "word": "no plan yet",
           "meaning": "quiet",
@@ -2950,7 +3326,8 @@
           "state": "trusted",
           "words": null
         },
-        "reading": null
+        "reading": null,
+        "planning": null
       },
       "brief": [],
       "record": [],
@@ -2969,6 +3346,8 @@
         "found_by": "the owner, 2026-09-01.",
         "card_ref": null,
         "suggestion_kind": "idea",
+        "fix": null,
+        "fix_note": "no Fix: line",
         "cites": [],
         "handouts": [],
         "head_fields": [
@@ -3085,6 +3464,8 @@
       },
       "signal": null,
       "signal_note": "no WATCH row names a signal",
+      "trigger": null,
+      "trigger_note": null,
       "readings": [],
       "verdict": null,
       "verdict_note": "no VERDICT row is written",
@@ -3133,6 +3514,7 @@
         "document_state": "suggestion",
         "document_path": "docs/slice-suggestions/2026-09-04-a-boat-longer-than-its-berth-is-accepted.md",
         "kind": "idea",
+        "fix": null,
         "state": {
           "word": "no plan yet",
           "meaning": "quiet",
@@ -3158,7 +3540,8 @@
           "state": "trusted",
           "words": null
         },
-        "reading": null
+        "reading": null,
+        "planning": null
       },
       "brief": [],
       "record": [],
@@ -3177,6 +3560,8 @@
         "found_by": "the harbourmaster, 2026-09-04.",
         "card_ref": null,
         "suggestion_kind": "idea",
+        "fix": null,
+        "fix_note": "no Fix: line",
         "cites": [],
         "handouts": [],
         "head_fields": [
@@ -3293,6 +3678,8 @@
       },
       "signal": null,
       "signal_note": "no WATCH row names a signal",
+      "trigger": null,
+      "trigger_note": null,
       "readings": [],
       "verdict": null,
       "verdict_note": "no VERDICT row is written",
@@ -3358,6 +3745,7 @@
         "document_state": "plan",
         "document_path": "docs/plans/2026-09-01-the-waiting-list-offers-every-berth-that-fits.md",
         "kind": null,
+        "fix": null,
         "state": {
           "word": "not read yet",
           "meaning": "quiet",
@@ -3383,7 +3771,8 @@
           "state": "trusted",
           "words": null
         },
-        "reading": null
+        "reading": null,
+        "planning": null
       },
       "brief": [
         {
@@ -3411,6 +3800,8 @@
         "found_by": null,
         "card_ref": null,
         "suggestion_kind": null,
+        "fix": null,
+        "fix_note": null,
         "cites": [],
         "handouts": [],
         "head_fields": [
@@ -3550,6 +3941,8 @@
       },
       "signal": null,
       "signal_note": "no WATCH row names a signal",
+      "trigger": null,
+      "trigger_note": null,
       "readings": [],
       "verdict": null,
       "verdict_note": "no VERDICT row is written",
@@ -3611,6 +4004,7 @@
         "document_state": "plan",
         "document_path": "docs/plans/2026-09-02-the-skipper-sees-the-price-before-the-berth.md",
         "kind": null,
+        "fix": null,
         "state": {
           "word": "not read yet",
           "meaning": "quiet",
@@ -3636,7 +4030,8 @@
           "state": "trusted",
           "words": null
         },
-        "reading": null
+        "reading": null,
+        "planning": null
       },
       "brief": [
         {
@@ -3660,6 +4055,8 @@
         "found_by": null,
         "card_ref": null,
         "suggestion_kind": null,
+        "fix": null,
+        "fix_note": null,
         "cites": [],
         "handouts": [],
         "head_fields": [
@@ -3799,6 +4196,8 @@
       },
       "signal": null,
       "signal_note": "no WATCH row names a signal",
+      "trigger": null,
+      "trigger_note": null,
       "readings": [],
       "verdict": null,
       "verdict_note": "no VERDICT row is written",
@@ -3864,6 +4263,7 @@
         "document_state": "plan",
         "document_path": "docs/plans/2026-08-26-a-screen-nobody-opens-is-removed.md",
         "kind": null,
+        "fix": null,
         "state": {
           "word": "not read yet",
           "meaning": "quiet",
@@ -3889,7 +4289,8 @@
           "state": "trusted",
           "words": null
         },
-        "reading": null
+        "reading": null,
+        "planning": null
       },
       "brief": [
         {
@@ -3917,6 +4318,8 @@
         "found_by": null,
         "card_ref": null,
         "suggestion_kind": null,
+        "fix": null,
+        "fix_note": null,
         "cites": [],
         "handouts": [],
         "head_fields": [
@@ -4056,6 +4459,8 @@
       },
       "signal": null,
       "signal_note": "no WATCH row names a signal",
+      "trigger": null,
+      "trigger_note": null,
       "readings": [],
       "verdict": null,
       "verdict_note": "no VERDICT row is written",
@@ -4104,6 +4509,7 @@
         "document_state": "plan",
         "document_path": "docs/plans/2026-09-04-the-tide-table-is-the-harbours-own.md",
         "kind": null,
+        "fix": null,
         "state": {
           "word": "not read yet",
           "meaning": "quiet",
@@ -4129,7 +4535,8 @@
           "state": "trusted",
           "words": null
         },
-        "reading": null
+        "reading": null,
+        "planning": null
       },
       "brief": [],
       "record": [],
@@ -4148,6 +4555,8 @@
         "found_by": null,
         "card_ref": null,
         "suggestion_kind": null,
+        "fix": null,
+        "fix_note": null,
         "cites": [],
         "handouts": [],
         "head_fields": [
@@ -4276,6 +4685,8 @@
       },
       "signal": null,
       "signal_note": "no WATCH row names a signal",
+      "trigger": null,
+      "trigger_note": null,
       "readings": [],
       "verdict": null,
       "verdict_note": "no VERDICT row is written",
@@ -4287,9 +4698,9 @@
         "verdict": null
       }
     },
-    "267": {
+    "268": {
       "card": {
-        "number": 267,
+        "number": 268,
         "project": "harbourmaster",
         "place": {
           "column": "Planned",
@@ -4315,7 +4726,7 @@
         "folded_into": null
       },
       "summary": {
-        "number": 267,
+        "number": 268,
         "title": "A storm warning reaches every skipper in the harbour",
         "essence": "Every boat in the harbour hears a gale warning the moment the office does.",
         "essence_source": "document",
@@ -4324,6 +4735,7 @@
         "document_state": "plan",
         "document_path": "docs/plans/2026-09-04-a-storm-warning-reaches-every-skipper.md",
         "kind": null,
+        "fix": null,
         "state": {
           "word": "not read yet",
           "meaning": "quiet",
@@ -4349,7 +4761,8 @@
           "state": "trusted",
           "words": null
         },
-        "reading": null
+        "reading": null,
+        "planning": null
       },
       "brief": [],
       "record": [],
@@ -4368,6 +4781,8 @@
         "found_by": null,
         "card_ref": null,
         "suggestion_kind": null,
+        "fix": null,
+        "fix_note": null,
         "cites": [],
         "handouts": [],
         "head_fields": [
@@ -4396,11 +4811,11 @@
       "other_citations": [],
       "history": [
         {
-          "id": 47,
+          "id": 48,
           "at": "2026-09-04T08:30:00Z",
           "actor": "corpus",
           "kind": "born",
-          "card_number": 267,
+          "card_number": 268,
           "from_place": null,
           "to_place": {
             "column": "Planned",
@@ -4412,8 +4827,8 @@
         }
       ],
       "lane": {
-        "card_number": 267,
-        "name": "card-267-a-storm-warning-reaches-every-sk",
+        "card_number": 268,
+        "name": "card-268-a-storm-warning-reaches-every-sk",
         "path": null,
         "state": "none",
         "sentence": "",
@@ -4496,6 +4911,8 @@
       },
       "signal": null,
       "signal_note": "no WATCH row names a signal",
+      "trigger": null,
+      "trigger_note": null,
       "readings": [],
       "verdict": null,
       "verdict_note": "no VERDICT row is written",
@@ -4561,6 +4978,7 @@
         "document_state": "plan",
         "document_path": "docs/plans/2026-09-03-every-metered-kilowatt-is-billed.md",
         "kind": null,
+        "fix": null,
         "state": {
           "word": "not read yet",
           "meaning": "quiet",
@@ -4586,7 +5004,8 @@
           "state": "trusted",
           "words": null
         },
-        "reading": null
+        "reading": null,
+        "planning": null
       },
       "brief": [
         {
@@ -4618,6 +5037,8 @@
         "found_by": null,
         "card_ref": 253,
         "suggestion_kind": null,
+        "fix": null,
+        "fix_note": null,
         "cites": [],
         "handouts": [],
         "head_fields": [
@@ -4761,6 +5182,8 @@
       },
       "signal": null,
       "signal_note": "no WATCH row names a signal",
+      "trigger": null,
+      "trigger_note": null,
       "readings": [],
       "verdict": null,
       "verdict_note": "no VERDICT row is written",
@@ -4830,6 +5253,7 @@
         "document_state": "plan",
         "document_path": "docs/plans/2026-09-02-a-gate-code-arrives-before-the-boat-does.md",
         "kind": null,
+        "fix": null,
         "state": {
           "word": "not read yet",
           "meaning": "quiet",
@@ -4855,7 +5279,8 @@
           "state": "trusted",
           "words": null
         },
-        "reading": null
+        "reading": null,
+        "planning": null
       },
       "brief": [
         {
@@ -4891,6 +5316,8 @@
         "found_by": null,
         "card_ref": 241,
         "suggestion_kind": null,
+        "fix": null,
+        "fix_note": null,
         "cites": [],
         "handouts": [],
         "head_fields": [
@@ -5034,6 +5461,8 @@
       },
       "signal": null,
       "signal_note": "no WATCH row names a signal",
+      "trigger": null,
+      "trigger_note": null,
       "readings": [],
       "verdict": null,
       "verdict_note": "no VERDICT row is written",
@@ -5092,6 +5521,7 @@
         "document_state": "note",
         "document_path": null,
         "kind": null,
+        "fix": null,
         "state": {
           "word": "not read yet",
           "meaning": "quiet",
@@ -5117,7 +5547,8 @@
           "state": "trusted",
           "words": null
         },
-        "reading": null
+        "reading": null,
+        "planning": null
       },
       "brief": [
         {
@@ -5238,6 +5669,8 @@
       },
       "signal": null,
       "signal_note": "no WATCH row names a signal",
+      "trigger": null,
+      "trigger_note": null,
       "readings": [],
       "verdict": null,
       "verdict_note": "no VERDICT row is written",
@@ -5303,6 +5736,7 @@
         "document_state": "plan",
         "document_path": "docs/plans/2026-08-28-a-berth-is-never-let-twice.md",
         "kind": null,
+        "fix": null,
         "state": {
           "word": "not read yet",
           "meaning": "quiet",
@@ -5328,7 +5762,8 @@
           "state": "trusted",
           "words": null
         },
-        "reading": null
+        "reading": null,
+        "planning": null
       },
       "brief": [
         {
@@ -5360,6 +5795,8 @@
         "found_by": null,
         "card_ref": null,
         "suggestion_kind": null,
+        "fix": null,
+        "fix_note": null,
         "cites": [],
         "handouts": [
           {
@@ -5506,6 +5943,8 @@
       },
       "signal": null,
       "signal_note": "no WATCH row names a signal",
+      "trigger": null,
+      "trigger_note": null,
       "readings": [],
       "verdict": null,
       "verdict_note": "no VERDICT row is written",
@@ -5578,6 +6017,7 @@
         "document_state": "plan",
         "document_path": "docs/plans/2026-08-30-the-booking-office-stops-growing-into-one-file.md",
         "kind": null,
+        "fix": null,
         "state": {
           "word": "not read yet",
           "meaning": "quiet",
@@ -5603,7 +6043,8 @@
           "state": "trusted",
           "words": null
         },
-        "reading": null
+        "reading": null,
+        "planning": null
       },
       "brief": [
         {
@@ -5631,6 +6072,8 @@
         "found_by": null,
         "card_ref": null,
         "suggestion_kind": null,
+        "fix": null,
+        "fix_note": null,
         "cites": [],
         "handouts": [
           {
@@ -5783,6 +6226,8 @@
       },
       "signal": null,
       "signal_note": "no WATCH row names a signal",
+      "trigger": null,
+      "trigger_note": null,
       "readings": [],
       "verdict": null,
       "verdict_note": "no VERDICT row is written",
@@ -5865,6 +6310,7 @@
         "document_state": "archived",
         "document_path": "docs/plans/done/2026-08-25-the-fuel-pontoon-takes-cards.md",
         "kind": null,
+        "fix": null,
         "state": {
           "word": "no hands on it",
           "meaning": "quiet",
@@ -5890,7 +6336,8 @@
           "state": "unknown",
           "words": "imported from Needle 0.1; evidence unknown until the first read"
         },
-        "reading": null
+        "reading": null,
+        "planning": null
       },
       "brief": [
         {
@@ -5927,6 +6374,8 @@
         "found_by": null,
         "card_ref": null,
         "suggestion_kind": null,
+        "fix": null,
+        "fix_note": null,
         "cites": [],
         "handouts": [],
         "head_fields": [
@@ -6066,6 +6515,8 @@
       },
       "signal": null,
       "signal_note": "the WATCH row names no reader (url, file, command, session or owner). The grammar: WATCH: <what> — url|file|command|session|owner <target> [expect <value>] by <YYYY-MM-DD> [every <N>h|<N>d]",
+      "trigger": null,
+      "trigger_note": null,
       "readings": [],
       "verdict": null,
       "verdict_note": "no VERDICT row is written",
@@ -6131,6 +6582,7 @@
         "document_state": "suggestion",
         "document_path": "docs/slice-suggestions/2026-08-20-the-gate-code-goes-out-in-plain-text.md",
         "kind": "idea",
+        "fix": null,
         "state": {
           "word": "no plan yet",
           "meaning": "quiet",
@@ -6156,7 +6608,8 @@
           "state": "unknown",
           "words": "imported from Needle 0.1; evidence unknown until the first read"
         },
-        "reading": null
+        "reading": null,
+        "planning": null
       },
       "brief": [
         {
@@ -6188,6 +6641,8 @@
         "found_by": "the security read of 2026-08-20.",
         "card_ref": null,
         "suggestion_kind": "idea",
+        "fix": null,
+        "fix_note": "no Fix: line",
         "cites": [],
         "handouts": [],
         "head_fields": [
@@ -6315,6 +6770,8 @@
       },
       "signal": null,
       "signal_note": "no WATCH row names a signal",
+      "trigger": null,
+      "trigger_note": null,
       "readings": [],
       "verdict": null,
       "verdict_note": "no VERDICT row is written",
@@ -6392,6 +6849,7 @@
         "document_state": "plan",
         "document_path": "docs/plans/2026-09-02-the-pricing-rule-judged-against-a-real-season.md",
         "kind": null,
+        "fix": null,
         "state": {
           "word": "your move",
           "meaning": "yours",
@@ -6424,7 +6882,8 @@
           "state": "trusted",
           "words": null
         },
-        "reading": null
+        "reading": null,
+        "planning": null
       },
       "brief": [
         {
@@ -6465,6 +6924,8 @@
         "found_by": null,
         "card_ref": null,
         "suggestion_kind": null,
+        "fix": null,
+        "fix_note": null,
         "cites": [],
         "handouts": [],
         "head_fields": [
@@ -6604,6 +7065,8 @@
       },
       "signal": null,
       "signal_note": "the WATCH row names no reader (url, file, command, session or owner). The grammar: WATCH: <what> — url|file|command|session|owner <target> [expect <value>] by <YYYY-MM-DD> [every <N>h|<N>d]",
+      "trigger": null,
+      "trigger_note": null,
       "readings": [],
       "verdict": null,
       "verdict_note": "no VERDICT row is written",
@@ -6664,6 +7127,7 @@
         "document_state": "note",
         "document_path": null,
         "kind": null,
+        "fix": null,
         "state": {
           "word": "your move",
           "meaning": "yours",
@@ -6696,7 +7160,8 @@
           "state": "trusted",
           "words": null
         },
-        "reading": null
+        "reading": null,
+        "planning": null
       },
       "brief": [
         {
@@ -6817,6 +7282,8 @@
       },
       "signal": null,
       "signal_note": "no WATCH row names a signal",
+      "trigger": null,
+      "trigger_note": null,
       "readings": [],
       "verdict": null,
       "verdict_note": "no VERDICT row is written",
@@ -6886,6 +7353,7 @@
         "document_state": "plan",
         "document_path": "docs/plans/2026-08-18-berth-first-booking.md",
         "kind": null,
+        "fix": null,
         "state": {
           "word": "your move",
           "meaning": "yours",
@@ -6918,7 +7386,8 @@
           "state": "trusted",
           "words": null
         },
-        "reading": null
+        "reading": null,
+        "planning": null
       },
       "brief": [
         {
@@ -6950,6 +7419,8 @@
         "found_by": null,
         "card_ref": null,
         "suggestion_kind": null,
+        "fix": null,
+        "fix_note": null,
         "cites": [],
         "handouts": [],
         "head_fields": [
@@ -7089,6 +7560,8 @@
       },
       "signal": null,
       "signal_note": "no WATCH row names a signal",
+      "trigger": null,
+      "trigger_note": null,
       "readings": [],
       "verdict": null,
       "verdict_note": "no VERDICT row is written",
@@ -7147,6 +7620,7 @@
         "document_state": "note",
         "document_path": null,
         "kind": null,
+        "fix": null,
         "state": {
           "word": "your move",
           "meaning": "yours",
@@ -7179,7 +7653,8 @@
           "state": "trusted",
           "words": null
         },
-        "reading": null
+        "reading": null,
+        "planning": null
       },
       "brief": [
         {
@@ -7300,6 +7775,8 @@
       },
       "signal": null,
       "signal_note": "no WATCH row names a signal",
+      "trigger": null,
+      "trigger_note": null,
       "readings": [],
       "verdict": null,
       "verdict_note": "no VERDICT row is written",
@@ -7366,6 +7843,7 @@
         "document_state": "archived",
         "document_path": "docs/plans/done/2026-08-30-the-office-runs-its-own-checks.md",
         "kind": null,
+        "fix": null,
         "state": {
           "word": "no signal named",
           "meaning": "quiet",
@@ -7391,7 +7869,8 @@
           "state": "unknown",
           "words": "imported from Needle 0.1; evidence unknown until the first read"
         },
-        "reading": null
+        "reading": null,
+        "planning": null
       },
       "brief": [],
       "record": [
@@ -7419,6 +7898,8 @@
         "found_by": null,
         "card_ref": null,
         "suggestion_kind": null,
+        "fix": null,
+        "fix_note": null,
         "cites": [],
         "handouts": [],
         "head_fields": [
@@ -7560,6 +8041,8 @@
       },
       "signal": null,
       "signal_note": "the WATCH row names no reader (url, file, command, session or owner). The grammar: WATCH: <what> — url|file|command|session|owner <target> [expect <value>] by <YYYY-MM-DD> [every <N>h|<N>d]",
+      "trigger": null,
+      "trigger_note": null,
       "readings": [],
       "verdict": null,
       "verdict_note": "no VERDICT row is written",
@@ -7617,6 +8100,7 @@
         "document_state": "gone",
         "document_path": "docs/plans/done/2026-09-01-a-confirmed-booking-waits-for-the-tide.md",
         "kind": null,
+        "fix": null,
         "state": {
           "word": "document nowhere",
           "meaning": "broken",
@@ -7644,7 +8128,8 @@
           "state": "trusted",
           "words": null
         },
-        "reading": null
+        "reading": null,
+        "planning": null
       },
       "brief": [],
       "record": [
@@ -7768,6 +8253,8 @@
       },
       "signal": null,
       "signal_note": "no WATCH row names a signal",
+      "trigger": null,
+      "trigger_note": null,
       "readings": [],
       "verdict": null,
       "verdict_note": "no VERDICT row is written",
@@ -7793,6 +8280,7 @@
         "document_state": "plan",
         "document_path": "docs/plans/2026-09-04-a-card-in-every-state.md",
         "kind": null,
+        "fix": null,
         "state": {
           "word": "free to start",
           "meaning": "proven",
@@ -7823,7 +8311,8 @@
           "state": "trusted",
           "words": null
         },
-        "reading": null
+        "reading": null,
+        "planning": null
       }
     },
     {
@@ -7838,6 +8327,7 @@
         "document_state": "plan",
         "document_path": "docs/plans/2026-09-04-a-card-in-every-state.md",
         "kind": null,
+        "fix": null,
         "state": {
           "word": "collides with #241 · waits",
           "meaning": "quiet",
@@ -7863,7 +8353,8 @@
           "state": "trusted",
           "words": null
         },
-        "reading": null
+        "reading": null,
+        "planning": null
       }
     },
     {
@@ -7878,6 +8369,7 @@
         "document_state": "plan",
         "document_path": "docs/plans/2026-09-04-a-card-in-every-state.md",
         "kind": null,
+        "fix": null,
         "state": {
           "word": "no gate",
           "meaning": "quiet",
@@ -7903,7 +8395,8 @@
           "state": "trusted",
           "words": null
         },
-        "reading": null
+        "reading": null,
+        "planning": null
       }
     },
     {
@@ -7918,6 +8411,7 @@
         "document_state": "plan",
         "document_path": "docs/plans/2026-09-04-a-card-in-every-state.md",
         "kind": null,
+        "fix": null,
         "state": {
           "word": "nowhere to run",
           "meaning": "quiet",
@@ -7943,7 +8437,8 @@
           "state": "trusted",
           "words": null
         },
-        "reading": null
+        "reading": null,
+        "planning": null
       }
     },
     {
@@ -7958,6 +8453,7 @@
         "document_state": "plan",
         "document_path": "docs/plans/2026-09-04-a-card-in-every-state.md",
         "kind": null,
+        "fix": null,
         "state": {
           "word": "working · 12 min · fable on alpha",
           "meaning": "live",
@@ -7990,7 +8486,8 @@
           "state": "trusted",
           "words": null
         },
-        "reading": null
+        "reading": null,
+        "planning": null
       }
     },
     {
@@ -8005,6 +8502,7 @@
         "document_state": "plan",
         "document_path": "docs/plans/2026-09-04-a-card-in-every-state.md",
         "kind": null,
+        "fix": null,
         "state": {
           "word": "asking you",
           "meaning": "yours",
@@ -8037,7 +8535,8 @@
           "state": "trusted",
           "words": null
         },
-        "reading": null
+        "reading": null,
+        "planning": null
       }
     },
     {
@@ -8052,6 +8551,7 @@
         "document_state": "plan",
         "document_path": "docs/plans/2026-09-04-a-card-in-every-state.md",
         "kind": null,
+        "fix": null,
         "state": {
           "word": "colliding with #241",
           "meaning": "broken",
@@ -8089,7 +8589,8 @@
           "state": "trusted",
           "words": null
         },
-        "reading": null
+        "reading": null,
+        "planning": null
       }
     },
     {
@@ -8104,6 +8605,7 @@
         "document_state": "plan",
         "document_path": "docs/plans/2026-09-04-a-card-in-every-state.md",
         "kind": null,
+        "fix": null,
         "state": {
           "word": "lane ended",
           "meaning": "broken",
@@ -8132,7 +8634,8 @@
           "state": "trusted",
           "words": null
         },
-        "reading": null
+        "reading": null,
+        "planning": null
       }
     },
     {
@@ -8147,6 +8650,7 @@
         "document_state": "plan",
         "document_path": "docs/plans/2026-09-04-a-card-in-every-state.md",
         "kind": null,
+        "fix": null,
         "state": {
           "word": "doubted",
           "meaning": "broken",
@@ -8174,7 +8678,8 @@
           "state": "doubted",
           "words": "the board doubts this: no lane exists for it — no worktree on disk and no session"
         },
-        "reading": null
+        "reading": null,
+        "planning": null
       }
     },
     {
@@ -8189,6 +8694,7 @@
         "document_state": "gone",
         "document_path": "docs/plans/nowhere.md",
         "kind": null,
+        "fix": null,
         "state": {
           "word": "document nowhere",
           "meaning": "broken",
@@ -8216,7 +8722,8 @@
           "state": "trusted",
           "words": null
         },
-        "reading": null
+        "reading": null,
+        "planning": null
       }
     },
     {
@@ -8231,6 +8738,7 @@
         "document_state": "plan",
         "document_path": "docs/plans/2026-09-04-a-card-in-every-state.md",
         "kind": null,
+        "fix": null,
         "state": {
           "word": "your move",
           "meaning": "yours",
@@ -8263,7 +8771,8 @@
           "state": "trusted",
           "words": null
         },
-        "reading": null
+        "reading": null,
+        "planning": null
       }
     },
     {
@@ -8278,6 +8787,7 @@
         "document_state": "archived",
         "document_path": "docs/plans/done/2026-09-04-a-card-in-every-state.md",
         "kind": null,
+        "fix": null,
         "state": {
           "word": "loop open · a session reads it 11 Sep",
           "meaning": "quiet",
@@ -8306,7 +8816,8 @@
           "state": "trusted",
           "words": null
         },
-        "reading": null
+        "reading": null,
+        "planning": null
       }
     },
     {
@@ -8321,6 +8832,7 @@
         "document_state": "archived",
         "document_path": "docs/plans/done/2026-09-04-a-card-in-every-state.md",
         "kind": null,
+        "fix": null,
         "state": {
           "word": "loop open · you read it 11 Sep",
           "meaning": "quiet",
@@ -8349,7 +8861,8 @@
           "state": "trusted",
           "words": null
         },
-        "reading": null
+        "reading": null,
+        "planning": null
       }
     },
     {
@@ -8364,6 +8877,7 @@
         "document_state": "archived",
         "document_path": "docs/plans/done/2026-09-04-a-card-in-every-state.md",
         "kind": null,
+        "fix": null,
         "state": {
           "word": "signal for you to read",
           "meaning": "yours",
@@ -8399,7 +8913,8 @@
           "state": "trusted",
           "words": null
         },
-        "reading": null
+        "reading": null,
+        "planning": null
       }
     },
     {
@@ -8414,6 +8929,7 @@
         "document_state": "archived",
         "document_path": "docs/plans/done/2026-09-04-a-card-in-every-state.md",
         "kind": null,
+        "fix": null,
         "state": {
           "word": "loop open · a session reads it now · beta",
           "meaning": "live",
@@ -8448,11 +8964,13 @@
           "id": 1,
           "project": "harbourmaster",
           "card_number": 900,
+          "work": "reading",
           "session_id": "bbbb0001-0000-4000-8000-000000000000",
           "slot": "beta",
           "started_at": "2026-09-04T08:28:00Z",
           "ended_at": null
-        }
+        },
+        "planning": null
       }
     },
     {
@@ -8467,6 +8985,7 @@
         "document_state": "archived",
         "document_path": "docs/plans/done/2026-09-04-a-card-in-every-state.md",
         "kind": null,
+        "fix": null,
         "state": {
           "word": "loop open · 1 Sep passed, unread",
           "meaning": "broken",
@@ -8497,7 +9016,8 @@
           "state": "trusted",
           "words": null
         },
-        "reading": null
+        "reading": null,
+        "planning": null
       }
     },
     {
@@ -8512,6 +9032,7 @@
         "document_state": "archived",
         "document_path": "docs/plans/done/2026-09-04-a-card-in-every-state.md",
         "kind": null,
+        "fix": null,
         "state": {
           "word": "loop closed · read 09:30, delivered",
           "meaning": "proven",
@@ -8540,7 +9061,8 @@
           "state": "trusted",
           "words": null
         },
-        "reading": null
+        "reading": null,
+        "planning": null
       }
     },
     {
@@ -8555,6 +9077,7 @@
         "document_state": "plan",
         "document_path": "docs/plans/2026-09-04-a-card-in-every-state.md",
         "kind": null,
+        "fix": null,
         "state": {
           "word": "not now",
           "meaning": "quiet",
@@ -8580,7 +9103,65 @@
           "state": "trusted",
           "words": null
         },
-        "reading": null
+        "reading": null,
+        "planning": null
+      }
+    },
+    {
+      "case": "being planned",
+      "card": {
+        "number": 900,
+        "title": "A card in every state",
+        "essence": "Every berth is billed by the metre.",
+        "essence_source": "card",
+        "gate": null,
+        "tags": [],
+        "document_state": "suggestion",
+        "document_path": "docs/slice-suggestions/2026-09-04-a-card-in-every-state.md",
+        "kind": "defect",
+        "fix": {
+          "mark": "now",
+          "why": null,
+          "trigger": null
+        },
+        "state": {
+          "word": "being planned · alpha",
+          "meaning": "live",
+          "detail": "The dial took it: a session is writing its plan in the project's checkout.",
+          "loop": null,
+          "door": null,
+          "hint": "open to see"
+        },
+        "claims": [
+          "planning"
+        ],
+        "folded": [],
+        "is_new": false,
+        "age_date": "2026-09-04",
+        "place": {
+          "column": "Backlog",
+          "group": null,
+          "position": 0
+        },
+        "lane_state": "none",
+        "colliding": null,
+        "standing": {
+          "actor": "corpus",
+          "evidence": null,
+          "state": "trusted",
+          "words": null
+        },
+        "reading": null,
+        "planning": {
+          "id": 2,
+          "project": "harbourmaster",
+          "card_number": 900,
+          "work": "planning",
+          "session_id": "cccc0001-0000-4000-8000-000000000000",
+          "slot": "alpha",
+          "started_at": "2026-09-04T08:27:00Z",
+          "ended_at": null
+        }
       }
     }
   ]

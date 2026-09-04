@@ -39,7 +39,7 @@ from domain.board import MachineState  # noqa: E402
 from domain.card import Actor, Card, CardOrigin, DocumentLink, Place  # noqa: E402
 from domain.column import Column  # noqa: E402
 from domain.corpus import CorpusIndex  # noqa: E402
-from domain.document import Document, DocumentKind  # noqa: E402
+from domain.document import Document, DocumentKind, Fix, FixMark, SuggestionKind  # noqa: E402
 from domain.evidence import Evidence  # noqa: E402
 from domain.gate import Gate  # noqa: E402
 from domain.hook import HookEvent, HookKind  # noqa: E402
@@ -47,7 +47,7 @@ from domain.lane import Collision, CollisionVerdict  # noqa: E402
 from domain.project import Project  # noqa: E402
 from domain.row import Row, RowKind  # noqa: E402
 from domain.session import Session, SessionKind, SessionState  # noqa: E402
-from domain.signal import Reading, ReadingSession  # noqa: E402
+from domain.signal import Reading, SessionWork, WindowlessSession  # noqa: E402
 from domain.slot import Model, Placement  # noqa: E402
 from infrastructure.corpus import scan  # noqa: E402
 from infrastructure.live import Live, sweep  # noqa: E402
@@ -74,6 +74,7 @@ def _card(
     archived: bool = False,
     gate: Gate | None = Gate.HIGH,
     watch: str | None = None,
+    kind: DocumentKind = DocumentKind.PLAN,
 ) -> Card:
     rows = [Row(kind=RowKind.SERVES, text="Every berth is billed by the metre.")]
     if watch:
@@ -87,22 +88,20 @@ def _card(
         tags=[],
         deep="",
         citations=[],
-        link=DocumentLink(
-            kind=DocumentKind.PLAN, stem="p", title="A card in every state", archived=archived
-        ),
+        link=DocumentLink(kind=kind, stem="p", title="A card in every state", archived=archived),
         origin=CardOrigin.IMPORTED,
         born_at=NOW,
         rows=rows,
     )
 
 
-def _document(*, archived: bool = False) -> Document:
+def _document(*, archived: bool = False, kind: DocumentKind = DocumentKind.PLAN) -> Document:
+    folder = "docs/plans" if kind == DocumentKind.PLAN else "docs/slice-suggestions"
+    suggestion = kind == DocumentKind.SUGGESTION
     return Document(
-        kind=DocumentKind.PLAN,
+        kind=kind,
         stem="p",
-        path="docs/plans/done/2026-09-04-a-card-in-every-state.md"
-        if archived
-        else "docs/plans/2026-09-04-a-card-in-every-state.md",
+        path=f"{folder}{'/done' if archived else ''}/2026-09-04-a-card-in-every-state.md",
         archived=archived,
         title="A card in every state",
         date=date(2026, 9, 4),
@@ -113,7 +112,9 @@ def _document(*, archived: bool = False) -> Document:
         sequencing=None,
         found_by=None,
         card_ref=None,
-        suggestion_kind=None,
+        suggestion_kind=SuggestionKind.DEFECT if suggestion else None,
+        fix=Fix(mark=FixMark.NOW, why=None, trigger=None) if suggestion else None,
+        fix_note=None,
         cites=[],
         handouts=[],
         head_fields=[],
@@ -179,6 +180,7 @@ def _summary(
     placed_by_machine: bool = False,
     last=None,
     reading=None,
+    planning=None,
     suggestion_live: bool = False,
     collision: Collision | None = None,
     placement: Placement | None = PLACEMENT,
@@ -214,8 +216,9 @@ def _summary(
         if placed_by_machine
         else None
     )
+    assert card.link is not None
     index = CorpusIndex(
-        documents=[_document(archived=card.link is not None and card.link.archived)], read_at=NOW
+        documents=[_document(archived=card.link.archived, kind=card.link.kind)], read_at=NOW
     )
     summary = summarize(
         card,
@@ -227,6 +230,7 @@ def _summary(
         last=last,
         read=True,
         reading=reading,
+        planning=planning,
         project_path=SHOWN_PATH,
     )
     return summary
@@ -305,10 +309,11 @@ def language_cases() -> list[dict[str, object]]:
         words="the doors stayed",
         actor=Actor.SESSION,
     )
-    reading = ReadingSession(
+    reading = WindowlessSession(
         id=1,
         project="harbourmaster",
         card_number=900,
+        work=SessionWork.READING,
         session_id="bbbb0001-0000-4000-8000-000000000000",
         slot="beta",
         started_at=NOW - timedelta(minutes=2),
@@ -316,6 +321,18 @@ def language_cases() -> list[dict[str, object]]:
     )
     gone = _card(900, column=Column.UP_NEXT)
     gone.link = DocumentLink(kind=DocumentKind.PLAN, stem="nowhere", title="", archived=False)
+    # A defect the dial took (plan 11): its planning session writes the plan
+    # in the project's checkout, never hands on the tree.
+    planning = WindowlessSession(
+        id=2,
+        project="harbourmaster",
+        card_number=900,
+        work=SessionWork.PLANNING,
+        session_id="cccc0001-0000-4000-8000-000000000000",
+        slot="alpha",
+        started_at=NOW - timedelta(minutes=3),
+        ended_at=None,
+    )
     cases: list[tuple[str, object]] = [
         ("free to start", _summary(_card(900, column=Column.UP_NEXT))),
         (
@@ -369,6 +386,14 @@ def language_cases() -> list[dict[str, object]]:
             ),
         ),
         ("not now", _summary(_card(900, column=Column.NOT_NOW))),
+        (
+            "being planned",
+            _summary(
+                _card(900, column=Column.BACKLOG, gate=None, kind=DocumentKind.SUGGESTION),
+                suggestion_live=True,
+                planning=planning,
+            ),
+        ),
     ]
     return [{"case": case, "card": card.model_dump(mode="json")} for case, card in cases]
 

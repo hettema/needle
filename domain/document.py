@@ -36,6 +36,34 @@ class SuggestionKind(StrEnum):
     DEFECT = "defect"
 
 
+class FixMark(StrEnum):
+    """Who fixes a defect, declared on the document's `**Fix:**` line by the
+    session that found it (plan 11, item 2): `now` — a straight fix that
+    needs nobody, against a written intent, inside its ring, removing a class
+    rather than an instance; `when <signal>` — a fix that waits for a trigger
+    in the WATCH grammar, read by the signal loop; `his` — a decision the
+    owner has to make first. A suggestion with no line, or a line outside
+    this vocabulary, is unmarked and reads as `his` (the safe default)."""
+
+    NOW = "now"
+    WHEN = "when"
+    HIS = "his"
+
+
+class Fix(BaseModel):
+    """A suggestion's `Fix:` mark as read from the head — before the first
+    `## `, exactly as `Kind:` is, so a `**Fix:**` line of prose under a
+    section (Hello Revenue's 2026-07-07 platform guard names what was fixed
+    that way) is never a mark."""
+
+    mark: FixMark
+    why: str | None
+    """The words after `now` or `his`, when the line carries a reason."""
+    trigger: str | None
+    """After `when`: the trigger in the WATCH grammar, verbatim; the board
+    parses it with the one signal parser where it reads it."""
+
+
 class DocumentState(StrEnum):
     """What is written behind a card — five states, and a card always shows one."""
 
@@ -77,6 +105,12 @@ class Document(BaseModel):
     """A `**Card:** #N` line names the card this document belongs to."""
     suggestion_kind: SuggestionKind | None
     """A suggestion's kind; None for a plan."""
+    fix: Fix | None = None
+    """A suggestion's `Fix:` mark (plan 11, item 2); None for a plan, and
+    None for a suggestion that is unmarked — `fix_note` says why."""
+    fix_note: str | None = None
+    """Why a suggestion is unmarked: no `Fix:` line, a line outside the
+    vocabulary, or two lines; None when it is marked or is a plan."""
     cites: list[str]
     """The suggestion stems the document's head names, in order: the
     suggestions a plan carries (plan 06, item 5)."""

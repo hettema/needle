@@ -4,6 +4,9 @@ import type { Actor } from "./card";
 export const FINDING_VALUES = ["delivered", "not-delivered", "cannot-tell"] as const;
 export type Finding = (typeof FINDING_VALUES)[number];
 
+export const SESSION_WORK_VALUES = ["reading", "planning"] as const;
+export type SessionWork = (typeof SESSION_WORK_VALUES)[number];
+
 export const SIGNAL_KIND_VALUES = ["url", "file", "command", "session", "owner"] as const;
 export type SignalKind = (typeof SIGNAL_KIND_VALUES)[number];
 
@@ -16,16 +19,6 @@ export interface Reading {
   actor: Actor;
 }
 
-export interface ReadingSession {
-  id: number;
-  project: string;
-  card_number: number;
-  session_id: string;
-  slot: string;
-  started_at: string;
-  ended_at: string | null;
-}
-
 export interface Signal {
   what: string;
   kind: SignalKind;
@@ -33,4 +26,15 @@ export interface Signal {
   expect: string | null;
   due: string;
   every_hours: number;
+}
+
+export interface WindowlessSession {
+  id: number;
+  project: string;
+  card_number: number;
+  work: SessionWork;
+  session_id: string;
+  slot: string;
+  started_at: string;
+  ended_at: string | null;
 }

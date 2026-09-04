@@ -22,11 +22,22 @@ import contextlib
 import logging
 from collections.abc import Awaitable, Callable
 from datetime import datetime
+from enum import StrEnum
 from pathlib import Path
 
 from watchfiles import awatch
 
-from board.assemble import asked_evidence, signal_asks_owner, signal_wants_reading, watch_signal
+from board.assemble import (
+    asked_evidence,
+    document_of,
+    is_trigger_card,
+    signal_asks_owner,
+    signal_wants_reading,
+    trigger_asks_owner,
+    trigger_signal,
+    trigger_wants_reading,
+    watch_signal,
+)
 from board.brief import reading_brief, reading_name
 from board.collision import footprint, verdict
 from board.lane import (
@@ -54,9 +65,9 @@ from domain.evidence import Evidence
 from domain.gate import Gate
 from domain.hook import HookEvent, HookPosted, Word
 from domain.lane import Collision, Doors, Lane, LaneRecord, LaneSnapshot, LaneState
-from domain.launch import LaunchVerdict, ReadingStart
+from domain.launch import LaunchVerdict, WindowlessStart
 from domain.session import Session, SessionState
-from domain.signal import Signal, SignalKind
+from domain.signal import SessionWork, Signal, SignalKind, WindowlessSession
 from domain.slot import Placement
 from domain.window import Window, WindowKind
 from infrastructure import clock
@@ -91,6 +102,21 @@ before it is stopped anyway: the verb runs inside its last turn."""
 READING_EFFORT = Gate.HIGH
 """Reading evidence is bounded investigation, not open thinking (the Discuss
 door's xhigh); the strongest model still does it, by the one rule."""
+
+
+class Tended(StrEnum):
+    """What tending a windowless session found (plans 09 and 11)."""
+
+    ALIVE = "alive"
+    """Still running, or its work already landed and it is being let finish."""
+    MOVED = "moved"
+    """Hit a limit and was moved; the record follows the new session."""
+    TURN_DONE = "turn done"
+    """Its turn finished with its process still there; the caller says what
+    a finished turn means for its work."""
+    ENDED = "ended"
+    """Its process is gone, it overran its ceiling and was stopped, or a
+    limit could not be moved: the record is ended and the words say why."""
 
 
 def project_of_cwd(cwd: str, projects: dict[str, LiveProject]) -> LiveProject | None:
@@ -604,6 +630,11 @@ class Loops:
             signal, _ = watch_signal(card)
             last = readings.get(card.number)
             asks_owner = signal_asks_owner(card, signal, last, now)
+            if not asks_owner:
+                # A Backlog defect's trigger asks him the same way (plan 11, item 5).
+                trigger, _ = trigger_signal(document)
+                if trigger_asks_owner(card, trigger, last, now):
+                    signal, asks_owner = trigger, True
             doors[card.number] = doors_for(
                 card,
                 lane,
@@ -624,35 +655,49 @@ class Loops:
 
     def read_signals_now(self) -> None:
         """Read every Executed card's signal whose cadence asks for it, and
-        move the card on what it says. A `session` signal is read by a
-        session the loop starts (plan 09, item 1): at most READINGS_AT_ONCE
-        alive at a time, one per card, and the finding comes back through
-        the reading door."""
+        move the card on what it says; and every Backlog defect's `Fix: when`
+        trigger on the same cadence by the same readers (plan 11, item 5),
+        which moves nothing — a delivered trigger makes the defect eligible
+        for the dial. A `session` signal is read by a session the loop starts
+        (plan 09, item 1): at most READINGS_AT_ONCE alive at a time, one per
+        card, and the finding comes back through the reading door."""
         projects = list(self.live.projects.values())
         sessions = self.runtime.sessions()
         for live in projects:
             self._tend_readings(live, sessions)
-        alive = sum(len(self.live.store.open_reading_sessions(p.project.slug)) for p in projects)
+        alive = sum(
+            len(self.live.store.open_windowless_sessions(p.project.slug, SessionWork.READING))
+            for p in projects
+        )
         for live in projects:
             slug = live.project.slug
             now = clock.now()
             readings = self.live.store.last_readings(slug)
-            in_flight = self.live.store.open_reading_sessions(slug)
+            in_flight = self.live.store.open_windowless_sessions(slug, SessionWork.READING)
             for card in self.live.store.cards(slug):
                 if card.folded_into is not None:
                     continue  # a folded card's loop is its leader's
+                last = readings.get(card.number)
                 signal, _ = watch_signal(card)
-                if not signal_wants_reading(card, signal, readings.get(card.number), now):
-                    continue
+                trigger = False
+                if not signal_wants_reading(card, signal, last, now):
+                    document = document_of(card, live.index)
+                    signal, _ = trigger_signal(document)
+                    if not (
+                        is_trigger_card(card, document)
+                        and trigger_wants_reading(card, signal, last, now)
+                    ):
+                        continue
+                    trigger = True
                 assert signal is not None
                 if signal.kind == SignalKind.SESSION:
                     if card.number in in_flight or alive >= READINGS_AT_ONCE:
                         continue
-                    if self._start_reading(live, card, signal, now):
+                    if self._start_reading(live, card, signal, now, trigger=trigger):
                         alive += 1
                     continue
                 delivered, words = self.runtime.read_signal(signal, live.project.path)
-                self._land(slug, card.number, signal, delivered, words, now)
+                self._land(slug, card.number, signal, delivered, words, now, trigger=trigger)
 
     def _land(
         self,
@@ -662,10 +707,16 @@ class Loops:
         delivered: bool | None,
         words: str,
         now: datetime,
+        *,
+        trigger: bool = False,
     ) -> None:
-        """A machine reading on the card, and the move it implies."""
+        """A machine reading on the card, and the move it implies. A trigger's
+        reading implies none: the card stays on the rail, eligible from a
+        delivered reading (plan 11, item 5)."""
         self.live.store.record_reading(slug, number, now, delivered, words, Actor.MACHINE)
         self.live.bump()
+        if trigger:
+            return
         landing = where_after(signal, delivered, now)
         if landing.column is not None:
             self.live.move(
@@ -677,16 +728,20 @@ class Loops:
                 evidence=landing.evidence,
             )
 
-    def _start_reading(self, live: LiveProject, card: Card, signal: Signal, now: datetime) -> bool:
-        """Start the session that reads this card's signal, in the project's
-        own checkout, and record it on the card; a start that fails is a
-        machine reading that could not be read, so the cadence moves on and
-        the card says why."""
+    def _start_reading(
+        self, live: LiveProject, card: Card, signal: Signal, now: datetime, *, trigger: bool
+    ) -> bool:
+        """Start the session that reads this card's signal — or its `Fix:
+        when` trigger — in the project's own checkout, and record it on the
+        card; a start that fails is a machine reading that could not be read,
+        so the cadence moves on and the card says why."""
         slug = live.project.slug
         detail = self.live.detail(slug, card.number)
-        brief = reading_brief(detail, live.project, signal, now.date().isoformat())
-        launch = self.runtime.read_by_session(
-            ReadingStart(
+        brief = reading_brief(
+            detail, live.project, signal, now.date().isoformat(), trigger=trigger
+        )
+        launch = self.runtime.start_windowless(
+            WindowlessStart(
                 repo=live.project.path,
                 card=reading_name(card.number, card.title),
                 brief=brief,
@@ -701,11 +756,12 @@ class Loops:
                 None,
                 f"the reading session could not start: {launch.reason}",
                 now,
+                trigger=trigger,
             )
             return False
         session = launch.session
-        self.live.store.open_reading_session(
-            slug, card.number, session.session_id, session.slot, now
+        self.live.store.open_windowless_session(
+            slug, card.number, SessionWork.READING, session.session_id, session.slot, now
         )
         placement = launch.placement
         where = f"{placement.model.value} on {placement.slot}" if placement else session.slot
@@ -719,91 +775,126 @@ class Loops:
         )
         return True
 
-    def _tend_readings(self, live: LiveProject, sessions: list[Session]) -> None:
-        """The reading sessions the board started, against the one list: one
-        whose process is gone without a finding is recorded as unreadable so
-        the cadence moves on and the card says why; one still running past
-        READING_SECONDS is stopped and recorded the same way; one whose
-        finding has landed is stopped once its turn is over, so a finished
-        reading leaves no process behind."""
+    def tend_windowless(
+        self,
+        live: LiveProject,
+        record: WindowlessSession,
+        session: Session | None,
+        now: datetime,
+        *,
+        ceiling_seconds: float,
+        what: str,
+        without: str,
+    ) -> tuple[Tended, str]:
+        """One windowless session against the one list (plans 09 and 11):
+        a record already ended is let finish its turn and then stopped, so
+        a finished session leaves no process behind; a limit mid-work is the
+        same move a lane gets, one hop to where the rule says, with the
+        record following the new id; a process gone, or one still running
+        past the ceiling (stopped here), ends the record with the words that
+        say why; a turn finished with the process still there is the
+        caller's to judge. `what` names the session in the words ("reading",
+        "planning") and `without` what it never produced ("without a
+        finding", "without a plan")."""
         slug = live.project.slug
-        by_id = {s.session_id: s for s in sessions if not s.stale}
-        now = clock.now()
-        for record in self.live.store.reading_sessions(slug):
-            session = by_id.get(record.session_id)
-            alive = session is not None and session.pid is not None
-            if record.ended_at is not None:
-                if not alive or session is None:
-                    continue
+        store = self.live.store
+        alive = session is not None and session.pid is not None
+        if record.ended_at is not None:
+            if alive and session is not None:
                 turn_over = session.state != SessionState.WORKING
                 overdue = (now - record.ended_at).total_seconds() >= READING_STOP_GRACE_SECONDS
                 if turn_over or overdue:
                     self.runtime.stop(session.short_id)
-                continue
-            if alive and session is not None and session.wall is not None:
-                # A limit mid-reading: the same move a lane gets, one hop to
-                # where the rule says, and the record follows the new id.
-                moved = self.runtime.move(session.short_id, None)
-                if moved.verdict == LaunchVerdict.ALIVE and moved.session is not None:
-                    self.live.store.move_reading_session(
-                        record.id, moved.session.session_id, moved.session.slot
-                    )
-                    self.live.note(
-                        slug,
-                        record.card_number,
-                        AuditKind.SIGNAL,
-                        Actor.MACHINE,
-                        f"Reading moved: hit a limit on {session.slot} ({session.wall.reason}); "
-                        f"now {moved.session.short_id} on {moved.session.slot}",
-                    )
-                    continue
-                self.live.store.end_reading_session(record.id, now)
-                self._reading_ended(
-                    live,
-                    record.card_number,
-                    f"the reading session hit a limit on {session.slot} ({session.wall.reason}) "
-                    f"and could not be moved: {moved.reason}",
-                    now,
+            return Tended.ALIVE, ""
+        if alive and session is not None and session.wall is not None:
+            moved = self.runtime.move(session.short_id, None)
+            if moved.verdict == LaunchVerdict.ALIVE and moved.session is not None:
+                store.move_windowless_session(
+                    record.id, moved.session.session_id, moved.session.slot
                 )
-                continue
-            # A turn that finished without the verb will never write one:
-            # the registry's `done` is that fact, and the ceiling is for a
-            # session that stops at a question nobody sees.
-            turn_done = session is not None and session.state == SessionState.DONE
-            overran = (now - record.started_at).total_seconds() >= READING_SECONDS
-            if alive and not turn_done and not overran:
-                continue
-            self.live.store.end_reading_session(record.id, now)
-            if alive and session is not None:
+                self.live.note(
+                    slug,
+                    record.card_number,
+                    AuditKind.SIGNAL,
+                    Actor.MACHINE,
+                    f"{what.capitalize()} moved: hit a limit on {session.slot} "
+                    f"({session.wall.reason}); now {moved.session.short_id} on "
+                    f"{moved.session.slot}",
+                )
+                return Tended.MOVED, ""
+            store.end_windowless_session(record.id, now)
+            return (
+                Tended.ENDED,
+                f"the {what} session hit a limit on {session.slot} ({session.wall.reason}) "
+                f"and could not be moved: {moved.reason}",
+            )
+        turn_done = session is not None and session.state == SessionState.DONE
+        overran = (now - record.started_at).total_seconds() >= ceiling_seconds
+        if alive and not overran:
+            return (Tended.TURN_DONE if turn_done else Tended.ALIVE), ""
+        store.end_windowless_session(record.id, now)
+        if alive and session is not None:
+            stopped = self.runtime.stop(session.short_id)
+            return (
+                Tended.ENDED,
+                f"the {what} session {session.short_id} ran {ceiling_seconds / 60:.0f} min "
+                f"{without} and was stopped"
+                + ("" if stopped.gone else f" (not gone: {stopped.words})"),
+            )
+        why = self.runtime.why_ended(session) if session is not None else None
+        return Tended.ENDED, f"the {what} session ended {without}" + (f" ({why})" if why else "")
+
+    def _tend_readings(self, live: LiveProject, sessions: list[Session]) -> None:
+        """The reading sessions the board started: one that ended without a
+        finding is recorded as unreadable so the cadence moves on and the
+        card says why. A turn that finished without the verb will never
+        write one — the registry's `done` is that fact — so it is stopped
+        and recorded the same way; the ceiling is for a session that stops
+        at a question nobody sees."""
+        by_id = {s.session_id: s for s in sessions if not s.stale}
+        now = clock.now()
+        records = self.live.store.windowless_sessions(live.project.slug, work=SessionWork.READING)
+        for record in records:
+            session = by_id.get(record.session_id)
+            tended, words = self.tend_windowless(
+                live,
+                record,
+                session,
+                now,
+                ceiling_seconds=READING_SECONDS,
+                what="reading",
+                without="without a finding",
+            )
+            if tended == Tended.TURN_DONE and session is not None:
+                self.live.store.end_windowless_session(record.id, now)
                 stopped = self.runtime.stop(session.short_id)
                 words = (
-                    f"the reading session {session.short_id} "
-                    + (
-                        "finished its turn without a finding"
-                        if turn_done
-                        else f"ran {READING_SECONDS / 60:.0f} min without a finding"
-                    )
-                    + " and was stopped"
+                    f"the reading session {session.short_id} finished its turn without a "
+                    "finding and was stopped"
                     + ("" if stopped.gone else f" (not gone: {stopped.words})")
                 )
-            else:
-                why = self.runtime.why_ended(session) if session is not None else None
-                words = "the reading session ended without a finding" + (f" ({why})" if why else "")
-            self._reading_ended(live, record.card_number, words, now)
+                tended = Tended.ENDED
+            if tended == Tended.ENDED:
+                self._reading_ended(live, record.card_number, words, now)
 
     def _reading_ended(self, live: LiveProject, number: int, words: str, now: datetime) -> None:
         """A reading that produced no finding, on the card: a machine reading
-        that could not be read while the card still waits on its signal, a
-        note otherwise."""
+        that could not be read while the card still waits on its signal or
+        its trigger, a note otherwise."""
         slug = live.project.slug
         card = self.live.store.card(slug, number)
         if card is None:
             return
         signal, _ = watch_signal(card)
-        if signal is None or card.place.column != Column.EXECUTED:
-            self.live.note(slug, number, AuditKind.SIGNAL, Actor.MACHINE, words)
+        if signal is not None and card.place.column == Column.EXECUTED:
+            self._land(slug, number, signal, None, words, now)
             return
-        self._land(slug, number, signal, None, words, now)
+        document = document_of(card, live.index)
+        trigger, _ = trigger_signal(document)
+        if trigger is not None and is_trigger_card(card, document):
+            self._land(slug, number, trigger, None, words, now, trigger=True)
+            return
+        self.live.note(slug, number, AuditKind.SIGNAL, Actor.MACHINE, words)
 
     # ── the trunk loop ─────────────────────────────────────────────────
 

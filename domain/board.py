@@ -9,7 +9,8 @@ from domain.audit import AuditEntry
 from domain.card import Card, Place
 from domain.column import ColumnDefinition
 from domain.corpus import CorpusSummary
-from domain.document import Document, DocumentRef, DocumentState, SuggestionKind
+from domain.dial import DialState
+from domain.document import Document, DocumentRef, DocumentState, Fix, SuggestionKind
 from domain.evidence import Standing
 from domain.gate import Gate
 from domain.handout import Handouts
@@ -17,7 +18,7 @@ from domain.hook import HeardMark
 from domain.lane import Collision, Conversation, Doors, Lane, LaneState
 from domain.project import Project
 from domain.row import Row
-from domain.signal import Reading, ReadingSession, Signal, SignalKind
+from domain.signal import Reading, Signal, SignalKind, WindowlessSession
 from domain.verdict import Verdict, VerdictLine
 from domain.watercooler import WatercoolerLine
 
@@ -68,9 +69,14 @@ class Claim(StrEnum):
     DOCUMENT_GONE = "document gone"
     COLLIDING = "colliding"
     DOCUMENT_WITHOUT_CARD = "document without card"
+    NO_REVIEW = "no review"
+    """Shipped by a close, with no REVIEW row: a close that slipped past the
+    refusal by another door (plan 11, item 1)."""
     LANE_WORKING = "lane working"
     CONVERSATION = "conversation"
     SIGNAL_READING = "signal reading"
+    PLANNING = "planning"
+    """A defect the dial is planning right now (plan 11, item 4)."""
 
 
 CLAIM_MEANING: dict[Claim, Meaning] = {
@@ -84,9 +90,11 @@ CLAIM_MEANING: dict[Claim, Meaning] = {
     Claim.DOCUMENT_GONE: Meaning.BROKEN,
     Claim.COLLIDING: Meaning.BROKEN,
     Claim.DOCUMENT_WITHOUT_CARD: Meaning.BROKEN,
+    Claim.NO_REVIEW: Meaning.BROKEN,
     Claim.LANE_WORKING: Meaning.LIVE,
     Claim.CONVERSATION: Meaning.LIVE,
     Claim.SIGNAL_READING: Meaning.LIVE,
+    Claim.PLANNING: Meaning.LIVE,
 }
 """Which of the three head words each claim counts under; the two other
 meanings never claim anyone."""
@@ -159,6 +167,10 @@ class CardSummary(BaseModel):
     """The cited path, whether or not it exists."""
     kind: SuggestionKind | None
     """A suggestion's kind, from its document; None behind a plan or a note."""
+    fix: Fix | None
+    """A suggestion's `Fix:` mark, from its document (plan 11, item 2); None
+    behind a plan or a note, and None for an unmarked suggestion, which the
+    face says."""
     state: CardState
     """The state line: one word, its meaning, the one door (plan 27, item 2)."""
     claims: list[Claim]
@@ -175,8 +187,11 @@ class CardSummary(BaseModel):
     """The lane has drifted into another live lane's files, named (plan 07, item 2)."""
     standing: Standing
     """Who placed the card here, on what evidence, and whether it holds on this read."""
-    reading: ReadingSession | None
+    reading: WindowlessSession | None
     """The session reading the card's signal right now, when one runs (plan 09, item 1)."""
+    planning: WindowlessSession | None
+    """The session the dial has planning this defect right now, when one
+    runs (plan 11, item 4)."""
 
 
 class GroupView(BaseModel):
@@ -269,6 +284,9 @@ class BoardState(BaseModel):
     attention: Attention
     trunk: TrunkState
     machine: MachineState
+    dial: DialState
+    """The owner's standing ruling on defects, one for the whole board, with
+    the fix lanes live against its number (plan 11, item 3)."""
     columns: list[ColumnView]
     documents_without_card: list[DocumentRef]
     asks: list[OwnerAsk]
@@ -305,6 +323,11 @@ class CardDetail(BaseModel):
     """The signal the card's WATCH row names, when one parses."""
     signal_note: str | None
     """Why the WATCH row names no signal the board can read, when it does not."""
+    trigger: Signal | None
+    """The signal a defect's `Fix: when` trigger names, when one parses: read
+    by the signal loop as an Executed card's WATCH row is (plan 11, item 5)."""
+    trigger_note: str | None
+    """Why the trigger names no signal the board can read, when it does not."""
     readings: list[Reading]
     verdict: Verdict | None
     """The verdict the card's VERDICT row names, when one parses."""

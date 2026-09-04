@@ -8,6 +8,9 @@ export type DocumentKind = (typeof DOCUMENT_KIND_VALUES)[number];
 export const DOCUMENT_STATE_VALUES = ["plan", "suggestion", "archived", "note", "gone"] as const;
 export type DocumentState = (typeof DOCUMENT_STATE_VALUES)[number];
 
+export const FIX_MARK_VALUES = ["now", "when", "his"] as const;
+export type FixMark = (typeof FIX_MARK_VALUES)[number];
+
 export const SUGGESTION_KIND_VALUES = ["idea", "defect"] as const;
 export type SuggestionKind = (typeof SUGGESTION_KIND_VALUES)[number];
 
@@ -26,6 +29,8 @@ export interface Document {
   found_by: string | null;
   card_ref: number | null;
   suggestion_kind: SuggestionKind | null;
+  fix?: Fix | null;
+  fix_note?: string | null;
   cites: string[];
   handouts: Handout[];
   head_fields: HeadField[];
@@ -40,6 +45,12 @@ export interface DocumentRef {
   stem: string;
   path: string;
   title: string;
+}
+
+export interface Fix {
+  mark: FixMark;
+  why: string | null;
+  trigger: string | null;
 }
 
 export interface HeadField {

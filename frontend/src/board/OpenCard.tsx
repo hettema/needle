@@ -282,6 +282,52 @@ export function OpenCard({ card, onMoveTo }: { card: CardSummary; onMoveTo: (num
         </Section>
       ) : null}
 
+      {detail.summary.planning ? (
+        <Section title="The dial" from="the owner's standing ruling: a defect marked Fix: now enters execution without him">
+          <Quiet>
+            The dial took it: a session is writing its plan in the project's checkout — {detail.summary.planning.session_id.slice(0, 8)} on {detail.summary.planning.slot}, since {ago(detail.summary.planning.started_at)}. Never hands on the tree. When the plan lands this card becomes the plan's and the board opens Start itself; a decision that is yours lands here as an ASK row instead.
+          </Quiet>
+        </Section>
+      ) : null}
+
+      {detail.trigger || (detail.summary.fix?.mark === "when" && detail.trigger_note) ? (
+        <Section title="The trigger" from={detail.trigger ? `Fix: when · ${detail.trigger.kind} · due ${detail.trigger.due} · every ${detail.trigger.every_hours}h` : "Fix: when, and the board cannot read it"}>
+          {detail.trigger ? (
+            <Quiet>
+              {detail.trigger.what} — {detail.trigger.kind} {detail.trigger.target}
+              {detail.trigger.expect ? ` expect ${detail.trigger.expect}` : ""}. Read on the same cadence as a shipped card's signal; delivered makes this defect eligible for the dial and moves nothing.
+            </Quiet>
+          ) : (
+            <Quiet>{detail.trigger_note}</Quiet>
+          )}
+          {detail.summary.reading ? (
+            <Quiet>
+              A session is reading this trigger now: {detail.summary.reading.session_id.slice(0, 8)} on {detail.summary.reading.slot}, since {ago(detail.summary.reading.started_at)}.
+            </Quiet>
+          ) : null}
+          {doors.signal.offered && !detail.signal ? (
+            <Ask>
+              {doors.signal.why}
+              <Acts>
+                <Button onClick={() => void through("signal", { delivered: true })} disabled={opening !== null}>
+                  Fired
+                </Button>
+                <Button ghost onClick={() => void through("signal", { delivered: false })} disabled={opening !== null}>
+                  Not yet
+                </Button>
+              </Acts>
+            </Ask>
+          ) : null}
+          {detail.readings.length && !detail.signal ? (
+            <Hist>
+              {detail.readings.slice(0, 5).map((r) => (
+                <HistRow key={r.id} when={when(r.at)} what={<What detail={`${r.delivered === null ? (r.actor === "session" ? "Cannot tell" : "Unreadable") : r.delivered ? "Fired" : "Not yet"} — ${r.words}`} />} who={r.actor === "owner" ? "you" : r.actor === "session" ? "a session" : "board"} owner={r.actor === "owner"} />
+              ))}
+            </Hist>
+          ) : null}
+        </Section>
+      ) : null}
+
       {card.place.column === "Executed" || card.place.column === "Done" || detail.signal ? (
         <Section title="The signal" from={detail.signal ? `${detail.signal.kind} · due ${detail.signal.due} · every ${detail.signal.every_hours}h` : "none the board can read"}>
           {detail.signal ? (

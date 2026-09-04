@@ -9,6 +9,7 @@ import type { DoorResult, Lane } from "../src/types/lane";
 import type { Project } from "../src/types/project";
 import type { ClaimCount } from "../src/types/board";
 import type { EvidenceClass, VerdictLine, VerdictsRuled } from "../src/types/verdict";
+import type { DialState } from "../src/types/dial";
 
 const api = vi.hoisted(() => ({
   getBoard: vi.fn<(slug: string) => Promise<BoardState>>(),
@@ -20,6 +21,7 @@ const api = vi.hoisted(() => ({
   openIdea: vi.fn<(slug: string, text: string) => Promise<DoorResult>>(),
   openPlan: vi.fn<(slug: string, numbers: number[]) => Promise<DoorResult>>(),
   acceptClass: vi.fn<(slug: string, evidenceClass: EvidenceClass) => Promise<VerdictsRuled>>(),
+  turnDial: vi.fn<(on: boolean, lanes: number) => Promise<DialState>>(),
   streamUrl: (slug: string) => `/api/projects/${slug}/stream`,
 }));
 
@@ -65,8 +67,14 @@ beforeEach(() => {
   api.openIdea.mockReset();
   api.openPlan.mockReset();
   api.acceptClass.mockReset();
+  api.turnDial.mockReset();
   window.history.replaceState(null, "", "/");
 });
+
+function numberOf(b: BoardState, title: string): number {
+  for (const column of b.columns) for (const group of column.groups) for (const card of group.cards) if (card.title === title) return card.number;
+  throw new Error(`no card titled ${title}`);
+}
 
 /** #253 with a lane: a live session on alpha, the doors a working lane offers. */
 function withLane(state: Lane["state"], sentence: string, question: string | null = null, windowOpen = false): CardDetail {
@@ -764,7 +772,7 @@ describe("the board at a glance (plan 06)", () => {
     await waitFor(() => expect(api.openPlan).toHaveBeenCalledWith(SLUG, [252]));
     expect(await within(one).findByText(/Planning #252/)).toBeInTheDocument();
     // A selection: + on the first, then a checkbox on every suggestion card, then one door for all.
-    expect(screen.queryByRole("checkbox")).not.toBeInTheDocument();
+    expect(screen.queryByRole("checkbox", { name: /together/ })).not.toBeInTheDocument();
     await userEvent.click(within(one).getByRole("button", { name: "Plan #252 together with others" }));
     const other = screen.getByText("#242").closest("article") as HTMLElement;
     expect(within(one).getByRole("checkbox", { name: "Plan #252 together" })).toBeChecked();
@@ -774,7 +782,7 @@ describe("the board at a glance (plan 06)", () => {
     await userEvent.click(within(bar).getByRole("button", { name: "Plan these together" }));
     await waitFor(() => expect(api.openPlan).toHaveBeenLastCalledWith(SLUG, [242, 252]));
     expect(await screen.findByText(/Planning #242, #252/)).toBeInTheDocument();
-    expect(screen.queryByRole("checkbox")).not.toBeInTheDocument();
+    expect(screen.queryByRole("checkbox", { name: /together/ })).not.toBeInTheDocument();
     // The open card offers Plan too.
     await userEvent.click(screen.getByText("The quay display polls the office all night"));
     const opened = await waitFor(() => {
@@ -790,7 +798,7 @@ describe("the board at a glance (plan 06)", () => {
     const backlog = document.querySelector('[data-column="Backlog"]') as HTMLElement;
     const rail = within(backlog).getByRole("button", { name: /Defects/ });
     expect(rail).toHaveAttribute("aria-expanded", "false");
-    expect(rail).toHaveTextContent("Defects1");
+    expect(rail).toHaveTextContent("Defects2");
     expect(within(backlog).queryByText("#232")).not.toBeInTheDocument();
     expect(backlog.querySelector(".stack")?.firstElementChild?.getAttribute("data-rail")).toBe("defects");
     await userEvent.click(rail);
@@ -799,7 +807,7 @@ describe("the board at a glance (plan 06)", () => {
     // A category is not a colour: the rail is a rail, and the counts of what is
     // unplanned are a quiet fact behind the project pill, not a claim on him.
     expect(rail.getAttribute("data-meaning")).toBeNull();
-    expect(document.querySelector(".facts")).toHaveTextContent("1 defects and 7 ideas unplanned");
+    expect(document.querySelector(".facts")).toHaveTextContent("2 defects and 7 ideas unplanned");
   });
 
   it("shows what a card carries on both faces", async () => {
@@ -874,6 +882,81 @@ describe("the board at a glance (plan 06)", () => {
   });
 });
 
+describe("defects fix themselves (plan 11)", () => {
+  it("shows the dial in the head, off, and a turn is persisted before the head shows it", async () => {
+    await renderBoard();
+    const dial = screen.getByRole("group", { name: "Auto-fix" });
+    const toggle = within(dial).getByRole("checkbox", { name: "Auto-fix defects" });
+    expect(toggle).not.toBeChecked();
+    const count = within(dial).getByText("0 of 1 live");
+    // A dial that is off, or on with nothing running, claims nothing.
+    expect(count.dataset["meaning"]).toBeUndefined();
+    const turned = board();
+    turned.dial = { dial: { on: true, lanes: 1, changed_at: "2026-09-05T08:00:00+00:00", first_on_at: "2026-09-05T08:00:00+00:00" }, running: 1, quiet: false };
+    api.turnDial.mockResolvedValue(turned.dial);
+    api.getBoard.mockResolvedValue(turned);
+    await userEvent.click(toggle);
+    await waitFor(() => expect(api.turnDial).toHaveBeenCalledWith(true, 1));
+    expect(await within(dial).findByText("auto-fix on, 1 fix lane at most")).toBeInTheDocument();
+    await waitFor(() => expect(within(dial).getByRole("checkbox", { name: "Auto-fix defects" })).toBeChecked());
+    // Something runs under the dial: the count is live, and only the count.
+    expect(within(dial).getByText("1 of 1 live").dataset["meaning"]).toBe("live");
+    expect(dial.dataset["meaning"]).toBeUndefined();
+    // The number lands on blur, never on a keystroke.
+    const lanes = within(dial).getByRole("spinbutton", { name: "Fix lanes at once" });
+    await userEvent.clear(lanes);
+    await userEvent.type(lanes, "3");
+    expect(api.turnDial).toHaveBeenCalledTimes(1);
+    fireEvent.blur(lanes);
+    await waitFor(() => expect(api.turnDial).toHaveBeenLastCalledWith(true, 3));
+  });
+
+  it("says who fixes a defect beside its kind, and unmarked when nobody said", async () => {
+    await renderBoard();
+    const backlog = document.querySelector('[data-column="Backlog"]') as HTMLElement;
+    await userEvent.click(within(backlog).getByRole("button", { name: /Defects/ }));
+    const tide = screen.getByText("The tide clock drifts a minute a day").closest("article") as HTMLElement;
+    const marked = within(tide).getByText("defect · now");
+    expect(marked).toHaveAttribute("title", expect.stringContaining("the dial may plan and start it without the owner"));
+    expect(marked.dataset["meaning"]).toBeUndefined();
+    const boat = screen.getByText("The night audit re-reads the whole harbour log").closest("article") as HTMLElement;
+    expect(within(boat).getByText("defect · unmarked")).toHaveAttribute("title", expect.stringContaining("an unmarked defect reads as his"));
+    // An idea says nothing about who fixes it.
+    expect(screen.queryByText(/idea · /)).toBeNull();
+  });
+
+  it("shows the dial's planning session and a defect's trigger on the open card", async () => {
+    const b = board();
+    const tide = numberOf(b, "The tide clock drifts a minute a day");
+    const d = detail(tide);
+    d.summary.planning = { id: 1, project: PROJECT.slug, card_number: tide, work: "planning", session_id: "cccc0001-0000-4000-8000-000000000000", slot: "alpha", started_at: "2026-09-04T08:27:00+00:00", ended_at: null };
+    api.getCard.mockResolvedValue(d);
+    await renderBoard();
+    const backlog = document.querySelector('[data-column="Backlog"]') as HTMLElement;
+    await userEvent.click(within(backlog).getByRole("button", { name: /Defects/ }));
+    await userEvent.click(screen.getByText("The tide clock drifts a minute a day"));
+    const section = await screen.findByText("The dial");
+    expect(section.closest(".sec")).toHaveTextContent("cccc0001 on alpha");
+    expect(section.closest(".sec")).toHaveTextContent("Never hands on the tree");
+    await userEvent.keyboard("{Escape}");
+    // A `when` defect: the trigger the signal loop reads, and the owner's
+    // answer when a session could not tell.
+    const boat = numberOf(b, "The night audit re-reads the whole harbour log");
+    const w = detail(boat);
+    w.summary.fix = { mark: "when", why: null, trigger: "a second boat is refused — session the booking log by 2026-12-31" };
+    w.trigger = { what: "a second boat is refused", kind: "session", target: "the booking log", expect: null, due: "2026-12-31", every_hours: 24 };
+    w.doors = { ...w.doors, signal: { offered: true, label: "Delivered?", why: "A session read this signal and could not tell — one refusal so far" } };
+    api.getCard.mockImplementation((_slug: string, number: number) => Promise.resolve(number === boat ? w : detail(number)));
+    api.openDoor.mockResolvedValue({ door: "signal", said: "Read as delivered; the trigger has fired: the defect is eligible for the dial." });
+    await userEvent.click(screen.getByText("The night audit re-reads the whole harbour log"));
+    const trigger = await screen.findByText("The trigger");
+    expect(trigger.closest(".sec")).toHaveTextContent("a second boat is refused — session the booking log");
+    await userEvent.click(within(trigger.closest(".sec") as HTMLElement).getByRole("button", { name: "Fired" }));
+    await waitFor(() => expect(api.openDoor).toHaveBeenCalledWith(SLUG, boat, "signal", { delivered: true }));
+    expect(await screen.findByText(/the defect is eligible for the dial/)).toBeInTheDocument();
+  });
+});
+
 /**
  * The colour language (plan 27, item 6). Every state the rule can name is
  * rendered here — one card each, from the real derivation in the fixture —
@@ -923,6 +1006,7 @@ describe("the colour language", () => {
     { case: "signal past due", word: "loop open · 1 Sep passed, unread", meaning: "broken", border: true, door: null },
     { case: "loop closed", word: "loop closed · read 09:30, delivered", meaning: "proven", border: false, door: null },
     { case: "not now", word: "not now", meaning: "quiet", border: false, door: "open ▸" },
+    { case: "being planned", word: "being planned · alpha", meaning: "live", border: true, door: "open to see" },
   ];
 
   it("has one card per state and no state the table does not name", () => {

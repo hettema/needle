@@ -1,6 +1,7 @@
 # A lane that folded cleanly is reported as having died
 
 **Kind:** defect
+**Fix:** now
 **Found by:** the owner, from the board's Idea door on 2026-09-04 (conversation
 56f7b05f), reading card #196's open face on the Hello Revenue board and asking
 what the lane band was saying.

@@ -11,7 +11,15 @@ import uuid
 from pathlib import Path
 
 from api.loops import Loops
-from board.brief import lane_name, needle_command, neighbours_text, render, watercooler_text
+from board.assemble import is_trigger_card
+from board.brief import (
+    filing_rule,
+    lane_name,
+    needle_command,
+    neighbours_text,
+    render,
+    watercooler_text,
+)
 from board.handouts import handouts_row
 from board.lane import HANDS_ON
 from board.signals import GRAMMAR, read_or_decline, where_after, where_after_finding
@@ -25,7 +33,7 @@ from domain.lane import DoorResult, Lane, LaneRecord, LaneState
 from domain.launch import LaunchVerdict, Start
 from domain.project import Project
 from domain.row import Row, RowKind
-from domain.signal import Finding
+from domain.signal import Finding, SessionWork
 from domain.verdict import EvidenceClass, VerdictsRuled
 from domain.window import WindowKind
 from infrastructure import clock
@@ -37,6 +45,9 @@ from runtime.windows import WindowRefused
 REPO_ROOT = Path(__file__).resolve().parent.parent
 DISCUSS_EFFORT = Gate.XHIGH
 """Talking a card through is thinking work, whatever the build gate says (0.1's rule)."""
+DOCS = "docs/"
+"""A lane whose every file is under here shipped no code, and its close
+needs no review record (plan 11, item 1)."""
 
 
 class DoorRefused(Exception):
@@ -209,12 +220,29 @@ class Doors:
             "archived to docs/plans/done/, the fold, then `needle close`. A WATCH row names the "
             "signal that will say the work delivered, and without one the card cannot enter "
             f"Executed. Its grammar: {GRAMMAR}"
+            "\nThe close refuses a lane that folded anything outside docs/ unless --review "
+            "names a record that exists; a docs-only close passes without one."
+            "\n\nThe review runs in rings (CLAUDE.md): a finding inside your change or on its "
+            "seams is fixed here and the next pass re-reads; a finding outside it is never "
+            "fixed in this lane — "
+            + filing_rule(
+                f"the lane on card #{card.number}"
+                + (f" ({detail.document.path})" if detail.document is not None else "")
+                + ", in the review's <lens> pass"
+            )
+            + "."
             "\n\nTo ask the owner something, end your turn with the question; the board shows it "
             "on the card and his answer resumes you."
         )
         return text
 
-    def start(self, slug: str, number: int, *, anyway: bool) -> DoorResult:
+    def start(
+        self, slug: str, number: int, *, anyway: bool, actor: Actor = Actor.OWNER
+    ) -> DoorResult:
+        """Start the card's lane where the rule says. `actor` is whose move
+        it is: the owner's click through the page or his terminal, or the
+        machine's under the dial — his standing ruling applied by the board
+        (plan 11, item 4), which the card's history then says."""
         detail = self._detail(slug, number)
         doors = detail.doors
         project = self.live.projects[slug].project
@@ -243,7 +271,7 @@ class Doors:
                 for a in launch.attempts
             )
             words = f"Start failed: {launch.reason}" + (f" ({tried})" if tried else "")
-            self.live.note(slug, number, AuditKind.STARTED, Actor.OWNER, words)
+            self.live.note(slug, number, AuditKind.STARTED, actor, words)
             raise DoorFailed(words)
         session = launch.session
         now = clock.now()
@@ -269,9 +297,11 @@ class Doors:
         where = f"{placement.model.value} on {placement.slot}" if placement else session.slot
         said = f"Started {session.short_id}, {where}, at {gate.value}, in {name}"
         said += f", in {launch.scope}" if launch.scope else f" ({launch.reason})"
+        if actor == Actor.MACHINE:
+            said += "; started by the dial"
         if overrode:
             said += f"; collision overridden: {overrode}"
-        self.live.note(slug, number, AuditKind.STARTED, Actor.OWNER, said)
+        self.live.note(slug, number, AuditKind.STARTED, actor, said)
         self.live.move(
             slug,
             number,
@@ -525,13 +555,27 @@ class Doors:
     # ── the owner reads a signal ───────────────────────────────────────
 
     def signal(self, slug: str, number: int, *, delivered: bool) -> DoorResult:
+        """The owner's reading: of an Executed card's signal, which moves the
+        card where the reading says; or of a Backlog defect's `Fix: when`
+        trigger (plan 11, item 5), which moves nothing — delivered makes the
+        defect eligible for the dial."""
         detail = self._detail(slug, number)
-        if not detail.doors.signal.offered or detail.signal is None:
+        trigger_card = is_trigger_card(detail.card, detail.document)
+        signal = detail.trigger if trigger_card else detail.signal
+        if not detail.doors.signal.offered or signal is None:
             raise DoorRefused(detail.doors.signal.why)
         now = clock.now()
         words = f"the owner read it as {'delivered' if delivered else 'not delivered'}"
         self.live.store.record_reading(slug, number, now, delivered, words, Actor.OWNER)
-        landing = where_after(detail.signal, delivered, now)
+        if trigger_card:
+            self.live.bump()
+            said = (
+                "the trigger has fired: the defect is eligible for the dial"
+                if delivered
+                else "the trigger has not fired: the defect waits"
+            )
+            return DoorResult(door="signal", said=f"Read as {words.split(' as ')[1]}; {said}.")
+        landing = where_after(signal, delivered, now)
         column = landing.column or Column.DECISION_MOMENT
         reason = landing.reason if landing.column else "the owner read the signal as not delivered"
         self.live.move(
@@ -638,14 +682,24 @@ class Doors:
         if not words:
             raise DoorRefused("A finding without its evidence records nothing; say what you read.")
         detail = self._detail(slug, number)
-        if detail.card.place.column != Column.EXECUTED:
+        trigger_card = is_trigger_card(detail.card, detail.document)
+        if detail.card.place.column != Column.EXECUTED and not trigger_card:
             raise DoorRefused(
                 f"#{number} is in {detail.card.place.column}; a reading is of an Executed "
-                "card's signal."
+                "card's signal, or of a Backlog defect's Fix: when trigger."
             )
-        signal = detail.signal
+        signal = detail.trigger if trigger_card else detail.signal
         if signal is None:
+            if trigger_card:
+                raise DoorRefused(
+                    f"#{number}'s Fix: when line names no trigger: {detail.trigger_note}"
+                )
             raise DoorRefused(f"#{number}'s WATCH row names no signal: {detail.signal_note}")
+        if watch is not None and trigger_card:
+            raise DoorRefused(
+                "A trigger lives on the suggestion's Fix: when line, not on a WATCH row; a "
+                "wrong measure is changed there."
+            )
         if watch is not None:
             replacement, why = read_or_decline(watch)
             if replacement is None:
@@ -656,10 +710,22 @@ class Doors:
             signal = replacement
         now = clock.now()
         self.live.store.record_reading(slug, number, now, finding.delivered, words, Actor.SESSION)
-        for open_reading in self.live.store.reading_sessions(slug, open_only=True):
+        for open_reading in self.live.store.windowless_sessions(
+            slug, work=SessionWork.READING, open_only=True
+        ):
             if open_reading.card_number == number:
-                self.live.store.end_reading_session(open_reading.id, now)
+                self.live.store.end_windowless_session(open_reading.id, now)
         self.live.bump()
+        if trigger_card:
+            where = {
+                Finding.DELIVERED: "the trigger has fired: the defect is eligible for the dial",
+                Finding.NOT_DELIVERED: "the trigger has not fired: the defect waits",
+                Finding.CANNOT_TELL: "the owner is asked with your words",
+            }[finding]
+            return DoorResult(
+                door="reading",
+                said=f"#{number} read as {finding.value.replace('-', ' ')}; {where}.",
+            )
         landing = where_after_finding(signal, finding, now)
         if landing.column is not None:
             self.live.move(
@@ -696,7 +762,10 @@ class Doors:
         actor: Actor,
     ) -> DoorResult:
         """Rows and the move in one act, so the card never says half of what
-        happened. Executed needs the plan archived and a readable signal."""
+        happened. Executed needs the plan archived and a readable signal; a
+        lane that folded anything outside docs/ needs a review record that
+        exists (plan 11, item 1) — an unattended lane's "clean" is a refused
+        close, not a remembered rule."""
         signal, why = read_or_decline(watch)
         if signal is None:
             raise DoorRefused(f"The WATCH row names no signal: {why}")
@@ -710,6 +779,7 @@ class Doors:
                 "docs/plans/done/ first, or name another column."
             )
         lane = live.snapshot.lanes.get(number) if live.snapshot else None
+        self._refuse_a_code_lane_without_its_review(slug, number, lane, review)
         # Read before any row is written, so nothing that goes wrong reading
         # the lane leaves DELIVERED on a card that did not move (review
         # pass 2; a file the board cannot read is skipped, and a directory
@@ -737,6 +807,43 @@ class Doors:
             + (", HANDED OUT" if handed is not None else "")
             + f" written; the signal is read {signal.kind.value} {signal.target} by {signal.due}.",
         )
+
+    def _refuse_a_code_lane_without_its_review(
+        self, slug: str, number: int, lane: Lane | None, review: str | None
+    ) -> None:
+        """The lane's files from its birth to its tip, read from its worktree
+        while it stands and from the project's checkout once it is gone: a
+        file outside docs/ makes it a code lane, and a code lane closes with
+        a review record that exists — named by the path it was expected at.
+        A card the board knows no lane for shipped nothing the board could
+        see, and passes; the head counts a shipped card with no REVIEW row
+        either way."""
+        project = self.live.projects[slug].project
+        record = self.live.store.lane(slug, number)
+        where = record.path if record is not None else (lane.path if lane is not None else None)
+        if where is None:
+            return
+        standing = Path(where).is_dir()
+        files = self.runtime.lane_files(
+            where if standing else project.path,
+            birth=record.birth if record is not None else None,
+            tip=None if standing else (record.tip if record is not None else None),
+        )
+        code = sorted(f for f in files if not f.startswith(DOCS))
+        if not code:
+            return
+        shown = ", ".join(code[:3]) + (f" and {len(code) - 3} more" if len(code) > 3 else "")
+        expected = f"{project.path}/docs/reviews/<file>.md"
+        if not review:
+            raise DoorRefused(
+                f"#{number}'s lane folded code ({shown}); a code lane closes with a review "
+                f"record — name it with --review, a file at {expected}."
+            )
+        if not any((Path(root) / review).is_file() for root in (project.path, where)):
+            raise DoorRefused(
+                f"#{number}'s review record {review} is not in the project's tree; expected "
+                f"{project.path}/{review}."
+            )
 
     def _handed_out(self, slug: str, number: int, lane: Lane | None) -> str | None:
         """The HANDED OUT row (plan 12, item 3): what the plan named against

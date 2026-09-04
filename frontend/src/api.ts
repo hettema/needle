@@ -2,6 +2,7 @@
 
 import type { BoardState, CardDetail, ProjectFile } from "./types/board";
 import type { Move, Place } from "./types/card";
+import type { DialState } from "./types/dial";
 import type { DoorResult } from "./types/lane";
 import type { Project } from "./types/project";
 import type { EvidenceClass, VerdictsRuled } from "./types/verdict";
@@ -97,6 +98,15 @@ export function acceptClass(slug: string, evidenceClass: EvidenceClass): Promise
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ evidence_class: evidenceClass }),
+  });
+}
+
+/** The dial (plan 11, item 3): the owner's standing ruling that a defect marked `Fix: now` enters execution without him, and how many fix lanes may run at once — one for the whole board. */
+export function turnDial(on: boolean, lanes: number): Promise<DialState> {
+  return call<DialState>("/api/dial", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ on, lanes }),
   });
 }
 

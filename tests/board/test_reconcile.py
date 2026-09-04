@@ -291,3 +291,24 @@ def test_a_suggestion_is_born_with_its_kind():
         ("d", "defect"),
         ("i", "idea"),
     ]
+
+
+def test_a_plan_landing_with_its_carried_suggestion_archived_in_one_read_archives_nothing():
+    """The plan-writing session moves the carried suggestion to done/ in the
+    commit that lands the plan; when the watcher sees both in one batch the
+    card is the plan's and its document is live — the archive is the
+    suggestion's, not the card's (Needle #30 went to Decision moment as "its
+    plan was archived" on 2026-09-04 for want of this; found by plan 11's
+    dial, which follows the plan onto the card)."""
+    cards = [card(7, _slink("a"), Column.BACKLOG)]
+    corpus = index(_plan("p", "a"), _suggestion("a", archived=True))
+    effects = reconcile(corpus, cards)
+    assert [(r.card_number, r.document.stem, r.promote) for r in effects.relinked] == [
+        (7, "p", True)
+    ]
+    assert effects.archived == [], "the card follows the live plan; nothing of its own is archived"
+    assert effects.born == []
+    # A card no plan takes over still notices its own document archived.
+    alone = [card(8, _slink("b"), Column.BACKLOG)]
+    archived = reconcile(index(_suggestion("b", archived=True)), alone).archived
+    assert [a.card_number for a in archived] == [8]

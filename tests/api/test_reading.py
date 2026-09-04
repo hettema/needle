@@ -17,6 +17,7 @@ from fastapi.testclient import TestClient
 
 from api import loops as loops_mod
 from api.cli import main
+from domain.signal import SessionWork
 from infrastructure import clock
 from tests.api import test_doors as doors
 from tests.api.attention import claim_count, yours
@@ -282,10 +283,12 @@ def test_at_most_readings_at_once_run_and_the_rest_wait_for_the_next_tick(
     # Another card's reading, alive on beta: this very process stands in for it.
     other_id = machine_floor.write_job("beta", "bbbb0001", cwd=str(repo), name="reading-card-174")
     machine_floor.write_process("beta", other_id, os.getpid(), cwd=str(repo))
-    other = store.open_reading_session("proj", 174, other_id, "beta", datetime.now(UTC))
+    other = store.open_windowless_session(
+        "proj", 174, SessionWork.READING, other_id, "beta", datetime.now(UTC)
+    )
     read_signals(client)
     assert machine_floor.state()["launch_log"] == [], "another card's reading holds the one slot"
-    store.end_reading_session(other.id, datetime.now(UTC))
+    store.end_windowless_session(other.id, datetime.now(UTC))
     read_signals(client)
     assert len(machine_floor.state()["launch_log"]) == 1
 

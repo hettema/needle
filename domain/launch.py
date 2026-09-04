@@ -28,14 +28,16 @@ class Start(BaseModel):
     """The slot to ask first; None asks the rule from the top."""
 
 
-class ReadingStart(BaseModel):
-    """What the loop asks for when a card's signal is a session's to read
-    (plan 09, item 1): a session in the repository's own checkout, no
-    worktree, that reads evidence and ends with a finding. Never a lane."""
+class WindowlessStart(BaseModel):
+    """What the board asks for when a session is to work in the repository's
+    own checkout with no worktree and no window: a reading of a card's
+    signal (plan 09, item 1) or the planning of a marked defect under the
+    dial (plan 11, item 4). Never a lane."""
 
     repo: str
     card: str
-    """The lane's name, prefixed `reading-`: the scope and the registry carry it."""
+    """The session's name, prefixed `reading-` or `planning-` before the
+    lane's name: the scope and the registry carry it."""
     brief: str
     effort: Gate
 

@@ -9,7 +9,7 @@ from pathlib import Path
 
 from domain.gate import Gate
 from domain.handout import Dispatch
-from domain.launch import Launch, ReadingStart, Rescue, Start, Stopped
+from domain.launch import Launch, Rescue, Start, Stopped, WindowlessStart
 from domain.session import Session
 from domain.signal import Signal
 from domain.slot import Placement, Rung, Slot, Where
@@ -80,10 +80,12 @@ class Runtime:
     def start(self, request: Start) -> Launch:
         return launch.start(self.store, request)
 
-    def read_by_session(self, request: ReadingStart) -> Launch:
-        """A reading session in the project's own checkout (plan 09, item
-        1): never a lane, so it is not `start`, which is the owner's click."""
-        return launch.read(self.store, request)
+    def start_windowless(self, request: WindowlessStart) -> Launch:
+        """A session in the project's own checkout with no window and no
+        worktree — a reading of a signal (plan 09, item 1) or the planning
+        of a defect under the dial (plan 11, item 4): never a lane, so it is
+        not `start`, which is the owner's click."""
+        return launch.windowless(self.store, request)
 
     def move(self, ref: str, to_slot: str | None) -> Launch:
         session = self.session(ref)
@@ -180,6 +182,17 @@ class Runtime:
 
     def edits(self, checkout: str) -> set[str]:
         return git.changed_files(checkout)
+
+    def lane_files(self, checkout: str, *, birth: str | None, tip: str | None) -> set[str]:
+        """Every file a lane touched from its birth to its tip, plus what its
+        worktree still holds uncommitted: what the close reads to tell a code
+        lane from a docs-only one (plan 11, item 1). Read after the fold, the
+        diff against the trunk is empty, so the lane's own birth is the base."""
+        return git.lane_files(checkout, birth=birth, tip=tip)
+
+    def reverted(self, repo: str, tip: str) -> bool:
+        """Whether a commit on the trunk says it reverts the lane's tip."""
+        return git.reverted(repo, tip)
 
     def branch_tip(self, repo: str, branch: str) -> str | None:
         return git.head_of(repo, branch)

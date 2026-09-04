@@ -93,6 +93,35 @@ def changed_files(checkout: str | Path, *, against: str = f"{REMOTE}/{TRUNK}") -
     return files
 
 
+def lane_files(checkout: str | Path, *, birth: str | None, tip: str | None) -> set[str]:
+    """Every file a lane changed from the commit it was born at to its tip,
+    plus what the checkout holds uncommitted (plan 11, item 1). After a fold
+    the diff against the trunk is empty — the lane's HEAD is the trunk — so
+    the lane's own birth is the base; with no birth known, the trunk is,
+    which is what the collision read uses while the lane runs."""
+    files: set[str] = set()
+    head_ref = tip or "HEAD"
+    if birth:
+        diff = _try(checkout, "diff", "--name-only", f"{birth}..{head_ref}")
+    else:
+        diff = _try(checkout, "diff", "--name-only", f"{REMOTE}/{TRUNK}...{head_ref}")
+    if diff:
+        files |= {line.strip() for line in diff.splitlines() if line.strip()}
+    porcelain = _try(checkout, "status", "--porcelain")
+    if porcelain:
+        files |= {line[3:].strip() for line in porcelain.splitlines() if line.strip()}
+    return files
+
+
+def reverted(repo: str | Path, tip: str) -> bool:
+    """Whether a commit on the trunk reverts the lane's tip: git's own revert
+    message names the commit it undoes ("This reverts commit <sha>"), and the
+    trunk is searched for that sentence with the tip's full or short sha."""
+    trunk = f"{REMOTE}/{TRUNK}"
+    out = _try(repo, "log", f"--grep=This reverts commit {tip[:10]}", "--format=%H", trunk)
+    return bool(out and out.strip())
+
+
 def tracked_changes(checkout: str | Path) -> list[str]:
     """Uncommitted changes to tracked files; untracked files are not work in progress."""
     porcelain = _try(checkout, "status", "--porcelain", "--untracked-files=no")

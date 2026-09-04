@@ -5,6 +5,7 @@ boundary pass. `uv run ruff check .` reported 27 errors on the lane's base
 commit (`16a8023`) and 25 after it — this lane introduced none and incidentally
 cleared two.
 **Kind:** defect
+**Fix:** now
 
 ## Observation
 

@@ -1,6 +1,7 @@
 # Nothing moves a walled lane; the board only says it is blocked
 
 **Kind:** defect
+**Fix:** now
 **Found by:** work-0c on the Omarchy board (2026-09-04 21:00), after the wall
 detector was fixed and four lanes still sat still — the files were being
 written correctly and nobody was reading them for action.

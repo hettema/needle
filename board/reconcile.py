@@ -290,6 +290,17 @@ def reconcile(index: CorpusIndex, cards: list[Card]) -> Effects:
                 Rehomed(card_number=card.number, into_rail=wants_rail, kind=document.suggestion_kind)
             )
 
+    # A card whose suggestion a plan takes over in this same read is not a
+    # card whose document was archived: the plan-writing session moves the
+    # carried suggestion to done/ in the commit that lands the plan, and
+    # when the watcher sees both in one batch the archive would otherwise be
+    # stamped over the new link, so the card read "its plan was archived,
+    # but no session wrote it up" and went to Decision moment with a done/
+    # path that does not exist (Needle #30, 2026-09-04 23:03Z; found by the
+    # dial's own path, plan 11, which follows the plan onto the card).
+    taken_over = {r.card_number for r in relinked}
+    archived = [a for a in archived if a.card_number not in taken_over]
+
     return Effects(
         renamed=renamed,
         relinked=relinked,

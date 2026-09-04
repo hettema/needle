@@ -3,7 +3,8 @@ import type { AuditEntry } from "./audit";
 import type { Card, Place } from "./card";
 import type { ColumnDefinition } from "./column";
 import type { CorpusSummary } from "./corpus";
-import type { Document, DocumentRef, DocumentState, SuggestionKind } from "./document";
+import type { DialState } from "./dial";
+import type { Document, DocumentRef, DocumentState, Fix, SuggestionKind } from "./document";
 import type { Standing } from "./evidence";
 import type { Gate } from "./gate";
 import type { Handouts } from "./handout";
@@ -11,11 +12,11 @@ import type { HeardMark } from "./hook";
 import type { Collision, Conversation, Doors, Lane, LaneState } from "./lane";
 import type { Project } from "./project";
 import type { Row } from "./row";
-import type { Reading, ReadingSession, Signal, SignalKind } from "./signal";
+import type { Reading, Signal, SignalKind, WindowlessSession } from "./signal";
 import type { Verdict, VerdictLine } from "./verdict";
 import type { WatercoolerLine } from "./watercooler";
 
-export const CLAIM_VALUES = ["verdict", "lane asking", "signal asking", "decision", "lane ended", "doubted", "signal overdue", "document gone", "colliding", "document without card", "lane working", "conversation", "signal reading"] as const;
+export const CLAIM_VALUES = ["verdict", "lane asking", "signal asking", "decision", "lane ended", "doubted", "signal overdue", "document gone", "colliding", "document without card", "no review", "lane working", "conversation", "signal reading", "planning"] as const;
 export type Claim = (typeof CLAIM_VALUES)[number];
 
 export const ESSENCE_SOURCE_VALUES = ["card", "document"] as const;
@@ -47,6 +48,7 @@ export interface BoardState {
   attention: Attention;
   trunk: TrunkState;
   machine: MachineState;
+  dial: DialState;
   columns: ColumnView[];
   documents_without_card: DocumentRef[];
   asks: OwnerAsk[];
@@ -67,6 +69,8 @@ export interface CardDetail {
   doors: Doors;
   signal: Signal | null;
   signal_note: string | null;
+  trigger: Signal | null;
+  trigger_note: string | null;
   readings: Reading[];
   verdict: Verdict | null;
   verdict_note: string | null;
@@ -94,6 +98,7 @@ export interface CardSummary {
   document_state: DocumentState;
   document_path: string | null;
   kind: SuggestionKind | null;
+  fix: Fix | null;
   state: CardState;
   claims: Claim[];
   folded: FoldedCard[];
@@ -103,7 +108,8 @@ export interface CardSummary {
   lane_state: LaneState;
   colliding: Collision | null;
   standing: Standing;
-  reading: ReadingSession | null;
+  reading: WindowlessSession | null;
+  planning: WindowlessSession | null;
 }
 
 export interface ClaimCount {
@@ -180,7 +186,9 @@ export const CLAIM_MEANING: Record<Claim, Meaning> = {
   "document gone": "broken",
   "colliding": "broken",
   "document without card": "broken",
+  "no review": "broken",
   "lane working": "live",
   "conversation": "live",
   "signal reading": "live",
+  "planning": "live",
 };

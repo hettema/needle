@@ -14,8 +14,10 @@ needle sync [SLUG]                       # level each main checkout with origin/
 needle signals [SLUG]                    # read every due signal now
 needle lanes SLUG                        # every card's lane, as the board reads it
 needle verdicts SLUG [--write]           # the verdicts the board's own facts settle (plan 05)
-needle kinds SLUG                        # every live suggestion's kind as the board reads it (plan 06)
+needle kinds SLUG                        # every live suggestion's kind and Fix: mark, as read
 needle watercooler SLUG [N "text"]       # read the watercooler, or say one line as #N's lane
+needle dial [on|off] [--lanes N]         # the owner's standing ruling on defects (plan 11)
+needle fixes SLUG|all                    # every fix lane the dial ran, and the rail against dial-on
 
 Rows are written to the store directly — the one writer — and the running
 board hears the store change; a start goes through the server so the board
@@ -31,9 +33,11 @@ import urllib.request
 from collections.abc import Callable
 from pathlib import Path
 
+from api.dial import Dial
 from api.doors import REPO_ROOT, DoorFailed, DoorRefused, Doors
 from api.loops import Loops, project_of_cwd
 from board.brief import watercooler_text
+from board.dial import Filer
 from board.lane import has_row
 from board.verdicts import CLOSED, VerdictUnreadable, machine_verdict, parse_verdict, render_verdict
 from domain.audit import AuditKind
@@ -431,7 +435,8 @@ def kinds(
     """Every live suggestion's kind as the board reads it (plan 06, item 2):
     from its `Kind:` line, or guessed from its text where there is none —
     the table of guesses the owner checks, printed rather than tracked,
-    since a project's titles stay in that project's repository."""
+    since a project's titles stay in that project's repository. And its
+    `Fix:` mark (plan 11, item 2), with why it is unmarked when it is."""
     project = live.projects.get(args.slug)
     if project is None:
         print(f'no project "{args.slug}" is on the board', file=sys.stderr)
@@ -440,9 +445,11 @@ def kinds(
     lined = sum(1 for d in rows if any(f.key.lower() == "kind" for f in d.head_fields))
     guessed = [d for d in rows if not any(f.key.lower() == "kind" for f in d.head_fields)]
     defects = sum(1 for d in guessed if d.suggestion_kind == SuggestionKind.DEFECT)
+    marked = sum(1 for d in rows if d.fix is not None)
     print(
         f"{len(rows)} live suggestions; {lined} with a Kind line; {len(guessed)} read from "
-        f"their text, {defects} of them as defects"
+        f"their text, {defects} of them as defects; {marked} with a Fix: mark, "
+        f"{len(rows) - marked} unmarked"
     )
     for document in rows:
         line = next((f.value for f in document.head_fields if f.key.lower() == "kind"), None)
@@ -452,7 +459,94 @@ def kinds(
             if line
             else ("its title or Found-by" if kind == "defect" else "no sign of a defect")
         )
-        print(f"{kind:<7} {document.path}  {document.title}  ({why})")
+        if document.fix is not None:
+            mark = document.fix.mark.value + (
+                f" {document.fix.trigger}" if document.fix.trigger else ""
+            )
+        else:
+            mark = f"unmarked ({document.fix_note})"
+        print(f"{kind:<7} {document.path}  {document.title}  ({why}; Fix: {mark})")
+    return 0
+
+
+def dial(args: argparse.Namespace, live: Live, runtime: Runtime, loops: Loops, doors: Doors) -> int:
+    """The owner's dial from his terminal (plan 11, item 3): read it, or
+    turn it. The running board hears the store change within a second."""
+    control = Dial(live, runtime, loops, doors)
+    loops.reconcile_now()
+    if args.setting is None and args.lanes is None:
+        state = live.dial_state()
+    else:
+        current = live.store.dial()
+        on = current.on if args.setting is None else args.setting == "on"
+        lanes = current.lanes if args.lanes is None else args.lanes
+        state = control.turn(on=on, lanes=lanes)
+    setting = state.dial
+    print(
+        f"auto-fix {'on' if setting.on else 'off'}, {setting.lanes} fix lane"
+        f"{'' if setting.lanes == 1 else 's'} at most; {state.running} live now; the machine is "
+        f"{'quiet' if state.quiet else 'not quiet (a lane has hands on a project)'}"
+        + (f"; changed {setting.changed_at.isoformat()}" if setting.changed_at else "")
+        + (f"; first turned on {setting.first_on_at.isoformat()}" if setting.first_on_at else "")
+    )
+    return 0
+
+
+def fixes(
+    args: argparse.Namespace, live: Live, runtime: Runtime, loops: Loops, doors: Doors
+) -> int:
+    """The loop counted (plan 11, item 6), for one project or all."""
+    slug = None if args.slug == "all" else args.slug
+    if slug is not None and slug not in live.projects:
+        print(f'no project "{slug}" is on the board', file=sys.stderr)
+        return 1
+    loops.reconcile_now()
+    report = Dial(live, runtime, loops, doors).fixes(slug)
+    setting = report.dial
+    print(
+        f"dial: {'on' if setting.on else 'off'}, {setting.lanes} at most"
+        + (f", first on {setting.first_on_at.isoformat()}" if setting.first_on_at else ", never on")
+    )
+    if not report.lanes:
+        print("no fix lane yet")
+    for lane in report.lanes:
+        facts = [
+            lane.stage.value,
+            "folded" if lane.folded else "not folded",
+            "review record" if lane.reviewed else "no review record",
+            "stopped to ask" if lane.stopped_to_ask else "did not ask",
+            "defect filed against it"
+            if lane.defect_filed_against
+            else "no defect filed against it",
+            "fold reverted" if lane.fold_reverted else "fold stands",
+            f"class: {lane.class_closer}" if lane.class_closer else "no Class: line",
+        ]
+        print(f"{lane.project} #{lane.card_number:<4} {lane.title}")
+        print("      " + "; ".join(facts))
+    closed = [lane for lane in report.lanes if lane.stage.value in ("folded", "ended", "asked")]
+    green = sum(1 for done in closed if done.folded and done.reviewed)
+    asked = sum(1 for done in closed if done.stopped_to_ask)
+    undone = sum(1 for done in closed if done.defect_filed_against or done.fold_reverted)
+    closers = sum(1 for done in closed if done.class_closer)
+    print(
+        f"{len(report.lanes)} fix lanes, {len(closed)} closed: {green} folded with a review "
+        f"record, {asked} stopped to ask, {undone} undone (a defect filed against it, or the "
+        f"fold reverted), {closers} carried a class-closer"
+    )
+    at_on = {r.project: r for r in report.rail_at_first_on}
+    for rail in report.rail_now:
+        before = at_on.get(rail.project)
+        split = ", ".join(
+            f"{filer.value} {rail.counts.get(filer, 0)}"
+            + (f" (was {before.counts.get(filer, 0)})" if before else "")
+            for filer in Filer
+            if rail.counts.get(filer, 0) or (before and before.counts.get(filer, 0))
+        )
+        print(
+            f"rail {rail.project}: {rail.total}"
+            + (f" (was {before.total} at dial-on)" if before else " (the dial has never been on)")
+            + (f" — {split}" if split else "")
+        )
     return 0
 
 
@@ -551,3 +645,16 @@ def register(sub: "argparse._SubParsersAction[argparse.ArgumentParser]") -> None
     p_water.add_argument("number", type=int, nargs="?", help="the card whose lane is speaking")
     p_water.add_argument("text", nargs="?", help="the line")
     p_water.set_defaults(run=_with_board(watercooler))
+
+    p_dial = sub.add_parser(
+        "dial", help="the dial: read it, or turn auto-fix on or off and set the number of fix lanes"
+    )
+    p_dial.add_argument("setting", nargs="?", choices=["on", "off"])
+    p_dial.add_argument("--lanes", type=int, help="how many fix lanes may run at once")
+    p_dial.set_defaults(run=_with_board(dial))
+
+    p_fixes = sub.add_parser(
+        "fixes", help="every fix lane the dial ran, and the rail now against dial-on"
+    )
+    p_fixes.add_argument("slug", help="a project's slug, or all")
+    p_fixes.set_defaults(run=_with_board(fixes))

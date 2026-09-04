@@ -2,7 +2,7 @@
 import type { Actor, Place } from "./card";
 import type { Evidence } from "./evidence";
 
-export const AUDIT_KIND_VALUES = ["born", "moved", "linked", "renamed", "archived", "retired", "started", "row", "answered", "discussed", "stopped", "rescued", "ended", "signal", "folded", "folded-into", "synced"] as const;
+export const AUDIT_KIND_VALUES = ["born", "moved", "linked", "renamed", "archived", "retired", "started", "row", "answered", "discussed", "stopped", "rescued", "ended", "signal", "folded", "folded-into", "synced", "dial"] as const;
 export type AuditKind = (typeof AUDIT_KIND_VALUES)[number];
 
 export interface AuditEntry {

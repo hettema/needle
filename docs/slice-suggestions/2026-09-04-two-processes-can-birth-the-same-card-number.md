@@ -6,6 +6,7 @@ route died with `sqlite3.IntegrityError: UNIQUE constraint failed:
 cards.project_slug, cards.number` inside `Store.apply_effects`, on the birth
 of a card whose number another process had just used.
 **Kind:** defect
+**Fix:** now
 
 ## Observation
 

@@ -16,7 +16,7 @@ from domain.evidence import Evidence, EvidenceState, Standing
 from domain.hook import HookKind
 from domain.lane import Collision, CollisionVerdict, LaneRecord, LaneState
 from domain.session import SessionState
-from domain.signal import Reading, ReadingSession
+from domain.signal import Reading, SessionWork, WindowlessSession
 from domain.slot import Handoff
 from tests.board.test_lane import LANE, NOW, PLACEMENT, card, doors, event, facts, session
 
@@ -345,10 +345,11 @@ def test_a_shipped_cards_state_is_its_loop():
         True,
     )
 
-    reading = ReadingSession(
+    reading = WindowlessSession(
         id=1,
         project="proj",
         card_number=7,
+        work=SessionWork.READING,
         session_id="bbbb0001-0000-4000-8000-000000000000",
         slot="beta",
         started_at=NOW - timedelta(minutes=2),

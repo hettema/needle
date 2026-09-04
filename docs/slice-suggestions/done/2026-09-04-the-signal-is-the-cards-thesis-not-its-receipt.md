@@ -3,6 +3,7 @@
 **Carried by:** docs/plans/2026-09-05-14-the-board-never-asks-about-what-does-not-matter.md
 
 **Kind:** idea
+**Fix:** his
 **Found by:** the owner, in conversation with the coordinating session on
 2026-09-04, watching the first reading round land: *"in my mind, the needle
 board would be my watchdog for the intent. So if we push a feature that is

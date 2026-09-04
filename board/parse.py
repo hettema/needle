@@ -10,7 +10,7 @@ document with no recognisable head is still a document with a title.
 import re
 from datetime import date, datetime
 
-from domain.document import Document, DocumentKind, HeadField, SuggestionKind
+from domain.document import Document, DocumentKind, Fix, FixMark, HeadField, SuggestionKind
 from domain.gate import Gate
 from domain.handout import Handout
 
@@ -30,6 +30,13 @@ _LIST_MARKER = re.compile(r"^(?:[-*+>]|\d+[.)])\s+")
 _SENTENCE_END = re.compile(r"(?<=[.!?])\s+(?=[A-Z0-9\"'(`*])")
 _SUGGESTION_PATH = re.compile(r"docs/slice-suggestions/(?:done/)?([\w.-]+?)\.md")
 _KIND = re.compile(r"^\W*(defect|idea)\b", re.I)
+_FIX = re.compile(r"^\W*(now|his|when)\b\W*(.*)$", re.I | re.S)
+"""The `Fix:` line's vocabulary (plan 11, item 2): the first word is the
+mark; after `now` or `his` the rest is the why, after `when` the trigger.
+Any other line is prose and the suggestion is unmarked."""
+NO_FIX_LINE = "no Fix: line"
+FIX_NOT_A_MARK = "Fix: line is not a mark"
+TWO_FIX_LINES = "two Fix: lines"
 _DEFECT_TITLE = re.compile(
     r"\b(?:does not|doesn'?t|do not|cannot|can'?t|never fires?|no longer|misses|is wrong|"
     r"fails?|escapes?|race|blind\w*|hole|bypass|broken|wrong|regression|crash\w*|bug|defect)\b",
@@ -193,6 +200,29 @@ def suggestion_kind_of(
     return SuggestionKind.IDEA
 
 
+def fix_of(kind: DocumentKind, fields: list[HeadField]) -> tuple[Fix | None, str | None]:
+    """A suggestion's `Fix:` mark from its head, or why it is unmarked (plan
+    11, item 2). The head only — a `**Fix:**` line under a section is prose
+    that says what was fixed, not a mark. One mark, one document: a head
+    carrying two `Fix:` lines is unmarked with both quoted, so the ratchet
+    and `needle kinds` can name them. A plan carries no mark."""
+    if kind != DocumentKind.SUGGESTION:
+        return None, None
+    lines = [f.value for f in fields if f.key.lower() == "fix"]
+    if not lines:
+        return None, NO_FIX_LINE
+    if len(lines) > 1:
+        return None, f"{TWO_FIX_LINES}: " + " / ".join(f"Fix: {line}" for line in lines)
+    match = _FIX.match(lines[0])
+    if not match:
+        return None, f"{FIX_NOT_A_MARK}: Fix: {lines[0]}"
+    mark = FixMark(match.group(1).lower())
+    rest = match.group(2).strip().lstrip("—-–:, ").strip() or None
+    if mark == FixMark.WHEN:
+        return Fix(mark=mark, why=None, trigger=rest), None
+    return Fix(mark=mark, why=rest, trigger=None), None
+
+
 def _item_label(number: str, title: str) -> str:
     bold = _ITEM_BOLD.match(title)
     words = _plain(bold.group(1) if bold else title).rstrip(".:—-– ")
@@ -306,6 +336,7 @@ def parse_document(
     card_match = _CARD_REF.search(card_value) if card_value else None
     heading, intent = _intent(text)
     found_by = _field(fields, "Found by")
+    fix, fix_note = fix_of(kind, fields)
     return Document(
         kind=kind,
         stem=stem,
@@ -321,6 +352,8 @@ def parse_document(
         found_by=found_by,
         card_ref=int(card_match.group(1)) if card_match else None,
         suggestion_kind=suggestion_kind_of(kind, _field(fields, "Kind"), title, found_by),
+        fix=fix,
+        fix_note=fix_note,
         cites=cites_of(fields),
         handouts=handouts_of(text),
         head_fields=fields,

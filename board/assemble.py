@@ -41,14 +41,22 @@ from domain.board import (
 from domain.card import Actor, Card, CardOrigin
 from domain.column import COLUMN_DEFINITIONS, DEFECTS_RAIL, Column
 from domain.corpus import CorpusIndex, CorpusSummary
-from domain.document import Document, DocumentKind, DocumentRef, DocumentState, SuggestionKind
+from domain.dial import Dial, DialState
+from domain.document import (
+    Document,
+    DocumentKind,
+    DocumentRef,
+    DocumentState,
+    FixMark,
+    SuggestionKind,
+)
 from domain.evidence import EvidenceState, Standing
 from domain.gate import Gate
 from domain.hook import HeardMark
 from domain.lane import HANDS_ON, Doors, Lane, LaneSnapshot, LaneState, StartState
 from domain.project import Project
 from domain.row import ROW_HALF, Row, RowHalf, RowKind
-from domain.signal import Reading, ReadingSession, Signal, SignalKind
+from domain.signal import Reading, Signal, SignalKind, WindowlessSession
 from domain.verdict import Verdict, VerdictLine
 from domain.watercooler import WatercoolerLine
 
@@ -72,11 +80,18 @@ CLAIM_WORDS: dict[Claim, tuple[str, str]] = {
     Claim.DOCUMENT_GONE: ("document nowhere", "documents nowhere"),
     Claim.COLLIDING: ("lane colliding", "lanes colliding"),
     Claim.DOCUMENT_WITHOUT_CARD: ("document with no card", "documents with no card"),
+    Claim.NO_REVIEW: ("shipped with no review record", "shipped with no review record"),
     Claim.LANE_WORKING: ("lane working", "lanes working"),
     Claim.CONVERSATION: ("conversation", "conversations"),
     Claim.SIGNAL_READING: ("signal being read", "signals being read"),
+    Claim.PLANNING: ("defect being planned", "defects being planned"),
 }
 """Each claim's words, singular and plural: the head's breakdown (plan 27, item 1)."""
+
+NO_DIAL = DialState(
+    dial=Dial(on=False, lanes=1, changed_at=None, first_on_at=None), running=0, quiet=True
+)
+"""The dial before the store has been asked: off, as a board never told otherwise is."""
 
 WAITING_ON_YOU: frozenset[LaneState] = frozenset(
     {LaneState.ASKING, LaneState.STOPPED, LaneState.BLOCKED}
@@ -138,6 +153,29 @@ def card_verdict(card: Card) -> tuple[Verdict | None, str | None]:
     return read_verdict_or_decline(text)
 
 
+def trigger_signal(document: Document | None) -> tuple[Signal | None, str | None]:
+    """The signal a defect's `Fix: when` trigger names (plan 11, item 5), or
+    why it names none; (None, None) for a document that carries no trigger."""
+    if document is None or document.fix is None or document.fix.mark != FixMark.WHEN:
+        return None, None
+    if document.fix.trigger is None:
+        return None, "the Fix: when line names no trigger"
+    return read_or_decline(document.fix.trigger)
+
+
+def is_trigger_card(card: Card, document: Document | None) -> bool:
+    """A Backlog card behind a live suggestion whose `Fix: when` trigger the
+    signal loop reads as it reads an Executed card's WATCH row."""
+    return (
+        card.place.column == Column.BACKLOG
+        and document is not None
+        and not document.archived
+        and document.kind == DocumentKind.SUGGESTION
+        and document.fix is not None
+        and document.fix.mark == FixMark.WHEN
+    )
+
+
 def verdict_lines(cards: list[Card]) -> list[VerdictLine]:
     """Every card standing on its own that carries a verdict the owner has
     not yet ruled on, by number."""
@@ -180,16 +218,29 @@ def asked_evidence(signal: Signal | None, last: Reading | None) -> str | None:
     return None
 
 
-def signal_asks_owner(
-    card: Card, signal: Signal | None, last: Reading | None, now: datetime
-) -> bool:
-    """An Executed card whose signal only the owner can read, at or past its
-    due time; or one a session read and could not tell."""
-    if card.place.column != Column.EXECUTED or signal is None:
+def asks_owner(signal: Signal | None, last: Reading | None, now: datetime) -> bool:
+    """A signal only the owner can read, at or past its due time; or one a
+    session read and could not tell."""
+    if signal is None:
         return False
     if signal.kind == SignalKind.OWNER:
         return now.date() >= signal.due and (last is None or last.delivered is None)
     return asked_evidence(signal, last) is not None
+
+
+def signal_asks_owner(
+    card: Card, signal: Signal | None, last: Reading | None, now: datetime
+) -> bool:
+    """An Executed card whose signal asks the owner."""
+    return card.place.column == Column.EXECUTED and asks_owner(signal, last, now)
+
+
+def trigger_asks_owner(
+    card: Card, trigger: Signal | None, last: Reading | None, now: datetime
+) -> bool:
+    """A Backlog defect whose `Fix: when` trigger asks the owner (plan 11,
+    item 5): a session read it and could not tell, or only he can read it."""
+    return card.place.column == Column.BACKLOG and asks_owner(trigger, last, now)
 
 
 def signal_overdue(card: Card, signal: Signal | None, last: Reading | None, now: datetime) -> bool:
@@ -203,17 +254,29 @@ def signal_overdue(card: Card, signal: Signal | None, last: Reading | None, now:
     )
 
 
-def signal_wants_reading(
-    card: Card, signal: Signal | None, last: Reading | None, now: datetime
-) -> bool:
+def wants_reading(signal: Signal | None, last: Reading | None, now: datetime) -> bool:
     """A board-readable signal whose cadence asks for a reading now."""
     return (
-        card.place.column == Column.EXECUTED
-        and signal is not None
+        signal is not None
         and signal.kind != SignalKind.OWNER
         and (last is None or not last.delivered)
         and is_due(signal, last_read=last.at if last else None, now=now)
     )
+
+
+def signal_wants_reading(
+    card: Card, signal: Signal | None, last: Reading | None, now: datetime
+) -> bool:
+    """An Executed card's signal, due for the board's or a session's reading."""
+    return card.place.column == Column.EXECUTED and wants_reading(signal, last, now)
+
+
+def trigger_wants_reading(
+    card: Card, trigger: Signal | None, last: Reading | None, now: datetime
+) -> bool:
+    """A Backlog defect's `Fix: when` trigger, due for the same readers on
+    the same cadence (plan 11, item 5)."""
+    return card.place.column == Column.BACKLOG and wants_reading(trigger, last, now)
 
 
 def _where(lane: Lane) -> str:
@@ -290,7 +353,7 @@ def _loop_state(
     signal: Signal | None,
     signal_note: str | None,
     last: Reading | None,
-    reading: ReadingSession | None,
+    reading: WindowlessSession | None,
     now: datetime,
 ) -> CardState:
     """A shipped card's state is its loop (plan 27, item 3)."""
@@ -368,13 +431,17 @@ def state_of(
     signal: Signal | None,
     signal_note: str | None,
     last: Reading | None,
-    reading: ReadingSession | None,
+    reading: WindowlessSession | None,
     now: datetime,
+    trigger: Signal | None = None,
+    planning: WindowlessSession | None = None,
 ) -> CardState:
     """The one function that names a card's state (plan 27, item 2). The
     order is the rule's precedence: broken before yours, yours before live,
     the loop before the queue, the queue before the quiet. A card is in one
-    state; the head's claims may count it under several."""
+    state; the head's claims may count it under several. `trigger` is a
+    defect's `Fix: when` signal and `planning` the dial's session writing
+    its plan (plan 11)."""
     hands_on = lane is not None and lane.state in HANDS_ON
     if document_state == DocumentState.GONE:
         return _state(
@@ -460,6 +527,29 @@ def state_of(
         )
     if card.place.column == Column.NOT_NOW:
         return _state("not now", Meaning.QUIET, hint="open ▸")
+    if document_state == DocumentState.SUGGESTION and trigger_asks_owner(card, trigger, last, now):
+        evidence = asked_evidence(trigger, last)
+        return _state(
+            "trigger for you to read",
+            Meaning.YOURS,
+            detail=f"A session read it and could not tell: {evidence}"
+            if evidence
+            else f"Trigger: {trigger.what} — by {_due(trigger)}"
+            if trigger is not None
+            else None,
+            door=_door(
+                FaceDoorName.OPEN,
+                "Read",
+                "Only you can read this trigger; the open card takes your reading.",
+                primary=True,
+            ),
+        )
+    if document_state == DocumentState.SUGGESTION and planning is not None:
+        return _state(
+            f"being planned · {planning.slot}",
+            Meaning.LIVE,
+            detail="The dial took it: a session is writing its plan in the project's checkout.",
+        )
     if document_state == DocumentState.SUGGESTION:
         return _state(
             "no plan yet",
@@ -515,18 +605,23 @@ def claims_of(
     standing: Standing,
     signal: Signal | None,
     last: Reading | None,
-    reading: ReadingSession | None,
+    reading: WindowlessSession | None,
     verdict: Verdict | None,
     now: datetime,
+    trigger: Signal | None = None,
+    planning: WindowlessSession | None = None,
+    placement: AuditEntry | None = None,
 ) -> list[Claim]:
     """Every claim the card makes on the owner's eye, in the head's order.
-    A card can carry several; the head counts each."""
+    A card can carry several; the head counts each. `placement` is the
+    audit row that put the card where it is: a shipped card a close placed
+    with no REVIEW row is a claim (plan 11, item 1)."""
     claims: list[Claim] = []
     if verdict is not None and card.folded_into is None:
         claims.append(Claim.VERDICT)
     if lane is not None and lane.state in WAITING_ON_YOU and not _lane_is_spent(card, lane):
         claims.append(Claim.LANE_ASKING)
-    if signal_asks_owner(card, signal, last, now):
+    if signal_asks_owner(card, signal, last, now) or trigger_asks_owner(card, trigger, last, now):
         claims.append(Claim.SIGNAL_ASKING)
     elif signal_overdue(card, signal, last, now):
         claims.append(Claim.SIGNAL_OVERDUE)
@@ -540,11 +635,28 @@ def claims_of(
         claims.append(Claim.DOCUMENT_GONE)
     if lane is not None and lane.state in HANDS_ON and lane.colliding is not None:
         claims.append(Claim.COLLIDING)
+    if shipped_without_review(card, placement):
+        claims.append(Claim.NO_REVIEW)
     if lane is not None and lane.state in {LaneState.WORKING, LaneState.MOVING}:
         claims.append(Claim.LANE_WORKING)
     if reading is not None:
         claims.append(Claim.SIGNAL_READING)
+    if planning is not None:
+        claims.append(Claim.PLANNING)
     return claims
+
+
+def shipped_without_review(card: Card, placement: AuditEntry | None) -> bool:
+    """A shipped card a close placed — a session's close, or the loop reading
+    the close as landed — with no REVIEW row (plan 11, item 1): the close
+    refuses a code lane without one, so a shipped card without one came
+    through another door, and the head says so. A card the owner placed, or
+    0.1's import did, is his word and not counted."""
+    if card.place.column not in SHIPPED or card.folded_into is not None:
+        return False
+    if any(r.kind == RowKind.REVIEW for r in card.rows):
+        return False
+    return placement is not None and placement.actor in (Actor.SESSION, Actor.MACHINE)
 
 
 def summarize(
@@ -558,13 +670,15 @@ def summarize(
     last: Reading | None = None,
     read: bool = False,
     folded: list[FoldedCard] | None = None,
-    reading: ReadingSession | None = None,
+    reading: WindowlessSession | None = None,
+    planning: WindowlessSession | None = None,
     project_path: str = "",
 ) -> CardSummary:
     """`doors` is the card's doors as the loop last read them; before its
     first read they are the closed doors of `nothing_read`. The state line and
     the claims are named here from the same facts (plan 27). `reading` is the
-    session reading the card's signal right now (plan 09)."""
+    session reading the card's signal right now (plan 09); `planning` the
+    dial's session writing its plan (plan 11)."""
     document = document_of(card, index)
     text, source = essence(card, document)
     state = document_state(card, document)
@@ -572,6 +686,7 @@ def summarize(
     doors = doors if doors is not None else nothing_read(card, project_path, now)[1]
     standing = standing_for(card, placement, lane, last, read=read)
     signal, signal_note = watch_signal(card)
+    trigger, _ = trigger_signal(document)
     return CardSummary(
         number=card.number,
         title=card.title,
@@ -582,6 +697,7 @@ def summarize(
         document_state=state,
         document_path=path,
         kind=document.suggestion_kind if document is not None else None,
+        fix=document.fix if document is not None else None,
         state=state_of(
             card,
             document_state=state,
@@ -594,6 +710,8 @@ def summarize(
             last=last,
             reading=reading,
             now=now,
+            trigger=trigger,
+            planning=planning,
         ),
         claims=claims_of(
             card,
@@ -605,6 +723,9 @@ def summarize(
             reading=reading,
             verdict=card_verdict(card)[0],
             now=now,
+            trigger=trigger,
+            planning=planning,
+            placement=placement,
         ),
         folded=folded or [],
         is_new=is_new(card, now),
@@ -614,6 +735,7 @@ def summarize(
         colliding=lane.colliding if lane is not None and lane.state in HANDS_ON else None,
         standing=standing,
         reading=reading,
+        planning=planning,
     )
 
 
@@ -673,19 +795,24 @@ def assemble_board(
     machine: MachineState | None = None,
     placements: dict[int, AuditEntry] | None = None,
     watercooler: list[WatercoolerLine] | None = None,
-    reading_sessions: dict[int, ReadingSession] | None = None,
+    reading_sessions: dict[int, WindowlessSession] | None = None,
+    planning_sessions: dict[int, WindowlessSession] | None = None,
+    dial: DialState | None = None,
 ) -> BoardState:
     """`snapshot`, `readings`, `trunk` and `machine` are what the loop has
     read; before its first read they are absent and the board says so.
     `placements` is each card's placing audit row, what a read re-tests;
     `watercooler` the project's lines, newest last; `reading_sessions` the
-    reading in flight on each card (plan 09)."""
+    reading in flight on each card (plan 09); `planning_sessions` the dial's
+    planning session on each card and `dial` the dial itself (plan 11)."""
     readings = readings or {}
     reading_sessions = reading_sessions or {}
+    planning_sessions = planning_sessions or {}
     watercooler = watercooler or []
     placements = placements or {}
     trunk = trunk or TrunkState(level=None, behind=0, note=None, read_at=None)
     machine = machine or MachineState(missing=[])
+    dial = dial or NO_DIAL
     by_number = {c.number: c for c in cards}
     standing = [c for c in cards if c.folded_into is None]
     lanes = snapshot.lanes if snapshot is not None else {}
@@ -708,10 +835,12 @@ def assemble_board(
             read=snapshot is not None,
             folded=folded.get(n),
             reading=reading_sessions.get(n),
+            planning=planning_sessions.get(n),
         )
         for n, c in by_number.items()
     }
     signals = {n: watch_signal(c)[0] for n, c in by_number.items()}
+    triggers = {n: trigger_signal(document_of(c, index))[0] for n, c in by_number.items()}
 
     columns: list[ColumnView] = []
     for definition in COLUMN_DEFINITIONS:
@@ -744,18 +873,27 @@ def assemble_board(
         )
 
     without_card = documents_without_card(index, cards)
-    asks = [
-        OwnerAsk(
-            number=n,
-            title=c.title,
-            what=signals[n].what,
-            due=signals[n].due,
-            kind=signals[n].kind,
-            evidence=asked_evidence(signals[n], readings.get(n)),
+    asks: list[OwnerAsk] = []
+    for n, c in sorted(by_number.items()):
+        asked = (
+            signals[n]
+            if signal_asks_owner(c, signals[n], readings.get(n), now)
+            else triggers[n]
+            if trigger_asks_owner(c, triggers[n], readings.get(n), now)
+            else None
         )
-        for n, c in sorted(by_number.items())
-        if signal_asks_owner(c, signals[n], readings.get(n), now) and signals[n] is not None
-    ]
+        if asked is None:
+            continue
+        asks.append(
+            OwnerAsk(
+                number=n,
+                title=c.title,
+                what=asked.what,
+                due=asked.due,
+                kind=asked.kind,
+                evidence=asked_evidence(asked, readings.get(n)),
+            )
+        )
     verdicts = verdict_lines(cards)
     conversations = snapshot.conversations if snapshot is not None else []
     shown = [summaries[c.number] for c in standing]
@@ -781,6 +919,7 @@ def assemble_board(
         attention=attention,
         trunk=trunk,
         machine=machine,
+        dial=dial,
         columns=columns,
         documents_without_card=without_card,
         asks=asks,
@@ -802,18 +941,21 @@ def assemble_detail(
     read: bool = False,
     watercooler: list[WatercoolerLine] | None = None,
     folded: list[FoldedCard] | None = None,
-    reading: ReadingSession | None = None,
+    reading: WindowlessSession | None = None,
     heard: HeardMark | None = None,
     machine: MachineState | None = None,
+    planning: WindowlessSession | None = None,
 ) -> CardDetail:
     """`readings` newest first; `read` is whether the loop has read the
     machine; `folded` the cards folded under this one; `reading` the
     session reading its signal right now; `machine` what the loop read of
-    the machine, whose roles the plan's handouts are checked against."""
+    the machine, whose roles the plan's handouts are checked against;
+    `planning` the dial's session writing the card's plan (plan 11)."""
     document = document_of(card, index)
     brief, record = split_rows(card.rows)
     own = cited_path(card)
     signal, signal_note = watch_signal(card)
+    trigger, trigger_note = trigger_signal(document)
     verdict, verdict_note = card_verdict(card)
     return CardDetail(
         card=card,
@@ -828,6 +970,7 @@ def assemble_detail(
             read=read,
             folded=folded,
             reading=reading,
+            planning=planning,
         ),
         brief=brief,
         record=record,
@@ -838,6 +981,8 @@ def assemble_detail(
         doors=doors,
         signal=signal,
         signal_note=signal_note,
+        trigger=trigger,
+        trigger_note=trigger_note,
         readings=readings,
         verdict=verdict,
         verdict_note=verdict_note,

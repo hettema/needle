@@ -17,10 +17,12 @@ from fastapi.responses import FileResponse, JSONResponse, PlainTextResponse, Str
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
+from api.dial import Dial
 from api.doors import DoorFailed, DoorRefused, Doors
 from api.loops import Loops
 from domain.board import BoardState, CardDetail, ProjectFile
 from domain.card import Move
+from domain.dial import DialState, Fixes
 from domain.hook import HookEvent, HookPosted, Word
 from domain.lane import DoorResult
 from domain.project import Project
@@ -64,6 +66,12 @@ class PlanBody(BaseModel):
     """The suggestion cards one plan is to carry; one number is the single Plan door."""
 
 
+class DialBody(BaseModel):
+    on: bool
+    lanes: int
+    """How many fix lanes may run at once, across the whole board (plan 11, item 3)."""
+
+
 class HooksReceived(BaseModel):
     received: int
     attributed: int
@@ -102,14 +110,19 @@ def create_app(store: Store | None = None, *, dist: Path | None = FRONTEND_DIST)
         await live.start_watching()
         runtime = Runtime(live.store)
         loops = Loops(live, runtime)
+        doors = Doors(live, runtime, loops)
+        dial = Dial(live, runtime, loops, doors)
         app.state.live = live
         app.state.loops = loops
-        app.state.doors = Doors(live, runtime, loops)
+        app.state.doors = doors
+        app.state.dial = dial
         await loops.start()
         await loops.first_read()
+        await dial.run()
         try:
             yield
         finally:
+            await dial.stop()
             await loops.stop()
             await live.stop()
             if owned:
@@ -243,6 +256,24 @@ def create_app(store: Store | None = None, *, dist: Path | None = FRONTEND_DIST)
         doors: Doors = request.app.state.doors
         async with loops.lock:
             return await asyncio.to_thread(doors.accept_class, slug, body.evidence_class)
+
+    @app.post("/api/dial", response_model=DialState)
+    async def turn_dial(body: DialBody, request: Request) -> DialState:
+        """The owner turns the dial (plan 11, item 3): one for the whole
+        board, audited as his, under the loops' lock like a door."""
+        loops: Loops = request.app.state.loops
+        dial: Dial = request.app.state.dial
+        async with loops.lock:
+            return await asyncio.to_thread(dial.turn, on=body.on, lanes=body.lanes)
+
+    @app.get("/api/fixes", response_model=Fixes)
+    async def fixes(request: Request, slug: str | None = None) -> Fixes:
+        """The loop counted (plan 11, item 6): every fix lane the dial ran,
+        and the rail now against the rail when the dial was first turned on."""
+        loops: Loops = request.app.state.loops
+        dial: Dial = request.app.state.dial
+        async with loops.lock:
+            return await asyncio.to_thread(dial.fixes, slug)
 
     @app.get("/api/projects/{slug}/cards/{number}/brief", response_class=PlainTextResponse)
     async def brief(slug: str, number: int, request: Request) -> str:

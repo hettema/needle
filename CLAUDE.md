@@ -73,7 +73,14 @@ when the fix serves this slice's intent, otherwise filed as a suggestion in
 the corpus with the finding as its evidence and `**Kind:** defect` on its
 second line, so it lands on the defects rail, not among the ideas. **Outside the change:** never
 fixed in the lane; filed as a suggestion (`**Kind:** defect`), which is a card
-by the next read.
+by the next read. Every suggestion also says who fixes it, on a `**Fix:**`
+line under the kind (plan 11): `now` when the intent it breaks is written,
+the fix stays inside its ring and removes a class rather than an instance;
+`when <signal>` in the WATCH grammar when it waits for a trigger the board
+can read; `his` when it implies a decision the owner has to make first. An
+unmarked defect reads as his. The dial on the head applies the owner's
+standing ruling: a `now` defect is planned and started without him. A
+ratchet refuses a live suggestion here without both lines.
 The fix loop runs over the inner two rings until a pass finds nothing new; the
 outer ring never loops, it files. A lane that fixes outside its change is the
 scope creep the effort gate warned about, however good the fix.

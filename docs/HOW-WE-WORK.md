@@ -110,7 +110,13 @@ experience, once, in a batch, with the evidence attached.
 ## 8. The corpus is the way in
 
 Work is written before it is done. An idea is a suggestion, in the project's
-suggestions folder, with its kind: an idea, or a defect. A slice of work is a
+suggestions folder, with its kind — an idea, or a defect — and with who fixes
+it, written by the session that holds the evidence: `now` when the intent it
+breaks is written, the fix stays inside its ring and removes a class rather
+than an instance; `when <signal>` when it waits for a trigger the board can
+read; `his` when it implies a decision the person has to make first. The
+board's dial is the person's standing ruling that a `now` defect enters
+execution without them; an unmarked defect reads as theirs. A slice of work is a
 plan, in the project's plans folder, with an intent, an effort gate that
 names why, a "done means" per item that someone can observe, terrain a cold
 session can navigate, and acceptance as behaviours. Plans align on intent,

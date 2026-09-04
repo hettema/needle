@@ -39,6 +39,9 @@ class AuditKind(StrEnum):
     card is folded under it (plan 06, item 5)."""
     SYNCED = "synced"
     """The trunk or main checkout was brought level after a fold."""
+    DIAL = "dial"
+    """The dial took the card, planned it, started it, or left it to the
+    owner, with why (plan 11, item 4)."""
 
 
 class AuditEntry(BaseModel):

@@ -75,14 +75,26 @@ class Reading(BaseModel):
     session that ended without a finding), a session's finding, or the owner."""
 
 
-class ReadingSession(BaseModel):
-    """A session the board started to read one card's signal (plan 09, item
-    1): listed on the card while it runs, never hands on any tree, ended when
-    its finding lands or its process is gone."""
+class SessionWork(StrEnum):
+    """What a windowless session the board started is doing."""
+
+    READING = "reading"
+    """Reading one card's signal, and ending with a finding (plan 09, item 1)."""
+    PLANNING = "planning"
+    """Writing the plan for a marked defect under the dial (plan 11, item 4)."""
+
+
+class WindowlessSession(BaseModel):
+    """A session the board started with no window and no worktree, in the
+    project's own checkout: to read one card's signal (plan 09, item 1) or
+    to plan a marked defect (plan 11, item 4). Listed on the card while it
+    runs, never hands on any tree, ended when its finding or its plan lands
+    or its process is gone."""
 
     id: int
     project: str
     card_number: int
+    work: SessionWork
     session_id: str
     slot: str
     started_at: datetime
