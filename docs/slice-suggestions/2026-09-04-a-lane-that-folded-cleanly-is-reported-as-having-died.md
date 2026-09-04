@@ -69,11 +69,16 @@ whatever it first guessed.
 
 `domain/lane.py:34` has one `ENDED`, so `board/lane.py:306` builds one sentence
 for a lane that was killed and a lane that finished, leading with the cause of
-death and appending the fold; `primitives.css:387` paints both in `--wrong`.
-The colour language already rules that red means *"evidence is gone or two
-things disagree … a lane that died"* — a lane that folded, levelled the trunk
-and levelled main is none of those. (The `starting….` is the same seam: `". ".join`
-adds a stop to a detail that already ended in one.)
+death and appending the fold — and `OpenCard.tsx:263` prints `lane.died` under
+it a second time. (The `starting….` is the same seam: `". ".join` adds a stop
+to a detail that already ended in one.)
+
+The colour half of this was fixed while this card was being written: the
+colour language landed (`9ea116a`…`de87ccc`), and `board/assemble.py:252`
+now rules that a lane that folded is done and red is for a lane that ended
+with nothing folded. The words have not caught up with the colour — the open
+card's band still says *"Lane ended … the registry says: starting…"* on a
+lane that finished, in a quieter ink.
 
 ## What would hold it
 
@@ -88,11 +93,12 @@ adds a stop to a detail that already ended in one.)
    `needle serve` and every `needle` command can see each other's knowledge.
    The `_parked` note then lands once per run-out as it says it does.
 4. **A lane that folded is reported as having finished, not as having died** —
-   its own state, its own sentence leading with the fold, and the red kept for
-   a lane that ended without one.
+   its sentence leads with the fold and names no cause of death, and the
+   `died` line under the band is for a lane that died. The colour already
+   draws the line (`board/assemble.py:252`); the words follow it.
 5. A test that a session with no pid *and no pid ever* yields no death reason;
-   a test that a folded lane's sentence names no cause of death and carries no
-   `--wrong` token; and one that the park note survives a fresh process.
+   a test that a folded lane's sentence names no cause of death; and one that
+   the park note survives a fresh process.
 
 ## Not this card
 
