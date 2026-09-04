@@ -1,0 +1,50 @@
+# Review — a session reads the signal (slice 09)
+
+**Plan:** docs/plans/done/2026-09-04-09-a-session-reads-the-signal.md
+**Reviewer:** the build session (Claude Fable 5.1 at high), reviewing its own diff in passes before the fold. No second session was in the loop; the first reading round on the served board, and the owner's first look at a batch that holds only what is his, are the sign-off this record cannot replace.
+**Diff range:** 34dfc52..77dc915 (one code commit on the lane `card-23-09-a-session-reads-the-signal`: the `session` reader and the parse fix, the reading session's launch, tending and limit move, the `reading` door and verb, the actor on a reading with migration 0007, the narrowed batch, the page, the regenerated types and fixture, ten tests). The docs commit that follows carries this record, the archived plan, the filed suggestion and the translations' reasoning.
+**Findings:** 9 — 6 fixed before this record, 2 no change with the reason, 1 filed.
+
+## The passes
+
+The review ran as a loop (CLAUDE.md): each pass one lens, fixes landed, the next pass re-read the fixed work.
+
+1. **The feature against the plan's "done means".** Item 1: a `session` signal due now starts a reading session in the project's checkout with no worktree, named apart from the lane, at high; the card lists it and the attention line counts it; the lane state stays `none` and Start is not blocked; a second tick starts no second one; `delivered` moves the card to Done with the finding on the history and the actor on the reading, `not delivered` to Decision moment now on `signal-failed`, `cannot tell` into the batch with the words as the evidence and the Delivered? door carrying them, the owner's click answering (`tests/api/test_reading.py`, the first three tests). Item 2: a replacement WATCH row on the finding replaces the card's row, the original stays in the history's "it read:", the next cadence starts a reading whose brief carries the new measure (the fourth test). Item 3: the 52 rows read against the one rule, 51 rewritten and 1 kept, the reasoning per card in the plan's close-out, the rows written on the served board after the restart and the first round's count recorded below. Item 4: `asks` carries only owner signals due and sessions' cannot-tells, each with the evidence; `signals_asking` is its length and `asking_you` includes it; a machine's unreadable — a reading that died — is not in it (the fifth test). Findings 1 to 3 came from this pass.
+2. **The seams.** Concurrency: readings start under the loops' lock two at a time; the verb runs in the session's own process and writes the finding, the end of the record and the move in one door, and the loop's next tick stops the process once its turn is over. Failure and restart: a reading whose process is gone is a machine reading that could not be read (the cadence moves on, the card says why); one that runs past thirty minutes is stopped and recorded; one whose turn ends without the verb is stopped at once; one that hits a limit is moved by the runtime's one `move` and its record follows the forked id; a server restart finds the open records and starts nothing twice. The truth of what the board shows: the reading is listed only while its record is open; the batch never carries a machine's words as a question; a folded card's loop is its leader's. Findings 4 to 8 came from this pass.
+3. **The boundaries.** Layers: `board/` imports domain only; the loop meets the runtime through `read_by_session` and never the doors (`needle_command` moved to `board/brief.py` so the brief could be built there). The board never runs: the reading is launched in `runtime/launch.py` through the machine door. Start is the owner's click: the ratchet is green with the loop calling `read_by_session`, and `launch.start` and `launch.read` share `_walk` below it. Typed edges regenerated (`board`, `launch`, `signal`); the fixture regenerated from the synthetic project. One design system: `AskRow` gained the evidence line, `Quiet` and `HistRow` carry the reading and its actor, one rule in `primitives.css`. No deferral marker. The store's shape is one schema with migration 0007. Finding 9 came from this pass.
+4. **The seams and the feature again, after the fixes.** The fixed work re-read: the parse takes the kind after the separator and the hazard row parses as the owner's; the `done` state and the limit move are covered by the sixth and seventh tests; the wall move records the new id and the card says where. 291 backend tests and 33 page scenarios pass; `tsc` is clean; the lane's files lint clean (the two long lines the linter names predate the lane). Nothing new. Clean.
+
+## Dispositions
+
+1. **The parse took the first kind word anywhere in the row**, so Hello Revenue's #177 — "did a one-click ruling launch its session and close the card? — owner by …" — would have read as a session's signal with the question as its target, and any translated row whose question said "session" would have broken the same way. FIXED: the kind word after the separator names the reader, the first kind word only when no separator precedes any (plan ruling 6).
+2. **The new tests imported the door tests' fixtures into the parameter names**, which the linter reads as redefinition. FIXED: the fixtures are bound by assignment.
+3. **The tests read a move's history row as the bare reason**; the store writes "Moved A → B: reason". FIXED in the tests.
+4. **A reading session whose turn ended without the verb would have sat until the thirty-minute ceiling**, a live process for nothing. FIXED: the registry's `done` ends it at once, and the card says the turn finished without a finding.
+5. **A reading session that hit a subscription limit mid-reading would have sat blocked until the ceiling, lost its round and left the wall detector's handoff on disk.** FIXED: the loop moves it with the runtime's one `move`, the record follows the forked id, and the card says where it went (plan ruling 5).
+6. **The batch would have asked the owner about a machine's unreadable** — a reading that died reads as `delivered: None`, the same as a session's cannot-tell. FIXED: readings carry their actor (plan ruling 3, migration 0007), and only a session's cannot-tell is the owner's question.
+7. **`first_read` starts up to two reading sessions before the board is served**, when session signals are due at a restart. NO CHANGE: bounded by `READINGS_AT_ONCE` at two launches of about five seconds each, and a caller who saw the server start has then seen a complete read of the signals as of every other loop; a reading skipped at the first read would be one the timer starts a minute later with nobody the wiser.
+8. **`needle signals` from a terminal and the served board's loop can both start a reading for the same card** inside one launch's verify window (about five seconds), since the record is written after the launch is proved alive. NO CHANGE: the verb is a hand tool, the window is small, and a second reading writes a second finding on the same card rather than corrupting anything; the store-side claim that would close it (a row before the launch, with no session id yet) is a primitive this slice does not need.
+9. **`needle close` accepts a card without a review record**, found translating #178's signal, whose refusal was the first board's. OUTSIDE THE CHANGE: filed as `docs/slice-suggestions/2026-09-04-a-close-without-a-review-record-is-accepted.md`, `Kind: defect`.
+
+## What was checked
+
+- **The suite on the fixture floor**: 291 backend tests including the ratchets (10 new in `tests/api/test_reading.py`: the start and the listing, delivered, not delivered, cannot tell and the owner's click, the replacement row and the next cadence, the death and the ceiling, the limit move, the cap, a start that fails, the row that needs a target), `npx tsc --noEmit` clean, 33 vitest scenarios (the batch scenario extended: a cannot-tell row shows the session's words, an owner's row does not).
+- **The grammar against the 52 real rows**: every one of the 51 translated rows parses as `session` with a target and no `by <date>` inside it; the #177 hazard row parses as the owner's.
+- **On the served board, after the fold and the restart**: recorded below and on the card.
+
+## The first reading round
+
+Recorded after the fold: how many of the 51 the served board's loop started on the lane's day, and what the first findings said.
+
+## What the build learned the plan got wrong
+
+- "The 47" were 52 by the lane's day, and one of them stays the owner's; the plan's number was a snapshot, the rule is what carried.
+- The plan's "at the due time, on the cadence" read as two things; the build reads on the cadence from the close, as the machine readers do, because a reading that waited for the due date would have settled nothing on day one, which item 3 asks for.
+- Item 1 said "the board … asks the owner with the session's evidence in the question"; the evidence had to be told from a machine's words by an actor on the reading, which the plan did not name (ruling 3).
+- Item 2 said nothing about cost; 51 readings a day would have been a subscription's day, and the cadence became the lane's ruling (ruling 7).
+
+## Not done, stated
+
+- **The collapsed card does not show a reading in flight**; the open card and the attention line do. The collapsed face's one sentence is the lane's, and a reading is not a lane.
+- **A reading session has no window door**: the owner cannot Watch a reading. Its finding and its history are on the card; a window into it is a door the plan did not ask for.
+- **The first reading round is the loop's, not this lane's**: two at a time on the served board, the lane recorded what landed while it watched and named the rest as the card's own signal.
