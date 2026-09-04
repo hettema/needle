@@ -70,7 +70,8 @@ Findings fall in three rings, and the ring decides what happens to them (owner
 ruling 2026-09-04). **Inside the change:** fixed in the lane, and the next
 pass re-reads. **Adjacent — the seams the change touches:** fixed in the lane
 when the fix serves this slice's intent, otherwise filed as a suggestion in
-the corpus with the finding as its evidence. **Outside the change:** never
+the corpus with the finding as its evidence and `**Kind:** defect` on its
+second line, so it lands on the defects rail, not among the ideas. **Outside the change:** never
 fixed in the lane; filed as a suggestion, which is a card by the next read.
 The fix loop runs over the inner two rings until a pass finds nothing new; the
 outer ring never loops, it files. A lane that fixes outside its change is the
