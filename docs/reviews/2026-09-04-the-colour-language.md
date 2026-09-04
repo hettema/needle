@@ -9,7 +9,7 @@ cannot replace it.
 code commits: the language itself; what the served board showed and jsdom
 could not; the signal that could go unnoticed. The docs commit that follows
 carries this record and the archived plan).
-**Findings:** 11 — 10 fixed before this record, 1 filed.
+**Findings:** 12 — 11 fixed before this record, 1 filed.
 
 ## The passes
 
@@ -119,6 +119,15 @@ lens, the fixes landed, and the next pass re-read the fixed work.
     a project's titles stay in its own repository. FIXED: the six sample
     titles are Harbourmaster's now; every design decision in the comp is
     untouched (ruling 10).
+12. **`uv run ruff check` does not pass, and never has.** 27 errors on this
+    lane's base commit, 25 after it — none of them this lane's, and two of
+    them cleared by it in passing. A check nobody can pass is a check nobody
+    runs, and the suite does not run it, so nothing catches the drift. OUTSIDE
+    THE CHANGE: filed as
+    `docs/slice-suggestions/2026-09-04-ruff-does-not-pass-so-it-cannot-be-a-gate.md`,
+    `Kind: defect`, with the before/after counts as its evidence and a
+    two-step fix. Not fixed here — a formatting sweep across the repository is
+    exactly the scope creep the effort gate warns about.
 
 ## What was checked
 
