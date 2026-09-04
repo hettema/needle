@@ -14,7 +14,7 @@ import type { Reading, ReadingSession, Signal, SignalKind } from "./signal";
 import type { Verdict, VerdictLine } from "./verdict";
 import type { WatercoolerLine } from "./watercooler";
 
-export const CLAIM_VALUES = ["verdict", "lane asking", "signal asking", "decision", "lane ended", "doubted", "document gone", "colliding", "document without card", "lane working", "conversation", "signal reading"] as const;
+export const CLAIM_VALUES = ["verdict", "lane asking", "signal asking", "decision", "lane ended", "doubted", "signal overdue", "document gone", "colliding", "document without card", "lane working", "conversation", "signal reading"] as const;
 export type Claim = (typeof CLAIM_VALUES)[number];
 
 export const ESSENCE_SOURCE_VALUES = ["card", "document"] as const;
@@ -173,6 +173,7 @@ export const CLAIM_MEANING: Record<Claim, Meaning> = {
   "decision": "yours",
   "lane ended": "broken",
   "doubted": "broken",
+  "signal overdue": "broken",
   "document gone": "broken",
   "colliding": "broken",
   "document without card": "broken",

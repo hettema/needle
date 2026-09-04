@@ -67,6 +67,7 @@ CLAIM_WORDS: dict[Claim, tuple[str, str]] = {
     Claim.DECISION: ("card in Decision moment", "cards in Decision moment"),
     Claim.LANE_ENDED: ("lane died", "lanes died"),
     Claim.DOUBTED: ("status doubted", "statuses doubted"),
+    Claim.SIGNAL_OVERDUE: ("signal past due, unread", "signals past due, unread"),
     Claim.DOCUMENT_GONE: ("document nowhere", "documents nowhere"),
     Claim.COLLIDING: ("lane colliding", "lanes colliding"),
     Claim.DOCUMENT_WITHOUT_CARD: ("document with no card", "documents with no card"),
@@ -190,6 +191,17 @@ def signal_asks_owner(
     return asked_evidence(signal, last) is not None
 
 
+def signal_overdue(card: Card, signal: Signal | None, last: Reading | None, now: datetime) -> bool:
+    """A shipped card past its signal's due time with nothing delivered: the
+    loop the board said it would close has not closed (plan 27, item 3)."""
+    return (
+        card.place.column == Column.EXECUTED
+        and signal is not None
+        and past_due(signal, now)
+        and (last is None or not last.delivered)
+    )
+
+
 def signal_wants_reading(
     card: Card, signal: Signal | None, last: Reading | None, now: datetime
 ) -> bool:
@@ -302,12 +314,22 @@ def _loop_state(
         if signal.kind == SignalKind.SESSION
         else "the board reads it"
     )
-    word = (
-        f"loop open · {_due(signal)} passed, unread"
-        if past_due(signal, now)
-        else f"loop open · {who} {_due(signal)}"
+    # A signal past its due date with nothing read is the loop failing to
+    # close: the card says who reads it and that reader has not. Two things
+    # disagree, so it is broken, and it says so on the head as well.
+    if past_due(signal, now):
+        return _state(
+            f"loop open · {_due(signal)} passed, unread",
+            Meaning.BROKEN,
+            detail=_signal_line(signal),
+            loop=open_loop,
+        )
+    return _state(
+        f"loop open · {who} {_due(signal)}",
+        Meaning.QUIET,
+        detail=_signal_line(signal),
+        loop=open_loop,
     )
-    return _state(word, Meaning.QUIET, detail=_signal_line(signal), loop=open_loop)
 
 
 def state_of(
@@ -486,6 +508,8 @@ def claims_of(
         claims.append(Claim.LANE_ASKING)
     if signal_asks_owner(card, signal, last, now):
         claims.append(Claim.SIGNAL_ASKING)
+    elif signal_overdue(card, signal, last, now):
+        claims.append(Claim.SIGNAL_OVERDUE)
     if card.place.column == Column.DECISION_MOMENT:
         claims.append(Claim.DECISION)
     if (

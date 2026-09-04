@@ -293,6 +293,7 @@ def language_cases() -> list[dict[str, object]]:
     )
     session_watch = "no session re-grows the old doors — session harbourmaster by 2026-09-11"
     due_watch = "the office check email names a real event — owner dennis by 2026-09-04"
+    late_watch = "the nightly check email names a real event — session harbourmaster by 2026-09-01"
     read_at = NOW - timedelta(hours=1)
     delivered = Reading(
         id=1,
@@ -354,6 +355,10 @@ def language_cases() -> list[dict[str, object]]:
                 _card(900, column=Column.EXECUTED, archived=True, watch=session_watch),
                 reading=reading,
             ),
+        ),
+        (
+            "signal past due",
+            _summary(_card(900, column=Column.EXECUTED, archived=True, watch=late_watch)),
         ),
         (
             "loop closed",

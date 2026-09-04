@@ -223,8 +223,21 @@ def test_a_shipped_cards_state_is_its_loop():
     assert (unnamed.word, unnamed.meaning) == ("no signal named", Meaning.QUIET)
     assert unnamed.detail == "No WATCH row names a signal." and unnamed.loop is None
 
+    # A loop the board said it would close and has not is broken, and says so
+    # on the head as well as on the card.
     late = state(c, signal=SESSION_SIGNAL.model_copy(update={"due": date(2026, 9, 1)}))
-    assert late.word == "loop open · 1 Sep passed, unread"
+    assert (late.word, late.meaning) == ("loop open · 1 Sep passed, unread", Meaning.BROKEN)
+    assert claims_of(
+        c,
+        document_state=DocumentState.ARCHIVED,
+        lane=None,
+        standing=TRUSTED,
+        signal=SESSION_SIGNAL.model_copy(update={"due": date(2026, 9, 1)}),
+        last=None,
+        reading=None,
+        verdict=None,
+        now=NOW,
+    ) == [Claim.SIGNAL_OVERDUE]
 
 
 def test_the_quiet_states_each_have_their_word():

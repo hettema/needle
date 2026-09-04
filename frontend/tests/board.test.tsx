@@ -902,6 +902,7 @@ describe("the colour language", () => {
     { case: "loop open, owner only", word: "loop open · you read it 11 Sep", meaning: "quiet", border: false, door: null },
     { case: "signal for you to read", word: "signal for you to read", meaning: "yours", border: true, door: "Read" },
     { case: "a session is reading it", word: "loop open · a session reads it now · beta", meaning: "live", border: true, door: null },
+    { case: "signal past due", word: "loop open · 1 Sep passed, unread", meaning: "broken", border: true, door: null },
     { case: "loop closed", word: "loop closed · read 09:30, delivered", meaning: "proven", border: false, door: null },
     { case: "not now", word: "not now", meaning: "quiet", border: false, door: "open ▸" },
   ];

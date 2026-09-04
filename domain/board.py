@@ -63,6 +63,7 @@ class Claim(StrEnum):
     DECISION = "decision"
     LANE_ENDED = "lane ended"
     DOUBTED = "doubted"
+    SIGNAL_OVERDUE = "signal overdue"
     DOCUMENT_GONE = "document gone"
     COLLIDING = "colliding"
     DOCUMENT_WITHOUT_CARD = "document without card"
@@ -78,6 +79,7 @@ CLAIM_MEANING: dict[Claim, Meaning] = {
     Claim.DECISION: Meaning.YOURS,
     Claim.LANE_ENDED: Meaning.BROKEN,
     Claim.DOUBTED: Meaning.BROKEN,
+    Claim.SIGNAL_OVERDUE: Meaning.BROKEN,
     Claim.DOCUMENT_GONE: Meaning.BROKEN,
     Claim.COLLIDING: Meaning.BROKEN,
     Claim.DOCUMENT_WITHOUT_CARD: Meaning.BROKEN,
@@ -209,7 +211,8 @@ class Attention(BaseModel):
     can read, cards in Decision moment."""
     broken: list[ClaimCount]
     """Evidence gone or two things disagreeing: lanes died, statuses doubted,
-    documents nowhere, two lanes in one file, documents with no card."""
+    signals the board said it would read and has not, documents nowhere, two
+    lanes in one file, documents with no card."""
     live: list[ClaimCount]
     """Happening now: lanes working, conversations, signals being read."""
     unplanned_defects: int

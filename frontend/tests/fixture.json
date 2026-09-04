@@ -8254,6 +8254,51 @@
       }
     },
     {
+      "case": "signal past due",
+      "card": {
+        "number": 900,
+        "title": "A card in every state",
+        "essence": "Every berth is billed by the metre.",
+        "essence_source": "card",
+        "gate": "high",
+        "tags": [],
+        "document_state": "archived",
+        "document_path": "docs/plans/done/2026-09-04-a-card-in-every-state.md",
+        "kind": null,
+        "state": {
+          "word": "loop open · 1 Sep passed, unread",
+          "meaning": "broken",
+          "detail": "Signal: the nightly check email names a real event — by 1 Sep",
+          "loop": {
+            "state": "open",
+            "owner_only": false
+          },
+          "door": null,
+          "hint": null
+        },
+        "claims": [
+          "signal overdue"
+        ],
+        "folded": [],
+        "is_new": false,
+        "age_date": "2026-09-04",
+        "place": {
+          "column": "Executed",
+          "group": null,
+          "position": 0
+        },
+        "lane_state": "none",
+        "colliding": null,
+        "standing": {
+          "actor": "corpus",
+          "evidence": null,
+          "state": "trusted",
+          "words": null
+        },
+        "reading": null
+      }
+    },
+    {
       "case": "loop closed",
       "card": {
         "number": 900,
