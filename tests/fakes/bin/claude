@@ -76,14 +76,26 @@ def background(args: list[str]) -> int:
     flags, positional = _parse(args)
     prompt = positional[-1] if positional else ""
     fate = _locked(lambda blob: blob["launches"].pop(0) if blob.get("launches") else {"then": "work"})
-    session_id = flags.get("--resume") or str(uuid.uuid4())
+    # A resume forks: the registry row carries a new session id and the
+    # transcript is copied (verified live 2026-09-04, same slot and across).
+    resumed_from = flags.get("--resume")
+    session_id = str(uuid.uuid4())
     short = session_id.split("-")[0]
     cwd = os.getcwd()
     name = flags.get("-n") or short
     worktree = None
     if "--worktree" in flags:
         worktree = os.path.join(cwd, ".claude", "worktrees", flags["--worktree"])
-        os.makedirs(worktree, exist_ok=True)
+        # A real worktree when the repository is real (the board reads lanes
+        # from `git worktree list`); a bare folder when a test only faked `.git`.
+        made = subprocess.run(
+            ["git", "worktree", "add", "-q", "-b", f"worktree-{flags['--worktree']}", worktree],
+            cwd=cwd,
+            capture_output=True,
+            text=True,
+        )
+        if made.returncode != 0:
+            os.makedirs(worktree, exist_ok=True)
     process = subprocess.Popen(
         ["sleep", "300"],
         stdin=subprocess.DEVNULL,
@@ -103,7 +115,7 @@ def background(args: list[str]) -> int:
         "detail": "starting…",
         "tempo": "active",
         "sessionId": session_id,
-        "resumeSessionId": session_id,
+        "resumeSessionId": resumed_from or session_id,
         "daemonShort": short,
         "cwd": cwd,
         "name": name,

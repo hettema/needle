@@ -86,16 +86,18 @@ def test_move_and_rescues_from_the_command_line(machine_floor: Floor, repo: Path
 
     assert main(["move", short]) == 0
     said = capsys.readouterr().out
-    assert said.startswith(f"{short} is alive: card-5-moves on beta with fable")
-    assert main(["rescues", short]) == 0
+    new_short = said.split(" ", 1)[0]
+    assert new_short != short, "a resume forks the session id"
+    assert said.startswith(f"{new_short} is alive: card-5-moves on beta with fable")
+    assert main(["rescues", new_short]) == 0
     assert (
         "alpha/fable → beta/fable  You've hit your session limit · resets 12pm"
         in capsys.readouterr().out
     )
-    assert main(["rescues", short, "--clear"]) == 0
+    assert main(["rescues", new_short, "--clear"]) == 0
     assert (
         capsys.readouterr().out.strip()
-        == f"cleared 1 rescue row for {short}; its slot record is untouched"
+        == f"cleared 1 rescue row for {new_short}; its slot record is untouched"
     )
 
 

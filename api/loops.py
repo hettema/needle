@@ -108,14 +108,26 @@ class Loops:
             with contextlib.suppress(asyncio.CancelledError):
                 await task
 
+    async def first_read(self) -> None:
+        """Every loop once, in order, before the board is served: the lanes,
+        the signals, the trunk. The timers then wait their interval first,
+        so a caller who saw the server start has seen a complete read."""
+        for work in (self.reconcile, self.read_signals, self.level_trunks):
+            try:
+                await work()
+            except Exception as error:  # noqa: BLE001 — a first read never stops the server
+                log.warning("the first read failed (%s: %s)", type(error).__name__, error)
+
     async def _timer(self, seconds: float, work: Callable[[], Awaitable[None]]) -> None:
         while not self._stop.is_set():
+            with contextlib.suppress(TimeoutError):
+                await asyncio.wait_for(self._stop.wait(), seconds)
+            if self._stop.is_set():
+                return
             try:
                 await work()
             except Exception as error:  # noqa: BLE001 — a loop never dies quietly
                 log.warning("a loop failed (%s: %s); it runs again", type(error).__name__, error)
-            with contextlib.suppress(TimeoutError):
-                await asyncio.wait_for(self._stop.wait(), seconds)
 
     async def _watch_registries(self) -> None:
         """Every registry's `jobs/` and the handoff directory: a state change
@@ -276,6 +288,7 @@ class Loops:
                     name=Path(path).name,
                     path=path,
                     branch=branch,
+                    birth=tip,
                     tip=tip,
                     first_seen=now,
                     last_seen=now,
@@ -289,6 +302,7 @@ class Loops:
                     update={
                         "path": path,
                         "branch": branch or record.branch,
+                        "birth": record.birth or tip,
                         "tip": tip or record.tip,
                         "last_seen": now,
                         "gone_at": None,
@@ -299,7 +313,9 @@ class Loops:
             if record.path not in worktrees and record.gone_at is None:
                 record = record.model_copy(update={"gone_at": now})
             if record.folded_at is None and record.tip:
-                folded = self.runtime.lane_folded(project_path, record.branch, record.tip)
+                folded = self.runtime.lane_folded(
+                    project_path, record.branch, record.tip, record.birth
+                )
                 if folded:
                     record = record.model_copy(update={"folded_at": now})
                     store.note(

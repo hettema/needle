@@ -149,8 +149,10 @@ class Runtime:
     def branch_tip(self, repo: str, branch: str) -> str | None:
         return git.head_of(repo, branch)
 
-    def lane_folded(self, repo: str, branch: str | None, tip: str | None) -> bool | None:
-        return git.lane_folded(repo, branch, tip)
+    def lane_folded(
+        self, repo: str, branch: str | None, tip: str | None, birth: str | None
+    ) -> bool | None:
+        return git.lane_folded(repo, branch, tip, birth)
 
     def in_stable(self, repo: str, tip: str) -> bool:
         """Whether a commit is in origin/main, as last fetched."""

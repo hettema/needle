@@ -91,7 +91,7 @@ def create_app(store: Store | None = None, *, dist: Path | None = FRONTEND_DIST)
         app.state.loops = loops
         app.state.doors = Doors(live, runtime, loops)
         await loops.start()
-        await loops.reconcile()
+        await loops.first_read()
         try:
             yield
         finally:

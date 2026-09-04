@@ -335,8 +335,16 @@ def _settle(
     verified: Verified,
     card: str,
     attempts: list[Attempt],
+    rescued_from: tuple[Rung, str] | None = None,
 ) -> Launch:
+    """Record where the verified session runs and, when it is the far end of
+    a move, the rescue that brought it here. A resume forks the session id
+    (verified live 2026-09-04), so the ledger is written under the id that
+    lives and `Runtime.rescues` of the dead id answers nothing."""
     assert verified.pid is not None and verified.session_id is not None
+    if rescued_from is not None:
+        from_rung, reason = rescued_from
+        store.record_rescue(verified.session_id, from_rung, _rung(placement), reason, clock.now())
     scoped = scope_session(placement, Path(placement.config_dir), verified.pid, card)
     store.record_session_slot(
         SessionSlot(
@@ -372,6 +380,7 @@ def start(store: Store, request: Start) -> Launch:
     placement = where.placement
     attempts: list[Attempt] = []
     prompt, resume, worktree_flag, cwd = request.brief, None, request.card, repo
+    rescued_from: tuple[Rung, str] | None = None
     while len(attempts) < WALK_LIMIT:
         argv = argv_for(
             placement,
@@ -404,7 +413,7 @@ def start(store: Store, request: Start) -> Launch:
             )
         )
         if verified.verdict == LaunchVerdict.ALIVE:
-            return _settle(store, placement, short, verified, request.card, attempts)
+            return _settle(store, placement, short, verified, request.card, attempts, rescued_from)
         if verified.verdict == LaunchVerdict.DEAD and verified.handoff is not None:
             wall = verified.handoff
             _stop_probe(placement, short, verified.pid)
@@ -417,13 +426,7 @@ def start(store: Store, request: Start) -> Launch:
                     placement,
                 )
             assert verified.session_id is not None
-            store.record_rescue(
-                verified.session_id,
-                _rung(placement),
-                _rung(next_placement),
-                wall.reason,
-                clock.now(),
-            )
+            rescued_from = (_rung(placement), wall.reason)
             handoffs.remove(wall)
             recorded_worktree = verified.state.get("worktreePath") if verified.state else None
             home = (
@@ -578,7 +581,6 @@ def move(
             attempts=attempts,
             reason=verified.reason,
         )
-    launch = _settle(store, to, short, verified, card, attempts)
     reason = (
         wall.reason
         if wall
@@ -591,7 +593,7 @@ def move(
             f"{size / 1048576:.1f} MB, above the {RESUME_SIZE_LIMIT // 1048576} MB resume limit"
         )
     from_rung = Rung(slot=session.slot, model=session.model)
-    store.record_rescue(session.session_id, from_rung, _rung(to), reason, clock.now())
+    launch = _settle(store, to, short, verified, card, attempts, (from_rung, reason))
     if wall is not None:
         handoffs.remove(wall)
     return launch

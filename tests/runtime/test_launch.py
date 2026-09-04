@@ -118,11 +118,14 @@ def test_a_launch_that_dies_on_a_wall_walks_to_where_the_handoff_names(
     assert machine_floor.state()["stops"] == [
         {"short": first["short"], "config_dir": str(machine_floor.config_dir("alpha"))}
     ]
-    assert second["session_id"] == first["session_id"], "the walk resumes the same session id"
+    # A resume forks the session id (verified live 2026-09-04), so the walk
+    # resumes the dead id into a new one, and the ledger follows the one that lives.
+    assert second["session_id"] != first["session_id"]
     assert "--resume" in second["argv"] and "--worktree" not in second["argv"]
+    assert second["argv"][second["argv"].index("--resume") + 1] == first["session_id"]
     assert second["cwd"] == str(repo / ".claude" / "worktrees" / "card-7-the-thing")
     assert second["argv"][-1] == "[claude-acct] Carry on."
-    rescues = store.rescues(first["session_id"])
+    rescues = store.rescues(second["session_id"])
     assert (
         len(rescues) == 1
         and rescues[0].from_rung.slot == "alpha"
@@ -130,7 +133,8 @@ def test_a_launch_that_dies_on_a_wall_walks_to_where_the_handoff_names(
     )
     assert rescues[0].reason == "You've reached your Fable limit."
     assert not list(machine_floor.handoff_dir.glob("*.json")), "an acted-on handoff is removed"
-    assert store.session_slot(first["session_id"]).slot == "beta"
+    assert store.session_slot(second["session_id"]).slot == "beta"
+    assert store.rescues(first["session_id"]) == [], "the dead id carries no ledger"
 
 
 def test_a_launch_that_vanishes_is_dead_with_the_machines_words(
@@ -204,22 +208,23 @@ def test_a_move_leaves_exactly_one_live_copy_and_records_the_slot(
     moved = runtime.move(started.session.short_id, None)
 
     assert moved.verdict == LaunchVerdict.ALIVE, moved.reason
+    assert moved.session is not None and moved.session.slot == "beta"
+    new_id = moved.session.session_id
+    assert new_id != session_id, "a resume forks the session id"
+    rows = {s.session_id: s for s in runtime.sessions() if s.session_id in {session_id, new_id}}
+    assert (rows[session_id].slot, rows[session_id].pid) == ("alpha", None)
+    assert (rows[new_id].slot, rows[new_id].pid is not None) == ("beta", True)
     assert (
-        moved.session is not None
-        and moved.session.slot == "beta"
-        and moved.session.session_id == session_id
+        sum(1 for s in runtime.sessions() if s.pid is not None and s.name == "card-7-the-thing")
+        == 1
     )
-    copies = [s for s in runtime.sessions() if s.session_id == session_id]
-    assert [(c.slot, c.stale, c.pid is not None) for c in sorted(copies, key=lambda c: c.slot)] == [
-        ("alpha", True, False),
-        ("beta", False, True),
-    ]
     assert machine_floor.state()["stops"][0]["config_dir"] == str(machine_floor.config_dir("alpha"))
     resumed = machine_floor.state()["launch_log"][1]
     assert "--resume" in resumed["argv"] and resumed["cwd"] == started.session.worktree
-    assert store.session_slot(session_id).slot == "beta"
-    assert store.session_slot(session_id).card == "card-7-the-thing"
-    assert [r.to_rung.slot for r in store.rescues(session_id)] == ["beta"]
+    assert resumed["argv"][resumed["argv"].index("--resume") + 1] == session_id
+    assert store.session_slot(new_id).slot == "beta"
+    assert store.session_slot(new_id).card == "card-7-the-thing"
+    assert [r.to_rung.slot for r in store.rescues(new_id)] == ["beta"]
     assert not list(machine_floor.handoff_dir.glob("*.json"))
 
 
@@ -230,16 +235,18 @@ def test_the_slot_record_survives_a_new_store_and_clearing_the_rescues(
     assert started.session is not None
     session_id = started.session.session_id
     machine_floor.write_handoff(session_id, account="beta")
-    runtime.move(started.session.short_id, None)
+    moved = runtime.move(started.session.short_id, None)
+    assert moved.session is not None
+    new_id, new_short = moved.session.session_id, moved.session.short_id
 
     from infrastructure.store import Store
 
     reopened = Store(store.path)
     try:
-        assert reopened.session_slot(session_id).slot == "beta"
-        assert Runtime(reopened).clear_rescues(started.session.short_id) == 1
-        assert reopened.rescues(session_id) == []
-        assert reopened.session_slot(session_id).slot == "beta", (
+        assert reopened.session_slot(new_id).slot == "beta"
+        assert Runtime(reopened).clear_rescues(new_short) == 1
+        assert reopened.rescues(new_id) == []
+        assert reopened.session_slot(new_id).slot == "beta", (
             "clearing rescues never clears the slot"
         )
     finally:
@@ -263,7 +270,7 @@ def test_a_move_above_the_resume_limit_starts_fresh_with_the_brief(
     fresh = machine_floor.state()["launch_log"][1]
     assert "--resume" not in fresh["argv"]
     assert "fresh session" in fresh["argv"][-1] and BRIEF in fresh["argv"][-1]
-    assert "fresh session" in store.rescues(old)[0].reason
+    assert "fresh session" in store.rescues(moved.session.session_id)[0].reason
     assert store.session_slot(moved.session.session_id).slot == "beta"
     assert machine_floor.state()["best_calls"][-1] == [
         "best",

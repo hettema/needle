@@ -122,10 +122,15 @@ def branch_birth(repo: str | Path, branch: str) -> str | None:
     return lines[-1] if lines else None
 
 
-def lane_folded(repo: str | Path, branch: str | None, tip: str | None) -> bool | None:
-    """Is the lane's work in the trunk? True on positive evidence, False when
-    the tip is not in the trunk, None when nothing can be proved (no tip
-    known, no copy of the trunk here)."""
+def lane_folded(
+    repo: str | Path, branch: str | None, tip: str | None, birth: str | None = None
+) -> bool | None:
+    """Is the lane's work in the trunk? True on positive evidence: the tip is
+    an ancestor of origin/develop AND has moved from the commit the lane was
+    born at (a zero-commit branch is an ancestor from birth). False when the
+    tip is not in the trunk. None when nothing can be proved: no tip, no
+    copy of the trunk here, or no birth known for a branch whose reflog is
+    gone."""
     trunk = f"{REMOTE}/{TRUNK}"
     if head_of(repo, trunk) is None:
         return None
@@ -137,12 +142,11 @@ def lane_folded(repo: str | Path, branch: str | None, tip: str | None) -> bool |
     contained = is_ancestor(repo, tip, trunk)
     if not contained:
         return False if contained is False else None
-    if branch:
+    if branch and birth is None:
         birth = branch_birth(repo, branch)
-        if birth is not None:
-            return tip != birth
-    trunk_tip = head_of(repo, trunk)
-    return tip is not None and trunk_tip is not None
+    if birth is None:
+        return None
+    return tip != birth
 
 
 def head_of(repo: str | Path, ref: str) -> str | None:

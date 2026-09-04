@@ -9,7 +9,7 @@ says (the runtime already holds that; this module only reads its verdict).
 """
 
 import re
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 
 from pydantic import BaseModel
 
@@ -37,6 +37,11 @@ from domain.slot import Placement
 from domain.window import Window
 
 _LANE_DIR = re.compile(r"/\.claude/worktrees/card-(\d+)-[^/]*(?:/|$)")
+HOOK_SLACK_SECONDS = 60.0
+"""The registry stamps its row after the Stop hook has fired (verified live
+2026-09-04: THANKS reached the board while the row still read the previous
+turn's `blocked`, updated a moment later), so a Stop this close behind the
+registry's stamp is the turn's end, not an older one."""
 _QUESTION_TAIL = re.compile(r"\?\s*(?:\*+|_+|`+)?\s*$")
 
 
@@ -134,12 +139,20 @@ def _last_words(events: list[HookEvent], session: Session | None) -> HookEvent |
     return max(pool, key=lambda e: e.id) if pool else None
 
 
-def _moved_sentence(rescues: list[Rescue], windows: list[Window], session_id: str) -> str | None:
-    if not rescues:
+def _moved_sentence(
+    rescues: list[Rescue], windows: list[Window], chain: set[str], since: datetime | None
+) -> str | None:
+    """The rescue sentence for this life of the lane: a move that changed the
+    rung, after the lane was last started. An Answer's resume is in the
+    ledger too but stays on its rung, and a previous life's move is history
+    (verified live 2026-09-04: a relaunched card said "Moved" for a resume
+    two lives back)."""
+    moves = [r for r in rescues if r.from_rung != r.to_rung and (since is None or r.at >= since)]
+    if not moves:
         return None
-    last = rescues[-1]
+    last = moves[-1]
     model = last.to_rung.model.value if last.to_rung.model else "fable"
-    opened = any(w.session_id == session_id and w.opened_at >= last.at for w in windows)
+    opened = any(w.session_id in chain and w.opened_at >= last.at for w in windows)
     said = f"Moved to {model} on {last.to_rung.slot}"
     return said + (", new window opened." if opened else ".")
 
@@ -167,11 +180,18 @@ def lane_for(card: Card, facts: LaneFacts) -> Lane:
             d.session_id == s.session_id and d.card_number == card.number for d in facts.discussions
         )
     ]
+    # A resume forks the session id (verified live 2026-09-04: `--bg --resume`
+    # registers a new sessionId), so the lane's rescues and windows are read
+    # across every session that has held this worktree, not the winner alone.
+    chain = {s.session_id for s in here}
     window_open = winner is not None and any(
-        w.session_id == winner.session_id and w.closed_at is None for w in facts.windows
+        w.session_id in chain and w.closed_at is None for w in facts.windows
+    )
+    chain_rescues = sorted(
+        (r for sid in chain for r in facts.rescues.get(sid, [])), key=lambda r: r.at
     )
     moved = (
-        _moved_sentence(facts.rescues.get(winner.session_id, []), facts.windows, winner.session_id)
+        _moved_sentence(chain_rescues, facts.windows, chain, record.first_seen if record else None)
         if winner is not None
         else None
     )
@@ -194,6 +214,21 @@ def lane_for(card: Card, facts: LaneFacts) -> Lane:
 
     question: str | None = None
     died: str | None = None
+    # The registry's word goes stale across a resume (verified live
+    # 2026-09-04: a resumed session read `blocked` with the previous life's
+    # detail after its own turn had ended). A Stop the hook pushed after the
+    # registry last moved is the truer word for a turn's end.
+    hook_stopped = (
+        words is not None
+        and words.kind == HookKind.STOP
+        and winner is not None
+        and winner.pid is not None
+        and (
+            winner.updated_at is None
+            or words.at >= winner.updated_at - timedelta(seconds=HOOK_SLACK_SECONDS)
+        )
+        and winner.state != SessionState.WORKING
+    )
     if winner is not None and winner.pid is not None:
         where = f"{winner.model.value if winner.model else 'fable'} on {winner.slot}"
         if winner.wall is not None:
@@ -207,6 +242,13 @@ def lane_for(card: Card, facts: LaneFacts) -> Lane:
             sentence = f"Working, {where}, hands on for {ago(since, facts.now)}."
             if winner.detail:
                 sentence += f" {first_line(winner.detail)}"
+        elif hook_stopped and is_question(said):
+            state = LaneState.ASKING
+            question = said
+            sentence = f"Asking you: {last_line(said)}"
+        elif hook_stopped:
+            state = LaneState.STOPPED
+            sentence = f"Stopped {ago(said_at, facts.now)} ago, {where}: {first_line(said)}"
         elif winner.state == SessionState.BLOCKED:
             if is_question(winner.detail) or is_question(said):
                 state = LaneState.ASKING
@@ -276,7 +318,7 @@ def lane_for(card: Card, facts: LaneFacts) -> Lane:
     return Lane(
         card_number=card.number,
         name=name,
-        path=path if (on_disk or record is not None) else None,
+        path=path if on_disk else None,
         state=state,
         sentence=sentence.strip(),
         session=winner,
@@ -538,7 +580,10 @@ def doors_for(
         if placement is not None
         else _closed("Discuss", f"The rule found nowhere to run: {placement_note}")
     )
-    if lane.state == LaneState.ENDED and lane.session is not None:
+    if lane.state == LaneState.ENDED and lane.session is not None and lane.path is None:
+        gone = "The lane's worktree is gone; Start opens a fresh one."
+        look, resume = _closed("Look", gone), _closed("Resume", gone)
+    elif lane.state == LaneState.ENDED and lane.session is not None:
         look = (
             _open(
                 "Look",

@@ -87,8 +87,8 @@ def test_a_deaths_reason_comes_from_the_journal_else_the_registry(machine_floor:
     )
     assert (
         reasons.why_ended(session("stopped"), "needle-card-7-x.scope")
-        == "the journal for needle-card-7-x.scope says: needle-card-7-x.scope: "
-        "Consumed 2min CPU time."
+        == "the journal for needle-card-7-x.scope says: claude[4242]: Killed process 4242 "
+        "(claude) total-vm:9GB"
     )
     assert reasons.why_ended(session("stopped"), "quiet.scope") == "the session was stopped"
     assert (

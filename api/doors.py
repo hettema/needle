@@ -130,6 +130,7 @@ class Doors:
                 name=name,
                 path=path,
                 branch=None,
+                birth=None,
                 tip=None,
                 first_seen=now,
                 last_seen=now,

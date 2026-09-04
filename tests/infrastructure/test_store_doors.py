@@ -125,6 +125,7 @@ def test_discussions_lanes_readings_and_the_trunk_round_trip(board: Store):
         name="card-253-x",
         path="/srv/p/.claude/worktrees/card-253-x",
         branch="card-253-x",
+        birth=None,
         tip=None,
         first_seen=NOW,
         last_seen=NOW,

@@ -94,6 +94,12 @@ def test_a_fold_is_proved_by_origin_develop_equalling_head_and_the_checkout_foll
     assert sh(origin, "rev-parse", "main") == folded.tip
     assert git.level(checkout).main_updated
     assert git.is_ancestor(checkout, folded.tip, "origin/main") is True
+    # The branch deleted at the fold: the recorded birth is what still proves it.
+    sh(checkout, "worktree", "remove", str(path))
+    sh(checkout, "branch", "-D", "card-7-the-thing")
+    assert git.lane_folded(checkout, "card-7-the-thing", folded.tip) is None
+    assert git.lane_folded(checkout, "card-7-the-thing", folded.tip, tip_before) is True
+    assert git.lane_folded(checkout, "card-7-the-thing", tip_before, tip_before) is False
 
 
 def test_a_dirty_worktree_does_not_fold_and_a_dirty_checkout_is_not_touched(

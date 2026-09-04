@@ -11,16 +11,9 @@ from domain.session import Session
 from runtime import machine
 
 JOURNAL_LINES = 40
-_TELLING = (
-    "killed",
-    "oom",
-    "out of memory",
-    "signal",
-    "failed",
-    "consumed",
-    "deactivated",
-    "stopped",
-)
+_TELLING = ("killed", "oom", "out of memory", "signal", "failed", "dumped core")
+"""A scope's accounting lines (`Consumed …`, `Deactivated`) are how every scope
+ends and say nothing about why; only these do."""
 
 
 def journal_of(unit: str) -> list[str]:

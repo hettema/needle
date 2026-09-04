@@ -585,6 +585,7 @@ class Store:
             row.name = record.name
             row.path = record.path
             row.branch = record.branch
+            row.birth = record.birth
             row.tip = record.tip
             row.first_seen = record.first_seen
             row.last_seen = record.last_seen
@@ -857,6 +858,7 @@ def _lane_record(row: LaneRow) -> LaneRecord:
         name=row.name,
         path=row.path,
         branch=row.branch,
+        birth=row.birth,
         tip=row.tip,
         first_seen=row.first_seen,
         last_seen=row.last_seen,

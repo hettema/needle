@@ -301,10 +301,11 @@ def test_a_stop_with_a_question_asks_you_and_answer_resumes_one_live_copy(
     assert answered.json()["said"].startswith("Answered, and the lane resumed as ")
     resumed = machine_floor.state()["launch_log"][1]
     assert "--resume" in resumed["argv"] and resumed["argv"][-1] == "High."
-    assert resumed["cwd"] == lane_path(repo) and resumed["session_id"] == session_id
+    assert resumed["cwd"] == lane_path(repo)
+    assert resumed["argv"][resumed["argv"].index("--resume") + 1] == session_id
     rows = client.app.state.loops.runtime.sessions()
-    live = [s for s in rows if s.session_id == session_id and s.pid is not None]
-    assert len(live) == 1, "exactly one live copy"
+    live = [s for s in rows if s.pid is not None and s.cwd == lane_path(repo)]
+    assert len(live) == 1, "exactly one live copy in the lane"
     after = detail(client)
     assert after["summary"]["lane_state"] == "working"
     assert any(h["kind"] == "answered" and "High." in h["detail"] for h in after["history"])
@@ -436,7 +437,9 @@ def test_executed_needs_a_signal_and_the_close_writes_rows_and_moves(
         "#253 closed into Executed: DELIVERED, WATCH, REVIEW written"
     )
     client.app.state.loops.live.rescan("proj")
-    assert column_of(client, CARD) == "Executed"
+    assert column_of(client, CARD) == "Executed", [
+        (h["actor"], h["detail"]) for h in detail(client)["history"][:4]
+    ]
     closed = detail(client)
     assert [r["kind"] for r in closed["record"]] == ["DELIVERED", "WATCH", "REVIEW"]
     assert closed["signal"]["kind"] == "file" and closed["signal"]["due"] == "2026-12-31"

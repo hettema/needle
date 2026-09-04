@@ -50,6 +50,11 @@ class LaneRecord(BaseModel):
     name: str
     path: str
     branch: str | None
+    birth: str | None
+    """The commit the lane was created at, from its first sighting: a fold is
+    proved by the tip being in the trunk AND having moved from here, since a
+    zero-commit branch is an ancestor of the trunk from birth (verified live
+    2026-09-04: a stopped lane's deleted branch read as folded without this)."""
     tip: str | None
     """The last commit seen on the lane's branch, kept so a fold can still be
     proved after the branch is deleted at the fold."""

@@ -187,6 +187,30 @@ def test_a_stop_with_a_question_is_asking_you_with_the_question():
     assert is_question("Done?") and not is_question("Done.") and not is_question(None)
 
 
+def test_a_stop_the_hook_pushed_wins_over_the_registrys_stale_word():
+    """A resumed session's row keeps the previous life's `blocked` and detail
+    for a while; the hook's Stop is the turn's end."""
+    stale = session(state=SessionState.BLOCKED, recorded="blocked", detail="awaiting colour")
+    stale = stale.model_copy(update={"updated_at": NOW})
+    lane = lane_for(
+        card(),
+        facts(
+            sessions=[stale],
+            events=[event(HookKind.STOP, "THANKS", at=NOW - timedelta(seconds=20))],
+        ),
+    )
+    assert lane.state == LaneState.STOPPED and lane.sentence.endswith(": THANKS")
+    older = lane_for(
+        card(),
+        facts(
+            sessions=[stale], events=[event(HookKind.STOP, "THANKS", at=NOW - timedelta(minutes=5))]
+        ),
+    )
+    assert older.state == LaneState.BLOCKED, (
+        "a Stop from an older turn does not outrank the registry"
+    )
+
+
 def test_a_stop_without_a_question_is_stopped_with_its_words():
     lane = lane_for(
         card(),
@@ -249,6 +273,17 @@ def test_a_wall_reads_as_moving_and_a_rescue_is_said_on_the_card():
     assert moved_lane.moved == "Moved to fable on beta, new window opened."
     assert moved_lane.sentence.startswith("Moved to fable on beta, new window opened. Working")
     assert moved_lane.window_open
+    answered = rescue.model_copy(
+        update={
+            "to_rung": Rung(slot="alpha", model=Model.FABLE),
+            "reason": "resumed with the owner's answer",
+        }
+    )
+    stayed = lane_for(
+        card(),
+        facts(sessions=[session()], rescues={"aaaa0001-0000-4000-8000-000000000000": [answered]}),
+    )
+    assert stayed.moved is None, "an answer's resume stays on its rung and is not a move"
 
 
 def test_a_session_with_no_process_is_an_ended_lane_with_the_machines_reason():
@@ -258,6 +293,7 @@ def test_a_session_with_no_process_is_an_ended_lane_with_the_machines_reason():
         name="card-7-the-thing",
         path=LANE,
         branch="card-7-the-thing",
+        birth="000",
         tip="abc",
         first_seen=NOW - timedelta(hours=1),
         last_seen=NOW,
@@ -460,11 +496,20 @@ def test_a_live_lane_offers_watch_and_stop_and_answer_only_when_stopped():
 def test_an_ended_lane_offers_look_and_resume_and_never_watch():
     ended = lane_for(
         card(column=Column.EXECUTING),
-        facts(sessions=[session(pid=None, state=SessionState.ENDED, recorded="stopped")]),
+        facts(
+            sessions=[session(pid=None, state=SessionState.ENDED, recorded="stopped")],
+            worktrees={LANE: "card-7-the-thing"},
+        ),
     )
     offered = doors(card(column=Column.EXECUTING), ended)
     assert offered.look.offered and offered.resume.offered
     assert not offered.watch.offered and not offered.stop.offered
+    gone = lane_for(
+        card(), facts(sessions=[session(pid=None, state=SessionState.ENDED, recorded="stopped")])
+    )
+    after_removal = doors(card(), gone)
+    assert after_removal.start.offered, "a removed worktree is a lane that can start again"
+    assert not after_removal.look.offered and "worktree is gone" in after_removal.look.why
     with_worktree = lane_for(card(), facts(worktrees={LANE: "card-7-the-thing"}))
     blocked = doors(card(), with_worktree)
     assert not blocked.start.offered and "already exists" in blocked.start.why

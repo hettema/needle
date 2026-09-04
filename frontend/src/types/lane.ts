@@ -75,6 +75,7 @@ export interface LaneRecord {
   name: string;
   path: string;
   branch: string | null;
+  birth: string | null;
   tip: string | null;
   first_seen: string;
   last_seen: string;

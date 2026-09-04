@@ -197,6 +197,7 @@ class LaneRow(Base):
     name: Mapped[str] = mapped_column(Text)
     path: Mapped[str] = mapped_column(Text)
     branch: Mapped[str | None] = mapped_column(Text, nullable=True)
+    birth: Mapped[str | None] = mapped_column(String(40), nullable=True)
     tip: Mapped[str | None] = mapped_column(String(40), nullable=True)
     first_seen: Mapped[datetime] = mapped_column(UtcDateTime)
     last_seen: Mapped[datetime] = mapped_column(UtcDateTime)

@@ -50,6 +50,7 @@ def upgrade() -> None:
         sa.Column("name", sa.Text, nullable=False),
         sa.Column("path", sa.Text, nullable=False),
         sa.Column("branch", sa.Text, nullable=True),
+        sa.Column("birth", sa.String(40), nullable=True),
         sa.Column("tip", sa.String(40), nullable=True),
         sa.Column("first_seen", sa.String(32), nullable=False),
         sa.Column("last_seen", sa.String(32), nullable=False),
