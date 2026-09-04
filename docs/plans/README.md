@@ -9,6 +9,15 @@ Every plan carries, near the top: `**Status:**`, `**Written:**`,
 it depends on another plan. Every item in a plan ends with what "done" means
 for it, as a behaviour someone can observe.
 
+A plan's title is its card's title, and the owner ranks cards from their
+titles alone. So the title says what will be true when the plan is done, in
+his words — the outcome, never the mechanism, the area or a term from the
+code. "Defects fix themselves", not "A standing ruling lets a defect enter
+execution". The test: could he place it against every other card without
+opening it? A suggestion's title is held to the same bar, because it becomes
+a card the moment it lands (owner ruling 2026-09-04: "I need to be able to
+derive from the card title what the intent of the card is").
+
 A plan that carries suggestions names their paths in its head — a
 `**Carries:**` line, or the `**Written:**` line as the early plans did. The
 board follows the plan from that line (plan 06, item 5): the first cited
