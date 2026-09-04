@@ -24,6 +24,13 @@ export interface Launch {
   reason: string | null;
 }
 
+export interface ReadingStart {
+  repo: string;
+  card: string;
+  brief: string;
+  effort: Gate;
+}
+
 export interface Rescue {
   id: number;
   session_id: string;

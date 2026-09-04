@@ -16,7 +16,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from domain.gate import Gate
-from domain.launch import Attempt, Launch, LaunchVerdict, Start, Stopped
+from domain.launch import Attempt, Launch, LaunchVerdict, ReadingStart, Start, Stopped
 from domain.session import Session, SessionKind, SessionSlot
 from domain.slot import Handoff, Model, Placement, Rung, Slot
 from infrastructure import clock
@@ -374,18 +374,56 @@ def start(store: Store, request: Start) -> Launch:
         return dead(
             request.card, [], f"{repo} is not a git repository; a lane needs a worktree", None
         )
-    where = rule.where(request.from_slot, [], cached=False)
+    return _walk(
+        store,
+        card=request.card,
+        brief=request.brief,
+        effort=request.effort,
+        from_slot=request.from_slot,
+        cwd=repo,
+        worktree=request.card,
+    )
+
+
+def read(store: Store, request: ReadingStart) -> Launch:
+    """Start a reading session in the repository's own checkout (plan 09,
+    item 1): the same walk as a lane's, with no worktree, so the board never
+    reads it as hands on a tree."""
+    return _walk(
+        store,
+        card=request.card,
+        brief=request.brief,
+        effort=request.effort,
+        from_slot=None,
+        cwd=Path(request.repo),
+        worktree=None,
+    )
+
+
+def _walk(
+    store: Store,
+    *,
+    card: str,
+    brief: str,
+    effort: Gate | None,
+    from_slot: str | None,
+    cwd: Path,
+    worktree: str | None,
+) -> Launch:
+    """Launch where the rule says and walk down the ladder when a rung dies
+    on a wall; one verified session or a named death."""
+    where = rule.where(from_slot, [], cached=False)
     if where.placement is None:
-        return dead(request.card, [], where.reason, None)
+        return dead(card, [], where.reason, None)
     placement = where.placement
     attempts: list[Attempt] = []
-    prompt, resume, worktree_flag, cwd = request.brief, None, request.card, repo
+    prompt, resume, worktree_flag = brief, None, worktree
     rescued_from: tuple[Rung, str] | None = None
     while len(attempts) < WALK_LIMIT:
         argv = argv_for(
             placement,
-            effort=request.effort,
-            name=request.card,
+            effort=effort,
+            name=card,
             prompt=prompt,
             resume=resume,
             worktree=worktree_flag,
@@ -401,7 +439,7 @@ def start(store: Store, request: Start) -> Launch:
                     seconds=round(time.time() - since, 2),
                 )
             )
-            return dead(request.card, attempts, words, placement)
+            return dead(card, attempts, words, placement)
         verified = verify(Path(placement.config_dir), short, since)
         attempts.append(
             Attempt(
@@ -413,14 +451,14 @@ def start(store: Store, request: Start) -> Launch:
             )
         )
         if verified.verdict == LaunchVerdict.ALIVE:
-            return _settle(store, placement, short, verified, request.card, attempts, rescued_from)
+            return _settle(store, placement, short, verified, card, attempts, rescued_from)
         if verified.verdict == LaunchVerdict.DEAD and verified.handoff is not None:
             wall = verified.handoff
             _stop_probe(placement, short, verified.pid)
             next_placement = placement_from(wall)
             if next_placement is None:
                 return dead(
-                    request.card,
+                    card,
                     attempts,
                     f"the handoff names {wall.account!r}, which accounts.json does not declare",
                     placement,
@@ -439,9 +477,9 @@ def start(store: Store, request: Start) -> Launch:
             continue
         if verified.verdict == LaunchVerdict.DEAD:
             _stop_probe(placement, short, verified.pid)
-            return dead(request.card, attempts, verified.reason or "died", placement)
+            return dead(card, attempts, verified.reason or "died", placement)
         return Launch(
-            card=request.card,
+            card=card,
             verdict=LaunchVerdict.UNCONFIRMED,
             session=_row(placement, short),
             placement=placement,
@@ -450,7 +488,7 @@ def start(store: Store, request: Start) -> Launch:
             reason=verified.reason,
         )
     return dead(
-        request.card,
+        card,
         attempts,
         f"{WALK_LIMIT} rungs died in a row; stopping rather than looping",
         placement,

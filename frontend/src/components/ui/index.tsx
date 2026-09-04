@@ -218,12 +218,15 @@ export function AskList({ children, title }: { children: ReactNode; title: strin
   );
 }
 
-export function AskRow({ number, title, what, due, onRead, disabled }: { number: number; title: string; what: string; due: string; onRead: (delivered: boolean) => void; disabled: boolean }) {
+export function AskRow({ number, title, what, due, evidence, onRead, disabled }: { number: number; title: string; what: string; due: string; evidence: string | null; onRead: (delivered: boolean) => void; disabled: boolean }) {
   return (
     <div className="ask-row" role="listitem">
       <span className="cid">#{number}</span>
       <span className="ask-title">{title}</span>
-      <span className="ask-what">{what}</span>
+      <span className="ask-what">
+        {what}
+        {evidence ? <span className="ask-evidence">A session read it and could not tell: {evidence}</span> : null}
+      </span>
       <span className="ask-due">due {due}</span>
       <span className="ask-acts">
         <button type="button" className="btn" onClick={() => onRead(true)} disabled={disabled}>

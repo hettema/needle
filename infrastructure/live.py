@@ -253,6 +253,7 @@ class Live:
             machine=self.machine,
             placements=self.store.placements(slug),
             watercooler=self.store.watercooler(slug, limit=WATERCOOLER_SHOWN),
+            reading_sessions=self.store.open_reading_sessions(slug),
         )
 
     def card(self, slug: str, number: int) -> Card:
@@ -277,6 +278,7 @@ class Live:
             read=live.snapshot is not None,
             watercooler=self.store.watercooler(slug, limit=WATERCOOLER_SHOWN),
             folded=folded_under(self.store.cards(slug)).get(number),
+            reading=self.store.open_reading_sessions(slug).get(number),
         )
 
     def lane_and_doors(self, slug: str, card: Card) -> tuple[Lane | None, Doors]:

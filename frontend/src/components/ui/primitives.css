@@ -118,6 +118,7 @@ button.att:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px
 .ask-row + .ask-row { border-top: 1px dotted var(--line); }
 .ask-row .ask-title { font-weight: 600; color: var(--ink); }
 .ask-row .ask-what { color: var(--ink-2); }
+.ask-row .ask-evidence { display: block; margin-top: 2px; font-size: 11px; color: var(--ink-3); }
 .ask-row .ask-due { font-family: var(--mono); font-size: 10px; color: var(--ink-3); white-space: nowrap; }
 .ask-row .ask-acts { display: flex; gap: 6px; }
 

@@ -275,6 +275,11 @@ export function OpenCard({ card, onMoveTo }: { card: CardSummary; onMoveTo: (num
           ) : (
             <Quiet>{detail.signal_note ?? "No WATCH row names a signal."} Without one the card cannot enter Executed.</Quiet>
           )}
+          {detail.summary.reading ? (
+            <Quiet>
+              A session is reading this signal now: {detail.summary.reading.session_id.slice(0, 8)} on {detail.summary.reading.slot}, since {ago(detail.summary.reading.started_at)}. Never hands on the tree; its finding moves the card.
+            </Quiet>
+          ) : null}
           {doors.signal.offered ? (
             <Ask>
               {doors.signal.why}
@@ -291,7 +296,7 @@ export function OpenCard({ card, onMoveTo }: { card: CardSummary; onMoveTo: (num
           {detail.readings.length ? (
             <Hist>
               {detail.readings.slice(0, 5).map((r) => (
-                <HistRow key={r.id} when={when(r.at)} what={<What detail={`${r.delivered === null ? "Unreadable" : r.delivered ? "Delivered" : "Not delivered"} — ${r.words}`} />} who="board" owner={false} />
+                <HistRow key={r.id} when={when(r.at)} what={<What detail={`${r.delivered === null ? (r.actor === "session" ? "Cannot tell" : "Unreadable") : r.delivered ? "Delivered" : "Not delivered"} — ${r.words}`} />} who={r.actor === "owner" ? "you" : r.actor === "session" ? "a session" : "board"} owner={r.actor === "owner"} />
               ))}
             </Hist>
           ) : null}

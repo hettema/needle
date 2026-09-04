@@ -24,6 +24,7 @@
       "lanes_ended": 0,
       "signals_due": 0,
       "signals_asking": 0,
+      "signals_reading": 0,
       "doubted": 0,
       "verdicts_unread": 0,
       "unplanned_defects": 1,
@@ -93,7 +94,8 @@
                   "evidence": null,
                   "state": "trusted",
                   "words": null
-                }
+                },
+                "reading": null
               }
             ],
             "rail": true
@@ -135,7 +137,8 @@
                   "evidence": null,
                   "state": "trusted",
                   "words": null
-                }
+                },
+                "reading": null
               },
               {
                 "number": 242,
@@ -171,7 +174,8 @@
                   "evidence": null,
                   "state": "trusted",
                   "words": null
-                }
+                },
+                "reading": null
               },
               {
                 "number": 120,
@@ -203,7 +207,8 @@
                   "evidence": null,
                   "state": "trusted",
                   "words": null
-                }
+                },
+                "reading": null
               }
             ],
             "rail": false
@@ -248,7 +253,8 @@
                   "evidence": null,
                   "state": "trusted",
                   "words": null
-                }
+                },
+                "reading": null
               }
             ],
             "rail": false
@@ -290,7 +296,8 @@
                   "evidence": null,
                   "state": "trusted",
                   "words": null
-                }
+                },
+                "reading": null
               },
               {
                 "number": 264,
@@ -326,7 +333,8 @@
                   "evidence": null,
                   "state": "trusted",
                   "words": null
-                }
+                },
+                "reading": null
               },
               {
                 "number": 265,
@@ -362,7 +370,8 @@
                   "evidence": null,
                   "state": "trusted",
                   "words": null
-                }
+                },
+                "reading": null
               },
               {
                 "number": 266,
@@ -398,7 +407,8 @@
                   "evidence": null,
                   "state": "trusted",
                   "words": null
-                }
+                },
+                "reading": null
               }
             ],
             "rail": false
@@ -464,7 +474,8 @@
                   "evidence": null,
                   "state": "trusted",
                   "words": null
-                }
+                },
+                "reading": null
               }
             ],
             "rail": false
@@ -513,7 +524,8 @@
                   "evidence": null,
                   "state": "trusted",
                   "words": null
-                }
+                },
+                "reading": null
               }
             ],
             "rail": false
@@ -562,7 +574,8 @@
                   "evidence": null,
                   "state": "trusted",
                   "words": null
-                }
+                },
+                "reading": null
               }
             ],
             "rail": false
@@ -609,7 +622,8 @@
                   "evidence": null,
                   "state": "trusted",
                   "words": null
-                }
+                },
+                "reading": null
               },
               {
                 "number": 267,
@@ -650,7 +664,8 @@
                   "evidence": null,
                   "state": "trusted",
                   "words": null
-                }
+                },
+                "reading": null
               }
             ],
             "rail": false
@@ -714,7 +729,8 @@
                   "evidence": null,
                   "state": "trusted",
                   "words": null
-                }
+                },
+                "reading": null
               },
               {
                 "number": 241,
@@ -755,7 +771,8 @@
                   "evidence": null,
                   "state": "trusted",
                   "words": null
-                }
+                },
+                "reading": null
               },
               {
                 "number": 228,
@@ -796,7 +813,8 @@
                   "evidence": null,
                   "state": "trusted",
                   "words": null
-                }
+                },
+                "reading": null
               },
               {
                 "number": 237,
@@ -837,7 +855,8 @@
                   "evidence": null,
                   "state": "trusted",
                   "words": null
-                }
+                },
+                "reading": null
               },
               {
                 "number": 174,
@@ -880,7 +899,8 @@
                   "evidence": null,
                   "state": "trusted",
                   "words": null
-                }
+                },
+                "reading": null
               }
             ],
             "rail": false
@@ -935,7 +955,8 @@
                   "evidence": "hands-on",
                   "state": "unknown",
                   "words": "imported from Needle 0.1; evidence unknown until the first read"
-                }
+                },
+                "reading": null
               },
               {
                 "number": 223,
@@ -971,7 +992,8 @@
                   "evidence": "hands-on",
                   "state": "unknown",
                   "words": "imported from Needle 0.1; evidence unknown until the first read"
-                }
+                },
+                "reading": null
               }
             ],
             "rail": false
@@ -1028,7 +1050,8 @@
                   "evidence": null,
                   "state": "trusted",
                   "words": null
-                }
+                },
+                "reading": null
               },
               {
                 "number": 147,
@@ -1063,7 +1086,8 @@
                   "evidence": null,
                   "state": "trusted",
                   "words": null
-                }
+                },
+                "reading": null
               }
             ],
             "rail": false
@@ -1103,7 +1127,8 @@
                   "evidence": null,
                   "state": "trusted",
                   "words": null
-                }
+                },
+                "reading": null
               }
             ],
             "rail": false
@@ -1143,7 +1168,8 @@
                   "evidence": null,
                   "state": "trusted",
                   "words": null
-                }
+                },
+                "reading": null
               }
             ],
             "rail": false
@@ -1200,7 +1226,8 @@
                   "evidence": "close-landed",
                   "state": "unknown",
                   "words": "imported from Needle 0.1; evidence unknown until the first read"
-                }
+                },
+                "reading": null
               }
             ],
             "rail": false
@@ -1277,7 +1304,8 @@
                   "evidence": null,
                   "state": "trusted",
                   "words": null
-                }
+                },
+                "reading": null
               }
             ],
             "rail": false
@@ -1367,7 +1395,8 @@
           "evidence": null,
           "state": "trusted",
           "words": null
-        }
+        },
+        "reading": null
       },
       "brief": [
         {
@@ -1619,7 +1648,8 @@
           "evidence": null,
           "state": "trusted",
           "words": null
-        }
+        },
+        "reading": null
       },
       "brief": [
         {
@@ -1852,7 +1882,8 @@
           "evidence": null,
           "state": "trusted",
           "words": null
-        }
+        },
+        "reading": null
       },
       "brief": [
         {
@@ -2073,7 +2104,8 @@
           "evidence": null,
           "state": "trusted",
           "words": null
-        }
+        },
+        "reading": null
       },
       "brief": [],
       "record": [],
@@ -2256,7 +2288,8 @@
           "evidence": null,
           "state": "trusted",
           "words": null
-        }
+        },
+        "reading": null
       },
       "brief": [],
       "record": [],
@@ -2430,7 +2463,8 @@
           "evidence": null,
           "state": "trusted",
           "words": null
-        }
+        },
+        "reading": null
       },
       "brief": [],
       "record": [],
@@ -2630,7 +2664,8 @@
           "evidence": null,
           "state": "trusted",
           "words": null
-        }
+        },
+        "reading": null
       },
       "brief": [],
       "record": [],
@@ -2830,7 +2865,8 @@
           "evidence": null,
           "state": "trusted",
           "words": null
-        }
+        },
+        "reading": null
       },
       "brief": [],
       "record": [],
@@ -3030,7 +3066,8 @@
           "evidence": null,
           "state": "trusted",
           "words": null
-        }
+        },
+        "reading": null
       },
       "brief": [],
       "record": [],
@@ -3252,7 +3289,8 @@
           "evidence": null,
           "state": "trusted",
           "words": null
-        }
+        },
+        "reading": null
       },
       "brief": [
         {
@@ -3502,7 +3540,8 @@
           "evidence": null,
           "state": "trusted",
           "words": null
-        }
+        },
+        "reading": null
       },
       "brief": [
         {
@@ -3752,7 +3791,8 @@
           "evidence": null,
           "state": "trusted",
           "words": null
-        }
+        },
+        "reading": null
       },
       "brief": [
         {
@@ -3989,7 +4029,8 @@
           "evidence": null,
           "state": "trusted",
           "words": null
-        }
+        },
+        "reading": null
       },
       "brief": [],
       "record": [],
@@ -4206,7 +4247,8 @@
           "evidence": null,
           "state": "trusted",
           "words": null
-        }
+        },
+        "reading": null
       },
       "brief": [],
       "record": [],
@@ -4440,7 +4482,8 @@
           "evidence": null,
           "state": "trusted",
           "words": null
-        }
+        },
+        "reading": null
       },
       "brief": [
         {
@@ -4706,7 +4749,8 @@
           "evidence": null,
           "state": "trusted",
           "words": null
-        }
+        },
+        "reading": null
       },
       "brief": [
         {
@@ -4965,7 +5009,8 @@
           "evidence": null,
           "state": "trusted",
           "words": null
-        }
+        },
+        "reading": null
       },
       "brief": [
         {
@@ -5174,7 +5219,8 @@
           "evidence": null,
           "state": "trusted",
           "words": null
-        }
+        },
+        "reading": null
       },
       "brief": [
         {
@@ -5432,7 +5478,8 @@
           "evidence": null,
           "state": "trusted",
           "words": null
-        }
+        },
+        "reading": null
       },
       "brief": [
         {
@@ -5681,7 +5728,8 @@
           "evidence": "hands-on",
           "state": "unknown",
           "words": "imported from Needle 0.1; evidence unknown until the first read"
-        }
+        },
+        "reading": null
       },
       "brief": [
         {
@@ -5855,7 +5903,7 @@
         }
       },
       "signal": null,
-      "signal_note": "the WATCH row names no reader (url, file, command or owner). The grammar: WATCH: <what> — url|file|command|owner <target> [expect <value>] by <YYYY-MM-DD> [every <N>h|<N>d]",
+      "signal_note": "the WATCH row names no reader (url, file, command, session or owner). The grammar: WATCH: <what> — url|file|command|session|owner <target> [expect <value>] by <YYYY-MM-DD> [every <N>h|<N>d]",
       "readings": [],
       "verdict": null,
       "verdict_note": "no VERDICT row is written",
@@ -5939,7 +5987,8 @@
           "evidence": "hands-on",
           "state": "unknown",
           "words": "imported from Needle 0.1; evidence unknown until the first read"
-        }
+        },
+        "reading": null
       },
       "brief": [
         {
@@ -6188,7 +6237,8 @@
           "evidence": null,
           "state": "trusted",
           "words": null
-        }
+        },
+        "reading": null
       },
       "brief": [
         {
@@ -6366,7 +6416,7 @@
         }
       },
       "signal": null,
-      "signal_note": "the WATCH row names no reader (url, file, command or owner). The grammar: WATCH: <what> — url|file|command|owner <target> [expect <value>] by <YYYY-MM-DD> [every <N>h|<N>d]",
+      "signal_note": "the WATCH row names no reader (url, file, command, session or owner). The grammar: WATCH: <what> — url|file|command|session|owner <target> [expect <value>] by <YYYY-MM-DD> [every <N>h|<N>d]",
       "readings": [],
       "verdict": null,
       "verdict_note": "no VERDICT row is written",
@@ -6441,7 +6491,8 @@
           "evidence": null,
           "state": "trusted",
           "words": null
-        }
+        },
+        "reading": null
       },
       "brief": [
         {
@@ -6645,7 +6696,8 @@
           "evidence": null,
           "state": "trusted",
           "words": null
-        }
+        },
+        "reading": null
       },
       "brief": [
         {
@@ -6887,7 +6939,8 @@
           "evidence": null,
           "state": "trusted",
           "words": null
-        }
+        },
+        "reading": null
       },
       "brief": [
         {
@@ -7088,7 +7141,8 @@
           "evidence": "close-landed",
           "state": "unknown",
           "words": "imported from Needle 0.1; evidence unknown until the first read"
-        }
+        },
+        "reading": null
       },
       "brief": [],
       "record": [
@@ -7255,7 +7309,7 @@
         }
       },
       "signal": null,
-      "signal_note": "the WATCH row names no reader (url, file, command or owner). The grammar: WATCH: <what> — url|file|command|owner <target> [expect <value>] by <YYYY-MM-DD> [every <N>h|<N>d]",
+      "signal_note": "the WATCH row names no reader (url, file, command, session or owner). The grammar: WATCH: <what> — url|file|command|session|owner <target> [expect <value>] by <YYYY-MM-DD> [every <N>h|<N>d]",
       "readings": [],
       "verdict": null,
       "verdict_note": "no VERDICT row is written",
@@ -7327,7 +7381,8 @@
           "evidence": null,
           "state": "trusted",
           "words": null
-        }
+        },
+        "reading": null
       },
       "brief": [],
       "record": [

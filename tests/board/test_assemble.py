@@ -173,6 +173,7 @@ def test_the_board_always_has_eight_columns_each_with_a_group_and_counts_attenti
         "lanes_ended": 0,
         "signals_due": 0,
         "signals_asking": 0,
+        "signals_reading": 0,
         "doubted": 0,
         "arrived_today": 1,
         "documents_gone": 1,

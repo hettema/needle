@@ -1,5 +1,6 @@
 """The doors: Start, Answer, Watch, Look, Discuss, Idea, Resume, Stop, the
-owner's reading of a signal, and a session's close. Each opens through the
+owner's reading of a signal, a reading session's finding, and a session's
+close. Each opens through the
 runtime, proves its effect by evidence, and fails loudly by name (INTENT.md
 lesson 5); none is a silent no-op. Every door writes what it did on the
 card — Idea, which is about no card yet, on the board's record of
@@ -10,9 +11,9 @@ import uuid
 from pathlib import Path
 
 from api.loops import Loops
-from board.brief import lane_name, neighbours_text, render, watercooler_text
+from board.brief import lane_name, needle_command, neighbours_text, render, watercooler_text
 from board.lane import HANDS_ON
-from board.signals import GRAMMAR, read_or_decline, where_after
+from board.signals import GRAMMAR, read_or_decline, where_after, where_after_finding
 from domain.audit import AuditKind
 from domain.board import CardDetail
 from domain.card import Actor, Place
@@ -23,6 +24,7 @@ from domain.lane import DoorResult, LaneRecord, LaneState
 from domain.launch import LaunchVerdict, Start
 from domain.project import Project
 from domain.row import Row, RowKind
+from domain.signal import Finding
 from domain.verdict import EvidenceClass, VerdictsRuled
 from domain.window import WindowKind
 from infrastructure import clock
@@ -143,15 +145,6 @@ def plan_brief(project: Project, details: list[CardDetail], skill: str | None, t
         + ("suggestions" if several else "suggestion")
         + " as asking for, and the one question that most sharpens the intent."
     )
-
-
-def needle_command() -> str:
-    # `--project`, never `--directory`: the latter changes directory to
-    # Needle's checkout before the verb runs, so a lane's `needle fold` read
-    # its worktree as `.` and pushed Needle's own HEAD to Needle's trunk
-    # (found by Hello Revenue card #387's review, 2026-09-04). `--project`
-    # only picks the environment; the verb runs where the lane stands.
-    return f"uv --project {REPO_ROOT} run needle"
 
 
 class Doors:
@@ -619,6 +612,71 @@ class Doors:
             except (DoorRefused, StoreRefusal) as why:
                 refused.append(f"#{line.number}: {why}")
         return VerdictsRuled(evidence_class=evidence_class, accepted=accepted, refused=refused)
+
+    # ── a reading session's finding ────────────────────────────────────
+
+    def reading(
+        self,
+        slug: str,
+        number: int,
+        *,
+        finding: Finding,
+        words: str,
+        watch: str | None,
+    ) -> DoorResult:
+        """A reading session's finding (plan 09, item 1), in one act: the
+        replacement WATCH row when the measure was wrong (item 2), the
+        reading in the session's words, the end of the reading session's
+        record, and the move the finding implies. Delivered goes to Done;
+        not delivered to Decision moment now; cannot tell stays and asks the
+        owner with the words, or lands in Decision moment once past due."""
+        words = words.strip()
+        if not words:
+            raise DoorRefused("A finding without its evidence records nothing; say what you read.")
+        detail = self._detail(slug, number)
+        if detail.card.place.column != Column.EXECUTED:
+            raise DoorRefused(
+                f"#{number} is in {detail.card.place.column}; a reading is of an Executed "
+                "card's signal."
+            )
+        signal = detail.signal
+        if signal is None:
+            raise DoorRefused(f"#{number}'s WATCH row names no signal: {detail.signal_note}")
+        if watch is not None:
+            replacement, why = read_or_decline(watch)
+            if replacement is None:
+                raise DoorRefused(f"The replacement WATCH row names no signal: {why}")
+            self.live.add_row(
+                slug, number, Row(kind=RowKind.WATCH, text=watch.strip()), Actor.SESSION
+            )
+            signal = replacement
+        now = clock.now()
+        self.live.store.record_reading(slug, number, now, finding.delivered, words, Actor.SESSION)
+        for open_reading in self.live.store.reading_sessions(slug, open_only=True):
+            if open_reading.card_number == number:
+                self.live.store.end_reading_session(open_reading.id, now)
+        self.live.bump()
+        landing = where_after_finding(signal, finding, now)
+        if landing.column is not None:
+            self.live.move(
+                slug,
+                number,
+                Place(column=landing.column, group=None, position=0),
+                actor=Actor.MACHINE,
+                detail=landing.reason,
+                evidence=landing.evidence,
+            )
+            where = f"moved to {landing.column}"
+        elif finding == Finding.CANNOT_TELL:
+            where = "stays in Executed; the owner is asked with your words"
+        else:
+            where = f"stays in Executed ({landing.reason})"
+        return DoorResult(
+            door="reading",
+            said=f"#{number} read as {finding.value.replace('-', ' ')}; {where}"
+            + ("; the WATCH row replaced" if watch is not None else "")
+            + ".",
+        )
 
     # ── a session's close ──────────────────────────────────────────────
 

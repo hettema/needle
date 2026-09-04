@@ -478,6 +478,7 @@ def doors(c: Card, lane, **changes):
         collision=None,
         signal=None,
         signal_due_for_owner=False,
+        signal_evidence=None,
         suggestion_live=False,
     )
     base.update(changes)

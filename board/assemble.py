@@ -28,7 +28,7 @@ from domain.board import (
     OwnerAsk,
     TrunkState,
 )
-from domain.card import Card, CardOrigin
+from domain.card import Actor, Card, CardOrigin
 from domain.column import COLUMN_DEFINITIONS, DEFECTS_RAIL, Column
 from domain.corpus import CorpusIndex, CorpusSummary
 from domain.document import Document, DocumentKind, DocumentRef, DocumentState, SuggestionKind
@@ -37,7 +37,7 @@ from domain.gate import Gate
 from domain.lane import HANDS_ON, Doors, Lane, LaneSnapshot, LaneState
 from domain.project import Project
 from domain.row import ROW_HALF, Row, RowHalf, RowKind
-from domain.signal import Reading, Signal, SignalKind
+from domain.signal import Reading, ReadingSession, Signal, SignalKind
 from domain.verdict import Verdict, VerdictLine
 from domain.watercooler import WatercoolerLine
 
@@ -126,17 +126,31 @@ def folded_under(cards: list[Card]) -> dict[int, list[FoldedCard]]:
     return out
 
 
+def asked_evidence(signal: Signal | None, last: Reading | None) -> str | None:
+    """A reading session's cannot-tell, in its words: what the owner is
+    asked with (plan 09, item 4). A machine's unreadable — a reading session
+    that ended without a finding — is not a question for him."""
+    if (
+        signal is not None
+        and signal.kind == SignalKind.SESSION
+        and last is not None
+        and last.delivered is None
+        and last.actor == Actor.SESSION
+    ):
+        return last.words
+    return None
+
+
 def signal_asks_owner(
     card: Card, signal: Signal | None, last: Reading | None, now: datetime
 ) -> bool:
-    """An Executed card whose signal only the owner can read, at or past its due time."""
-    return (
-        card.place.column == Column.EXECUTED
-        and signal is not None
-        and signal.kind == SignalKind.OWNER
-        and now.date() >= signal.due
-        and (last is None or last.delivered is None)
-    )
+    """An Executed card whose signal only the owner can read, at or past its
+    due time; or one a session read and could not tell."""
+    if card.place.column != Column.EXECUTED or signal is None:
+        return False
+    if signal.kind == SignalKind.OWNER:
+        return now.date() >= signal.due and (last is None or last.delivered is None)
+    return asked_evidence(signal, last) is not None
 
 
 def signal_overdue(card: Card, signal: Signal | None, last: Reading | None, now: datetime) -> bool:
@@ -173,9 +187,11 @@ def summarize(
     last: Reading | None = None,
     read: bool = False,
     folded: list[FoldedCard] | None = None,
+    reading: ReadingSession | None = None,
 ) -> CardSummary:
     """`doors` is the card's doors as the loop last read them; the collapsed
-    face shows the Start door's verdict and Plan from them (plan 06)."""
+    face shows the Start door's verdict and Plan from them (plan 06).
+    `reading` is the session reading the card's signal right now (plan 09)."""
     document = document_of(card, index)
     text, source = essence(card, document)
     state = document_state(card, document)
@@ -203,6 +219,7 @@ def summarize(
         lane_sentence=lane.sentence if lane is not None and lane.sentence else None,
         colliding=lane.colliding if lane is not None and lane.state in HANDS_ON else None,
         standing=standing_for(card, placement, lane, last, read=read),
+        reading=reading,
     )
 
 
@@ -253,12 +270,15 @@ def assemble_board(
     machine: MachineState | None = None,
     placements: dict[int, AuditEntry] | None = None,
     watercooler: list[WatercoolerLine] | None = None,
+    reading_sessions: dict[int, ReadingSession] | None = None,
 ) -> BoardState:
     """`snapshot`, `readings`, `trunk` and `machine` are what the loop has
     read; before its first read they are absent and the board says so.
     `placements` is each card's placing audit row, what a read re-tests;
-    `watercooler` the project's lines, newest last."""
+    `watercooler` the project's lines, newest last; `reading_sessions` the
+    reading in flight on each card (plan 09)."""
     readings = readings or {}
+    reading_sessions = reading_sessions or {}
     watercooler = watercooler or []
     placements = placements or {}
     trunk = trunk or TrunkState(level=None, behind=0, note=None, read_at=None)
@@ -284,6 +304,7 @@ def assemble_board(
             last=readings.get(n),
             read=snapshot is not None,
             folded=folded.get(n),
+            reading=reading_sessions.get(n),
         )
         for n, c in by_number.items()
     }
@@ -325,7 +346,14 @@ def assemble_board(
     without_card = documents_without_card(index, cards)
     asking_lanes = sum(1 for lane in lanes.values() if lane.state == LaneState.ASKING)
     asks = [
-        OwnerAsk(number=n, title=c.title, what=signals[n].what, due=signals[n].due)
+        OwnerAsk(
+            number=n,
+            title=c.title,
+            what=signals[n].what,
+            due=signals[n].due,
+            kind=signals[n].kind,
+            evidence=asked_evidence(signals[n], readings.get(n)),
+        )
         for n, c in sorted(by_number.items())
         if signal_asks_owner(c, signals[n], readings.get(n), now) and signals[n] is not None
     ]
@@ -349,6 +377,7 @@ def assemble_board(
             1 for n, c in by_number.items() if signal_overdue(c, signals[n], readings.get(n), now)
         ),
         signals_asking=len(asks),
+        signals_reading=sum(1 for c in standing if c.number in reading_sessions),
         doubted=sum(1 for s in shown if s.standing.state == EvidenceState.DOUBTED),
         verdicts_unread=len(verdicts),
         unplanned_defects=unplanned(SuggestionKind.DEFECT),
@@ -386,9 +415,11 @@ def assemble_detail(
     read: bool = False,
     watercooler: list[WatercoolerLine] | None = None,
     folded: list[FoldedCard] | None = None,
+    reading: ReadingSession | None = None,
 ) -> CardDetail:
     """`readings` newest first; `read` is whether the loop has read the
-    machine; `folded` the cards folded under this one."""
+    machine; `folded` the cards folded under this one; `reading` the
+    session reading its signal right now."""
     document = document_of(card, index)
     brief, record = split_rows(card.rows)
     own = cited_path(card)
@@ -406,6 +437,7 @@ def assemble_detail(
             last=readings[0] if readings else None,
             read=read,
             folded=folded,
+            reading=reading,
         ),
         brief=brief,
         record=record,

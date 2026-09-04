@@ -6,6 +6,7 @@ by hand.
 needle card SLUG N                       # the brief a lane opens with
 needle row SLUG N KIND "text"            # one row on the card
 needle close SLUG N --delivered … --watch … [--review PATH] [--column COL]
+needle reading SLUG N delivered|not-delivered|cannot-tell "…" [--watch "…"]
 needle fold [--main] [--worktree PATH]   # fast-forward push to origin/develop, trunk synced
 needle start-card SLUG N [--anyway]      # Start, through the running board
 needle hook install REPO                 # register the session hook in REPO/.claude/settings.json
@@ -41,6 +42,7 @@ from domain.column import Column
 from domain.document import DocumentKind, SuggestionKind
 from domain.lane import HANDS_ON, LaneState
 from domain.row import Row, RowKind
+from domain.signal import Finding
 from domain.verdict import EvidenceClass
 from infrastructure import clock
 from infrastructure.live import Live
@@ -145,6 +147,22 @@ def close(
         review=args.review,
         column=Column(args.column) if args.column else None,
         actor=Actor.SESSION,
+    )
+    print(result.said)
+    return 0
+
+
+def reading(
+    args: argparse.Namespace, live: Live, runtime: Runtime, loops: Loops, doors: Doors
+) -> int:
+    """A reading session's finding on the card, and the move it implies
+    (plan 09): the one verb a reading session ends its turn with."""
+    result = doors.reading(
+        args.slug,
+        args.number,
+        finding=Finding(args.finding),
+        words=args.words,
+        watch=args.watch,
     )
     print(result.said)
     return 0
@@ -325,7 +343,10 @@ def signals(
             said = {True: "delivered", False: "not delivered", None: "unreadable"}[
                 reading.delivered
             ]
-            print(f"#{number}: {said} — {reading.words} ({reading.at.isoformat()})")
+            print(
+                f"#{number}: {said}, by the {reading.actor.value} — {reading.words} "
+                f"({reading.at.isoformat()})"
+            )
     return 0
 
 
@@ -396,7 +417,9 @@ def verdicts(
     return 0
 
 
-def kinds(args: argparse.Namespace, live: Live, runtime: Runtime, loops: Loops, doors: Doors) -> int:
+def kinds(
+    args: argparse.Namespace, live: Live, runtime: Runtime, loops: Loops, doors: Doors
+) -> int:
     """Every live suggestion's kind as the board reads it (plan 06, item 2):
     from its `Kind:` line, or guessed from its text where there is none —
     the table of guesses the owner checks, printed rather than tracked,
@@ -416,7 +439,11 @@ def kinds(args: argparse.Namespace, live: Live, runtime: Runtime, loops: Loops, 
     for document in rows:
         line = next((f.value for f in document.head_fields if f.key.lower() == "kind"), None)
         kind = document.suggestion_kind.value if document.suggestion_kind else "-"
-        why = f"Kind: {line}" if line else ("its title or Found-by" if kind == "defect" else "no sign of a defect")
+        why = (
+            f"Kind: {line}"
+            if line
+            else ("its title or Found-by" if kind == "defect" else "no sign of a defect")
+        )
         print(f"{kind:<7} {document.path}  {document.title}  ({why})")
     return 0
 
@@ -447,6 +474,18 @@ def register(sub: "argparse._SubParsersAction[argparse.ArgumentParser]") -> None
     p_close.add_argument("--review", help="the review record's path under docs/reviews/")
     p_close.add_argument("--column", choices=[c.value for c in Column], help="Executed unless said")
     p_close.set_defaults(run=_with_board(close))
+
+    p_reading = sub.add_parser(
+        "reading", help="a reading session's finding on its card, with the evidence"
+    )
+    p_reading.add_argument("slug")
+    p_reading.add_argument("number", type=int)
+    p_reading.add_argument("finding", choices=[f.value for f in Finding])
+    p_reading.add_argument("words", help="what was read, where, and what it said")
+    p_reading.add_argument(
+        "--watch", help="a replacement WATCH row when the measure could not be read"
+    )
+    p_reading.set_defaults(run=_with_board(reading))
 
     p_fold = sub.add_parser(
         "fold", help="fast-forward push this lane to origin/develop; level the trunk"

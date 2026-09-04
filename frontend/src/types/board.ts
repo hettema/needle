@@ -9,7 +9,7 @@ import type { Gate } from "./gate";
 import type { Collision, Conversation, Door, Doors, Lane, LaneState, Readiness } from "./lane";
 import type { Project } from "./project";
 import type { Row } from "./row";
-import type { Reading, Signal } from "./signal";
+import type { Reading, ReadingSession, Signal, SignalKind } from "./signal";
 import type { Verdict, VerdictLine } from "./verdict";
 import type { WatercoolerLine } from "./watercooler";
 
@@ -24,6 +24,7 @@ export interface Attention {
   lanes_ended: number;
   signals_due: number;
   signals_asking: number;
+  signals_reading: number;
   doubted: number;
   verdicts_unread: number;
   unplanned_defects: number;
@@ -89,6 +90,7 @@ export interface CardSummary {
   lane_sentence: string | null;
   colliding: Collision | null;
   standing: Standing;
+  reading: ReadingSession | null;
 }
 
 export interface ColumnView {
@@ -118,6 +120,8 @@ export interface OwnerAsk {
   title: string;
   what: string;
   due: string;
+  kind: SignalKind;
+  evidence: string | null;
 }
 
 export interface ProjectFile {

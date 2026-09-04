@@ -297,6 +297,7 @@ export function Board({ slug, store, projects, onSwitch }: { slug: string; store
         {board.attention.in_discussion > 0 ? <Att n={board.attention.in_discussion} label="in discussion" onClick={() => setTalksOpen((v) => !v)} on={talksOpen} /> : null}
         {board.attention.lanes_ended > 0 ? <Att n={board.attention.lanes_ended} label={board.attention.lanes_ended === 1 ? "lane ended — Resume or Look" : "lanes ended — Resume or Look"} tone="bad" /> : null}
         {board.attention.signals_asking > 0 ? <Att n={board.attention.signals_asking} label={board.attention.signals_asking === 1 ? "shipped card waits on your reading" : "shipped cards wait on your reading"} tone="you" onClick={() => setAsksOpen((v) => !v)} on={asksOpen} /> : null}
+        {board.attention.signals_reading > 0 ? <Att n={board.attention.signals_reading} label={board.attention.signals_reading === 1 ? "signal being read by a session" : "signals being read by sessions"} /> : null}
         {board.attention.signals_due > 0 ? <Att n={board.attention.signals_due} label={board.attention.signals_due === 1 ? "signal past due" : "signals past due"} tone="you" /> : null}
         {board.attention.doubted > 0 ? <Att n={board.attention.doubted} label={board.attention.doubted === 1 ? "status doubted — its evidence is gone" : "statuses doubted — their evidence is gone"} tone="bad" /> : null}
         {board.attention.verdicts_unread > 0 ? <Att n={board.attention.verdicts_unread} label={board.attention.verdicts_unread === 1 ? "card carries a verdict you have not read" : "cards carry a verdict you have not read"} tone="you" onClick={() => setLens(lens === "triage" ? "rank" : "triage")} on={lens === "triage"} /> : null}
@@ -309,9 +310,9 @@ export function Board({ slug, store, projects, onSwitch }: { slug: string; store
       </AttentionLine>
       </HeadFrame>
       {asksOpen && board.asks.length ? (
-        <AskList title={`${board.asks.length} shipped card${board.asks.length === 1 ? "" : "s"} wait${board.asks.length === 1 ? "s" : ""} on your reading — only you can read these signals`}>
+        <AskList title={`${board.asks.length} shipped card${board.asks.length === 1 ? "" : "s"} wait${board.asks.length === 1 ? "s" : ""} on your reading — only you can read these signals, or a session read them and could not tell`}>
           {board.asks.map((a) => (
-            <AskRow key={a.number} number={a.number} title={a.title} what={a.what} due={a.due} onRead={(delivered) => void readSignal(a.number, delivered)} disabled={reading !== null} />
+            <AskRow key={a.number} number={a.number} title={a.title} what={a.what} due={a.due} evidence={a.evidence} onRead={(delivered) => void readSignal(a.number, delivered)} disabled={reading !== null} />
           ))}
           {readSaid ? <Notice quiet>{readSaid}</Notice> : null}
         </AskList>

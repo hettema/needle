@@ -8,7 +8,7 @@ import uuid
 from pathlib import Path
 
 from domain.gate import Gate
-from domain.launch import Launch, Rescue, Start, Stopped
+from domain.launch import Launch, ReadingStart, Rescue, Start, Stopped
 from domain.session import Session
 from domain.signal import Signal
 from domain.slot import Placement, Rung, Slot, Where
@@ -65,6 +65,11 @@ class Runtime:
 
     def start(self, request: Start) -> Launch:
         return launch.start(self.store, request)
+
+    def read_by_session(self, request: ReadingStart) -> Launch:
+        """A reading session in the project's own checkout (plan 09, item
+        1): never a lane, so it is not `start`, which is the owner's click."""
+        return launch.read(self.store, request)
 
     def move(self, ref: str, to_slot: str | None) -> Launch:
         session = self.session(ref)

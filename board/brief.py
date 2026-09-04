@@ -4,15 +4,30 @@ from a terminal read the same brief (plan 03, item 3).
 """
 
 import re
+from pathlib import Path
 
 from domain.board import CardDetail
 from domain.lane import HANDS_ON, Lane
 from domain.project import Project
+from domain.row import RowKind
+from domain.signal import Signal
 from domain.watercooler import WatercoolerLine
 
+REPO_ROOT = Path(__file__).resolve().parent.parent
 LANE_SLUG_LENGTH = 32
 """0.1 cut the slug at 32 characters; the same cut keeps a lane name legible in
 a unit name, an app-id and a branch."""
+READING_PREFIX = "reading-"
+"""A reading session is named after the lane it is not: `reading-card-<n>-<slug>`."""
+
+
+def needle_command() -> str:
+    # `--project`, never `--directory`: the latter changes directory to
+    # Needle's checkout before the verb runs, so a lane's `needle fold` read
+    # its worktree as `.` and pushed Needle's own HEAD to Needle's trunk
+    # (found by Hello Revenue card #387's review, 2026-09-04). `--project`
+    # only picks the environment; the verb runs where the lane stands.
+    return f"uv --project {REPO_ROOT} run needle"
 
 
 def lane_slug(title: str) -> str:
@@ -105,3 +120,71 @@ def neighbours_text(lanes: dict[int, Lane], titles: dict[int, str], number: int)
             f"  #{other} {titles.get(other, lane.name)} — {lane.sentence}{touching}{declared}"
         )
     return "\n".join(lines) if lines else "  (no other lane has hands on this project)"
+
+
+def reading_name(number: int, title: str) -> str:
+    return READING_PREFIX + lane_name(number, title)
+
+
+def reading_brief(detail: CardDetail, project: Project, signal: Signal, today: str) -> str:
+    """What a reading session opens with (plan 09, item 1): the card, the
+    signal and what the closing session said it delivered; that it is never a
+    lane; where the project's own rules put its read-only data access; the
+    three findings and the one verb that writes them; and the replacement
+    row for a measure that cannot be read (item 2). The project's data rules
+    are pointed at, never restated: they live in its own CLAUDE.md."""
+    card = detail.card
+    needle = needle_command()
+    slug = card.project
+    delivered = next((r.text for r in card.rows if r.kind == RowKind.DELIVERED), None)
+    expect = f" expect {signal.expect}" if signal.expect else ""
+    cadence = (
+        f"every {signal.every_hours:g} h"
+        if signal.every_hours < 24 or signal.every_hours % 24
+        else f"every {signal.every_hours / 24:g} d"
+    )
+    return (
+        f"A reading of #{card.number}'s signal, started by the board on {project.name} "
+        f"({project.path}), {today}. This session reads evidence and ends with one finding. "
+        "It is never a lane: no worktree (never EnterWorktree), no edit to code, no commit of "
+        "code, no push of code, no window. Read-only for the repository; for the project's "
+        "data exactly as its own rules provide it — its CLAUDE.md names the read-only "
+        "database role, the log rules and the probes; never a credential those rules reserve. "
+        "Git, the project's own commands and its documents are yours to read.\n\n"
+        + render(detail, project)
+        + "\n\nThe signal to read: "
+        f"{signal.what} — {signal.target}{expect}; due {signal.due.isoformat()}, {cadence}."
+        + (
+            f"\nWhat the session that shipped it said the owner now has: {delivered}"
+            if delivered
+            else ""
+        )
+        + "\n\nRead the evidence the signal names with the tools you have. Then end your turn "
+        "with exactly one finding, through the needle command line, never by editing a file:"
+        f'\n  {needle} reading {slug} {card.number} delivered "what you read, where, and what '
+        'it said"'
+        f'\n  {needle} reading {slug} {card.number} not-delivered "what you read, where, and '
+        'what it said"'
+        f'\n  {needle} reading {slug} {card.number} cannot-tell "what you read, and what would '
+        'decide it"'
+        "\nA finding names what was read and where, so the owner can check it in a minute. "
+        "Never guess: delivered needs the evidence in hand; not delivered means the evidence "
+        "exists and says no; cannot tell means the evidence cannot exist yet (the next real "
+        "build has not happened) or exists and does not decide it. A cannot-tell is put to "
+        "the owner with your words as the evidence, so write them for him."
+        "\n\nIf the signal is unmeasurable or the wrong measure — a threshold nobody set from "
+        "data, a measure that ignores size — do not guess. Write the measure you can read as "
+        'a replacement WATCH row on the same command, `--watch "<what> — session <what to '
+        'check, where> [expect <value>] by YYYY-MM-DD [every <N>h|<N>d]"`, and say so in your '
+        "finding: the board reads the new row from its next cadence and the owner sees both "
+        "rows on the card. When the evidence cannot exist before a certain time, set the "
+        "cadence so the next reading lands when it could."
+        "\n\nA defect in the product you saw on the way is not this signal's business: file "
+        "it as a suggestion in docs/slice-suggestions/ with `**Kind:** defect` on its second "
+        f"line and a `**Found by:**` line naming this reading (#{card.number}'s reading, "
+        f"{today}), committed on develop with a body saying what prompted it and pushed — "
+        "the one write this session may make, and only when you saw one."
+        "\n\nYour turn ends with the needle reading command and one plain sentence after it. "
+        "Ask the owner nothing: a question is a cannot-tell finding with the question as its "
+        "words."
+    )

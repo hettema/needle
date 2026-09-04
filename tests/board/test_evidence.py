@@ -39,7 +39,9 @@ def placed(
 
 
 def reading(delivered: bool | None, words: str = "read") -> Reading:
-    return Reading(id=1, card_number=7, at=NOW, delivered=delivered, words=words)
+    return Reading(
+        id=1, card_number=7, at=NOW, delivered=delivered, words=words, actor=Actor.MACHINE
+    )
 
 
 def test_the_placement_is_the_newest_move_else_the_birth():

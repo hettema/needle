@@ -130,7 +130,7 @@ OWNER_SIGNAL = Signal(
 
 def test_a_shipped_card_whose_signal_read_delivered_goes_to_done():
     card = _card(Column.EXECUTED, archived=True, rows=[DELIVERED])
-    last = Reading(id=1, card_number=1, at=NOW, delivered=True, words="2 of 2")
+    last = Reading(id=1, card_number=1, at=NOW, delivered=True, words="2 of 2", actor=Actor.MACHINE)
     verdict = machine_verdict(
         card,
         HELD,
@@ -153,7 +153,9 @@ def test_a_shipped_card_whose_signal_only_the_owner_reads_stays_with_its_questio
     assert "due 2026-09-11" in verdict.evidence
     # A machine-readable signal still being read is nothing the board can rule on.
     command = OWNER_SIGNAL.model_copy(update={"kind": SignalKind.COMMAND, "target": "ls"})
-    not_yet = Reading(id=1, card_number=1, at=NOW, delivered=False, words="2 of 3")
+    not_yet = Reading(
+        id=1, card_number=1, at=NOW, delivered=False, words="2 of 3", actor=Actor.MACHINE
+    )
     assert (
         machine_verdict(card, HELD, None, command, not_yet, ever_had_a_lane=True, now=NOW) is None
     )

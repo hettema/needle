@@ -37,7 +37,7 @@ from domain.launch import Rescue
 from domain.project import Project
 from domain.row import Row, RowKind
 from domain.session import SessionSlot
-from domain.signal import Reading
+from domain.signal import Reading, ReadingSession
 from domain.slot import Model, Rung
 from domain.watercooler import WatercoolerLine
 from domain.window import Window, WindowKind
@@ -51,6 +51,7 @@ from infrastructure.schema import (
     LaneRow,
     ProjectRow,
     ReadingRow,
+    ReadingSessionRow,
     RescueRow,
     SessionSlotRow,
     TrunkRow,
@@ -886,7 +887,12 @@ class Store:
     ) -> Reading:
         with self._session() as session, session.begin():
             row = ReadingRow(
-                project_slug=slug, card_number=number, at=at, delivered=delivered, words=words
+                project_slug=slug,
+                card_number=number,
+                at=at,
+                delivered=delivered,
+                words=words,
+                actor=actor.value,
             )
             session.add(row)
             said = {True: "delivered", False: "not delivered", None: "unreadable"}[delivered]
@@ -922,6 +928,54 @@ class Store:
             for row in rows:
                 out[row.card_number] = _reading(row)
             return out
+
+    # ── the sessions the board starts to read a signal (plan 09) ───────
+
+    def open_reading_session(
+        self, slug: str, number: int, session_id: str, slot: str, at: datetime
+    ) -> ReadingSession:
+        with self._session() as session, session.begin():
+            row = ReadingSessionRow(
+                project_slug=slug,
+                card_number=number,
+                session_id=session_id,
+                slot=slot,
+                started_at=at,
+                ended_at=None,
+            )
+            session.add(row)
+            session.flush()
+            return _reading_session(row)
+
+    def end_reading_session(self, reading_session_id: int, at: datetime) -> None:
+        with self._session() as session, session.begin():
+            row = session.get(ReadingSessionRow, reading_session_id)
+            if row is not None and row.ended_at is None:
+                row.ended_at = at
+
+    def move_reading_session(self, reading_session_id: int, session_id: str, slot: str) -> None:
+        """The reading now runs as another session: a resume forks the id
+        (verified live 2026-09-04), so the record follows the one that lives."""
+        with self._session() as session, session.begin():
+            row = session.get(ReadingSessionRow, reading_session_id)
+            if row is not None:
+                row.session_id = session_id
+                row.slot = slot
+
+    def reading_sessions(self, slug: str, *, open_only: bool = False) -> list[ReadingSession]:
+        """Every reading session of the project, oldest first; with
+        `open_only`, those whose finding has not landed and whose process
+        the loop has not yet found gone."""
+        with self._session() as session:
+            query = select(ReadingSessionRow).where(ReadingSessionRow.project_slug == slug)
+            if open_only:
+                query = query.where(ReadingSessionRow.ended_at.is_(None))
+            rows = session.scalars(query.order_by(ReadingSessionRow.id))
+            return [_reading_session(r) for r in rows]
+
+    def open_reading_sessions(self, slug: str) -> dict[int, ReadingSession]:
+        """The reading in flight on each card, by card number."""
+        return {r.card_number: r for r in self.reading_sessions(slug, open_only=True)}
 
     # ── the trunk ──────────────────────────────────────────────────────
 
@@ -1158,7 +1212,24 @@ def _lane_record(row: LaneRow) -> LaneRecord:
 
 def _reading(row: ReadingRow) -> Reading:
     return Reading(
-        id=row.id, card_number=row.card_number, at=row.at, delivered=row.delivered, words=row.words
+        id=row.id,
+        card_number=row.card_number,
+        at=row.at,
+        delivered=row.delivered,
+        words=row.words,
+        actor=Actor(row.actor),
+    )
+
+
+def _reading_session(row: ReadingSessionRow) -> ReadingSession:
+    return ReadingSession(
+        id=row.id,
+        project=row.project_slug,
+        card_number=row.card_number,
+        session_id=row.session_id,
+        slot=row.slot,
+        started_at=row.started_at,
+        ended_at=row.ended_at,
     )
 
 

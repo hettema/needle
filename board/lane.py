@@ -631,6 +631,7 @@ def nothing_read(card: Card, project_path: str, now: datetime) -> tuple[Lane, "D
         collision=None,
         signal=None,
         signal_due_for_owner=False,
+        signal_evidence=None,
         suggestion_live=card.link is not None
         and card.link.kind == DocumentKind.SUGGESTION
         and not card.link.archived,
@@ -656,10 +657,13 @@ def doors_for(
     collision: Collision | None,
     signal: Signal | None,
     signal_due_for_owner: bool,
+    signal_evidence: str | None,
     suggestion_live: bool,
 ) -> Doors:
     """`suggestion_live`: the card's document is a suggestion still in its
-    live folder, so Plan may write the plan that carries it."""
+    live folder, so Plan may write the plan that carries it. `signal_evidence`
+    is a reading session's cannot-tell in its words, when that is why the
+    owner is asked (plan 09, item 4)."""
     live = lane.session is not None and lane.session.pid is not None and lane.state in HANDS_ON
     background = live and lane.session is not None and lane.session.kind == SessionKind.BACKGROUND
     collides = collision is not None and collision.verdict == CollisionVerdict.COLLIDES
@@ -788,7 +792,12 @@ def doors_for(
         if background
         else _closed("Stop", "No background session to stop.")
     )
-    if signal is not None and signal_due_for_owner:
+    if signal is not None and signal_due_for_owner and signal_evidence is not None:
+        signal_door = _open(
+            "Delivered?",
+            f"A session read this signal and could not tell — {signal_evidence}",
+        )
+    elif signal is not None and signal_due_for_owner:
         signal_door = _open(
             "Delivered?",
             f"Only you can read this signal: {signal.what} — due {signal.due.isoformat()}.",

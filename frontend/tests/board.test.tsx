@@ -375,8 +375,8 @@ describe("the doors", () => {
     const b = board();
     b.attention = { ...b.attention, signals_asking: 2, asking_you: 2 };
     b.asks = [
-      { number: 259, title: "The fuel pontoon takes cards, live", what: "Did the first card payment at the pontoon go through?", due: "2026-09-11" },
-      { number: 134, title: "The office runs its own checks, nightly", what: "Did the nightly check email name a real event?", due: "2026-09-11" },
+      { number: 259, title: "The fuel pontoon takes cards, live", what: "Did the first card payment at the pontoon go through?", due: "2026-09-11", kind: "owner", evidence: null },
+      { number: 134, title: "The office runs its own checks, nightly", what: "Did the nightly check email name a real event?", due: "2026-09-11", kind: "session", evidence: "no check email since the close; Friday's run decides it" },
     ];
     api.getBoard.mockResolvedValue(b);
     api.openDoor.mockResolvedValue({ door: "signal", said: "Read as delivered; moved to Done." });
@@ -389,6 +389,8 @@ describe("the doors", () => {
     expect(rows).toHaveLength(2);
     expect(rows[0]).toHaveTextContent("#259");
     expect(rows[0]).toHaveTextContent("Did the first card payment at the pontoon go through?");
+    expect(rows[0]).not.toHaveTextContent("could not tell");
+    expect(rows[1]).toHaveTextContent("A session read it and could not tell: no check email since the close; Friday's run decides it");
     await userEvent.click(within(rows[0] as HTMLElement).getByRole("button", { name: "Delivered" }));
     await waitFor(() => expect(api.openDoor).toHaveBeenCalledWith(SLUG, 259, "signal", { delivered: true }));
     expect(await screen.findByText("#259: Read as delivered; moved to Done.")).toBeInTheDocument();

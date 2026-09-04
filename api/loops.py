@@ -5,10 +5,13 @@ runtime's one list, the hook events and git, derives every lane and every
 card's doors, acts on the wall detector's handoffs, and makes the machine
 moves (into Executing on hands, out of it to where the work says). The
 signal loop reads each Executed card's signal on the cadence its WATCH row
-states. The trunk loop keeps every project's main checkout level with
-origin/develop. Each loop runs on a floor timer and the lane loop also runs
-the moment a hook posts or a registry file moves, so a session's push is
-on the board within a second and a quiet machine costs nothing.
+states — itself for a URL, a file or a command, and through a reading
+session it starts in the project's checkout for a `session` signal (plan
+09), whose finding comes back through `needle reading`. The trunk loop
+keeps every project's main checkout level with origin/develop. Each loop
+runs on a floor timer and the lane loop also runs the moment a hook posts
+or a registry file moves, so a session's push is on the board within a
+second and a quiet machine costs nothing.
 
 This module is the one place the board and the runtime meet: `api/` may
 import both, and nothing below it may.
@@ -23,7 +26,8 @@ from pathlib import Path
 
 from watchfiles import awatch
 
-from board.assemble import signal_asks_owner, signal_wants_reading, watch_signal
+from board.assemble import asked_evidence, signal_asks_owner, signal_wants_reading, watch_signal
+from board.brief import reading_brief, reading_name
 from board.collision import footprint, verdict
 from board.lane import (
     HANDS_ON,
@@ -46,10 +50,12 @@ from domain.card import Actor, Card, Place
 from domain.column import Column
 from domain.document import DocumentKind
 from domain.evidence import Evidence
+from domain.gate import Gate
 from domain.hook import HookEvent, HookPosted
 from domain.lane import Collision, Doors, Lane, LaneRecord, LaneSnapshot, LaneState
-from domain.launch import LaunchVerdict
-from domain.session import Session
+from domain.launch import LaunchVerdict, ReadingStart
+from domain.session import Session, SessionState
+from domain.signal import Signal, SignalKind
 from domain.slot import Placement
 from domain.window import Window, WindowKind
 from infrastructure import clock
@@ -70,6 +76,20 @@ RESCUE_HORIZON_SECONDS = 3600.0
 """One automatic retry per run-out: a second wall on the same lane within
 this window parks the lane with the reason instead of thrashing."""
 WATCH_DEBOUNCE_MS = 400
+READINGS_AT_ONCE = 2
+"""Reading sessions alive at once, across every project (plan 09): each is
+a whole session on a subscription, and the lanes come first. The rest wait
+for the next tick of the signal loop."""
+READING_SECONDS = 1800.0
+"""A reading session still without a finding past this is stopped and the
+card says so: a reading is short by design, and one that asks a question
+nobody sees would otherwise run forever."""
+READING_STOP_GRACE_SECONDS = 120.0
+"""How long a reading session whose finding has landed may keep working
+before it is stopped anyway: the verb runs inside its last turn."""
+READING_EFFORT = Gate.HIGH
+"""Reading evidence is bounded investigation, not open thinking (the Discuss
+door's xhigh); the strongest model still does it, by the one rule."""
 
 
 def project_of_cwd(cwd: str, projects: dict[str, LiveProject]) -> LiveProject | None:
@@ -524,7 +544,8 @@ class Loops:
                 mine = self._plan_footprint(live, card)
                 collision = verdict(mine, editing=editing, declared=declared)
             signal, _ = watch_signal(card)
-            asks_owner = signal_asks_owner(card, signal, readings.get(card.number), now)
+            last = readings.get(card.number)
+            asks_owner = signal_asks_owner(card, signal, last, now)
             doors[card.number] = doors_for(
                 card,
                 lane,
@@ -534,6 +555,7 @@ class Loops:
                 collision=collision,
                 signal=signal,
                 signal_due_for_owner=asks_owner,
+                signal_evidence=asked_evidence(signal, last),
                 suggestion_live=document is not None
                 and document.kind == DocumentKind.SUGGESTION
                 and not document.archived,
@@ -544,11 +566,20 @@ class Loops:
 
     def read_signals_now(self) -> None:
         """Read every Executed card's signal whose cadence asks for it, and
-        move the card on what it says."""
-        for live in list(self.live.projects.values()):
+        move the card on what it says. A `session` signal is read by a
+        session the loop starts (plan 09, item 1): at most READINGS_AT_ONCE
+        alive at a time, one per card, and the finding comes back through
+        the reading door."""
+        projects = list(self.live.projects.values())
+        sessions = self.runtime.sessions()
+        for live in projects:
+            self._tend_readings(live, sessions)
+        alive = sum(len(self.live.store.open_reading_sessions(p.project.slug)) for p in projects)
+        for live in projects:
             slug = live.project.slug
             now = clock.now()
             readings = self.live.store.last_readings(slug)
+            in_flight = self.live.store.open_reading_sessions(slug)
             for card in self.live.store.cards(slug):
                 if card.folded_into is not None:
                     continue  # a folded card's loop is its leader's
@@ -556,21 +587,165 @@ class Loops:
                 if not signal_wants_reading(card, signal, readings.get(card.number), now):
                     continue
                 assert signal is not None
+                if signal.kind == SignalKind.SESSION:
+                    if card.number in in_flight or alive >= READINGS_AT_ONCE:
+                        continue
+                    if self._start_reading(live, card, signal, now):
+                        alive += 1
+                    continue
                 delivered, words = self.runtime.read_signal(signal, live.project.path)
-                self.live.store.record_reading(
-                    slug, card.number, now, delivered, words, Actor.MACHINE
-                )
-                self.live.bump()
-                landing = where_after(signal, delivered, now)
-                if landing.column is not None:
-                    self.live.move(
-                        slug,
-                        card.number,
-                        Place(column=landing.column, group=None, position=0),
-                        actor=Actor.MACHINE,
-                        detail=landing.reason,
-                        evidence=landing.evidence,
+                self._land(slug, card.number, signal, delivered, words, now)
+
+    def _land(
+        self,
+        slug: str,
+        number: int,
+        signal: Signal,
+        delivered: bool | None,
+        words: str,
+        now: datetime,
+    ) -> None:
+        """A machine reading on the card, and the move it implies."""
+        self.live.store.record_reading(slug, number, now, delivered, words, Actor.MACHINE)
+        self.live.bump()
+        landing = where_after(signal, delivered, now)
+        if landing.column is not None:
+            self.live.move(
+                slug,
+                number,
+                Place(column=landing.column, group=None, position=0),
+                actor=Actor.MACHINE,
+                detail=landing.reason,
+                evidence=landing.evidence,
+            )
+
+    def _start_reading(self, live: LiveProject, card: Card, signal: Signal, now: datetime) -> bool:
+        """Start the session that reads this card's signal, in the project's
+        own checkout, and record it on the card; a start that fails is a
+        machine reading that could not be read, so the cadence moves on and
+        the card says why."""
+        slug = live.project.slug
+        detail = self.live.detail(slug, card.number)
+        brief = reading_brief(detail, live.project, signal, now.date().isoformat())
+        launch = self.runtime.read_by_session(
+            ReadingStart(
+                repo=live.project.path,
+                card=reading_name(card.number, card.title),
+                brief=brief,
+                effort=READING_EFFORT,
+            )
+        )
+        if launch.verdict != LaunchVerdict.ALIVE or launch.session is None:
+            self._land(
+                slug,
+                card.number,
+                signal,
+                None,
+                f"the reading session could not start: {launch.reason}",
+                now,
+            )
+            return False
+        session = launch.session
+        self.live.store.open_reading_session(
+            slug, card.number, session.session_id, session.slot, now
+        )
+        placement = launch.placement
+        where = f"{placement.model.value} on {placement.slot}" if placement else session.slot
+        self.live.note(
+            slug,
+            card.number,
+            AuditKind.SIGNAL,
+            Actor.MACHINE,
+            f"Reading started: {session.short_id}, {where}, in {live.project.path}; never "
+            "hands on the tree",
+        )
+        return True
+
+    def _tend_readings(self, live: LiveProject, sessions: list[Session]) -> None:
+        """The reading sessions the board started, against the one list: one
+        whose process is gone without a finding is recorded as unreadable so
+        the cadence moves on and the card says why; one still running past
+        READING_SECONDS is stopped and recorded the same way; one whose
+        finding has landed is stopped once its turn is over, so a finished
+        reading leaves no process behind."""
+        slug = live.project.slug
+        by_id = {s.session_id: s for s in sessions if not s.stale}
+        now = clock.now()
+        for record in self.live.store.reading_sessions(slug):
+            session = by_id.get(record.session_id)
+            alive = session is not None and session.pid is not None
+            if record.ended_at is not None:
+                if not alive or session is None:
+                    continue
+                turn_over = session.state != SessionState.WORKING
+                overdue = (now - record.ended_at).total_seconds() >= READING_STOP_GRACE_SECONDS
+                if turn_over or overdue:
+                    self.runtime.stop(session.short_id)
+                continue
+            if alive and session is not None and session.wall is not None:
+                # A limit mid-reading: the same move a lane gets, one hop to
+                # where the rule says, and the record follows the new id.
+                moved = self.runtime.move(session.short_id, None)
+                if moved.verdict == LaunchVerdict.ALIVE and moved.session is not None:
+                    self.live.store.move_reading_session(
+                        record.id, moved.session.session_id, moved.session.slot
                     )
+                    self.live.note(
+                        slug,
+                        record.card_number,
+                        AuditKind.SIGNAL,
+                        Actor.MACHINE,
+                        f"Reading moved: hit a limit on {session.slot} ({session.wall.reason}); "
+                        f"now {moved.session.short_id} on {moved.session.slot}",
+                    )
+                    continue
+                self.live.store.end_reading_session(record.id, now)
+                self._reading_ended(
+                    live,
+                    record.card_number,
+                    f"the reading session hit a limit on {session.slot} ({session.wall.reason}) "
+                    f"and could not be moved: {moved.reason}",
+                    now,
+                )
+                continue
+            # A turn that finished without the verb will never write one:
+            # the registry's `done` is that fact, and the ceiling is for a
+            # session that stops at a question nobody sees.
+            turn_done = session is not None and session.state == SessionState.DONE
+            overran = (now - record.started_at).total_seconds() >= READING_SECONDS
+            if alive and not turn_done and not overran:
+                continue
+            self.live.store.end_reading_session(record.id, now)
+            if alive and session is not None:
+                stopped = self.runtime.stop(session.short_id)
+                words = (
+                    f"the reading session {session.short_id} "
+                    + (
+                        "finished its turn without a finding"
+                        if turn_done
+                        else f"ran {READING_SECONDS / 60:.0f} min without a finding"
+                    )
+                    + " and was stopped"
+                    + ("" if stopped.gone else f" (not gone: {stopped.words})")
+                )
+            else:
+                why = self.runtime.why_ended(session) if session is not None else None
+                words = "the reading session ended without a finding" + (f" ({why})" if why else "")
+            self._reading_ended(live, record.card_number, words, now)
+
+    def _reading_ended(self, live: LiveProject, number: int, words: str, now: datetime) -> None:
+        """A reading that produced no finding, on the card: a machine reading
+        that could not be read while the card still waits on its signal, a
+        note otherwise."""
+        slug = live.project.slug
+        card = self.live.store.card(slug, number)
+        if card is None:
+            return
+        signal, _ = watch_signal(card)
+        if signal is None or card.place.column != Column.EXECUTED:
+            self.live.note(slug, number, AuditKind.SIGNAL, Actor.MACHINE, words)
+            return
+        self._land(slug, number, signal, None, words, now)
 
     # ── the trunk loop ─────────────────────────────────────────────────
 

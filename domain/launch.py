@@ -28,6 +28,18 @@ class Start(BaseModel):
     """The slot to ask first; None asks the rule from the top."""
 
 
+class ReadingStart(BaseModel):
+    """What the loop asks for when a card's signal is a session's to read
+    (plan 09, item 1): a session in the repository's own checkout, no
+    worktree, that reads evidence and ends with a finding. Never a lane."""
+
+    repo: str
+    card: str
+    """The lane's name, prefixed `reading-`: the scope and the registry carry it."""
+    brief: str
+    effort: Gate
+
+
 class LaunchVerdict(StrEnum):
     ALIVE = "alive"
     """A registered row with a live process that outlived the observation window."""

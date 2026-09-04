@@ -15,7 +15,7 @@ from domain.gate import Gate
 from domain.lane import Collision, Conversation, Door, Doors, Lane, LaneState, Readiness
 from domain.project import Project
 from domain.row import Row
-from domain.signal import Reading, Signal
+from domain.signal import Reading, ReadingSession, Signal, SignalKind
 from domain.verdict import Verdict, VerdictLine
 from domain.watercooler import WatercoolerLine
 
@@ -71,6 +71,8 @@ class CardSummary(BaseModel):
     """The lane has drifted into another live lane's files, named (plan 07, item 2)."""
     standing: Standing
     """Who placed the card here, on what evidence, and whether it holds on this read."""
+    reading: ReadingSession | None
+    """The session reading the card's signal right now, when one runs (plan 09, item 1)."""
 
 
 class GroupView(BaseModel):
@@ -103,7 +105,10 @@ class Attention(BaseModel):
     signals_due: int
     """Executed cards past their signal's due time with nothing delivered yet."""
     signals_asking: int
-    """Shipped cards whose signal only you can read, due now: one batched list (plan 04)."""
+    """Shipped cards waiting on your reading: a signal only you can read, due
+    now, or one a session read and could not tell (plan 04; plan 09, item 4)."""
+    signals_reading: int
+    """Shipped cards whose signal a session is reading right now (plan 09, item 1)."""
     doubted: int
     """Machine-placed cards whose evidence is gone on this read."""
     verdicts_unread: int
@@ -118,13 +123,18 @@ class Attention(BaseModel):
 
 
 class OwnerAsk(BaseModel):
-    """One shipped card waiting on the owner's reading, in the batched list."""
+    """One shipped card waiting on the owner's reading, in the batched list:
+    a signal only he can read, or one a session read and could not tell,
+    with the session's words (plan 09, item 4)."""
 
     number: int
     title: str
     what: str
     """The question, as the WATCH row's `what`."""
     due: date
+    kind: SignalKind
+    evidence: str | None
+    """A session's cannot-tell finding, in its words; None for an owner's own signal."""
 
 
 class TrunkState(BaseModel):

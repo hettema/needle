@@ -245,7 +245,8 @@ class LaneRow(Base):
 
 
 class ReadingRow(Base):
-    """One reading of a card's WATCH signal, by the board or by the owner."""
+    """One reading of a card's WATCH signal, by the board, by a reading
+    session's finding, or by the owner."""
 
     __tablename__ = "readings"
     __table_args__ = (Index("ix_readings_card", "project_slug", "card_number"),)
@@ -256,6 +257,27 @@ class ReadingRow(Base):
     at: Mapped[datetime] = mapped_column(UtcDateTime)
     delivered: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
     words: Mapped[str] = mapped_column(Text)
+    actor: Mapped[str] = mapped_column(String(20))
+    """Who read it (plan 09): the rail asks the owner about a session's
+    cannot-tell, never about a machine's unreadable."""
+
+
+class ReadingSessionRow(Base):
+    """A session the board started to read one card's signal (plan 09, item
+    1): open while it runs, ended when its finding lands or its process is
+    gone. The loop reads the open rows to list a reading on its card and to
+    start no second one."""
+
+    __tablename__ = "reading_sessions"
+    __table_args__ = (Index("ix_reading_sessions_card", "project_slug", "card_number"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    project_slug: Mapped[str] = mapped_column(String(80))
+    card_number: Mapped[int] = mapped_column(Integer)
+    session_id: Mapped[str] = mapped_column(String(36))
+    slot: Mapped[str] = mapped_column(String(40))
+    started_at: Mapped[datetime] = mapped_column(UtcDateTime)
+    ended_at: Mapped[datetime | None] = mapped_column(UtcDateTime, nullable=True)
 
 
 class TrunkRow(Base):
