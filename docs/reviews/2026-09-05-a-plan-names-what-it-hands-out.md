@@ -41,3 +41,7 @@ The review ran as a loop (`CLAUDE.md`): each pass one lens, the fixes landed, th
 
 - Hello Revenue's `hr-plan-write` does not yet carry the paragraph; that is Hello Revenue's own planned card, sequenced on the machine's card 12, which folded during this lane. Acceptance criterion 4 holds for two of the three copies.
 - `machine burn` matches `hands out` anywhere on a line; the board matches only a sentence of its own. On a malformed plan the two can disagree; the fix belongs to the machine's repository and is said there, not here.
+
+## The served board, after the fold
+
+Read on 2026-09-05 after `needle fold`, the page bundle rebuilt from the main checkout and `needle-serve.service` restarted (up after 14 s): the board reads the real roles file (`top, downgrade, execution, search`); card #38 (plan 13) shows two `execution` handouts, items 1 and 5, each with its verification, and no line against them; card #36 (this plan) shows its archived plan and nothing handed out, which is true. Nothing the fixture could not show.
