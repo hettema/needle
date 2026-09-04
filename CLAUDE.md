@@ -66,6 +66,16 @@ One clean pass after a pass with findings is the floor; a review that stopped
 at its first pass is not a review (owner ruling 2026-09-04, from watching a
 nine-pass close on the first board: "review, fix, review again").
 
+Findings fall in three rings, and the ring decides what happens to them (owner
+ruling 2026-09-04). **Inside the change:** fixed in the lane, and the next
+pass re-reads. **Adjacent — the seams the change touches:** fixed in the lane
+when the fix serves this slice's intent, otherwise filed as a suggestion in
+the corpus with the finding as its evidence. **Outside the change:** never
+fixed in the lane; filed as a suggestion, which is a card by the next read.
+The fix loop runs over the inner two rings until a pass finds nothing new; the
+outer ring never loops, it files. A lane that fixes outside its change is the
+scope creep the effort gate warned about, however good the fix.
+
 **Docstrings say why, commits say what prompted.** Every commit has a body:
 what prompted the change and what the diff cannot convey.
 
