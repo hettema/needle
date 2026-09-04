@@ -62,6 +62,14 @@ def render(detail: CardDetail, project: Project) -> str:
         lines.append(f"   gate: {summary.gate.value}{why}")
     else:
         lines.append("   gate: none declared — a suggestion or a note, not a plan")
+    for handout in detail.handouts.named:
+        item = f"{handout.item} — " if handout.item else ""
+        verifies = (
+            f"; verifies {handout.verifies}" if handout.verifies else "; verifies nothing named"
+        )
+        lines.append(f"  hands: {item}{handout.role}: {handout.what}{verifies}")
+    if detail.handouts.verdict:
+        lines.append(f"  hands: {detail.handouts.verdict}")
     if document is not None:
         state = "archived" if document.archived else document.kind.value
         lines.append(f"   open: {document.path} ({state})")

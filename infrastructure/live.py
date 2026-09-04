@@ -280,6 +280,7 @@ class Live:
             folded=folded_under(self.store.cards(slug)).get(number),
             reading=self.store.open_reading_sessions(slug).get(number),
             heard=self.store.heard_mark(slug, number),
+            machine=self.machine,
         )
 
     def lane_and_doors(self, slug: str, card: Card) -> tuple[Lane | None, Doors]:

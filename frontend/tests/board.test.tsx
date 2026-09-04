@@ -284,6 +284,19 @@ describe("the open card", () => {
   });
 });
 
+describe("what a plan hands out", () => {
+  it("shows each handout on its item, and the board's line when a role is not the machine's", async () => {
+    await renderBoard();
+    await userEvent.click(screen.getByText("The booking office stops growing into one file"));
+    expect(await screen.findByText(/1\. Name the seams — search: every function in/)).toBeInTheDocument();
+    expect(screen.getByText(/2\. Split along them — execution: the move of each path/)).toBeInTheDocument();
+    expect(screen.queryByText(/has not defined/)).toBeNull();
+    await userEvent.keyboard("{Escape}");
+    await userEvent.click(screen.getByText("A berth is never let twice"));
+    expect(await screen.findByText(/hands out to "harbour-pilot", which this machine has not defined/)).toBeInTheDocument();
+  });
+});
+
 describe("the doors", () => {
   it("offers Start with the slot and model the rule named, opens it, and shows the evidence", async () => {
     const d = detail(253);

@@ -8,13 +8,27 @@ import uuid
 from pathlib import Path
 
 from domain.gate import Gate
+from domain.handout import Dispatch
 from domain.launch import Launch, ReadingStart, Rescue, Start, Stopped
 from domain.session import Session
 from domain.signal import Signal
 from domain.slot import Placement, Rung, Slot, Where
 from domain.window import Focused, Opened, Window, WindowKind
 from infrastructure.store import Store
-from runtime import git, handoffs, launch, machine, reasons, registry, rule, signals, slots, windows
+from runtime import (
+    git,
+    handoffs,
+    launch,
+    machine,
+    reasons,
+    registry,
+    roles,
+    rule,
+    signals,
+    slots,
+    transcripts,
+    windows,
+)
 
 COMMANDS = ("claude", "claude-acct", "hyprctl", "omarchy-launch-tui", "busctl", "git", "curl")
 """What the runtime needs on PATH. `journalctl` is asked for a death's reason
@@ -194,6 +208,15 @@ class Runtime:
 
     def is_repository(self, path: str) -> bool:
         return (Path(path) / ".git").exists()
+
+    def roles(self) -> list[str] | None:
+        """The roles the machine names; None when it has no roles file."""
+        return roles.roles()
+
+    def dispatches(self, cwd: str) -> list[Dispatch] | None:
+        """What every session that ran in `cwd` handed out, from its
+        transcripts; None when none exists."""
+        return transcripts.dispatches(cwd)
 
     def machine_is_reachable(self) -> list[str]:
         """Which of the commands the runtime needs are missing, by name."""

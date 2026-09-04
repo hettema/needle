@@ -9,6 +9,7 @@ file with nobody syncing anything.
 from datetime import datetime, timedelta
 
 from board.evidence import placement_from, standing_for
+from board.handouts import handouts_for
 from board.lane import STARTABLE_COLUMNS, ago, first_line, last_line, nothing_read
 from board.moves import GroupLayout
 from board.reconcile import carried_stems, ref
@@ -803,10 +804,12 @@ def assemble_detail(
     folded: list[FoldedCard] | None = None,
     reading: ReadingSession | None = None,
     heard: HeardMark | None = None,
+    machine: MachineState | None = None,
 ) -> CardDetail:
     """`readings` newest first; `read` is whether the loop has read the
     machine; `folded` the cards folded under this one; `reading` the
-    session reading its signal right now."""
+    session reading its signal right now; `machine` what the loop read of
+    the machine, whose roles the plan's handouts are checked against."""
     document = document_of(card, index)
     brief, record = split_rows(card.rows)
     own = cited_path(card)
@@ -840,4 +843,5 @@ def assemble_detail(
         verdict_note=verdict_note,
         watercooler=watercooler or [],
         heard=heard,
+        handouts=handouts_for(document, machine.roles if machine is not None else None),
     )

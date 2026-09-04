@@ -35,6 +35,7 @@ MODULES: list[str] = [
     "evidence",
     "verdict",
     "watercooler",
+    "handout",
 ]
 
 TYPES_DIR = Path(__file__).resolve().parent.parent / "frontend" / "src" / "types"

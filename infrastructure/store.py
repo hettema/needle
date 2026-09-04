@@ -64,11 +64,11 @@ from infrastructure.schema import (
 _COLUMN_ORDER: dict[str, int] = {d.column.value: i for i, d in enumerate(COLUMN_DEFINITIONS)}
 _MIGRATIONS = Path(__file__).parent / "migrations"
 ONE_PER_CARD: frozenset[RowKind] = frozenset(
-    {RowKind.DELIVERED, RowKind.WATCH, RowKind.REVIEW, RowKind.VERDICT}
+    {RowKind.DELIVERED, RowKind.WATCH, RowKind.REVIEW, RowKind.VERDICT, RowKind.HANDED_OUT}
 )
 """Record rows a card carries once: writing one again replaces it, so a
 close written twice never says two things about what shipped, and a card
-never carries two verdicts."""
+never carries two verdicts or two handout tallies."""
 ROW_DETAIL_LENGTH = 140
 _END = 1_000_000
 """A position past any group's end: the move clamps it to the last slot."""

@@ -6,6 +6,7 @@ import type { CorpusSummary } from "./corpus";
 import type { Document, DocumentRef, DocumentState, SuggestionKind } from "./document";
 import type { Standing } from "./evidence";
 import type { Gate } from "./gate";
+import type { Handouts } from "./handout";
 import type { HeardMark } from "./hook";
 import type { Collision, Conversation, Doors, Lane, LaneState } from "./lane";
 import type { Project } from "./project";
@@ -71,6 +72,7 @@ export interface CardDetail {
   verdict_note: string | null;
   watercooler: WatercoolerLine[];
   heard: HeardMark | null;
+  handouts: Handouts;
 }
 
 export interface CardState {
@@ -142,6 +144,7 @@ export interface Loop {
 
 export interface MachineState {
   missing: string[];
+  roles?: string[] | null;
 }
 
 export interface OwnerAsk {

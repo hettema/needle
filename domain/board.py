@@ -12,6 +12,7 @@ from domain.corpus import CorpusSummary
 from domain.document import Document, DocumentRef, DocumentState, SuggestionKind
 from domain.evidence import Standing
 from domain.gate import Gate
+from domain.handout import Handouts
 from domain.hook import HeardMark
 from domain.lane import Collision, Conversation, Doors, Lane, LaneState
 from domain.project import Project
@@ -249,10 +250,14 @@ class TrunkState(BaseModel):
 
 
 class MachineState(BaseModel):
-    """Whether the runtime can reach what it needs on this machine."""
+    """Whether the runtime can reach what it needs on this machine, and what
+    the machine names that a plan may name too."""
 
     missing: list[str]
     """Commands the runtime needs and cannot find, by name."""
+    roles: list[str] | None = None
+    """The roles the machine's roles file names, in file order; None when
+    the machine has no roles file (plan 12, item 2)."""
 
 
 class BoardState(BaseModel):
@@ -310,3 +315,5 @@ class CardDetail(BaseModel):
     heard: HeardMark | None
     """When this card's lane last heard the board inside its session, and
     what (plan 10, item 1); None when it has never been told anything."""
+    handouts: Handouts
+    """What the plan hands out, per item, against the machine's roles (plan 12, item 2)."""

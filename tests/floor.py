@@ -206,6 +206,19 @@ def lay(root: Path) -> Floor:
         ),
         encoding="utf-8",
     )
+    (slot_root / "roles.json").write_text(
+        json.dumps(
+            {
+                "_comment": "the test floor's roles: the machine's shape, both roles unearned",
+                "top": "claude-fable-5-1[1m]",
+                "downgrade": "opus",
+                "execution": None,
+                "search": None,
+                "_history": [],
+            }
+        ),
+        encoding="utf-8",
+    )
     home = root / "claude-home"
     home.mkdir()
     (home / ".claude.json").write_text(

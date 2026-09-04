@@ -6,7 +6,7 @@
       "path": "/srv/harbourmaster",
       "registered_at": "2026-09-04T08:30:00Z"
     },
-    "version": 1,
+    "version": 2,
     "generated_at": "2026-09-04T08:30:00Z",
     "corpus": {
       "live_plans": 11,
@@ -43,7 +43,13 @@
       "read_at": null
     },
     "machine": {
-      "missing": []
+      "missing": [],
+      "roles": [
+        "top",
+        "downgrade",
+        "execution",
+        "search"
+      ]
     },
     "columns": [
       {
@@ -1446,6 +1452,7 @@
         "card_ref": null,
         "suggestion_kind": "defect",
         "cites": [],
+        "handouts": [],
         "head_fields": [
           {
             "key": "Found by",
@@ -1594,7 +1601,12 @@
       "verdict": null,
       "verdict_note": "no VERDICT row is written",
       "watercooler": [],
-      "heard": null
+      "heard": null,
+      "handouts": {
+        "named": [],
+        "unknown": [],
+        "verdict": null
+      }
     },
     "252": {
       "card": {
@@ -1700,6 +1712,7 @@
         "card_ref": null,
         "suggestion_kind": "idea",
         "cites": [],
+        "handouts": [],
         "head_fields": [
           {
             "key": "Found by",
@@ -1829,7 +1842,12 @@
       "verdict": null,
       "verdict_note": "no VERDICT row is written",
       "watercooler": [],
-      "heard": null
+      "heard": null,
+      "handouts": {
+        "named": [],
+        "unknown": [],
+        "verdict": null
+      }
     },
     "242": {
       "card": {
@@ -1935,6 +1953,7 @@
         "card_ref": null,
         "suggestion_kind": "idea",
         "cites": [],
+        "handouts": [],
         "head_fields": [
           {
             "key": "Found by",
@@ -2064,7 +2083,12 @@
       "verdict": null,
       "verdict_note": "no VERDICT row is written",
       "watercooler": [],
-      "heard": null
+      "heard": null,
+      "handouts": {
+        "named": [],
+        "unknown": [],
+        "verdict": null
+      }
     },
     "120": {
       "card": {
@@ -2258,7 +2282,12 @@
       "verdict": null,
       "verdict_note": "no VERDICT row is written",
       "watercooler": [],
-      "heard": null
+      "heard": null,
+      "handouts": {
+        "named": [],
+        "unknown": [],
+        "verdict": null
+      }
     },
     "105": {
       "card": {
@@ -2436,7 +2465,12 @@
       "verdict": null,
       "verdict_note": "no VERDICT row is written",
       "watercooler": [],
-      "heard": null
+      "heard": null,
+      "handouts": {
+        "named": [],
+        "unknown": [],
+        "verdict": null
+      }
     },
     "263": {
       "card": {
@@ -2520,6 +2554,7 @@
         "card_ref": null,
         "suggestion_kind": "idea",
         "cites": [],
+        "handouts": [],
         "head_fields": [
           {
             "key": "Found by",
@@ -2638,7 +2673,12 @@
       "verdict": null,
       "verdict_note": "no VERDICT row is written",
       "watercooler": [],
-      "heard": null
+      "heard": null,
+      "handouts": {
+        "named": [],
+        "unknown": [],
+        "verdict": null
+      }
     },
     "264": {
       "card": {
@@ -2722,6 +2762,7 @@
         "card_ref": null,
         "suggestion_kind": "idea",
         "cites": [],
+        "handouts": [],
         "head_fields": [
           {
             "key": "Found by",
@@ -2840,7 +2881,12 @@
       "verdict": null,
       "verdict_note": "no VERDICT row is written",
       "watercooler": [],
-      "heard": null
+      "heard": null,
+      "handouts": {
+        "named": [],
+        "unknown": [],
+        "verdict": null
+      }
     },
     "265": {
       "card": {
@@ -2924,6 +2970,7 @@
         "card_ref": null,
         "suggestion_kind": "idea",
         "cites": [],
+        "handouts": [],
         "head_fields": [
           {
             "key": "Found by",
@@ -3042,7 +3089,12 @@
       "verdict": null,
       "verdict_note": "no VERDICT row is written",
       "watercooler": [],
-      "heard": null
+      "heard": null,
+      "handouts": {
+        "named": [],
+        "unknown": [],
+        "verdict": null
+      }
     },
     "266": {
       "card": {
@@ -3126,6 +3178,7 @@
         "card_ref": null,
         "suggestion_kind": "idea",
         "cites": [],
+        "handouts": [],
         "head_fields": [
           {
             "key": "Found by",
@@ -3244,7 +3297,12 @@
       "verdict": null,
       "verdict_note": "no VERDICT row is written",
       "watercooler": [],
-      "heard": null
+      "heard": null,
+      "handouts": {
+        "named": [],
+        "unknown": [],
+        "verdict": null
+      }
     },
     "196": {
       "card": {
@@ -3354,6 +3412,7 @@
         "card_ref": null,
         "suggestion_kind": null,
         "cites": [],
+        "handouts": [],
         "head_fields": [
           {
             "key": "Status",
@@ -3495,7 +3554,12 @@
       "verdict": null,
       "verdict_note": "no VERDICT row is written",
       "watercooler": [],
-      "heard": null
+      "heard": null,
+      "handouts": {
+        "named": [],
+        "unknown": [],
+        "verdict": null
+      }
     },
     "109": {
       "card": {
@@ -3597,6 +3661,7 @@
         "card_ref": null,
         "suggestion_kind": null,
         "cites": [],
+        "handouts": [],
         "head_fields": [
           {
             "key": "Status",
@@ -3738,7 +3803,12 @@
       "verdict": null,
       "verdict_note": "no VERDICT row is written",
       "watercooler": [],
-      "heard": null
+      "heard": null,
+      "handouts": {
+        "named": [],
+        "unknown": [],
+        "verdict": null
+      }
     },
     "172": {
       "card": {
@@ -3848,6 +3918,7 @@
         "card_ref": null,
         "suggestion_kind": null,
         "cites": [],
+        "handouts": [],
         "head_fields": [
           {
             "key": "Status",
@@ -3989,7 +4060,12 @@
       "verdict": null,
       "verdict_note": "no VERDICT row is written",
       "watercooler": [],
-      "heard": null
+      "heard": null,
+      "handouts": {
+        "named": [],
+        "unknown": [],
+        "verdict": null
+      }
     },
     "262": {
       "card": {
@@ -4073,6 +4149,7 @@
         "card_ref": null,
         "suggestion_kind": null,
         "cites": [],
+        "handouts": [],
         "head_fields": [
           {
             "key": "Status",
@@ -4203,7 +4280,12 @@
       "verdict": null,
       "verdict_note": "no VERDICT row is written",
       "watercooler": [],
-      "heard": null
+      "heard": null,
+      "handouts": {
+        "named": [],
+        "unknown": [],
+        "verdict": null
+      }
     },
     "267": {
       "card": {
@@ -4287,6 +4369,7 @@
         "card_ref": null,
         "suggestion_kind": null,
         "cites": [],
+        "handouts": [],
         "head_fields": [
           {
             "key": "Status",
@@ -4417,7 +4500,12 @@
       "verdict": null,
       "verdict_note": "no VERDICT row is written",
       "watercooler": [],
-      "heard": null
+      "heard": null,
+      "handouts": {
+        "named": [],
+        "unknown": [],
+        "verdict": null
+      }
     },
     "253": {
       "card": {
@@ -4531,6 +4619,7 @@
         "card_ref": 253,
         "suggestion_kind": null,
         "cites": [],
+        "handouts": [],
         "head_fields": [
           {
             "key": "Status",
@@ -4676,7 +4765,12 @@
       "verdict": null,
       "verdict_note": "no VERDICT row is written",
       "watercooler": [],
-      "heard": null
+      "heard": null,
+      "handouts": {
+        "named": [],
+        "unknown": [],
+        "verdict": null
+      }
     },
     "241": {
       "card": {
@@ -4798,6 +4892,7 @@
         "card_ref": 241,
         "suggestion_kind": null,
         "cites": [],
+        "handouts": [],
         "head_fields": [
           {
             "key": "Status",
@@ -4943,7 +5038,12 @@
       "verdict": null,
       "verdict_note": "no VERDICT row is written",
       "watercooler": [],
-      "heard": null
+      "heard": null,
+      "handouts": {
+        "named": [],
+        "unknown": [],
+        "verdict": null
+      }
     },
     "228": {
       "card": {
@@ -5142,7 +5242,12 @@
       "verdict": null,
       "verdict_note": "no VERDICT row is written",
       "watercooler": [],
-      "heard": null
+      "heard": null,
+      "handouts": {
+        "named": [],
+        "unknown": [],
+        "verdict": null
+      }
     },
     "237": {
       "card": {
@@ -5256,6 +5361,14 @@
         "card_ref": null,
         "suggestion_kind": null,
         "cites": [],
+        "handouts": [
+          {
+            "item": "1. The constraint",
+            "role": "harbour-pilot",
+            "what": "the race of two confirmations against the constraint",
+            "verifies": "the losing confirmation's sentence"
+          }
+        ],
         "head_fields": [
           {
             "key": "Status",
@@ -5397,7 +5510,21 @@
       "verdict": null,
       "verdict_note": "no VERDICT row is written",
       "watercooler": [],
-      "heard": null
+      "heard": null,
+      "handouts": {
+        "named": [
+          {
+            "item": "1. The constraint",
+            "role": "harbour-pilot",
+            "what": "the race of two confirmations against the constraint",
+            "verifies": "the losing confirmation's sentence"
+          }
+        ],
+        "unknown": [
+          "harbour-pilot"
+        ],
+        "verdict": "This plan hands out to \"harbour-pilot\", which this machine has not defined; its roles are top, downgrade, execution, search. A role is named in the machine's roles file before a plan names it."
+      }
     },
     "174": {
       "card": {
@@ -5507,6 +5634,20 @@
         "card_ref": null,
         "suggestion_kind": null,
         "cites": [],
+        "handouts": [
+          {
+            "item": "1. Name the seams",
+            "role": "search",
+            "what": "every function in office/bookings.py and every caller of each, with path and line",
+            "verifies": "the file at each line named before a seam is drawn from it"
+          },
+          {
+            "item": "2. Split along them",
+            "role": "execution",
+            "what": "the move of each path into its module, and the suite after each move",
+            "verifies": "the suite's own output by re-running the failing test it names"
+          }
+        ],
         "head_fields": [
           {
             "key": "Status",
@@ -5648,7 +5789,25 @@
       "verdict": null,
       "verdict_note": "no VERDICT row is written",
       "watercooler": [],
-      "heard": null
+      "heard": null,
+      "handouts": {
+        "named": [
+          {
+            "item": "1. Name the seams",
+            "role": "search",
+            "what": "every function in office/bookings.py and every caller of each, with path and line",
+            "verifies": "the file at each line named before a seam is drawn from it"
+          },
+          {
+            "item": "2. Split along them",
+            "role": "execution",
+            "what": "the move of each path into its module, and the suite after each move",
+            "verifies": "the suite's own output by re-running the failing test it names"
+          }
+        ],
+        "unknown": [],
+        "verdict": null
+      }
     },
     "259": {
       "card": {
@@ -5771,6 +5930,7 @@
         "card_ref": null,
         "suggestion_kind": null,
         "cites": [],
+        "handouts": [],
         "head_fields": [
           {
             "key": "Status",
@@ -5912,7 +6072,12 @@
       "verdict": null,
       "verdict_note": "no VERDICT row is written",
       "watercooler": [],
-      "heard": null
+      "heard": null,
+      "handouts": {
+        "named": [],
+        "unknown": [],
+        "verdict": null
+      }
     },
     "223": {
       "card": {
@@ -6026,6 +6191,7 @@
         "card_ref": null,
         "suggestion_kind": "idea",
         "cites": [],
+        "handouts": [],
         "head_fields": [
           {
             "key": "Found by",
@@ -6155,7 +6321,12 @@
       "verdict": null,
       "verdict_note": "no VERDICT row is written",
       "watercooler": [],
-      "heard": null
+      "heard": null,
+      "handouts": {
+        "named": [],
+        "unknown": [],
+        "verdict": null
+      }
     },
     "219": {
       "card": {
@@ -6297,6 +6468,7 @@
         "card_ref": null,
         "suggestion_kind": null,
         "cites": [],
+        "handouts": [],
         "head_fields": [
           {
             "key": "Status",
@@ -6438,7 +6610,12 @@
       "verdict": null,
       "verdict_note": "no VERDICT row is written",
       "watercooler": [],
-      "heard": null
+      "heard": null,
+      "handouts": {
+        "named": [],
+        "unknown": [],
+        "verdict": null
+      }
     },
     "147": {
       "card": {
@@ -6646,7 +6823,12 @@
       "verdict": null,
       "verdict_note": "no VERDICT row is written",
       "watercooler": [],
-      "heard": null
+      "heard": null,
+      "handouts": {
+        "named": [],
+        "unknown": [],
+        "verdict": null
+      }
     },
     "139": {
       "card": {
@@ -6771,6 +6953,7 @@
         "card_ref": null,
         "suggestion_kind": null,
         "cites": [],
+        "handouts": [],
         "head_fields": [
           {
             "key": "Status",
@@ -6912,7 +7095,12 @@
       "verdict": null,
       "verdict_note": "no VERDICT row is written",
       "watercooler": [],
-      "heard": null
+      "heard": null,
+      "handouts": {
+        "named": [],
+        "unknown": [],
+        "verdict": null
+      }
     },
     "149": {
       "card": {
@@ -7118,7 +7306,12 @@
       "verdict": null,
       "verdict_note": "no VERDICT row is written",
       "watercooler": [],
-      "heard": null
+      "heard": null,
+      "handouts": {
+        "named": [],
+        "unknown": [],
+        "verdict": null
+      }
     },
     "134": {
       "card": {
@@ -7229,6 +7422,7 @@
         "card_ref": null,
         "suggestion_kind": null,
         "cites": [],
+        "handouts": [],
         "head_fields": [
           {
             "key": "Status",
@@ -7372,7 +7566,12 @@
       "verdict": null,
       "verdict_note": "no VERDICT row is written",
       "watercooler": [],
-      "heard": null
+      "heard": null,
+      "handouts": {
+        "named": [],
+        "unknown": [],
+        "verdict": null
+      }
     },
     "201": {
       "card": {
@@ -7575,7 +7774,12 @@
       "verdict": null,
       "verdict_note": "no VERDICT row is written",
       "watercooler": [],
-      "heard": null
+      "heard": null,
+      "handouts": {
+        "named": [],
+        "unknown": [],
+        "verdict": null
+      }
     }
   },
   "language": [

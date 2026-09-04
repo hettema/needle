@@ -46,6 +46,7 @@ def test_the_brief_carries_the_rows_the_gate_the_document_and_the_lane():
         card_ref=None,
         suggestion_kind=None,
         cites=[],
+        handouts=[],
         head_fields=[],
         intent_heading="Intent",
         intent="The owner presses one button. Then more.",

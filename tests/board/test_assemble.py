@@ -45,6 +45,7 @@ def doc(
         card_ref=None,
         suggestion_kind=None,
         cites=[],
+        handouts=[],
         head_fields=[],
         intent_heading=None,
         intent="",

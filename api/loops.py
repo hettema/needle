@@ -274,7 +274,9 @@ class Loops:
 
     def reconcile_now(self) -> None:
         """One read of the machine, and every move it implies."""
-        self.live.set_machine(MachineState(missing=self.runtime.machine_is_reachable()))
+        self.live.set_machine(
+            MachineState(missing=self.runtime.machine_is_reachable(), roles=self.runtime.roles())
+        )
         sessions = self.runtime.sessions()
         windows = self.runtime.open_windows()
         placement, note = self._placement()

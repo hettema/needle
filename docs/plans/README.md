@@ -9,6 +9,21 @@ Every plan carries, near the top: `**Status:**`, `**Written:**`,
 it depends on another plan. Every item in a plan ends with what "done" means
 for it, as a behaviour someone can observe.
 
+**And an item that hands work out says so.** An item whose work goes to a
+role ends with a `Hands out:` sentence: `Hands out: <role> — <what it hands
+out>; verifies <what the executing session checks before acting on the
+result>`. The roles are the machine's (`search`, `execution` — the names in
+`~/.claude-accounts/roles.json`), never model names. An item that is
+judgment says nothing, and that silence means Fable. Why: verbose work in a
+subagent's own context is the cheapest token on the machine, and a
+subagent's result is a claim, so the plan is where "hand it out, then check
+this" is decided rather than remembered. The board reads the sentence onto
+the card per item, says on the card when a role named is not one the
+machine has, and at the lane's close writes what the plan named against
+what the lane dispatched (plan 12). This file is the source of the line;
+the machine's `docs/plans/README.md` and Hello Revenue's `hr-plan-write`
+carry copies that cite it.
+
 A plan's title is its card's title, and the owner ranks cards from their
 titles alone. So the title says what will be true when the plan is done, in
 his words — the outcome, never the mechanism, the area or a term from the

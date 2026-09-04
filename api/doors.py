@@ -12,6 +12,7 @@ from pathlib import Path
 
 from api.loops import Loops
 from board.brief import lane_name, needle_command, neighbours_text, render, watercooler_text
+from board.handouts import handouts_row
 from board.lane import HANDS_ON
 from board.signals import GRAMMAR, read_or_decline, where_after, where_after_finding
 from domain.audit import AuditKind
@@ -20,7 +21,7 @@ from domain.card import Actor, Place
 from domain.column import Column
 from domain.evidence import Evidence, EvidenceState
 from domain.gate import Gate
-from domain.lane import DoorResult, LaneRecord, LaneState
+from domain.lane import DoorResult, Lane, LaneRecord, LaneState
 from domain.launch import LaunchVerdict, Start
 from domain.project import Project
 from domain.row import Row, RowKind
@@ -713,6 +714,9 @@ class Doors:
         if review:
             self.live.add_row(slug, number, Row(kind=RowKind.REVIEW, text=review.strip()), actor)
         lane = live.snapshot.lanes.get(number) if live.snapshot else None
+        handed = self._handed_out(slug, number, lane)
+        if handed is not None:
+            self.live.add_row(slug, number, Row(kind=RowKind.HANDED_OUT, text=handed), actor)
         hands = lane is not None and lane.state in HANDS_ON and lane.state != LaneState.NONE
         self.live.move(
             slug,
@@ -726,5 +730,19 @@ class Doors:
             door="close",
             said=f"#{number} closed into {target}: DELIVERED, WATCH"
             + (", REVIEW" if review else "")
+            + (", HANDED OUT" if handed is not None else "")
             + f" written; the signal is read {signal.kind.value} {signal.target} by {signal.due}.",
         )
+
+    def _handed_out(self, slug: str, number: int, lane: Lane | None) -> str | None:
+        """The HANDED OUT row (plan 12, item 3): what the plan named against
+        what the lane's transcripts show it dispatched. The lane is found by
+        the board's own record of it, else the loop's last read; a card
+        whose plan named nothing and whose lane dispatched nothing gets no
+        row."""
+        named = self._detail(slug, number).handouts.named
+        record = self.live.store.lane(slug, number)
+        where = record.path if record is not None else (lane.path if lane is not None else None)
+        if where is None:
+            return handouts_row(named, None, None)
+        return handouts_row(named, self.runtime.dispatches(where), where)

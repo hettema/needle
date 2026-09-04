@@ -481,6 +481,87 @@ def test_executed_needs_a_signal_and_the_close_writes_rows_and_moves(
     )
 
 
+def test_the_close_writes_what_the_plan_named_against_what_the_lane_dispatched(
+    client: TestClient, machine_floor: Floor, repo: Path, capsys
+):
+    """Plan 12, item 3: the lane's transcripts hold two `search` dispatches
+    against a plan that named one; the row says both counts, and a role
+    named and never dispatched reads as such. The brief showed the handouts
+    per item before the work, and the unknown role as the board's line."""
+    plan = next(repo.glob("docs/plans/*metered*"))
+    plan.write_text(
+        plan.read_text(encoding="utf-8")
+        + "\n## Items\n\n### 1. The parser\nRead the meter. Hands out: search — every reading "
+        "the meter wrote;\nverifies the reading at the line named.\n\n### 2. The bill\n"
+        "Hands out: execution — the suite; verifies the failing test it names.\n",
+        encoding="utf-8",
+    )
+    git(repo, "add", "-A")
+    git(repo, "commit", "-q", "-m", "handouts")
+    client.app.state.loops.live.rescan("proj")
+    brief = client.get(f"/api/projects/proj/cards/{CARD}/brief").text
+    assert (
+        "  hands: 1. The parser — search: every reading the meter wrote; verifies the reading "
+        "at the line named" in brief
+    )
+    assert (
+        "  hands: 2. The bill — execution: the suite; verifies the failing test it names" in brief
+    )
+    assert "has not defined" not in brief
+    opened = detail(client)
+    assert [h["role"] for h in opened["handouts"]["named"]] == ["search", "execution"]
+    assert opened["handouts"]["verdict"] is None
+
+    start(client)
+    reconcile(client)
+    lane = lane_path(repo)
+    from runtime import machine
+
+    transcript = machine.transcript_dir(lane) / "abc.jsonl"
+    transcript.parent.mkdir(parents=True)
+    agent = {"type": "tool_use", "id": "t", "name": "Agent", "input": {"subagent_type": "search"}}
+    transcript.write_text(
+        "\n".join(
+            json.dumps({"type": "assistant", "sessionId": "abc", "message": {"content": [agent]}})
+            for _ in range(2)
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    done = archive_plan(repo)
+    watch = f"the plan is archived — file {done.relative_to(repo)} by 2026-12-31 every 1h"
+    assert main(["close", "proj", str(CARD), "--delivered", "bills", "--watch", watch]) == 0
+    assert "DELIVERED, WATCH, HANDED OUT written" in capsys.readouterr().out
+    client.app.state.loops.live.rescan("proj")
+    rows = {r["kind"]: r["text"] for r in detail(client)["record"]}
+    assert rows["HANDED OUT"] == (
+        "search ×2 (named 1), execution ×0 (named 1) — execution named and never dispatched"
+    )
+
+
+def test_a_plan_naming_a_role_the_machine_has_not_defined_is_the_boards_line_on_the_card(
+    client: TestClient, repo: Path
+):
+    plan = next(repo.glob("docs/plans/*metered*"))
+    plan.write_text(
+        plan.read_text(encoding="utf-8")
+        + "\n1. **The race.** Hands out: harbour-pilot — the race; verifies the loser.\n",
+        encoding="utf-8",
+    )
+    client.app.state.loops.live.rescan("proj")
+    reconcile(client)
+    opened = detail(client)
+    assert opened["handouts"]["unknown"] == ["harbour-pilot"]
+    assert (
+        'hands out to "harbour-pilot", which this machine has not defined'
+        in (opened["handouts"]["verdict"])
+    )
+    assert "top, downgrade, execution, search" in opened["handouts"]["verdict"]
+    brief = client.get(f"/api/projects/proj/cards/{CARD}/brief").text
+    assert "  hands: 1. The race — harbour-pilot: the race; verifies the loser" in brief
+    assert '  hands: This plan hands out to "harbour-pilot"' in brief
+
+
 def test_a_signal_only_the_owner_can_read_is_a_question_at_its_due_time(
     client: TestClient, repo: Path
 ):

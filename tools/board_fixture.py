@@ -35,6 +35,7 @@ from board.lane import (  # noqa: E402
     lane_for,
 )
 from domain.audit import AuditEntry, AuditKind  # noqa: E402
+from domain.board import MachineState  # noqa: E402
 from domain.card import Actor, Card, CardOrigin, DocumentLink, Place  # noqa: E402
 from domain.column import Column  # noqa: E402
 from domain.corpus import CorpusIndex  # noqa: E402
@@ -114,6 +115,7 @@ def _document(*, archived: bool = False) -> Document:
         card_ref=None,
         suggestion_kind=None,
         cites=[],
+        handouts=[],
         head_fields=[],
         intent_heading=None,
         intent="",
@@ -395,6 +397,11 @@ def snapshot() -> dict[str, object]:
         # running loop there is no watcher task, so its two facts are set here.
         live.projects[project.slug].watching = True
         live.projects[project.slug].watch_note = None
+        # The machine as the loop would have read it: every command found,
+        # and the two roles the machine's roles file names today (plan 12).
+        live.set_machine(
+            MachineState(missing=[], roles=["top", "downgrade", "execution", "search"])
+        )
 
         board = live.board(project.slug)
         board.project = board.project.model_copy(update={"path": SHOWN_PATH})

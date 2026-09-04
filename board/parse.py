@@ -12,6 +12,7 @@ from datetime import date, datetime
 
 from domain.document import Document, DocumentKind, HeadField, SuggestionKind
 from domain.gate import Gate
+from domain.handout import Handout
 
 _H1 = re.compile(r"^#\s+(.+?)\s*$", re.M)
 _H2 = re.compile(r"^##\s+(.+?)\s*$", re.M)
@@ -37,6 +38,28 @@ _DEFECT_TITLE = re.compile(
 """A defect-shaped title, for a suggestion written before the `Kind:` line
 existed (plan 06, item 2): what was built and got wrong, in the words such
 titles use. Only read when no `Kind:` line says otherwise."""
+
+_HANDS_OUT = re.compile(
+    r"(?:^|(?<=[.!?:]\s)|(?<=\*\*)|(?<=\*\*\s))\*{0,2}hands out:\*{0,2}\s*(.+)$", re.I
+)
+"""The `Hands out:` sentence, at the head of its own line or beginning a
+sentence at the end of an item's paragraph — never a mention of the sentence
+in prose ("ends with a Hands out: sentence naming the role", as plan 12
+itself says), which is what a match anywhere on the line read as a handout
+to the role "sentence" (review pass 1). `machine burn` reads the same words."""
+_ROLE = re.compile(r"^\W*([A-Za-z][\w-]*)")
+_VERIFIES = re.compile(
+    r"[;.]\s*(?:(?:the|and the)\s+(?:lane|session|executing session)\s+)?"
+    r"verif(?:y|ies|ied|ying|ication)\s*(?:by|:)?\s*",
+    re.I,
+)
+"""Where the verification starts: `; verifies <what>` as the README writes
+it, and `; the lane verifies by <what>` as plan 13 wrote it before the
+README fixed the form (review pass 1)."""
+_ITEM_HEADING = re.compile(r"^#{2,4}\s+(\d+)[.)]?\s+(.+?)\s*$")
+_ITEM_LIST = re.compile(r"^\s{0,3}(\d+)[.)]\s+(.+?)\s*$")
+_ITEM_BOLD = re.compile(r"^\*\*(.+?)\*\*")
+ITEM_LABEL_MAX = 60
 
 ESSENCE_MAX = 280
 
@@ -170,6 +193,79 @@ def suggestion_kind_of(
     return SuggestionKind.IDEA
 
 
+def _item_label(number: str, title: str) -> str:
+    bold = _ITEM_BOLD.match(title)
+    words = _plain(bold.group(1) if bold else title).rstrip(".:—-– ")
+    if len(words) > ITEM_LABEL_MAX:
+        words = words[: ITEM_LABEL_MAX - 1].rstrip() + "…"
+    return f"{number}. {words}" if words else number
+
+
+def _handout(sentence: str, item: str | None) -> Handout | None:
+    text = _plain(sentence).strip()
+    role = _ROLE.match(text)
+    if not role:
+        return None
+    rest = text[role.end() :].strip().lstrip("—-–:, ").strip()
+    split = _VERIFIES.search(rest)
+    what = rest[: split.start()].strip() if split else rest
+    verifies = rest[split.end() :].strip().rstrip(".") if split else None
+    return Handout(
+        item=item, role=role.group(1).lower(), what=what.rstrip("."), verifies=verifies or None
+    )
+
+
+def _paragraph_ends(line: str) -> bool:
+    stripped = line.strip()
+    return (
+        not stripped
+        or stripped.startswith("#")
+        or _FENCE.match(stripped) is not None
+        or _ITEM_LIST.match(line) is not None
+        or _LIST_MARKER.match(stripped) is not None
+        or _HEAD_FIELD.match(stripped) is not None
+    )
+
+
+def handouts_of(text: str) -> list[Handout]:
+    """Every `Hands out:` sentence in the body, each attributed to the item
+    it ends: the last numbered heading or numbered list line before it
+    (plan 12, item 2). The corpus numbers items as `### 1. Title`, `## 1.`
+    and `1. **Title.**`, so all three are items; a sentence runs to the end
+    of its paragraph, since plans wrap at eighty columns; fenced code is
+    not read."""
+    found: list[Handout] = []
+    item: str | None = None
+    in_fence = False
+    lines = text.split("\n")
+    index = 0
+    while index < len(lines):
+        line = lines[index]
+        index += 1
+        if _FENCE.match(line.strip()):
+            in_fence = not in_fence
+            continue
+        if in_fence:
+            continue
+        heading = _ITEM_HEADING.match(line)
+        listed = _ITEM_LIST.match(line) if heading is None else None
+        if heading:
+            item = _item_label(heading.group(1), heading.group(2))
+        elif listed:
+            item = _item_label(listed.group(1), listed.group(2))
+        match = _HANDS_OUT.search(line)
+        if not match:
+            continue
+        sentence = [match.group(1)]
+        while index < len(lines) and not _paragraph_ends(lines[index]):
+            sentence.append(lines[index].strip())
+            index += 1
+        handout = _handout(" ".join(sentence), item)
+        if handout is not None:
+            found.append(handout)
+    return found
+
+
 def cites_of(fields: list[HeadField]) -> list[str]:
     """The suggestion stems a document's head names, in order, each once:
     what a plan carries (plan 06, item 5). The head only — a plan's body
@@ -226,6 +322,7 @@ def parse_document(
         card_ref=int(card_match.group(1)) if card_match else None,
         suggestion_kind=suggestion_kind_of(kind, _field(fields, "Kind"), title, found_by),
         cites=cites_of(fields),
+        handouts=handouts_of(text),
         head_fields=fields,
         intent_heading=heading,
         intent=intent,

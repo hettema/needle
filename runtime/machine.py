@@ -38,6 +38,12 @@ def slot_root() -> Path:
     return _path("NEEDLE_SLOT_ROOT", Path.home() / ".claude-accounts")
 
 
+def roles_path() -> Path:
+    """The machine's roles file: which roles exist and the model each runs on
+    today (`~/.claude-accounts/roles.json`, the machine's card 12)."""
+    return slot_root() / "roles.json"
+
+
 def claude_home() -> Path:
     """Claude Code's default config directory, which is a registry of its own:
     a session started with no `CLAUDE_CONFIG_DIR` registers here."""
@@ -58,11 +64,15 @@ def transcripts_root() -> Path:
     return _path("NEEDLE_TRANSCRIPTS", claude_home() / "projects")
 
 
+def transcript_dir(cwd: str) -> Path:
+    """`<projects>/<cwd slug>/`: every session that ran in `cwd`, one
+    `.jsonl` each; the slug is the path with every character outside
+    [A-Za-z0-9] written as `-`."""
+    return transcripts_root() / re.sub(r"[^A-Za-z0-9]", "-", cwd)
+
+
 def transcript_path(cwd: str, session_id: str) -> Path:
-    """`<projects>/<cwd slug>/<session id>.jsonl`; the slug is the path with
-    every character outside [A-Za-z0-9] written as `-`."""
-    slug = re.sub(r"[^A-Za-z0-9]", "-", cwd)
-    return transcripts_root() / slug / f"{session_id}.jsonl"
+    return transcript_dir(cwd) / f"{session_id}.jsonl"
 
 
 def transcript_size(cwd: str, session_id: str) -> int | None:

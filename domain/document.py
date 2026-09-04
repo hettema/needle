@@ -11,6 +11,7 @@ from enum import StrEnum
 from pydantic import BaseModel
 
 from domain.gate import Gate
+from domain.handout import Handout
 
 
 class DocumentKind(StrEnum):
@@ -79,6 +80,9 @@ class Document(BaseModel):
     cites: list[str]
     """The suggestion stems the document's head names, in order: the
     suggestions a plan carries (plan 06, item 5)."""
+    handouts: list[Handout]
+    """Every `Hands out:` sentence in the body, in order, each with its item
+    (plan 12, item 2); empty for a plan that hands nothing out."""
     head_fields: list[HeadField]
     intent_heading: str | None
     intent: str

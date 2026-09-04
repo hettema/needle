@@ -342,7 +342,11 @@ export function OpenCard({ card, onMoveTo }: { card: CardSummary; onMoveTo: (num
                   <StatLine key={f.key} k={f.key} v={<Inline text={f.value} />} />
                 ))}
                 {document.archived ? <StatLine k="Archived" v={<b>yes — in done/</b>} /> : null}
+                {detail.handouts.named.map((h, i) => (
+                  <StatLine key={i} k="Hands out" v={<Inline text={`${h.item ? `${h.item} — ` : ""}${h.role}: ${h.what}; verifies ${h.verifies ?? "nothing named"}`} />} />
+                ))}
               </StatLines>
+              {detail.handouts.verdict ? <Notice>{detail.handouts.verdict}</Notice> : null}
               {intentOpen ? <Markdown text={document.intent ? `## ${document.intent_heading ?? "Intent"}\n\n${document.intent}` : "_This document has no body._"} /> : null}
             </PlanBody>
           </PlanBlock>

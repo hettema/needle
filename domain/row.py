@@ -45,6 +45,9 @@ class RowKind(StrEnum):
     VERDICT = "VERDICT"
     """A proposal on the card's own fate, unread until the owner accepts or
     overturns it (plan 05)."""
+    HANDED_OUT = "HANDED OUT"
+    """What the plan named against what the lane dispatched, per role,
+    written by the close from the lane's transcripts (plan 12, item 3)."""
 
 
 ROW_HALF: dict[RowKind, RowHalf] = {
@@ -72,6 +75,7 @@ ROW_HALF: dict[RowKind, RowHalf] = {
     RowKind.RULED: RowHalf.RECORD,
     RowKind.DONE: RowHalf.RECORD,
     RowKind.VERDICT: RowHalf.RECORD,
+    RowKind.HANDED_OUT: RowHalf.RECORD,
 }
 
 LEAD_ROWS: frozenset[RowKind] = frozenset({RowKind.TODAY})
