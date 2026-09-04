@@ -46,6 +46,21 @@ Three of his moves per defect:
    items — the material a plan needs. A defect that cannot say this says so,
    and waits for him. This is written when the finding is fresh, by the session
    that has the evidence, and it is visible on the card.
+
+   The proposed bar, three parts, all required (from the owner's question the
+   same evening — "find a bug, fix it, because you can; but is it that black
+   and white?" — and the answer that it is not, in exactly three places):
+   - **Against a written intent.** The intent existed and the code did not
+     hold it. A "defect" that turns out to be an unwritten intent is a
+     question, not a fix, and is his.
+   - **Inside its ring.** The fix stays within the change it corrects, in the
+     rings rule's sense; a fix that has to move a boundary is a redesign
+     wearing a defect's clothes.
+   - **Removes a class, not an instance.** At a seam with something that
+     moves — the registry, the wall detector, launch timing — "ignore
+     `starting…`" patches one case and rots into a special case; "a session
+     never seen alive has not died" removes the class. Only the second is a
+     fix, and only the second is eligible.
 2. **His ruling, written once**, names which class may enter execution without
    him — and is a document, not a setting, so the reason it says what it says
    survives the session that asked for it.
