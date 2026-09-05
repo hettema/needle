@@ -26,7 +26,7 @@ that ceremony, and the ratchet keeps it honest.*
 *Convention because:* a decision taken as the colleague's that was the person's is loud — an outcome they did not ask for, seen at the next report; the one mechanised clause is entry into execution, `tests/ratchets/test_start_is_the_owners_click.py`.
 
 ## 2. Intent over orders, and the test for a rule
-*Convention because:* a rule written as a method is read at the effort gate, where the person reads the plan before Start and says so.
+*Traced by:* the walk that read every section by this test (`docs/design/2026-09-05-the-doctrine-walked-as-its-readers-would-read-it.md`) and the review's boundaries pass, which reads a plan's new rules by it; nothing guarantees the person detects a method in an intent's clothes at the gate.
 
 ## 3. A session's economics are inverted
 *Traced by:* the review's passes, which read for the shortcut and the second way; the deferral markers alone are refused by `tests/ratchets/test_nothing_ships_half_done.py`.
@@ -38,13 +38,13 @@ that ceremony, and the ratchet keeps it honest.*
 *Traced by:* this register's print and each project's own ratchets, read at the review's boundaries pass; the one clause held is that every rule here names its holder, by `tests/ratchets/test_every_rule_says_what_holds_it.py`.
 
 ## 6. Completeness is a claim only the session can check
-*Traced by:* the plan's `Met:` and `Deviated:` lines and the review record, read by the person at the close; the close itself is one act or refused, `api/doors.py::close`.
+*Traced by:* the plan's `Met:` and `Deviated:` lines and the review record, presented on the card at the close; nothing guarantees they are read. The close itself is one act or refused, `api/doors.py::close`.
 
 ## 7. We live in iterations, and a loop is a thesis
 *Undefended until:* docs/plans/2026-09-05-16-every-loop-a-plan-names-is-watched-until-it-closes.md by 2026-09-19 — every loop a plan names is watched by the board until it closes, and a loop that never closed is shown as a belief.
 
 ## 8. Verify, don't assume — and the answer is usually there
-*Traced by:* the review record's passes, each re-reading the last pass's claims, and the owner reading the record at the close.
+*Traced by:* the review record's passes, each re-reading the last pass's claims, presented on the card at the close; nothing guarantees a reader beyond the next pass.
 
 ## 9. Raise the standard, not just the output
 *Traced by:* the suggestions folder, where a learning about the way we work arrives marked `his`, read on the board's rail.
@@ -53,16 +53,16 @@ that ceremony, and the ratchet keeps it honest.*
 *Traced by:* the board's own read of the corpus, which shows a plan or suggestion it cannot parse on its card; two clauses are held — a project needs a plans folder (`api/cli.py::add`) and a suggestion names its kind and fix (`tests/ratchets/test_every_suggestion_names_its_kind_and_fix.py`).
 
 ## 11. The board is the team's memory, and one move is the person's
-*Traced by:* the card's history, which names the actor and the reason of every move, read by the person; the page shows only held state, `tests/ratchets/test_the_page_shows_only_held_state.py`.
+*Traced by:* the card's history, which names the actor and the reason of every move, presented to the person on the card; the page shows only held state, `tests/ratchets/test_the_page_shows_only_held_state.py`.
 
 ## 12. Execution takes a lane
-*Held by:* api/board_cli.py::fold — the trunk moves only by a fast-forward push from a lane's own worktree, so nothing merges by hand and nothing lands red; a lane's isolation and its overlap with another are the board's read of the machine, shown on both cards.
+*Traced by:* the board's read of the machine — a lane's isolation and its overlap with another shown on both cards, a project of another kind's method in its own instructions; the one clause held is integration: the trunk moves only by a fast-forward push from a lane's own worktree, `api/board_cli.py::fold`.
 
 ## 13. Nothing is done without a review, and a review is a loop
 *Traced by:* the review record itself, pass by pass with what each found, read by the person at the close; that one exists is held by `api/doors.py::close`.
 
 ## 14. The close ritual
-*Held by:* api/doors.py::close — the close is one act, delivered and watch and review, or it is refused; a folded card nobody closed is moved to the person's attention by the board's lane read, never to shipped.
+*Traced by:* the card's close rows and its history, and the board's lane read, which moves a folded card nobody closed to the person's attention rather than to shipped; two clauses are held by `api/doors.py::close` — every close writes DELIVERED and WATCH in one act, and for a code lane that act also requires a review record that exists.
 
 ## The owner's steering
 *Convention because:* a wrong form of address is the loudest failure there is — he sees it in the first line and says so.
