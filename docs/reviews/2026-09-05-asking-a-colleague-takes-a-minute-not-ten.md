@@ -28,6 +28,8 @@ The review ran as a loop (`CLAUDE.md`): each pass one lens, the fixes landed, th
 - **The doing line, live** on this machine's real registries, read-only: nine live rows with a step and an age; `needle sessions` in 0.54 s wall clock for 202 rows.
 - **The cost, measured** on the real registries, five runs each, read-only: the one list in 14 ms with the tails and 10 ms without; 3 ms for nine live rows, 0.4 ms each; the hook untouched, so zero per tool call. Plan 10's word: 0.2–2.4 ms a tool call. The registry's `detail` line costs nothing new; it was always in the state file.
 - **Exchange 4 from the rollout** (the `execution` role extracted; the numbers are in the plan's close-out and the table below), and **exchange 3's four timestamps re-derived by hand** as the plan asked: launch 09:16:32.6, the reply's file write 09:28:34.2 (12 m 02 s, as the baseline said), the chair's first sight 09:29:05.7 — and 16 polls where the baseline said 2, which corrects the baseline and is ruling 4's case in one row.
+- **The served board after the fold** (origin/develop 585eb8d, dist rebuilt, `needle-serve.service` restarted, the store at 0010): `needle sessions` from the main checkout printed a step and an age under each of nine live rows, the two terminal rows included; `GET /api/projects/needle/cards/51` carried the lane's `doing` (`Bash cd /home/dennis && npm …`, 11:45:41Z) and its `detail`.
+- **The first real call, exchange 5 (warm):** `needle call 6f059ca0-… <note>` at 11:47:05Z resumed the hrclaude colleague of exchanges 3 and 4 from its 2.6 MB transcript — no registry held it — on armana, named `call-6f059ca0`; the real CLI kept the session id (`sessionId == resumeSessionId`), where a background session's resume forks it (2026-09-04), and the record handles both. Sixteen seconds after the call the one list read `working … Bash cat …/from-needle-51-call-protocol.md, 16 s ago; "Reading the caller's note and check whether a reply file already exists"` — the caller saw the colleague working. The chair's wait: `needle wait 1 --ceiling 900`, started 11:47:26Z, zero polls by construction; it returned `landed: … at 11:47:58Z` — 53 s after the call, 32 s of which was the daemon starting the resumed session — and the loop ended the call with the same words on its next beat; the colleague's row reads `done` with its last step and age. The reply corrected nothing, re-read nothing a prior note had cited, and answered both questions.
 - **Not done, stated:** the wall on the machine's `fake429.py` (the plan's Deviated line under item 1); a real warm exchange chaired through `needle call` and `needle wait` — none has run yet, so the Loop's first reading is still to come; the served board's own reading after the fold, which the close-out below carries once made.
 
 ## The six exchanges
@@ -40,14 +42,16 @@ Written by the two parties at the time, never reconstructed by one (ruling 4): t
 | 2 | cold one-shot | Codex | armana | 09:06:38 | 09:15:36 | 8 m 58 s | 15 + 3 directory reads | as above | 5 / 5 | 5 | — | baseline, one party |
 | 3 | cold one-shot | Codex | hrclaude | 09:16:32 | 09:28:34 | 12 m 02 s | 16 (13 `write_stdin`, 1 `wait`, 2 status) | as above | 4 / 4 | 5 | — | re-derived by hand |
 | 4 | warm resume of 3, by hand | Codex | hrclaude | 09:30:00 (two refused attempts before it) | 09:40:48 | 10 m 48 s | 27 (16 `write_stdin`, 5 `wait`, 6 status), 10 in the first five minutes | as above | 3 / 3 | 3 of 4 reads | — | from the rollout and the transcript |
-| 5 | cold | | | | | | | | | | | |
-| 6 | warm, `needle call` + `needle wait` | | | | | | | | | | | |
-| 7 | cold | | | | | | | | | | | |
-| 8 | warm | | | | | | | | | | | |
-| 9 | cold | | | | | | | | | | | |
-| 10 | warm | | | | | | | | | | | |
+| 5 | warm, `needle call` + `needle wait` | the #51 lane (Claude) | hrclaude's 6f059ca0, resumed on armana | 11:47:05 (the note written 11:46:59) | 11:47:58 | **53 s** (the brief was its first tool call at 11:47:19) | **0** — one `needle wait`, returned on the file | one call and one wait, ~2 k tokens of the chair's context | 2 / 2 | 0 (it read the call note and nothing else) | 0 | both parties at the time |
+| 6 | cold, the same two questions, Codex's to chair | | | | | | | | | | | |
+| 7 | warm | | | | | | | | | | | |
+| 8 | cold | | | | | | | | | | | |
+| 9 | warm | | | | | | | | | | | |
+| 10 | cold | | | | | | | | | | | |
 
-The sixth measured row of 5–10 ends its last cell with the word `six-measured`, which is what the WATCH row expects.
+Row 5 ran first and warm, so the alternation is warm-cold from here; its cold pair is row 6, the same two questions chaired by Codex with a one-shot. The sixth measured row of 5–10 ends its last cell with the word `six-measured`, which is what the WATCH row expects.
+
+The called party's own line for row 5, verbatim from its reply (`from-6f059ca0-re-51-call-protocol.md`): "Read: the call note only. Nothing re-derived. … sources re-read that a prior note in the thread had cited with a path: 0 | claims of earlier notes corrected: 0". Its answer to the second question: keep the step on the transcript tail — a Codex colleague's rollout records every tool call with a timestamp for the same list-time reader, a subagent's dispatch reads honestly as "dispatched, waiting" with the sidechain beside it, a session thinking between tool calls is one the hook cannot see at all, and the tail's one blind spot (a session started from inside another stops saving its transcript — the machine doc's `CLAUDE_CODE_CHILD_SESSION` trap) is exactly the launch shape the plan refused; the runtime's launch path strips the marker. One warm reply, 53 s, corrected nothing and re-read nothing; one row is not the reading, and the plan's gate is six.
 
 ## The reading, when the six rows exist
 
