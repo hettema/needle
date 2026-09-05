@@ -44,7 +44,7 @@ that ceremony, and the ratchet keeps it honest.*
 *Undefended until:* docs/plans/2026-09-05-16-every-loop-a-plan-names-is-watched-until-it-closes.md by 2026-09-19 — every loop a plan names is watched by the board until it closes, and a loop that never closed is shown as a belief.
 
 ## 8. Verify, don't assume — and the answer is usually there
-*Traced by:* the review record's passes, each re-reading the last pass's claims, presented on the card at the close; nothing guarantees a reader beyond the next pass.
+*Traced by:* the `[verification]` findings in every review record — a claim with no source, a hedge shipped as a fact, a primitive built beside an existing one — which the review's boundaries pass reads for by name and the loop on card #60 counts per carded close, read by the session at the tenth close after its fold against Hello Revenue's rate over the same window (`docs/plans/2026-09-05-every-session-of-any-make-follows-the-doctrine-at-least-as-well-as-hello-revenues-did.md`, its Loop); the one clause held is that every finding says its class, `tests/ratchets/test_every_finding_says_its_class.py`. The section is read back into a session verbatim on the word "backbrief" (`hooks/needle_hook.py`), which is delivery, not a hold: a session that has stopped checking reads like one that has not, and only the count says which.
 
 ## 9. Raise the standard, not just the output
 *Traced by:* the suggestions folder, where a learning about the way we work arrives marked `his`, read on the board's rail.
@@ -59,7 +59,7 @@ that ceremony, and the ratchet keeps it honest.*
 *Traced by:* the board's read of the machine — a lane's isolation and its overlap with another shown on both cards, a project of another kind's method in its own instructions; the one clause held is integration: the trunk moves only by a fast-forward push from a lane's own worktree, `api/board_cli.py::fold`.
 
 ## 13. Nothing is done without a review, and a review is a loop
-*Traced by:* the review record itself, pass by pass with what each found, read by the person at the close; that one exists is held by `api/doors.py::close`.
+*Traced by:* the review record itself, pass by pass with what each found, read by the person at the close; two clauses are held — that one exists, by `api/doors.py::close`, and that every finding in it says its class, by `tests/ratchets/test_every_finding_says_its_class.py`.
 
 ## 14. The close ritual
 *Traced by:* the card's close rows and its history, and the board's lane read, which moves a folded card nobody closed to the person's attention rather than to shipped; two clauses are held by `api/doors.py::close` — every close writes DELIVERED and WATCH in one act, and for a code lane that act also requires a review record that exists.
