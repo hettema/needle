@@ -82,11 +82,22 @@ from infrastructure.schema import (
 _COLUMN_ORDER: dict[str, int] = {d.column.value: i for i, d in enumerate(COLUMN_DEFINITIONS)}
 _MIGRATIONS = Path(__file__).parent / "migrations"
 ONE_PER_CARD: frozenset[RowKind] = frozenset(
-    {RowKind.DELIVERED, RowKind.WATCH, RowKind.REVIEW, RowKind.VERDICT, RowKind.HANDED_OUT}
+    {
+        RowKind.DELIVERED,
+        RowKind.WATCH,
+        RowKind.REVIEW,
+        RowKind.VERDICT,
+        RowKind.HANDED_OUT,
+        RowKind.TRIAGED,
+        RowKind.SPLIT,
+    }
 )
 """Record rows a card carries once: writing one again replaces it, so a
 close written twice never says two things about what shipped, and a card
-never carries two verdicts or two handout tallies."""
+never carries two verdicts or two handout tallies. A defect read four times
+would otherwise carry four `TRIAGED` rows saying four things about who
+fixes it; the rewrite keeps every previous text in the card's history, and
+the readings themselves are a table (plan 59, item 3)."""
 ROW_DETAIL_LENGTH = 140
 _END = 1_000_000
 """A position past any group's end: the move clamps it to the last slot."""
@@ -1299,6 +1310,17 @@ class Store:
             if number is not None:
                 query = query.where(TriageRow.card_number == number)
             return [_triage(r) for r in session.scalars(query.order_by(TriageRow.id))]
+
+    def triage(self, slug: str, number: int) -> Triage | None:
+        """The newest reading on one card: what routing is read from when
+        the board is asked about one card rather than a whole project."""
+        with self._session() as session:
+            row = session.scalars(
+                select(TriageRow)
+                .where(TriageRow.project_slug == slug, TriageRow.card_number == number)
+                .order_by(TriageRow.id.desc())
+            ).first()
+            return _triage(row) if row is not None else None
 
     def latest_triages(self, slug: str) -> dict[int, Triage]:
         """The newest reading on each of the project's cards: what routing

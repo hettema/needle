@@ -14,6 +14,13 @@ through the dial — and nothing else. Mechanised:
 - `runtime.start` / `launch.start` are still reached only from the pressed
   modules; the dial presses the Start *door*, so there is one start and it
   writes one history.
+- Plan 59 added a third thing that puts hands on a fresh worktree: a corpus
+  lane, which applies a decision the record already made — the owner's own
+  answer, or a separation an independent reading proposed. It is his too, and
+  it is held the same way rather than left to the letter of the two tests
+  above, which it would have passed without being seen: it reaches
+  `runtime.start` only from the doors module, only two door functions reach
+  that call at all, and only the dial opens a corpus lane.
 - The loops still never start anything and never import the doors: a loop
   that starts the top card when the machine is idle is one line, locally
   reasonable, and would fail no test but this one (0.1's rot).
@@ -81,6 +88,28 @@ def machine_starts_in(source: str) -> list[str]:
     return found
 
 
+def start_functions(source: str) -> set[str]:
+    """The functions in a module that reach the runtime's start, by name."""
+    tree = ast.parse(source)
+    found: set[str] = set()
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.FunctionDef | ast.AsyncFunctionDef):
+            continue
+        calls = [child for child in ast.walk(node) if isinstance(child, ast.Call)]
+        if any(starts_in(ast.unparse(call)) for call in calls):
+            found.add(node.name)
+    return found
+
+
+def calls_of(source: str, name: str) -> list[str]:
+    """Every call of a method with this name, by its dotted chain."""
+    return [
+        ".".join(_names(node.func))
+        for node in ast.walk(ast.parse(source))
+        if isinstance(node, ast.Call) and _names(node.func)[-1:] == [name]
+    ]
+
+
 def _imports(source: str) -> set[str]:
     tree = ast.parse(source)
     return {
@@ -135,6 +164,24 @@ def test_only_the_dial_opens_the_door_as_the_machine():
     assert machine_starts_in(_api_sources()[THE_DIAL]) == ["self.doors.start"]
 
 
+def test_only_two_doors_put_hands_on_a_fresh_worktree_and_only_the_dial_opens_the_second():
+    """Plan 59's corpus lane is the third way his move is made, and it is
+    named rather than tolerated. A fourth would be a new way to put hands on
+    a tree that no test would have noticed — which is the whole failure this
+    ratchet exists to make loud."""
+    sources = _api_sources()
+    assert start_functions(sources[THE_DOORS]) == {"start", "corpus_lane"}, (
+        "a new door reaches the runtime's start; say here which move it is, and whose"
+    )
+    for name, source in sources.items():
+        if name == THE_DOORS:
+            continue
+        assert not calls_of(source, "corpus_lane") or name == THE_DIAL, (
+            f"{name} opens a corpus lane; only {THE_DIAL} does, under his ruling or his answer"
+        )
+    assert calls_of(sources[THE_DIAL], "corpus_lane") == ["self.doors.corpus_lane"]
+
+
 def test_the_ratchet_sees_what_it_looks_for():
     assert starts_in("self.runtime.start(Start(...))") == ["self.runtime.start"]
     assert starts_in("runtime.start(x)") == ["runtime.start"]
@@ -148,3 +195,6 @@ def test_the_ratchet_sees_what_it_looks_for():
         "self.doors.start"
     ]
     assert machine_starts_in("doors.start(s, n, anyway=False)") == []
+    assert start_functions("def a():\n    self.runtime.start(x)\ndef b():\n    pass\n") == {"a"}
+    assert calls_of("self.doors.corpus_lane(s, n)", "corpus_lane") == ["self.doors.corpus_lane"]
+    assert calls_of("self.doors.start(s, n)", "corpus_lane") == []

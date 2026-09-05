@@ -78,6 +78,14 @@ class Claim(StrEnum):
     SIGNAL_READING = "signal reading"
     PLANNING = "planning"
     """A defect the dial is planning right now (plan 11, item 4)."""
+    MARK_BEING_READ = "mark being read"
+    """A defect whose mark an independent reading is verifying right now
+    (plan 59, item 3)."""
+    RULING_YOURS = "ruling yours"
+    """A defect a reading put on the owner's pile and he has not ruled on.
+    The pile drained at zero for the board's whole life partly because
+    nothing counted it: a door he cannot find is not a door (plan 59, item
+    5)."""
 
 
 CLAIM_MEANING: dict[Claim, Meaning] = {
@@ -96,6 +104,8 @@ CLAIM_MEANING: dict[Claim, Meaning] = {
     Claim.CONVERSATION: Meaning.LIVE,
     Claim.SIGNAL_READING: Meaning.LIVE,
     Claim.PLANNING: Meaning.LIVE,
+    Claim.MARK_BEING_READ: Meaning.LIVE,
+    Claim.RULING_YOURS: Meaning.YOURS,
 }
 """Which of the three head words each claim counts under; the two other
 meanings never claim anyone."""

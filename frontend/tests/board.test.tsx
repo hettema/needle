@@ -1165,6 +1165,8 @@ describe("the colour language", () => {
     { case: "loop closed", word: "loop closed · read 09:30, delivered", meaning: "proven", border: false, door: null },
     { case: "not now", word: "not now", meaning: "quiet", border: false, door: "open ▸" },
     { case: "being planned", word: "being planned · alpha", meaning: "live", border: true, door: "open to see" },
+    { case: "mark being read", word: "mark being read · beta", meaning: "live", border: true, door: "open to see" },
+    { case: "your ruling", word: "your ruling", meaning: "yours", border: true, door: "Rule" },
   ];
 
   it("has one card per state and no state the table does not name", () => {

@@ -348,7 +348,7 @@ class Live:
             machine=self.machine,
             planning=self.store.open_windowless_sessions(slug, SessionWork.PLANNING).get(number),
             triaging=self.store.open_windowless_sessions(slug, SessionWork.TRIAGE).get(number),
-            triage=self.store.latest_triages(slug).get(number),
+            triage=self.store.triage(slug, number),
             sources=self.sources(slug),
         )
 

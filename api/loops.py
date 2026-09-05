@@ -59,9 +59,9 @@ from board.lane import (
     with_footprints,
 )
 from board.progress import progress_of
-from board.triage import already_ruled
 from board.sequencing import waits_for
 from board.signals import where_after
+from board.triage import already_ruled
 from board.word import compose, notes_word
 from domain.audit import AuditKind
 from domain.board import MachineState, TrunkState

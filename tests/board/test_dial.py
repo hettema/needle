@@ -192,7 +192,8 @@ def test_eligibility_is_the_documents_mark_plus_the_cards_latest_reading():
     assert why_not_eligible(card(4, "d"), when, **when_ok, **common) == (
         "marked when, and its trigger has not been read as delivered"
     )
-    assert why_not_eligible(card(4, "d"), when, **when_ok, **{**common, "last": reading(False)}) == (
+    not_yet = {**common, "last": reading(False)}
+    assert why_not_eligible(card(4, "d"), when, **when_ok, **not_yet) == (
         "marked when, and its trigger last read not delivered"
     )
     assert why_not_eligible(card(4, "d"), when, **when_ok, **{**common, "last": reading(None)}) == (

@@ -278,7 +278,9 @@ class Dial:
                     if doors is None or doors.placement is None:
                         continue  # nowhere to run: the card would say so on Start too
                     candidates.append(Candidate(project=slug, card=card, document=document))
-                elif self._wants_a_reading(slug, card, document, routed, snapshot):
+                elif self._wants_a_reading(
+                    slug, card, routed, snapshot, ran_before=card.number in ran
+                ):
                     # No placement check here: a reading is a windowless
                     # session in the project's own checkout, so the card's
                     # Start door — which is about a worktree — has nothing to
@@ -300,18 +302,26 @@ class Dial:
             for slug in self.live.projects
         )
 
-    def _wants_a_reading(self, slug, card: Card, document, routed, snapshot) -> bool:
+    def _wants_a_reading(
+        self, slug: str, card: Card, routed, snapshot, *, ran_before: bool
+    ) -> bool:
         """Whether the board should open a reading on this defect now. Only
         the two states that mean *nobody has verified today's text*: a
         cannot-tell is not retried, because the evidence it named has to
         arrive first — and when it does, the document or the source moves and
-        the row goes stale, which is this same door."""
+        the row goes stale, which is this same door.
+
+        And only where a reading could still change what the machine does. A
+        card with a lane on it, one carrying a question, or one the dial has
+        already taken once is the owner's from here, so a session spent
+        reading its mark is a session spent on an answer nothing will act
+        on."""
         if routed.state not in (Routing.NEEDS_TRIAGE, Routing.STALE):
             return False
         lane = snapshot.lanes.get(card.number)
         if lane is not None and (lane.state != LaneState.NONE or lane.path is not None):
             return False
-        if has_row(card, RowKind.ASK):
+        if ran_before or has_row(card, RowKind.ASK):
             return False
         return self._readings_that_died(slug, card.number) < TRIAGE_ATTEMPTS
 
@@ -725,7 +735,7 @@ class Dial:
             document = document_of(card, live.index)
             landed = self._applied(live, lane, document)
             if landed is not None:
-                self._land_corpus_lane(live, lane, card, document, landed, now)
+                self._land_corpus_lane(live, lane, card, document, landed, by_id, now)
                 continue
             session = by_id.get(lane.session_id) if lane.session_id else None
             alive = session is not None and session.pid is not None
@@ -770,6 +780,7 @@ class Dial:
         card: Card,
         document: Document | None,
         landed: Document,
+        by_id,
         now: datetime,
     ) -> None:
         """The corpus says what the lane was opened to write. A ruling is
@@ -838,9 +849,7 @@ class Dial:
         # a finished lane leaves no process behind, the same rule a finished
         # reading gets (plan 09's review, pass 1).
         if lane.session_id is not None:
-            session = next(
-                (s for s in self.runtime.sessions() if s.session_id == lane.session_id), None
-            )
+            session = by_id.get(lane.session_id)
             if session is not None and session.pid is not None:
                 stopped = self.runtime.stop(session.short_id)
                 if not stopped.gone:

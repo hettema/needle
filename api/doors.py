@@ -858,7 +858,8 @@ class Doors:
                 f"No triage is open for #{number}. A result lands from the reading the board "
                 "started and nowhere else; that is what makes it independent."
             )
-        resolved = self.live.sources(slug).resolve(source)
+        sources = self.live.sources(slug)
+        resolved = sources.resolve(source)
         if result == TriageResult.NOW:
             if resolved is None or resolved.fingerprint is None:
                 raise DoorRefused(
@@ -907,7 +908,7 @@ class Doors:
         self.live.store.end_windowless_session(open_now.id, now)
         self.live.bump()
         self.loops.reconcile_now()
-        routed = routing_now(document, record, self.live.sources(slug))
+        routed = routing_now(document, record, sources)
         return DoorResult(
             door="triage",
             said=(

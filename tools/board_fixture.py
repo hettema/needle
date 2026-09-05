@@ -27,7 +27,11 @@ from pathlib import Path
 REPO = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(REPO))
 
-from board.assemble import summarize  # noqa: E402
+from board.assemble import (  # noqa: E402
+    document_of,
+    routing_for,
+    summarize,  # noqa: E402
+)
 from board.import_01 import read_01  # noqa: E402
 from board.lane import (  # noqa: E402
     LaneFacts,  # noqa: E402
@@ -35,6 +39,7 @@ from board.lane import (  # noqa: E402
     lane_for,
 )
 from board.progress import progress_of  # noqa: E402
+from board.triage import Sources  # noqa: E402
 from domain.audit import AuditEntry, AuditKind  # noqa: E402
 from domain.board import MachineState  # noqa: E402
 from domain.card import Actor, Card, CardOrigin, DocumentLink, Place  # noqa: E402
@@ -50,6 +55,7 @@ from domain.row import Row, RowKind  # noqa: E402
 from domain.session import Session, SessionKind, SessionState  # noqa: E402
 from domain.signal import Reading, SessionWork, WindowlessSession  # noqa: E402
 from domain.slot import Model, Placement  # noqa: E402
+from domain.triage import Triage, TriageResult  # noqa: E402
 from infrastructure.corpus import scan  # noqa: E402
 from infrastructure.live import Live, sweep  # noqa: E402
 from infrastructure.store import Store  # noqa: E402
@@ -186,6 +192,8 @@ def _summary(
     last=None,
     reading=None,
     planning=None,
+    triaging=None,
+    triage=None,
     suggestion_live: bool = False,
     collision: Collision | None = None,
     placement: Placement | None = PLACEMENT,
@@ -193,6 +201,12 @@ def _summary(
 ):
     """One card as the page receives it, through the real derivation."""
     the_lane = lane if lane is not None else lane_for(card, _facts(worktrees={}))
+    assert card.link is not None
+    index = CorpusIndex(
+        documents=[_document(archived=card.link.archived, kind=card.link.kind)], read_at=NOW
+    )
+    sources = Sources(Path(SHOWN_PATH), lambda number: None)
+    routed = routing_for(card, document_of(card, index), triage, sources)
     doors = doors_for(
         card,
         the_lane,
@@ -205,6 +219,7 @@ def _summary(
         signal_evidence=None,
         suggestion_live=suggestion_live,
         waits=waits or [],
+        routed=routed,
     )
     # A card the machine put in Executing on hands-on evidence, with no lane
     # on this read, is what the board doubts: the evidence is gone.
@@ -223,10 +238,6 @@ def _summary(
         if placed_by_machine
         else None
     )
-    assert card.link is not None
-    index = CorpusIndex(
-        documents=[_document(archived=card.link.archived, kind=card.link.kind)], read_at=NOW
-    )
     summary = summarize(
         card,
         index,
@@ -238,6 +249,9 @@ def _summary(
         read=True,
         reading=reading,
         planning=planning,
+        triaging=triaging,
+        triage=triage,
+        sources=sources,
         project_path=SHOWN_PATH,
     )
     return summary
@@ -340,6 +354,38 @@ def language_cases() -> list[dict[str, object]]:
         started_at=NOW - timedelta(minutes=3),
         ended_at=None,
     )
+    # A defect whose mark an independent reading is verifying, and one that
+    # reading put on the owner's pile (plan 59): the two faces the seat adds.
+    triaging = WindowlessSession(
+        id=3,
+        project="harbourmaster",
+        card_number=900,
+        work=SessionWork.TRIAGE,
+        session_id="dddd0001-0000-4000-8000-000000000000",
+        slot="beta",
+        started_at=NOW - timedelta(minutes=4),
+        ended_at=None,
+    )
+    ruled_yours = Triage(
+        id=1,
+        project="harbourmaster",
+        card_number=900,
+        at=NOW - timedelta(minutes=6),
+        actor=Actor.SESSION,
+        result=TriageResult.HIS,
+        words=(
+            "the berth plan names neither of the two shapes this could take, and both are "
+            "yours to choose between"
+        ),
+        decision="a1b2c3d4e5f60718",
+        parent=None,
+        direction=None,
+        source_ref=None,
+        source_path=None,
+        source_fingerprint=None,
+        document_fingerprint=_document(kind=DocumentKind.SUGGESTION).fingerprint,
+        session_id="dddd0001-0000-4000-8000-000000000000",
+    )
     cases: list[tuple[str, object]] = [
         ("free to start", _summary(_card(900, column=Column.UP_NEXT))),
         (
@@ -415,6 +461,22 @@ def language_cases() -> list[dict[str, object]]:
                 _card(900, column=Column.BACKLOG, gate=None, kind=DocumentKind.SUGGESTION),
                 suggestion_live=True,
                 planning=planning,
+            ),
+        ),
+        (
+            "mark being read",
+            _summary(
+                _card(900, column=Column.BACKLOG, gate=None, kind=DocumentKind.SUGGESTION),
+                suggestion_live=True,
+                triaging=triaging,
+            ),
+        ),
+        (
+            "your ruling",
+            _summary(
+                _card(900, column=Column.BACKLOG, gate=None, kind=DocumentKind.SUGGESTION),
+                suggestion_live=True,
+                triage=ruled_yours,
             ),
         ),
     ]

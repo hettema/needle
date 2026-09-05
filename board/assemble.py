@@ -66,7 +66,7 @@ from domain.lane import HANDS_ON, Doors, Lane, LaneSnapshot, LaneState, StartSta
 from domain.project import Project
 from domain.row import ROW_HALF, Row, RowHalf, RowKind
 from domain.signal import Reading, Signal, SignalKind, WindowlessSession
-from domain.triage import Routed, Triage
+from domain.triage import Routed, Routing, Triage
 from domain.verdict import Verdict, VerdictLine
 from domain.watercooler import WatercoolerLine
 
@@ -95,6 +95,8 @@ CLAIM_WORDS: dict[Claim, tuple[str, str]] = {
     Claim.CONVERSATION: ("conversation", "conversations"),
     Claim.SIGNAL_READING: ("signal being read", "signals being read"),
     Claim.PLANNING: ("defect being planned", "defects being planned"),
+    Claim.MARK_BEING_READ: ("mark being read", "marks being read"),
+    Claim.RULING_YOURS: ("defect waiting on your ruling", "defects waiting on your ruling"),
 }
 """Each claim's words, singular and plural: the head's breakdown (plan 27, item 1)."""
 
@@ -473,13 +475,16 @@ def state_of(
     now: datetime,
     trigger: Signal | None = None,
     planning: WindowlessSession | None = None,
+    triaging: WindowlessSession | None = None,
+    routed: Routed | None = None,
 ) -> CardState:
     """The one function that names a card's state (plan 27, item 2). The
     order is the rule's precedence: broken before yours, yours before live,
     the loop before the queue, the queue before the quiet. A card is in one
     state; the head's claims may count it under several. `trigger` is a
-    defect's `Fix: when` signal and `planning` the dial's session writing
-    its plan (plan 11)."""
+    defect's `Fix: when` signal, `planning` the dial's session writing its
+    plan (plan 11), `triaging` the reading verifying its mark and `routed`
+    where it routes (plan 59)."""
     hands_on = lane is not None and lane.state in HANDS_ON
     if document_state == DocumentState.GONE:
         return _state(
@@ -588,6 +593,22 @@ def state_of(
             Meaning.LIVE,
             detail="The dial took it: a session is writing its plan in the project's checkout.",
         )
+    if document_state == DocumentState.SUGGESTION and triaging is not None:
+        return _state(
+            f"mark being read · {triaging.slot}",
+            Meaning.LIVE,
+            detail=(
+                "A reading with no share of the finding session's context is verifying who "
+                "fixes this, against the source the mark cites."
+            ),
+        )
+    if routed is not None and routed.state == Routing.TRIAGED_HIS and doors.answer.offered:
+        return _state(
+            "your ruling",
+            Meaning.YOURS,
+            detail=routed.why,
+            door=_door(FaceDoorName.OPEN, "Rule", doors.answer.why, primary=True),
+        )
     if document_state == DocumentState.SUGGESTION:
         return _state(
             "no plan yet",
@@ -662,11 +683,17 @@ def claims_of(
     trigger: Signal | None = None,
     planning: WindowlessSession | None = None,
     placement: AuditEntry | None = None,
+    triaging: WindowlessSession | None = None,
+    routed: Routed | None = None,
+    answer_offered: bool = False,
 ) -> list[Claim]:
     """Every claim the card makes on the owner's eye, in the head's order.
     A card can carry several; the head counts each. `placement` is the
     audit row that put the card where it is: a shipped card a close placed
-    with no REVIEW row is a claim (plan 11, item 1)."""
+    with no REVIEW row is a claim (plan 11, item 1). `routed` with
+    `answer_offered` is a defect a reading put on his pile that he has not
+    ruled on — counted, because a door nothing counts is a door he never
+    finds (plan 59, item 5)."""
     claims: list[Claim] = []
     if verdict is not None and card.folded_into is None:
         claims.append(Claim.VERDICT)
@@ -694,6 +721,10 @@ def claims_of(
         claims.append(Claim.SIGNAL_READING)
     if planning is not None:
         claims.append(Claim.PLANNING)
+    if triaging is not None:
+        claims.append(Claim.MARK_BEING_READ)
+    if routed is not None and routed.state == Routing.TRIAGED_HIS and answer_offered:
+        claims.append(Claim.RULING_YOURS)
     return claims
 
 
@@ -739,6 +770,7 @@ def summarize(
     state = document_state(card, document)
     path = document.path if document is not None else cited_path(card)
     doors = doors if doors is not None else nothing_read(card, project_path, now)[1]
+    routed = routing_for(card, document, triage, sources)
     standing = standing_for(card, placement, lane, last, read=read)
     signal, signal_note = watch_signal(card)
     trigger, _ = trigger_signal(document)
@@ -753,7 +785,7 @@ def summarize(
         document_path=path,
         kind=document.suggestion_kind if document is not None else None,
         fix=document.fix if document is not None else None,
-        routing=routing_for(card, document, triage, sources),
+        routing=routed,
         state=state_of(
             card,
             document_state=state,
@@ -768,6 +800,8 @@ def summarize(
             now=now,
             trigger=trigger,
             planning=planning,
+            triaging=triaging,
+            routed=routed,
         ),
         claims=claims_of(
             card,
@@ -782,6 +816,9 @@ def summarize(
             trigger=trigger,
             planning=planning,
             placement=placement,
+            triaging=triaging,
+            routed=routed,
+            answer_offered=doors.answer.offered,
         ),
         folded=folded or [],
         is_new=is_new(card, now),

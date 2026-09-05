@@ -17,7 +17,7 @@ import type { Routed, Source, Triage } from "./triage";
 import type { Verdict, VerdictLine } from "./verdict";
 import type { WatercoolerLine } from "./watercooler";
 
-export const CLAIM_VALUES = ["verdict", "lane asking", "signal asking", "decision", "lane ended", "doubted", "signal overdue", "document gone", "colliding", "document without card", "no review", "lane working", "conversation", "signal reading", "planning"] as const;
+export const CLAIM_VALUES = ["verdict", "lane asking", "signal asking", "decision", "lane ended", "doubted", "signal overdue", "document gone", "colliding", "document without card", "no review", "lane working", "conversation", "signal reading", "planning", "mark being read", "ruling yours"] as const;
 export type Claim = (typeof CLAIM_VALUES)[number];
 
 export const ESSENCE_SOURCE_VALUES = ["card", "document"] as const;
@@ -199,4 +199,6 @@ export const CLAIM_MEANING: Record<Claim, Meaning> = {
   "conversation": "live",
   "signal reading": "live",
   "planning": "live",
+  "mark being read": "live",
+  "ruling yours": "yours",
 };

@@ -9684,6 +9684,146 @@
         "triaging": null,
         "triage": null
       }
+    },
+    {
+      "case": "mark being read",
+      "card": {
+        "number": 900,
+        "title": "A card in every state",
+        "essence": "Every berth is billed by the metre.",
+        "essence_source": "card",
+        "gate": null,
+        "tags": [],
+        "document_state": "suggestion",
+        "document_path": "docs/slice-suggestions/2026-09-04-a-card-in-every-state.md",
+        "kind": "defect",
+        "fix": {
+          "mark": "now",
+          "why": null,
+          "trigger": null
+        },
+        "routing": {
+          "state": "needs triage",
+          "why": "marked now, and no reading has verified it; it is nobody's yet"
+        },
+        "state": {
+          "word": "mark being read · beta",
+          "meaning": "live",
+          "detail": "A reading with no share of the finding session's context is verifying who fixes this, against the source the mark cites.",
+          "loop": null,
+          "door": null,
+          "hint": "open to see"
+        },
+        "claims": [
+          "mark being read"
+        ],
+        "folded": [],
+        "is_new": false,
+        "age_date": "2026-09-04",
+        "place": {
+          "column": "Backlog",
+          "group": null,
+          "position": 0
+        },
+        "lane_state": "none",
+        "colliding": null,
+        "progress": null,
+        "standing": {
+          "actor": "corpus",
+          "evidence": null,
+          "state": "trusted",
+          "words": null
+        },
+        "reading": null,
+        "planning": null,
+        "triaging": {
+          "id": 3,
+          "project": "harbourmaster",
+          "card_number": 900,
+          "work": "triage",
+          "session_id": "dddd0001-0000-4000-8000-000000000000",
+          "slot": "beta",
+          "started_at": "2026-09-04T08:26:00Z",
+          "ended_at": null
+        },
+        "triage": null
+      }
+    },
+    {
+      "case": "your ruling",
+      "card": {
+        "number": 900,
+        "title": "A card in every state",
+        "essence": "Every berth is billed by the metre.",
+        "essence_source": "card",
+        "gate": null,
+        "tags": [],
+        "document_state": "suggestion",
+        "document_path": "docs/slice-suggestions/2026-09-04-a-card-in-every-state.md",
+        "kind": "defect",
+        "fix": {
+          "mark": "now",
+          "why": null,
+          "trigger": null
+        },
+        "routing": {
+          "state": "triaged his",
+          "why": "a reading says it is yours: the berth plan names neither of the two shapes this could take, and both are yours to choose between"
+        },
+        "state": {
+          "word": "your ruling",
+          "meaning": "yours",
+          "detail": "a reading says it is yours: the berth plan names neither of the two shapes this could take, and both are yours to choose between",
+          "loop": null,
+          "door": {
+            "name": "open",
+            "label": "Rule",
+            "why": "A reading says this decision is yours. Your sentence is the ruling; a short lane writes it into the document, citing your answer.",
+            "primary": true
+          },
+          "hint": null
+        },
+        "claims": [
+          "ruling yours"
+        ],
+        "folded": [],
+        "is_new": false,
+        "age_date": "2026-09-04",
+        "place": {
+          "column": "Backlog",
+          "group": null,
+          "position": 0
+        },
+        "lane_state": "none",
+        "colliding": null,
+        "progress": null,
+        "standing": {
+          "actor": "corpus",
+          "evidence": null,
+          "state": "trusted",
+          "words": null
+        },
+        "reading": null,
+        "planning": null,
+        "triaging": null,
+        "triage": {
+          "id": 1,
+          "project": "harbourmaster",
+          "card_number": 900,
+          "at": "2026-09-04T08:24:00Z",
+          "actor": "session",
+          "result": "his",
+          "words": "the berth plan names neither of the two shapes this could take, and both are yours to choose between",
+          "decision": "a1b2c3d4e5f60718",
+          "parent": null,
+          "direction": null,
+          "source_ref": null,
+          "source_path": null,
+          "source_fingerprint": null,
+          "document_fingerprint": "f1x7ur3f1n6erpr",
+          "session_id": "dddd0001-0000-4000-8000-000000000000"
+        }
+      }
     }
   ],
   "progress": {

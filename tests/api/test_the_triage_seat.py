@@ -33,7 +33,6 @@ from tests.api import test_doors as doors
 from tests.api.test_dial import (
     SOURCE,
     number_of,
-    open_readings,
     read_the_rail_until,
     reading_for,
     tick,
@@ -72,7 +71,13 @@ def park_the_rail(client: TestClient, machine_floor: Floor) -> None:
 
 
 def on_a_quiet_rail(
-    client: TestClient, machine_floor: Floor, repo: Path, stem: str, title: str, head: str, body: str
+    client: TestClient,
+    machine_floor: Floor,
+    repo: Path,
+    stem: str,
+    title: str,
+    head: str,
+    body: str,
 ) -> int:
     """One defect of our own, alone on a rail whose others have been read and
     left with the owner, with the dial on."""
