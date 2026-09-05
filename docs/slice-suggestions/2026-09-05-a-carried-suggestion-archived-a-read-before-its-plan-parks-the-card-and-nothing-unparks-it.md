@@ -19,6 +19,7 @@ The plan and the archive are one commit on Hello Revenue's trunk (`2105e24b9`, 1
 
 - The audit rows above (`needle card hellorevenue 384`; the store's `audit` table).
 - Hello Revenue `git show --stat 2105e24b9`: the plan and the suggestion's rename in one commit.
+- The second card the same night: #386's plan landed at 06:20 and the board parked it the same way ("this card is in Decision moment" on its Start door), so by 06:36 two of the dial's four slots were held by parked cards.
 - Cards #361, #379 and #383, planned the same night by the same path, were not parked: their planning sessions left the suggestion live. The README's instruction to archive the carried suggestion is what trips it, so following the corpus rule is what breaks the board.
 
 ## What would hold it
