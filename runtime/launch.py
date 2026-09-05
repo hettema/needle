@@ -21,7 +21,7 @@ from domain.session import Session, SessionKind, SessionSlot, SessionState
 from domain.slot import Handoff, Model, Placement, Rung, Slot
 from infrastructure import clock
 from infrastructure.store import Store
-from runtime import handoffs, machine, registry, rule, slots
+from runtime import codex, handoffs, machine, registry, rule, slots
 
 OBSERVATION_SECONDS = 5.0
 """How long a registered row must keep a live process before "registered"
@@ -514,9 +514,23 @@ def _walk(
 
 
 def stop(session: Session) -> Stopped:
-    """End a session through its own slot, and prove the process is gone."""
-    env = machine.session_env(session.config_dir, session.slot)
+    """End a session through its own slot, and prove the process is gone.
+    A Codex worker has no slot to go through: it is asked to end by
+    signal, and the same proof is read (plan 57)."""
     since = time.time()
+    if session.slot == codex.SLOT:
+        if session.pid is not None:
+            machine.terminate(session.pid)
+        gone = wait_gone(session.pid, STOP_SECONDS) if session.pid is not None else True
+        return Stopped(
+            short_id=session.short_id,
+            session_id=session.session_id,
+            slot=session.slot,
+            gone=gone,
+            seconds=round(time.time() - since, 2),
+            words="asked to end by signal" if session.pid is not None else "no process",
+        )
+    env = machine.session_env(session.config_dir, session.slot)
     try:
         done = machine.run([machine.which("claude"), "stop", session.short_id], env=env, timeout=30)
         words = (done.stdout or done.stderr).strip()
@@ -551,6 +565,14 @@ def move(
     says whether the slot it ran on is used up: a move on a wall rules the
     slot out, a resume after an answer or a death prefers to stay put."""
     name = session.name
+    if session.slot == codex.SLOT:
+        return dead(
+            name,
+            [],
+            f"{session.short_id} is a Codex session: it runs on no subscription slot and has "
+            "no wall to move away from; the runtime does not move it (plan 57)",
+            None,
+        )
     if session.stale:
         return dead(
             name,
@@ -651,7 +673,7 @@ def move(
     return launch
 
 
-def call(store: Store, session: Session, *, brief: str, name: str) -> Launch:
+def call(store: Store, session: Session, *, brief: str, name: str, answer: str) -> Launch:
     """Resume a colleague's session with a caller's brief (plan 17, item 1):
     the Answer door's shape, bound to no card. A session in a terminal of
     its own is refused, not resumed beside itself; one mid-turn is refused
@@ -659,9 +681,24 @@ def call(store: Store, session: Session, *, brief: str, name: str) -> Launch:
     and a lane hears the note as its word instead. A call whose brief is
     empty is refused before anything runs: the by-hand form of 2026-09-05
     started a session whose prompt never arrived, and that is the refusal
-    the CLI printed ("Provide a prompt"), made ours."""
+    the CLI printed ("Provide a prompt"), made ours. The same refusals hold
+    for a colleague of the other make (plan 57, item 1); past them a Codex
+    row is resumed as a worker of its own kind, with `answer` as the file
+    Codex writes its last message to."""
     if not brief.strip():
         return dead(name, [], "an empty brief calls nobody; provide a note or an objective", None)
+    if (
+        session.slot == codex.SLOT
+        and session.kind == SessionKind.INTERACTIVE
+        and session.recorded != codex.TERMINAL_SOURCE
+    ):
+        return dead(
+            name,
+            [],
+            f"{session.short_id} is a Codex session of source {session.recorded!r}, which this "
+            f"runtime does not know as a worker; only an `exec` rollout is called",
+            None,
+        )
     if session.kind == SessionKind.INTERACTIVE:
         return dead(
             name,
@@ -678,7 +715,131 @@ def call(store: Store, session: Session, *, brief: str, name: str) -> Launch:
             "call again when its turn is done, or a lane hears the note as its word",
             None,
         )
+    if session.slot == codex.SLOT:
+        return call_codex(store, session, brief=brief, name=name, answer=answer)
     return move(store, session, to=None, card=name, prompt=brief, spent=False)
+
+
+CODEX_RUNG = Rung(slot=codex.SLOT, model=None)
+"""What a Codex attempt is recorded under: the make's name, no model rung —
+the rungs are Claude's subscription ladder and a worker of the other make
+never stands on one."""
+
+
+def call_codex(store: Store, session: Session, *, brief: str, name: str, answer: str) -> Launch:
+    """Resume a Codex worker with the brief (plan 57, item 2): `codex exec
+    resume` detached, its output in a log beside the answer, verified the
+    way a Claude launch is — the process is there past the observation
+    window, or it ended and said why. An exit within the window is a
+    verdict too: with the answer written it is a fast reply and the call
+    is alive in the sense that matters (the record it lands in); without
+    one it is a death with the log's last words. A verified worker is put
+    in a scope named for the call, so the one list shows it as a unit of
+    its own and its death has a journal."""
+    log = codex.log_path(answer)
+    try:
+        argv = codex.resume_argv(session.session_id, brief=brief, answer=answer)
+    except machine.CommandMissing as missing:
+        return dead(name, [], str(missing), None)
+    since = time.time()
+    try:
+        pid = machine.detach(argv, cwd=session.cwd or ".", log=log)
+    except OSError as error:
+        return dead(name, [], f"`codex exec resume` could not run: {error}", None)
+    born = machine.process_start(pid)
+    while True:
+        elapsed = time.time() - since
+        if not machine.process_alive(pid, born):
+            if _answered(answer, since):
+                attempt = Attempt(
+                    rung=CODEX_RUNG,
+                    verdict=LaunchVerdict.ALIVE,
+                    short_id=session.short_id,
+                    reason=f"answered within {elapsed:.1f} s",
+                    seconds=round(elapsed, 2),
+                )
+                return Launch(
+                    card=name,
+                    verdict=LaunchVerdict.ALIVE,
+                    session=_codex_row(session),
+                    placement=None,
+                    scope=None,
+                    attempts=[attempt],
+                    reason=f"already answered, {elapsed:.1f} s after the call",
+                )
+            words = _last_words(log)
+            reason = (
+                f"`codex exec resume` ended {elapsed:.1f} s after the call without an answer"
+                + (f": {words}" if words else "")
+            )
+            attempt = Attempt(
+                rung=CODEX_RUNG,
+                verdict=LaunchVerdict.DEAD,
+                short_id=session.short_id,
+                reason=reason,
+                seconds=round(elapsed, 2),
+            )
+            return dead(name, [attempt], reason, None)
+        if elapsed >= OBSERVATION_SECONDS:
+            break
+        time.sleep(POLL_SECONDS)
+    unit = machine.unit_name(SESSION_UNIT_PREFIX, name)
+    try:
+        asked, words = machine.adopt(unit, [pid, *machine.descendants_of(pid)])
+    except machine.CommandMissing as missing:
+        asked, words = False, str(missing)
+    scoped = asked and _in_scope(pid, unit)
+    store.record_session_slot(
+        SessionSlot(
+            session_id=session.session_id,
+            slot=codex.SLOT,
+            card=name,
+            scope=unit,
+            recorded_at=clock.now(),
+        )
+    )
+    attempt = Attempt(
+        rung=CODEX_RUNG,
+        verdict=LaunchVerdict.ALIVE,
+        short_id=session.short_id,
+        reason=None,
+        seconds=round(time.time() - since, 2),
+    )
+    return Launch(
+        card=name,
+        verdict=LaunchVerdict.ALIVE,
+        session=_codex_row(session),
+        placement=None,
+        scope=unit if scoped else None,
+        attempts=[attempt],
+        reason=None if scoped else f"running, but not in its own scope: {words}",
+    )
+
+
+def _codex_row(session: Session) -> Session:
+    """The worker's row as the one list reads it now, with its process."""
+    rows = codex.find(session.session_id)
+    return rows[0] if rows else session
+
+
+def _answered(answer: str, since: float) -> bool:
+    try:
+        stat = Path(answer).stat()
+    except OSError:
+        return False
+    return stat.st_size > 0 and stat.st_mtime >= since
+
+
+def _last_words(log: Path) -> str:
+    try:
+        lines = [
+            line.strip()
+            for line in log.read_text(encoding="utf-8", errors="replace").splitlines()
+            if line.strip()
+        ]
+    except OSError:
+        return ""
+    return _ANSI.sub("", lines[-1])[:300] if lines else ""
 
 
 def resume_transcript(store: Store, session_id: str, cwd: str, *, brief: str, name: str) -> Launch:

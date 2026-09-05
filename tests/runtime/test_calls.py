@@ -133,7 +133,12 @@ def test_a_call_resumes_a_colleague_whose_turn_is_done_with_the_brief_and_nothin
 
     who = runtime.colleague(first.short_id)
     assert isinstance(who, Session)
-    result = runtime.call(who, brief="Read /srv/d/from-codex.md and answer", name=who.name)
+    result = runtime.call(
+        who,
+        brief="Read /srv/d/from-codex.md and answer",
+        name=who.name,
+        answer="/srv/d/from-x-re-codex.md",
+    )
 
     assert result.verdict == LaunchVerdict.ALIVE and result.session is not None, result.reason
     log = machine_floor.state()["launch_log"]
@@ -151,17 +156,17 @@ def test_a_call_refuses_a_terminal_a_turn_in_flight_and_an_empty_brief(
     machine_floor: Floor, runtime: Runtime, repo: Path
 ):
     working = colleague(runtime, repo, machine_floor, {"then": "work"})
-    refused = runtime.call(working, brief="a question", name=working.name)
+    refused = runtime.call(working, brief="a question", name=working.name, answer="/srv/d/a.md")
     assert refused.verdict == LaunchVerdict.DEAD and "working on its turn" in (refused.reason or "")
 
-    empty = runtime.call(working, brief="   ", name=working.name)
+    empty = runtime.call(working, brief="   ", name=working.name, answer="/srv/d/a.md")
     assert empty.verdict == LaunchVerdict.DEAD and "empty brief" in (empty.reason or "")
 
     terminal_id = "eeee0001-0000-4000-8000-000000000000"
     machine_floor.write_process("beta", terminal_id, os.getpid(), kind="cli", cwd="/srv/p")
     terminal = runtime.colleague("eeee0001")
     assert isinstance(terminal, Session) and terminal.kind == SessionKind.INTERACTIVE
-    no = runtime.call(terminal, brief="a question", name=terminal.name)
+    no = runtime.call(terminal, brief="a question", name=terminal.name, answer="/srv/d/a.md")
     assert no.verdict == LaunchVerdict.DEAD and "terminal of its own" in (no.reason or "")
     assert len(machine_floor.state()["launch_log"]) == 1, "no second process for any refusal"
 
@@ -183,7 +188,7 @@ def test_a_colleague_no_registry_holds_is_resumed_from_its_transcript_by_id(
     who = runtime.colleague(gone)
     assert who == (gone, str(repo)), "found by id, its directory read from its own records"
 
-    result = runtime.call(who, brief="Read the note", name="call-6f059ca0")
+    result = runtime.call(who, brief="Read the note", name="call-6f059ca0", answer="/srv/d/a.md")
     assert result.verdict == LaunchVerdict.ALIVE and result.session is not None, result.reason
     launched = machine_floor.state()["launch_log"][0]
     assert launched["argv"][launched["argv"].index("--resume") + 1] == gone
@@ -191,7 +196,7 @@ def test_a_colleague_no_registry_holds_is_resumed_from_its_transcript_by_id(
     assert result.session.resumed_from == gone
 
     monkeypatch.setattr(launch, "RESUME_SIZE_LIMIT", 10)
-    too_big = runtime.call(who, brief="again", name="call-6f059ca0")
+    too_big = runtime.call(who, brief="again", name="call-6f059ca0", answer="/srv/d/a.md")
     assert too_big.verdict == LaunchVerdict.DEAD and "above the" in (too_big.reason or "")
 
 

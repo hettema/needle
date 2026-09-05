@@ -18,9 +18,11 @@ from domain.signal import Signal
 from domain.slot import Placement, Rung, Slot, Where
 from domain.watercooler import Note
 from domain.window import Focused, Opened, Window, WindowKind
+from infrastructure import clock
 from infrastructure.store import Store
 from runtime import (
     calls,
+    codex,
     discussion,
     git,
     handoffs,
@@ -48,6 +50,10 @@ class NoSuchSession(Exception):
     """No registry on this machine holds the session named."""
 
 
+class Ambiguous(NoSuchSession):
+    """The ref names more than one session, so it names none (plan 57)."""
+
+
 class Runtime:
     def __init__(self, store: Store):
         self.store = store
@@ -66,6 +72,10 @@ class Runtime:
         closed since the last read."""
         walls = handoffs.read_handoffs().by_session
         rows = registry.sessions(slots.registries(), walls)
+        # Codex's sessions are rows of the same list (plan 57, item 3): read
+        # from its rollouts, checked in /proc the same way, sorted under the
+        # make's name where a Claude row sorts under its slot.
+        rows = registry.merge([*rows, *codex.sessions(clock.now())])
         # With no compositor to ask, the windows' state stays as last recorded.
         with contextlib.suppress(windows.WindowRefused):
             windows.reconcile(self.store)
@@ -83,9 +93,17 @@ class Runtime:
         the most recent background session of a slot named, or — for a
         colleague no registry holds any more — its id and the directory
         its transcript says it ran in; None when nothing on this machine
-        answers to the ref."""
+        answers to the ref. The other make answers to the same refs (plan
+        57, item 1): its bare name is its most recent worker, a rollout id
+        or its prefix is that rollout, and a prefix that names two is
+        refused as naming none."""
         rows = self.sessions()
         matches = [s for s in rows if ref in (s.short_id, s.session_id)]
+        named = {m.session_id for m in matches}
+        if len(named) > 1:
+            raise Ambiguous(
+                f"{ref!r} names {len(named)} sessions ({', '.join(sorted(named))}); name one"
+            )
         if matches:
             return next((m for m in matches if not m.stale), matches[0])
         on_slot = [
@@ -93,8 +111,16 @@ class Runtime:
         ]
         if on_slot:
             return max(on_slot, key=lambda s: s.updated_at or s.created_at or _EPOCH)
+        if ref == codex.SLOT:
+            return codex.warm()
         found = transcripts.find(ref)
-        return (ref, found[0]) if found else None
+        if found:
+            return (ref, found[0])
+        rollouts = codex.find(ref)
+        if len(rollouts) > 1:
+            named = ", ".join(sorted(r.session_id for r in rollouts))
+            raise Ambiguous(f"{ref!r} names {len(rollouts)} Codex sessions ({named}); name one")
+        return rollouts[0] if rollouts else None
 
     def notes(self) -> list[Note]:
         """The machine's watercooler as it stands, oldest change first."""
@@ -165,15 +191,19 @@ class Runtime:
             spent=False,
         )
 
-    def call(self, session: Session | tuple[str, str], *, brief: str, name: str) -> Launch:
+    def call(
+        self, session: Session | tuple[str, str], *, brief: str, name: str, answer: str
+    ) -> Launch:
         """Call a colleague warm (plan 17, item 1): resume its session with
         the brief through the one launch path, or from its transcript when
         no registry holds it. The verb owns nothing of the session's life
-        after this (ruling 5)."""
+        after this (ruling 5). `answer` is where the reply lands: a Claude
+        colleague writes it as the brief says, a Codex worker's last
+        message is written there by Codex itself (plan 57, item 2)."""
         if isinstance(session, tuple):
             session_id, cwd = session
             return launch.resume_transcript(self.store, session_id, cwd, brief=brief, name=name)
-        return launch.call(self.store, session, brief=brief, name=name)
+        return launch.call(self.store, session, brief=brief, name=name, answer=answer)
 
     def judge_call(self, call: Call, sessions: list[Session] | None = None) -> CallVerdict | None:
         """One reading of a call against the one list and its answer file:

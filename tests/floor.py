@@ -29,6 +29,7 @@ class Floor:
     transcripts: Path
     discussion: Path
     meminfo: Path
+    codex_home: Path
     state_file: Path
     pids: list[int] = field(default_factory=list)
 
@@ -157,6 +158,87 @@ class Floor:
         path.write_text(json.dumps(blob), encoding="utf-8")
         return path
 
+    def write_rollout(
+        self,
+        session_id: str,
+        *,
+        cwd: str = "/tmp/somewhere",
+        source: str = "exec",
+        started_at: str = "2026-09-05T09:00:00.000Z",
+        mid_turn: bool = False,
+        tool: str | None = None,
+        tool_input: str = "",
+        malformed: bool = False,
+    ) -> Path:
+        """A Codex rollout as Codex writes one (verified 2026-09-05): the
+        `session_meta` head naming the session, its directory and its
+        source (`cli` for a terminal, `exec` for a worker), then a turn —
+        open when `mid_turn`, else closed by `task_complete` — with one
+        tool call in it when `tool` is named."""
+        stamp = started_at.replace(":", "-").split(".")[0]
+        folder = self.codex_home / "sessions" / "2026" / "09" / "05"
+        folder.mkdir(parents=True, exist_ok=True)
+        path = folder / f"rollout-{stamp}-{session_id}.jsonl"
+        if malformed:
+            path.write_text("{not json\n", encoding="utf-8")
+            return path
+        meta = {
+            "timestamp": started_at,
+            "ordinal": 0,
+            "type": "session_meta",
+            "payload": {
+                "session_id": session_id,
+                "id": session_id,
+                "timestamp": started_at,
+                "cwd": cwd,
+                "originator": "codex-tui" if source == "cli" else "codex_exec",
+                "cli_version": "0.152.1",
+                "source": source,
+            },
+        }
+        records = [
+            meta,
+            {
+                "timestamp": started_at,
+                "ordinal": 1,
+                "type": "event_msg",
+                "payload": {"type": "task_started", "turn_id": "t1"},
+            },
+        ]
+        if tool is not None:
+            records.append(
+                {
+                    "timestamp": "2026-09-05T09:00:05.000Z",
+                    "ordinal": 2,
+                    "type": "response_item",
+                    "payload": {
+                        "type": "custom_tool_call",
+                        "status": "completed",
+                        "call_id": "call_1",
+                        "name": tool,
+                        "input": tool_input,
+                    },
+                }
+            )
+        if not mid_turn:
+            records.append(
+                {
+                    "timestamp": "2026-09-05T09:00:09.000Z",
+                    "ordinal": 3,
+                    "type": "event_msg",
+                    "payload": {"type": "task_complete", "turn_id": "t1", "last_agent_message": ""},
+                }
+            )
+        path.write_text("".join(json.dumps(r) + "\n" for r in records), encoding="utf-8")
+        return path
+
+    def script_codex(self, *fates: dict) -> None:
+        """What the fake `codex exec resume` does next, one fate per call:
+        `answer` (writes `text` to the answer file after `after` seconds),
+        `silent` (an empty last message), `fail` (exits 1 at once with
+        `stderr`), `linger` (stays at work until stopped)."""
+        self.update(codex=list(fates))
+
     def write_transcript(self, cwd: str, session_id: str, size: int) -> Path:
         from runtime import machine
 
@@ -245,6 +327,8 @@ def lay(root: Path) -> Floor:
     transcripts.mkdir()
     discussion = root / "discussion"
     discussion.mkdir()
+    codex_home = root / "codex-home"
+    (codex_home / "sessions").mkdir(parents=True)
     # A machine with room: the dial's memory floor is 5 GB (board/dial.py).
     meminfo = root / "meminfo"
     write_meminfo(meminfo, available_gb=16.0, swap_free_gb=8.0, swap_total_gb=8.0)
@@ -260,6 +344,8 @@ def lay(root: Path) -> Floor:
                 "clients": [],
                 "spawned": [],
                 "busctl_calls": [],
+                "codex": [],
+                "codex_log": [],
                 "windows_open": True,
                 "window_delay": 0.0,
                 "pids": [],
@@ -276,6 +362,7 @@ def lay(root: Path) -> Floor:
         transcripts=transcripts,
         discussion=discussion,
         meminfo=meminfo,
+        codex_home=codex_home,
         state_file=state,
     )
 
@@ -306,6 +393,7 @@ ENVIRONMENT = {
     "NEEDLE_TRANSCRIPTS": "transcripts",
     "NEEDLE_DISCUSSION_DIR": "discussion",
     "NEEDLE_MEMINFO": "meminfo",
+    "NEEDLE_CODEX_HOME": "codex_home",
     "NEEDLE_FAKE_STATE": "state_file",
 }
 """Variable → the floor attribute it points at. `runtime.machine` reads all

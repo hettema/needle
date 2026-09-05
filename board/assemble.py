@@ -17,6 +17,7 @@ from board.lane import (
     last_line,
     nothing_read,
     placement_from,
+    where_of,
 )
 from board.moves import GroupLayout
 from board.reconcile import carried_stems, ref
@@ -294,7 +295,7 @@ def _where(lane: Lane) -> str:
     session = lane.session
     if session is None:
         return lane.name
-    return f"{session.model.value if session.model else 'fable'} on {session.slot}"
+    return where_of(session)
 
 
 def _cards(numbers: list[int]) -> str:

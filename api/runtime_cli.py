@@ -38,7 +38,7 @@ from domain.window import WindowKind
 from infrastructure import clock
 from infrastructure.paths import db_path
 from infrastructure.store import Store
-from runtime import calls
+from runtime import calls, codex
 from runtime.service import NoSuchSession, Runtime
 from runtime.windows import WindowRefused
 
@@ -138,12 +138,18 @@ def describe_session(session: Session, now: datetime | None = None) -> str:
 
 
 def describe_launch(launch: Launch) -> str:
-    if launch.verdict == LaunchVerdict.ALIVE and launch.placement is not None:
+    if launch.verdict == LaunchVerdict.ALIVE:
         short = launch.session.short_id if launch.session else "?"
-        head = (
-            f"{short} is alive: {launch.card} on {launch.placement.slot} with "
-            f"{launch.placement.model.value}"
+        # A Codex worker is alive on no placement: the rule placed nothing,
+        # it runs where its rollout says (plan 57).
+        where = (
+            f"on {launch.placement.slot} with {launch.placement.model.value}"
+            if launch.placement is not None
+            else f"on {launch.session.slot}"
+            if launch.session is not None
+            else "nowhere the rule placed"
         )
+        head = f"{short} is alive: {launch.card} {where}"
         head += f", in {launch.scope}" if launch.scope else ""
         head += f" ({launch.reason})" if launch.reason else ""
     elif launch.verdict == LaunchVerdict.UNCONFIRMED:
@@ -267,10 +273,22 @@ def rescues(runtime: Runtime, args: argparse.Namespace) -> int:
     return 0
 
 
-def call_brief(note: str, answer: str, objective: str | None) -> str:
+def call_brief(note: str, answer: str, objective: str | None, *, by_message: bool = False) -> str:
     """What a called colleague is told: the thread, the question, where the
-    answer goes. The note is the record; the brief only points at it."""
+    answer goes. The note is the record; the brief only points at it. A
+    Codex worker answers by its last message, which Codex writes to the
+    file itself (`by_message`, plan 57): its own shell runs in a sandbox
+    that refused the shared record on 2026-09-05, so it is told not to
+    try."""
     asked = f" {objective.strip()}" if objective and objective.strip() else ""
+    if by_message:
+        return (
+            f"A colleague calls you with a question. Read {note} first — it holds the thread "
+            f"and the question.{asked} Answer as your final message: the runtime writes your "
+            f"last message to {answer}, where the caller waits on it. Do not write that file "
+            "yourself — your sandbox may refuse it, and only the message the runtime writes "
+            "reaches the caller."
+        )
     return (
         f"A colleague calls you with a question. Read {note} first — it holds the thread "
         f"and the question.{asked} Answer in the record: write your reply to {answer} "
@@ -309,8 +327,13 @@ def call(runtime: Runtime, args: argparse.Namespace) -> int:
     answer = (
         str(Path(args.answer).expanduser().resolve()) if args.answer else answer_path(note, short)
     )
-    brief = call_brief(note, answer, args.objective)
-    launch = runtime.call(who, brief=brief, name=name)
+    by_message = isinstance(who, Session) and who.slot == codex.SLOT
+    brief = call_brief(note, answer, args.objective, by_message=by_message)
+    # The call's time is before the launch, not after: a worker that answers
+    # inside the launch's own observation window (a Codex worker can) would
+    # otherwise have landed its answer before the call it answers.
+    called_at = clock.now()
+    launch = runtime.call(who, brief=brief, name=name, answer=answer)
     if launch.verdict != LaunchVerdict.ALIVE or launch.session is None:
         _emit(args, launch, describe_launch(launch))
         return 1
@@ -322,7 +345,7 @@ def call(runtime: Runtime, args: argparse.Namespace) -> int:
         answer=answer,
         brief=brief,
         caller=os.getcwd(),
-        at=clock.now(),
+        at=called_at,
     )
     placement = launch.placement
     where = f"{placement.model.value} on {placement.slot}" if placement else launch.session.slot

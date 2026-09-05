@@ -1,0 +1,117 @@
+#!/usr/bin/env python3
+"""A stand-in for the Codex CLI on the test floor (plan 57).
+
+`codex exec -o ANSWER resume [--skip-git-repo-check] ID PROMPT` is the one
+form the runtime runs. The fake finds the rollout by id under
+`$NEEDLE_CODEX_HOME/sessions`, appends the turn's events the way Codex does
+(`task_started`, a tool call, `task_complete`) and follows the fate the
+test scripted in `$NEEDLE_FAKE_STATE` (`codex`): it answers by writing its
+last message to the `-o` file, as Codex itself does outside the sandbox;
+answers with nothing; fails at once; or lingers at work until stopped.
+Every call is logged with its argv, the id and the prompt, so a test can
+read what the runtime asked for.
+"""
+
+import fcntl
+import json
+import os
+import sys
+import time
+from datetime import UTC, datetime
+from pathlib import Path
+
+STATE = Path(os.environ["NEEDLE_FAKE_STATE"])
+HOME = Path(os.environ["NEEDLE_CODEX_HOME"])
+
+
+def _locked(function):
+    with (STATE.parent / (STATE.name + ".lock")).open("a+") as lock:
+        fcntl.flock(lock, fcntl.LOCK_EX)
+        try:
+            blob = json.loads(STATE.read_text(encoding="utf-8"))
+            result = function(blob)
+            STATE.write_text(json.dumps(blob, indent=1), encoding="utf-8")
+            return result
+        finally:
+            fcntl.flock(lock, fcntl.LOCK_UN)
+
+
+def _proc_start(pid: int) -> str:
+    return (Path("/proc") / str(pid) / "stat").read_text().rsplit(")", 1)[1].split()[19]
+
+
+def _now() -> str:
+    return datetime.now(UTC).isoformat(timespec="milliseconds").replace("+00:00", "Z")
+
+
+def _append(path: Path, kind: str, payload: dict) -> None:
+    with path.open("a", encoding="utf-8") as f:
+        f.write(json.dumps({"timestamp": _now(), "type": kind, "payload": payload}) + "\n")
+
+
+def resume(args: list[str]) -> int:
+    answer = None
+    rest: list[str] = []
+    i = 0
+    while i < len(args):
+        if args[i] in ("-o", "--output-last-message") and i + 1 < len(args):
+            answer = args[i + 1]
+            i += 2
+        elif args[i].startswith("-"):
+            i += 1
+        else:
+            rest.append(args[i])
+            i += 1
+    if not rest or rest[0] != "resume" or len(rest) < 3:
+        print("error: usage: codex exec [-o FILE] resume ID PROMPT", file=sys.stderr)
+        return 2
+    session_id, prompt = rest[1], rest[2]
+    fate = _locked(lambda blob: blob["codex"].pop(0) if blob.get("codex") else {"then": "answer"})
+    _locked(
+        lambda blob: blob.setdefault("codex_log", []).append(
+            {"argv": args, "id": session_id, "prompt": prompt, "answer": answer, "fate": fate}
+        )
+    )
+    then = fate.get("then", "answer")
+    if then == "fail":
+        print(fate.get("stderr", "error: no session found"), file=sys.stderr)
+        return 1
+    print(f"OpenAI Codex v0.152.1 (fake)\nsession id: {session_id}", file=sys.stderr)
+    found = sorted((HOME / "sessions").rglob(f"rollout-*-{session_id}.jsonl"))
+    if not found:
+        print(f"error: no session found for {session_id}", file=sys.stderr)
+        return 1
+    rollout = found[0]
+    _append(rollout, "event_msg", {"type": "task_started", "turn_id": "fake"})
+    _append(
+        rollout,
+        "response_item",
+        {"type": "custom_tool_call", "name": "exec", "input": "await tools.exec_command({})"},
+    )
+    if then == "linger":
+        pid = os.getpid()
+        _locked(lambda blob: blob.setdefault("pids", []).append([pid, _proc_start(pid)]))
+        # The floor tears a `sleep` down and nothing else; the name keeps
+        # the id in argv, which is how the runtime finds a worker's process.
+        os.execv("/usr/bin/sleep", [f"codex-exec-resume-{session_id}", "300"])
+    time.sleep(float(fate.get("after", 0.3)))
+    text = "" if then == "silent" else fate.get("text", "the answer, from the fake worker")
+    _append(rollout, "event_msg", {"type": "task_complete", "turn_id": "fake"})
+    if answer is not None:
+        Path(answer).write_text(text, encoding="utf-8")
+    print(text)
+    return 0
+
+
+def main(argv: list[str]) -> int:
+    if argv[:1] == ["--version"]:
+        print("codex-cli 0.152.1 (fake)")
+        return 0
+    if argv[:1] == ["exec"]:
+        return resume(argv[1:])
+    print(f"fake codex: unsupported {argv}", file=sys.stderr)
+    return 2
+
+
+if __name__ == "__main__":
+    sys.exit(main(sys.argv[1:]))

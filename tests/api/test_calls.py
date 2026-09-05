@@ -275,3 +275,68 @@ def test_a_lane_party_by_a_call_hears_the_answer_as_its_word(
     assert word(client, lane) == [
         f"A note landed on the machine's watercooler: {answer} — # From the colleague"
     ]
+
+
+# ── plan 57: the same two verbs reach a colleague of the other make ────
+
+WORKER = "01a07123-7d89-78f3-ad15-ee875e35a4c8"
+
+
+def test_call_codex_resumes_the_worker_and_wait_returns_as_its_last_message_lands(
+    client: TestClient, machine_floor: Floor, repo: Path, capsys
+):
+    machine_floor.write_rollout(WORKER, cwd=str(repo))
+    machine_floor.script_codex({"then": "answer", "text": "The second.", "after": 4.0})
+    note = a_note(machine_floor)
+    answer = machine_floor.discussion / "from-01a07123-re-topic.md"
+
+    started = time.monotonic()
+    assert main(["call", "codex", str(note), "--objective", "Say which."]) == 0
+    said = capsys.readouterr().out
+    assert said.startswith("call 1: 01a07123 is working on"), said
+    assert f"the answer lands in {answer}" in said and "wait for it: needle wait 1" in said
+    ran = machine_floor.state()["codex_log"]
+    assert len(ran) == 1 and ran[0]["id"] == WORKER and ran[0]["answer"] == str(answer)
+    brief = ran[0]["prompt"]
+    assert brief.startswith(f"A colleague calls you with a question. Read {note} first")
+    assert "Say which." in brief and "Answer as your final message" in brief
+    assert "Do not write that file yourself" in brief
+    assert machine_floor.state()["launch_log"] == [], "no Claude session was started for it"
+
+    assert main(["sessions"]) == 0
+    listed = capsys.readouterr().out
+    assert "codex     01a07123  working  background  codex-01a07123" in listed, listed
+
+    assert main(["wait", "1", "--ceiling", "10"]) == 0
+    took = time.monotonic() - started
+    said = capsys.readouterr().out
+    assert said.startswith(f"landed: {answer} landed at ") and said.rstrip().endswith("The second.")
+    assert took < 9.0, f"the answer landed at about 4 s and the wait returned at {took:.1f} s"
+    assert answer.read_text(encoding="utf-8") == "The second."
+
+    reconcile(client)
+    store = client.app.state.loops.live.store
+    ended = store.call(1)
+    assert ended is not None and ended.slot == "codex" and ended.ended_at is not None
+
+
+def test_a_codex_worker_that_ends_with_nothing_is_reported_before_the_ceiling(
+    client: TestClient, machine_floor: Floor, repo: Path, capsys
+):
+    machine_floor.write_rollout(WORKER, cwd=str(repo))
+    machine_floor.script_codex({"then": "silent", "after": 1.5})
+    note = a_note(machine_floor)
+    assert main(["call", WORKER[:8], str(note)]) == 0
+    capsys.readouterr()
+    started = time.monotonic()
+    assert main(["wait", "1", "--ceiling", "20"]) == 1
+    assert time.monotonic() - started < 8, "the ceiling was twenty seconds; the truth came first"
+    said = capsys.readouterr().out
+    assert said.startswith("ended: ") and "without its note" in said
+
+    machine_floor.script_codex({"then": "fail", "stderr": "error: no session found"})
+    assert main(["call", WORKER[:8], str(note)]) == 1
+    said = capsys.readouterr().out
+    assert "not running:" in said and "no session found" in said
+    store = client.app.state.loops.live.store
+    assert len(store.calls()) == 1, "a launch that failed recorded no second call"

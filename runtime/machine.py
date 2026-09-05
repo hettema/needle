@@ -93,6 +93,19 @@ def transcript_size(cwd: str, session_id: str) -> int | None:
         return None
 
 
+def codex_home() -> Path:
+    """Codex's own configuration directory, which is a registry of its
+    own: every session of the other make writes a rollout under its
+    `sessions/` (plan 57, `runtime.codex`)."""
+    return _path("NEEDLE_CODEX_HOME", Path.home() / ".codex")
+
+
+def codex_sessions_root() -> Path:
+    """`<codex home>/sessions/<yyyy>/<mm>/<dd>/rollout-<stamp>-<id>.jsonl`,
+    one file per Codex session, verified on this machine 2026-09-05."""
+    return codex_home() / "sessions"
+
+
 def meminfo_path() -> Path:
     """The kernel's memory summary; the floor lays one of its own."""
     return _path("NEEDLE_MEMINFO", PROC / "meminfo")
@@ -165,6 +178,49 @@ def spawn(argv: list[str], *, env: dict[str, str] | None = None) -> None:
         child.wait(timeout=SPAWN_REAP_SECONDS)
 
 
+def detach(argv: list[str], *, cwd: str | Path, log: Path) -> int:
+    """Start a process the runtime watches by pid and never pipes to or
+    waits on: a called Codex worker (plan 57, item 2). Forked twice so it
+    is init's child, not ours — a worker that outlives the command that
+    called it is nobody's zombie, and nothing the caller does ends it.
+    What it prints goes to `log`, so a death has its words and a live
+    worker never blocks on a full pipe. Answers the worker's pid; a
+    command that cannot be executed is a worker that ends at once with
+    the error in the log, which the caller reads as a death."""
+    reader, writer = os.pipe()
+    pid = os.fork()
+    if pid == 0:  # the intermediate: leaves the session, hands the pid over, exits
+        os.close(reader)
+        os.setsid()
+        grandchild = os.fork()
+        if grandchild == 0:
+            os.close(writer)
+            try:
+                sink = os.open(log, os.O_WRONLY | os.O_APPEND | os.O_CREAT, 0o644)
+                quiet = os.open(os.devnull, os.O_RDONLY)
+                os.dup2(quiet, 0)
+                os.dup2(sink, 1)
+                os.dup2(sink, 2)
+                os.chdir(cwd)
+                os.execvp(argv[0], argv)
+            except OSError as error:
+                os.write(2, f"could not run {argv[0]}: {error}\n".encode())
+            os._exit(127)
+        os.write(writer, str(grandchild).encode())
+        os._exit(0)
+    os.close(writer)
+    handed = os.read(reader, 32)
+    os.close(reader)
+    os.waitpid(pid, 0)
+    return int(handed)
+
+
+def terminate(pid: int) -> None:
+    """Ask a process of ours to end; a pid already gone is no error."""
+    with contextlib.suppress(ProcessLookupError, PermissionError):
+        os.kill(pid, 15)
+
+
 def session_env(config_dir: str | Path, slot: str) -> dict[str, str]:
     """The environment a session on a slot runs with. `CLAUDE_ACCOUNT` mirrors
     what `claude-acct use` sets, so the statusline and the browser router
@@ -189,7 +245,10 @@ def process_start(pid: int) -> str | None:
     """Field 22 of /proc/<pid>/stat, the start time the registry stamps as
     `procStart` (verified equal on every live row, 2026-09-04)."""
     fields = _stat_fields(pid)
-    return None if fields is None or len(fields) < 20 else fields[19]
+    if fields is None or len(fields) < 20 or fields[0] == "Z":
+        # A zombie has a stat line and no process: it is gone.
+        return None
+    return fields[19]
 
 
 def process_alive(pid: int, start: str | None) -> bool:
@@ -223,6 +282,36 @@ def descendants_of(pid: int) -> list[int]:
             out.append(child)
             queue.append(child)
     return out
+
+
+def pids() -> list[int]:
+    """Every process in /proc right now."""
+    return [int(entry.name) for entry in PROC.iterdir() if entry.name.isdigit()]
+
+
+def cmdline_of(pid: int) -> str | None:
+    """The process's argv as one space-joined line; None once it is gone."""
+    try:
+        raw = (PROC / str(pid) / "cmdline").read_bytes()
+    except OSError:
+        return None
+    return raw.replace(b"\0", b" ").decode("utf-8", errors="replace").strip()
+
+
+def open_files_of(pid: int) -> list[str]:
+    """The paths the process holds open, as its fd links name them; empty
+    when it is gone or not ours to read. A Codex terminal holds its rollout
+    open and names it nowhere in argv (verified 2026-09-05)."""
+    folder = PROC / str(pid) / "fd"
+    try:
+        entries = list(folder.iterdir())
+    except OSError:
+        return []
+    found: list[str] = []
+    for entry in entries:
+        with contextlib.suppress(OSError):
+            found.append(os.readlink(entry))
+    return found
 
 
 def cgroup_of(pid: int) -> str | None:

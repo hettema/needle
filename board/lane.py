@@ -121,6 +121,16 @@ def ago(then: datetime | None, now: datetime) -> str:
     return f"{round(hours / 24)} d"
 
 
+def where_of(session: Session) -> str:
+    """Where a session runs, as the board says it: its model and slot when
+    the registry recorded a model, else the slot alone. The board used to
+    say `fable` for a row with no model recorded, which was a guess for a
+    terminal of the owner's and a false claim for a session of another
+    make (plan 57): Codex rows carry the make's name as their slot and no
+    rung the `Model` ladder could hold."""
+    return f"{session.model.value} on {session.slot}" if session.model else f"on {session.slot}"
+
+
 def _sessions_in(path: str, name: str, facts: LaneFacts, discussing: set[str]) -> list[Session]:
     return [
         s
@@ -245,7 +255,7 @@ def lane_for(card: Card, facts: LaneFacts) -> Lane:
     # wins: such a lane has ended, whatever /proc says about the process.
     gone = winner is not None and not on_disk
     if winner is not None and winner.pid is not None and not gone:
-        where = f"{winner.model.value if winner.model else 'fable'} on {winner.slot}"
+        where = where_of(winner)
         if winner.wall is not None:
             state = LaneState.MOVING
             sentence = (
