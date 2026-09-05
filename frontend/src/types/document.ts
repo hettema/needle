@@ -11,6 +11,9 @@ export type DocumentState = (typeof DOCUMENT_STATE_VALUES)[number];
 export const FIX_MARK_VALUES = ["now", "when", "his"] as const;
 export type FixMark = (typeof FIX_MARK_VALUES)[number];
 
+export const STANCE_VALUES = ["met", "deviated"] as const;
+export type Stance = (typeof STANCE_VALUES)[number];
+
 export const SUGGESTION_KIND_VALUES = ["idea", "defect"] as const;
 export type SuggestionKind = (typeof SUGGESTION_KIND_VALUES)[number];
 
@@ -33,6 +36,7 @@ export interface Document {
   fix_note?: string | null;
   cites: string[];
   handouts: Handout[];
+  items: Item[];
   head_fields: HeadField[];
   intent_heading: string | null;
   intent: string;
@@ -56,4 +60,31 @@ export interface Fix {
 export interface HeadField {
   key: string;
   value: string;
+}
+
+export interface Item {
+  number: number;
+  title: string;
+  done_means: string | null;
+  stance: Stance | null;
+  text: string | null;
+}
+
+export interface Review {
+  path: string;
+  plan_stem: string | null;
+  passes: ReviewPass[];
+  clean: boolean;
+  found: number;
+  fixed: number;
+  no_change: number;
+  filed: number;
+  filed_names: string[];
+}
+
+export interface ReviewPass {
+  number: number;
+  lens: string;
+  text: string;
+  clean: boolean;
 }

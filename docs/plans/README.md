@@ -9,6 +9,16 @@ Every plan carries, near the top: `**Status:**`, `**Written:**`,
 it depends on another plan. Every item in a plan ends with what "done" means
 for it, as a behaviour someone can observe.
 
+**And when that holds, the session says so at the item.** The session ends
+the item with one line, `**Met:** <what shows it>`, in the commit that makes
+it true; an item that landed otherwise than written ends with
+`**Deviated:** <pointer>`. Why: the card shows the count of items met while
+the lane runs, and nothing but the session can know it; the stance is the
+close-out's, written early, so a close finds every promise already answered
+(plan 13). The board reads the lane's own copy of the plan and counts; it
+never judges an item. The archive's older habit — DONE, SHIPPED or a tick on
+the item's own line — reads as met.
+
 **And an item that hands work out says so.** An item whose work goes to a
 role ends with a `Hands out:` sentence: `Hands out: <role> — <what it hands
 out>; verifies <what the executing session checks before acting on the

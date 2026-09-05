@@ -21,11 +21,13 @@ import {
   Hist,
   HistRow,
   Inline,
+  Items,
   Markdown,
   MoveTo,
   Note,
   Notice,
   OpenBody,
+  Passes,
   PathText,
   PlanBlock,
   PlanBody,
@@ -36,6 +38,7 @@ import {
   Section,
   StatLine,
   StatLines,
+  Strip,
 } from "../components/ui";
 import { ago, when } from "./time";
 import { useProject } from "./ProjectContext";
@@ -149,6 +152,18 @@ export function OpenCard({ card, onMoveTo }: { card: CardSummary; onMoveTo: (num
   };
   const doors = detail.doors;
   const lane = detail.lane;
+  // The items are the lane's own copy while it has hands on the card, and
+  // the plan as the trunk holds it in every other column — so a shipped
+  // card keeps the shape of its run (plan 13, item 3).
+  const progress = lane?.progress ?? null;
+  const items = progress ? progress.items : document?.items ?? [];
+  // The header keeps to one line at the open card's width (the served board
+  // wrapped it under the whole count line): the count, and where it was read.
+  const itemsFrom = progress
+    ? `${progress.met} of ${progress.total} met${progress.deviated ? `, ${progress.deviated} deviated` : ""} · read ${ago(progress.read_at)} from the lane's copy`
+    : document
+      ? `${document.items.filter((i) => i.stance !== null).length} of ${document.items.length} marked, as the plan holds them`
+      : undefined;
   // One door is filled and the rest are outlined: pressable is a shape, never
   // a hue (plan 27, item 4). The filled one is the first act this state
   // allows, in the order a card is acted on.
@@ -253,6 +268,28 @@ export function OpenCard({ card, onMoveTo }: { card: CardSummary; onMoveTo: (num
           </Note>
         ) : null}
       </Section>
+
+      {items.length ? (
+        <Section title="The plan's items" from={itemsFrom}>
+          <Strip items={items} label={itemsFrom ?? "the plan's items"} />
+          <Items items={items} />
+        </Section>
+      ) : null}
+
+      {progress && !progress.review && progress.met + progress.deviated === progress.total ? (
+        <Section title="The review" from="not started, or unnamed">
+          <Quiet>Every item is marked, and no record under docs/reviews/ in the lane's worktree names this plan on its Plan: line yet. The counter turns into the review loop's the moment one does.</Quiet>
+        </Section>
+      ) : null}
+
+      {progress?.review ? (
+        <Section title="The review" from={progress.line}>
+          <Passes review={progress.review} />
+          <Quiet>
+            Read from <PathText>{progress.review.path}</PathText> in the lane's worktree, {ago(progress.read_at)}.
+          </Quiet>
+        </Section>
+      ) : null}
 
       {lane && lane.state !== "none" ? (
         <Section title="The lane" from={lane.session ? `${lane.session.short_id} · ${lane.session.model ?? "fable"} on ${lane.session.slot}` : lane.name}>

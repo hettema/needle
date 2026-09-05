@@ -15,7 +15,7 @@ from domain.evidence import Standing
 from domain.gate import Gate
 from domain.handout import Handouts
 from domain.hook import HeardMark
-from domain.lane import Collision, Conversation, Doors, Lane, LaneState
+from domain.lane import Collision, Conversation, Doors, Lane, LaneState, Progress
 from domain.project import Project
 from domain.row import Row
 from domain.signal import Reading, Signal, SignalKind, WindowlessSession
@@ -185,6 +185,10 @@ class CardSummary(BaseModel):
     lane_state: LaneState
     colliding: Collision | None
     """The lane has drifted into another live lane's files, named (plan 07, item 2)."""
+    progress: Progress | None
+    """How far the lane has come, in its own words, while a session has
+    hands on the card (plan 13); None otherwise, and None for a plan with
+    no items, which shows the signed card."""
     standing: Standing
     """Who placed the card here, on what evidence, and whether it holds on this read."""
     reading: WindowlessSession | None

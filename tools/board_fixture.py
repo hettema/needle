@@ -34,6 +34,7 @@ from board.lane import (  # noqa: E402
     doors_for,
     lane_for,
 )
+from board.progress import progress_of  # noqa: E402
 from domain.audit import AuditEntry, AuditKind  # noqa: E402
 from domain.board import MachineState  # noqa: E402
 from domain.card import Actor, Card, CardOrigin, DocumentLink, Place  # noqa: E402
@@ -43,7 +44,7 @@ from domain.document import Document, DocumentKind, Fix, FixMark, SuggestionKind
 from domain.evidence import Evidence  # noqa: E402
 from domain.gate import Gate  # noqa: E402
 from domain.hook import HookEvent, HookKind  # noqa: E402
-from domain.lane import Collision, CollisionVerdict  # noqa: E402
+from domain.lane import Collision, CollisionVerdict, Progress  # noqa: E402
 from domain.project import Project  # noqa: E402
 from domain.row import Row, RowKind  # noqa: E402
 from domain.session import Session, SessionKind, SessionState  # noqa: E402
@@ -117,6 +118,7 @@ def _document(*, archived: bool = False, kind: DocumentKind = DocumentKind.PLAN)
         fix_note=None,
         cites=[],
         handouts=[],
+        items=[],
         head_fields=[],
         intent_heading=None,
         intent="",
@@ -398,6 +400,89 @@ def language_cases() -> list[dict[str, object]]:
     return [{"case": case, "card": card.model_dump(mode="json")} for case, card in cases]
 
 
+RECORD = """# Review — a storm warning reaches every skipper
+
+**Plan:** docs/plans/done/2026-09-04-a-storm-warning-reaches-every-skipper.md
+**Reviewer:** the build session
+**Diff range:** 3c91e2a..HEAD
+**Findings:** 9 — 8 fixed before this record, 1 filed.
+
+## The passes
+
+1. **The feature against the plan's "done means".** A boat booked twice was
+   warned twice; the log line said reached before the message left; two more.
+2. **The seams.** Two offices warning at once; the send retried on a timeout
+   and reached a skipper twice; two more.
+3. **The boundaries.** The warning reaches the office's mailer directly — the fix is landing.
+
+## Dispositions
+
+1. **A boat booked twice was warned twice.** FIXED in 4d1e2f.
+2. **The log line said reached before the message left.** FIXED in 4d1e2f.
+3. **A skipper with no phone was skipped in silence.** FIXED in 5e2f3a.
+4. **The list read yesterday's bookings after midnight.** FIXED in 5e2f3a.
+5. **Two offices warned at once.** FIXED in 6f3a4b.
+6. **The send retried on a timeout and reached a skipper twice.** FIXED in 6f3a4b.
+7. **The rehearsal's five unreached were the wrong five.** FIXED in 7a4b5c.
+8. **The Warn button was reachable from the tide table.** FIXED in 7a4b5c.
+9. **A berth is let twice when two offices book in the same second.** Outside
+   this change — filed as docs/slice-suggestions/2026-09-05-a-berth-is-let-twice.md.
+"""
+"""A review record as the lane on the storm-warning plan would write it,
+pass by pass, in Harbourmaster's words: the fixture for the review counter
+(plan 13, item 5). The passes and findings are staged, as the comp says."""
+
+CLEAN_PASS = "4. **The fixed work again.** Re-read the three fix commits. Nothing new. Clean.\n"
+
+
+def progress_cases() -> dict[str, object]:
+    """How far a running card has come, from the real derivation over the
+    storm-warning plan (plan 13): the lane's copy with two items met, with
+    one deviated, with every item met and the review loop open, and with
+    the loop closed by a clean pass. The page test renders each on an
+    Executing card and on the open card's items section."""
+    plan = (HARBOURMASTER / ARRIVAL).read_text(encoding="utf-8")
+    stem = "2026-09-04-a-storm-warning-reaches-every-skipper"
+    met = {
+        1: "**Met:** the list at office/tonight.py; eleven boats on the fixture, each with "
+        "its skipper's phone.",
+        2: "**Met:** Warn sends through office/messages.py; test_warn_reaches_every_boat passes.",
+        3: "**Met:** a line per skipper in office/log.py, reached or not.",
+        4: "**Met:** test_gale_rehearsed finds five unreached.",
+    }
+    deviated = "**Deviated:** sent from the tide clock, not a Warn button; see the review's pass 1."
+
+    def marked(stances: dict[int, str]) -> str:
+        lines = plan.split("\n")
+        out: list[str] = []
+        for line in lines:
+            out.append(line)
+            for number, stance in stances.items():
+                if line.startswith(f"{number}. **"):
+                    out.append(stance)
+        return "\n".join(out)
+
+    def progress(stances: dict[int, str], record: str | None) -> Progress:
+        found = progress_of(
+            marked(stances),
+            plan_stem=stem,
+            read_reviews=lambda: [(f"docs/reviews/{stem}.md", record)] if record else [],
+            now=NOW,
+        )
+        assert found is not None
+        return found
+
+    return {
+        "nothing": progress({}, None).model_dump(mode="json"),
+        "two_met": progress({1: met[1], 2: met[2]}, None).model_dump(mode="json"),
+        "deviated": progress({1: met[1], 2: deviated, 3: met[3]}, None).model_dump(mode="json"),
+        "review_open": progress(met, RECORD).model_dump(mode="json"),
+        "review_clean": progress(
+            met, RECORD.replace("## Dispositions", CLEAN_PASS + "\n## Dispositions")
+        ).model_dump(mode="json"),
+    }
+
+
 def snapshot() -> dict[str, object]:
     with tempfile.TemporaryDirectory() as tmp:
         root = Path(tmp) / "harbourmaster"
@@ -437,6 +522,7 @@ def snapshot() -> dict[str, object]:
             "board": board.model_dump(mode="json"),
             "details": details,
             "language": language_cases(),
+            "progress": progress_cases(),
         }
 
 

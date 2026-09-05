@@ -54,6 +54,7 @@ from board.lane import (
     should_enter_executing,
     with_footprints,
 )
+from board.progress import progress_of
 from board.signals import where_after
 from board.word import compose
 from domain.audit import AuditKind
@@ -64,7 +65,7 @@ from domain.document import DocumentKind
 from domain.evidence import Evidence
 from domain.gate import Gate
 from domain.hook import HookEvent, HookPosted, Word
-from domain.lane import Collision, Doors, Lane, LaneRecord, LaneSnapshot, LaneState
+from domain.lane import Collision, Doors, Lane, LaneRecord, LaneSnapshot, LaneState, Progress
 from domain.launch import LaunchVerdict, WindowlessStart
 from domain.session import Session, SessionState
 from domain.signal import SessionWork, Signal, SignalKind, WindowlessSession
@@ -586,18 +587,65 @@ class Loops:
 
     def _footprints(
         self, live: LiveProject, cards: list[Card], lanes: dict[int, Lane]
-    ) -> tuple[dict[int, set[str]], dict[int, set[str]]]:
+    ) -> tuple[dict[int, set[str]], dict[int, set[str]], dict[int, Progress | None]]:
         """For every lane with hands on its worktree: what the worktree has
-        actually changed (git, re-read on every read) and what its plan
-        names. Read once here for the lanes, the drift and the doors."""
+        actually changed (git, re-read on every read), what its plan names,
+        and how far it has come by its own copy of the plan (plan 13). Read
+        once here for the lanes, the drift and the doors."""
         edits: dict[int, set[str]] = {}
         declared: dict[int, set[str]] = {}
+        progress: dict[int, Progress | None] = {}
         for card in cards:
             lane = lanes[card.number]
             if lane.state in HANDS_ON and lane.path:
                 edits[card.number] = self.runtime.edits(lane.path)
                 declared[card.number] = self._plan_footprint(live, card)
-        return edits, declared
+                progress[card.number] = self._lane_progress(live, card, lane.path)
+        return edits, declared, progress
+
+    def _lane_progress(self, live: LiveProject, card: Card, lane_path: str) -> Progress | None:
+        """The card's plan as the lane's worktree carries it, and — once every
+        item is met — the review record there whose `Plan:` names it. One
+        file per lane per beat while items are open; the reviews folder is
+        listed only in the review loop. Never the main checkout's copy: that
+        is the plan as it stood at Start (plan 13, ruling 3). A plan the lane
+        has already archived is read from `done/`, so the count holds through
+        the close."""
+        if card.link is None or card.link.kind != DocumentKind.PLAN:
+            return None
+        document = live.index.find(card.link.kind, card.link.stem)
+        if document is None:
+            return None
+        root = Path(lane_path)
+        text: str | None = None
+        for candidate in (document.path, f"docs/plans/done/{document.stem}.md"):
+            try:
+                text = (root / candidate).read_text(encoding="utf-8", errors="replace")
+                break
+            except OSError:
+                continue
+        if text is None:
+            return None
+
+        def read_reviews() -> list[tuple[str, str]]:
+            records: list[tuple[str, str]] = []
+            for path in sorted((root / "docs" / "reviews").glob("*.md")):
+                if path.name == "README.md":
+                    continue
+                try:
+                    records.append(
+                        (
+                            str(path.relative_to(root)),
+                            path.read_text(encoding="utf-8", errors="replace"),
+                        )
+                    )
+                except OSError:
+                    continue
+            return records
+
+        return progress_of(
+            text, plan_stem=document.stem, read_reviews=read_reviews, now=clock.now()
+        )
 
     def _doors(
         self,
@@ -737,9 +785,7 @@ class Loops:
         so the cadence moves on and the card says why."""
         slug = live.project.slug
         detail = self.live.detail(slug, card.number)
-        brief = reading_brief(
-            detail, live.project, signal, now.date().isoformat(), trigger=trigger
-        )
+        brief = reading_brief(detail, live.project, signal, now.date().isoformat(), trigger=trigger)
         launch = self.runtime.start_windowless(
             WindowlessStart(
                 repo=live.project.path,

@@ -32,6 +32,7 @@ from domain.lane import (
     Lane,
     LaneRecord,
     LaneState,
+    Progress,
     Readiness,
     StartState,
 )
@@ -354,12 +355,16 @@ def lane_for(card: Card, facts: LaneFacts) -> Lane:
 
 
 def with_footprints(
-    lanes: dict[int, Lane], edits: dict[int, set[str]], declared: dict[int, set[str]]
+    lanes: dict[int, Lane],
+    edits: dict[int, set[str]],
+    declared: dict[int, set[str]],
+    progress: dict[int, Progress | None] | None = None,
 ) -> dict[int, Lane]:
     """Every lane with its footprint read in, and each live lane's drift into
     another live lane's files named on both (plan 07, item 2). `edits` is
     what each live worktree has changed, read from git by the caller;
-    `declared` is what each card's plan names."""
+    `declared` is what each card's plan names; `progress` how far each
+    live lane has come, from its own copy of the plan (plan 13)."""
     colliding = drift(edits)
     out: dict[int, Lane] = {}
     for number, lane in lanes.items():
@@ -368,6 +373,7 @@ def with_footprints(
                 "edits": sorted(edits.get(number, set())),
                 "declared": sorted(declared.get(number, set())),
                 "colliding": colliding.get(number),
+                "progress": (progress or {}).get(number),
             }
         )
     return out

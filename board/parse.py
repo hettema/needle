@@ -10,7 +10,18 @@ document with no recognisable head is still a document with a title.
 import re
 from datetime import date, datetime
 
-from domain.document import Document, DocumentKind, Fix, FixMark, HeadField, SuggestionKind
+from domain.document import (
+    Document,
+    DocumentKind,
+    Fix,
+    FixMark,
+    HeadField,
+    Item,
+    Review,
+    ReviewPass,
+    Stance,
+    SuggestionKind,
+)
 from domain.gate import Gate
 from domain.handout import Handout
 
@@ -63,10 +74,41 @@ _VERIFIES = re.compile(
 """Where the verification starts: `; verifies <what>` as the README writes
 it, and `; the lane verifies by <what>` as plan 13 wrote it before the
 README fixed the form (review pass 1)."""
-_ITEM_HEADING = re.compile(r"^#{2,4}\s+(\d+)[.)]?\s+(.+?)\s*$")
+_ITEM_HEADING = re.compile(r"^(#{2,4})\s+(\d+)[.)]?\s+(.+?)\s*$")
 _ITEM_LIST = re.compile(r"^\s{0,3}(\d+)[.)]\s+(.+?)\s*$")
 _ITEM_BOLD = re.compile(r"^\*\*(.+?)\*\*")
 ITEM_LABEL_MAX = 60
+_STANCE = re.compile(r"(?:^\s*|(?<=[.!?]\s))\*\*(met|deviated):\*\*\s*(.*)$", re.I)
+"""The stance a session writes at an item (plan 13, item 1): `**Met:** <what
+shows it>` or `**Deviated:** <pointer>`, at the head of a line or beginning
+a sentence, bold as the README writes it — a plain "met:" in prose is
+prose. The last one in the item is the item's stance."""
+_INLINE_MET = re.compile(r"✅|\[(?:DONE|SHIPPED)[^\]]*\]|\b(?:DONE|SHIPPED)\b")
+"""The inline habit five months of archive already have: a tick, `[DONE
+<date>]` or a bare DONE/SHIPPED on the item's own line reads as met, so the
+archive reads right without a rewrite. Upper case only: "done means" is
+the promise, not the stance."""
+_DONE_MEANS = re.compile(
+    r"(?:^\s*|(?<=[.!?:]\s)|(?<=\*\*)|(?<=\*\*\s))\*{0,2}done means:?\*{0,2}\s*(.+)$", re.I
+)
+_SENTENCE_MARKERS = re.compile(r"\*{0,2}(?:hands out|met|deviated):\*{0,2}", re.I)
+"""Where an item's "done means" sentence stops: at the next sentence the
+grammar names — the handout, or the stance."""
+_TASK_HEADING = re.compile(r"\b(?:task|tasks|item|items|slice|slices|work|steps|breakdown)\b", re.I)
+"""What a plan calls the section its task list sits under, across the
+corpora: "Slices", "Items", "The work", "Task breakdown". A bold numbered
+list under one of these is the task list even when a decision log or a
+ruling list comes first in the file."""
+_PLAN_STEM = re.compile(r"docs/plans/(?:done/)?([\w.-]+?)\.md")
+_PASSES_HEADING = re.compile(r"^##\s+the passes\b", re.I)
+_DISPOSITIONS_HEADING = re.compile(r"^##\s+dispositions\b", re.I)
+_CLEAN = re.compile(r"\bnothing new\b|\bclean\b[.!]?\s*$", re.I)
+"""A pass that found nothing: the record says "nothing new" or ends the
+pass on the word clean, as every record under `docs/reviews/` does."""
+_FIXED = re.compile(r"\bFIXED\b")
+_NO_CHANGE = re.compile(r"\bNO CHANGE\b")
+_FILED = re.compile(r"\bfiled\b", re.I)
+_INTEGER = re.compile(r"\d+")
 
 ESSENCE_MAX = 280
 
@@ -223,9 +265,16 @@ def fix_of(kind: DocumentKind, fields: list[HeadField]) -> tuple[Fix | None, str
     return Fix(mark=mark, why=rest, trigger=None), None
 
 
-def _item_label(number: str, title: str) -> str:
+def _item_words(title: str) -> str:
+    """An item's title as words: the bold lead when the line has one, the
+    inline stance habit stripped, the marks and the trailing stop gone."""
     bold = _ITEM_BOLD.match(title)
-    words = _plain(bold.group(1) if bold else title).rstrip(".:—-– ")
+    words = _plain(_INLINE_MET.sub("", bold.group(1) if bold else title))
+    return words.strip().rstrip(".:—-– ").strip()
+
+
+def _item_label(number: str, title: str) -> str:
+    words = _item_words(title)
     if len(words) > ITEM_LABEL_MAX:
         words = words[: ITEM_LABEL_MAX - 1].rstrip() + "…"
     return f"{number}. {words}" if words else number
@@ -280,7 +329,7 @@ def handouts_of(text: str) -> list[Handout]:
         heading = _ITEM_HEADING.match(line)
         listed = _ITEM_LIST.match(line) if heading is None else None
         if heading:
-            item = _item_label(heading.group(1), heading.group(2))
+            item = _item_label(heading.group(2), heading.group(3))
         elif listed:
             item = _item_label(listed.group(1), listed.group(2))
         match = _HANDS_OUT.search(line)
@@ -294,6 +343,262 @@ def handouts_of(text: str) -> list[Handout]:
         if handout is not None:
             found.append(handout)
     return found
+
+
+def _unfenced(text: str) -> list[str | None]:
+    """The document's lines with every fenced line replaced by None, so a
+    reader can keep line numbers while never reading an example."""
+    out: list[str | None] = []
+    in_fence = False
+    for line in text.split("\n"):
+        if _FENCE.match(line.strip()):
+            in_fence = not in_fence
+            out.append(None)
+            continue
+        out.append(None if in_fence else line)
+    return out
+
+
+def _sentence_to_paragraph_end(lines: list[str | None], index: int, first: str) -> str:
+    """A sentence that begins on `lines[index]` and runs to the end of its
+    paragraph, as `handouts_of` reads a handout: plans wrap at eighty."""
+    parts = [first]
+    index += 1
+    while index < len(lines):
+        line = lines[index]
+        if line is None or _paragraph_ends(line):
+            break
+        parts.append(line.strip())
+        index += 1
+    return " ".join(parts)
+
+
+def _item(number: int, title_line: str, rest_of_line: str, body: list[str | None]) -> Item:
+    """One item from its title line and the lines under it: its words, its
+    "done means" sentence, and its stance — the last `**Met:**` or
+    `**Deviated:**` written in it, else the inline habit on its own line."""
+    title = _item_words(title_line)
+    stance: Stance | None = None
+    text: str | None = None
+    if _INLINE_MET.search(title_line):
+        stance = Stance.MET
+        tail = _plain(_INLINE_MET.sub("", rest_of_line)).strip().lstrip("—-–:, ").strip()
+        # A stop left standing alone where the word was: "keywords? ." is "keywords?".
+        tail = re.sub(r"\s+(?=[.,;:!?])", "", tail).strip(".").strip()
+        text = tail or None
+    done_means: str | None = None
+    # A list item's line carries its sentences after the bold lead — "5.
+    # **Reporting.** Done means: …" — so the rest of that line is read with
+    # the lines under it.
+    lines: list[str | None] = [rest_of_line, *body]
+    for offset, line in enumerate(lines):
+        if line is None:
+            continue
+        marked = _STANCE.search(line)
+        if marked:
+            stance = Stance(marked.group(1).lower())
+            said = _sentence_to_paragraph_end(lines, offset, marked.group(2))
+            text = _plain(said).strip() or None
+            continue
+        promised = _DONE_MEANS.search(line)
+        if promised and done_means is None:
+            sentence = _sentence_to_paragraph_end(lines, offset, promised.group(1))
+            cut = _SENTENCE_MARKERS.search(sentence)
+            done_means = _plain(sentence[: cut.start()] if cut else sentence).strip() or None
+    return Item(number=number, title=title, done_means=done_means, stance=stance, text=text)
+
+
+def _heading_items(lines: list[str | None]) -> list[Item]:
+    """Items as `### N. Title` sections: the numbered headings at the deepest
+    level the document numbers, so `## 1. Intent` — a corpus variant of the
+    intent heading — is a section and not an item when `### 1.` items exist
+    under it. An item runs to the next heading of any level."""
+    numbered = [
+        (index, m)
+        for index, line in enumerate(lines)
+        if line is not None and (m := _ITEM_HEADING.match(line))
+    ]
+    if not numbered:
+        return []
+    deepest = max(len(m.group(1)) for _, m in numbered)
+    starts = [(index, m) for index, m in numbered if len(m.group(1)) == deepest]
+    items: list[Item] = []
+    for index, m in starts:
+        end = index + 1
+        while end < len(lines) and not (lines[end] is not None and lines[end].startswith("#")):
+            end += 1
+        rest = m.group(3)
+        bold = _ITEM_BOLD.match(rest)
+        after = rest[bold.end() :] if bold else ""
+        items.append(_item(int(m.group(2)), rest, after, lines[index + 1 : end]))
+    return items
+
+
+def _numbered_entries(lines: list[str | None]) -> list[tuple[int, str, list[str | None]]]:
+    """Top-level `N. text` entries with the lines under each, up to the next
+    entry or heading: the shape of a list of items, of a record's passes and
+    of its dispositions. Each is (number, first line's text, body)."""
+    entries: list[tuple[int, str, list[str | None]]] = []
+    index = 0
+    while index < len(lines):
+        line = lines[index]
+        listed = _ITEM_LIST.match(line) if line is not None else None
+        if listed is None:
+            index += 1
+            continue
+        end = index + 1
+        while end < len(lines):
+            nxt = lines[end]
+            if nxt is not None and (_ITEM_LIST.match(nxt) or nxt.startswith("#")):
+                break
+            end += 1
+        entries.append((int(listed.group(1)), listed.group(2), lines[index + 1 : end]))
+        index = end
+    return entries
+
+
+def _list_runs(lines: list[str | None]) -> list[tuple[str, list[Item]]]:
+    """Every run of consecutive top-level numbers that starts at a bold 1,
+    each with the heading it sits under. A heading or a break in the
+    numbering ends a run. A plain numbered list — acceptance criteria, a
+    ruling's reasons — starts no run, which is what the bold lead decides."""
+    runs: list[tuple[str, list[Item]]] = []
+    heading = ""
+    items: list[Item] = []
+    expected = 1
+    for index, line in enumerate(lines):
+        if line is None:
+            continue
+        if line.startswith("#"):
+            if items:
+                runs.append((heading, items))
+                items = []
+            heading = line.lstrip("#").strip()
+            expected = 1
+            continue
+        listed = _ITEM_LIST.match(line)
+        if listed is None:
+            continue
+        number, rest = int(listed.group(1)), listed.group(2)
+        bold = _ITEM_BOLD.match(rest)
+        if not items and (number != 1 or bold is None):
+            continue
+        if number != expected:
+            if items:
+                runs.append((heading, items))
+                items = []
+            expected = 1
+            if number != 1 or bold is None:
+                continue
+        end = index + 1
+        while end < len(lines):
+            nxt = lines[end]
+            if nxt is not None and (_ITEM_LIST.match(nxt) or nxt.startswith("#")):
+                break
+            end += 1
+        after = rest[bold.end() :] if bold else ""
+        items.append(_item(number, rest, after, lines[index + 1 : end]))
+        expected += 1
+    if items:
+        runs.append((heading, items))
+    return runs
+
+
+def _list_items(lines: list[str | None]) -> list[Item]:
+    """Items as a top-level `1. **Title.**` list, Hello Revenue's shape: the
+    bold run under the section a plan calls its tasks, slices, items or
+    work when it has one — a decision log or a ruling list can come first
+    in the file — else the first bold run."""
+    runs = _list_runs(lines)
+    named = next((items for heading, items in runs if _TASK_HEADING.search(heading)), None)
+    return named if named is not None else (runs[0][1] if runs else [])
+
+
+def items_of(text: str) -> list[Item]:
+    """A plan's task list with each item's stance (plan 13, item 1), in
+    either shape the corpora use: `### N. Title` sections as Needle's plans,
+    else a top-level `N. **Title.**` list as Hello Revenue's. Headings win
+    when a document has both, since Needle's rulings are a bold numbered
+    list under a plan whose items are headings. Fenced code is not read."""
+    lines = _unfenced(text)
+    return _heading_items(lines) or _list_items(lines)
+
+
+def _section(lines: list[str | None], heading: re.Pattern[str]) -> list[str | None]:
+    """The lines under the first `## ` heading matching, up to the next `## `."""
+    start = next(
+        (i for i, line in enumerate(lines) if line is not None and heading.match(line)), None
+    )
+    if start is None:
+        return []
+    end = start + 1
+    while end < len(lines):
+        line = lines[end]
+        if line is not None and line.startswith("## "):
+            break
+        end += 1
+    return lines[start + 1 : end]
+
+
+def _lead_and_rest(first: str, body: list[str | None]) -> tuple[str, str]:
+    """An entry's bold lead as its name, and everything else as its text."""
+    bold = _ITEM_BOLD.match(first)
+    lead = bold.group(1) if bold else _SENTENCE_END.split(first, maxsplit=1)[0]
+    rest = first[bold.end() :] if bold else first[len(lead) :]
+    tail = " ".join(line.strip() for line in body if line is not None and line.strip())
+    return _plain(lead).strip().rstrip(".:—-– "), _plain(f"{rest} {tail}").strip().lstrip("—-–:, ")
+
+
+def plan_stem_of(record_text: str) -> str | None:
+    """The stem of the plan a review record's `**Plan:**` line names, from
+    the head alone: how a lane's record is told from the others before any
+    of them is parsed whole (thirteen records cost 7 ms parsed, under 1 ms
+    matched by head)."""
+    match = _PLAN_STEM.search(_field(_head_fields(record_text), "Plan") or "")
+    return match.group(1) if match else None
+
+
+def review_of(text: str, path: str) -> Review:
+    """A review record's counts (plan 13, item 5), in the shape
+    `docs/reviews/README.md` prescribes: the plan its head names, the
+    findings count from `**Findings:**`, one pass per numbered entry under
+    `## The passes` — clean when it says nothing new — and each entry under
+    `## Dispositions` as FIXED, NO CHANGE or filed. A record without a
+    section simply has none of that section's counts."""
+    fields = _head_fields(text)
+    plan_stem = plan_stem_of(text)
+    findings_line = _field(fields, "Findings") or ""
+    count = _INTEGER.search(findings_line)
+    lines = _unfenced(text)
+    passes: list[ReviewPass] = []
+    for number, first, body in _numbered_entries(_section(lines, _PASSES_HEADING)):
+        lens, rest = _lead_and_rest(first, body)
+        passes.append(
+            ReviewPass(number=number, lens=lens, text=rest, clean=_CLEAN.search(rest) is not None)
+        )
+    fixed = no_change = filed = 0
+    filed_names: list[str] = []
+    for _, first, body in _numbered_entries(_section(lines, _DISPOSITIONS_HEADING)):
+        name, rest = _lead_and_rest(first, body)
+        whole = f"{first} {rest}"
+        if _FIXED.search(whole):
+            fixed += 1
+        elif _NO_CHANGE.search(whole):
+            no_change += 1
+        elif _FILED.search(whole):
+            filed += 1
+            filed_names.append(name)
+    return Review(
+        path=path,
+        plan_stem=plan_stem,
+        passes=passes,
+        clean=bool(passes) and passes[-1].clean,
+        found=int(count.group(0)) if count else 0,
+        fixed=fixed,
+        no_change=no_change,
+        filed=filed,
+        filed_names=filed_names,
+    )
 
 
 def cites_of(fields: list[HeadField]) -> list[str]:
@@ -356,6 +661,7 @@ def parse_document(
         fix_note=fix_note,
         cites=cites_of(fields),
         handouts=handouts_of(text),
+        items=items_of(text) if kind == DocumentKind.PLAN else [],
         head_fields=fields,
         intent_heading=heading,
         intent=intent,

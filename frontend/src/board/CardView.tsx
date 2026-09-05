@@ -3,7 +3,7 @@ import { useDraggable } from "@dnd-kit/core";
 import { openDoor, openPlan } from "../api";
 import type { CardSummary, FaceDoor } from "../types/board";
 import { HANDS_ON } from "../types/lane";
-import { Button, CardShell, CardTitle, CardTop, Carries, Chip, Cid, Essence, FailNote, Grow, Heard, KbdHint, Kind, Pick, Pickable, Said, StandingMark, StateLine, StateSentence, type DragProps } from "../components/ui";
+import { Button, CardShell, CardTitle, CardTop, Carries, Chip, Cid, Essence, FailNote, Grow, Heard, HowFar, KbdHint, Kind, Pick, Pickable, Said, StandingMark, StateLine, StateSentence, type DragProps } from "../components/ui";
 import type { MoveStatus } from "../state/board";
 import { useLift } from "./LiftContext";
 import { OpenCard } from "./OpenCard";
@@ -115,6 +115,7 @@ export function CardBody({ card, open, onOpen, onClose, selected = false, select
         <>
           {state.detail ? <Essence said>{state.detail}</Essence> : card.essence ? <Essence>{card.essence}</Essence> : null}
           <Carries cards={card.folded} open={false} />
+          {card.place.column === "Executing" && card.progress ? <HowFar progress={card.progress} /> : null}
           {HANDS_ON.includes(card.lane_state) && heard ? <Heard who={heard.card_number === null ? "the board" : `#${heard.card_number}`}>{heard.text}</Heard> : null}
           <StateLine state={state}>
             {onSelect ? <Together card={card} selected={selected} selecting={selecting} onSelect={onSelect} /> : null}

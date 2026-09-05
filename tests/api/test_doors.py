@@ -939,6 +939,121 @@ def test_two_lanes_in_one_file_collide_on_both_cards_know_each_other_and_the_fol
     assert last["text"] == "#253 folded over #241's edits in README.md"
 
 
+# ── plan 13: a running card says how far its plan has come ─────────────
+
+ITEMS = """
+## The work
+
+### 1. The reading is parsed in both shapes
+Done means: `"12.4 kWh"` and `12.4` both reach the invoice line.
+
+### 2. The two missed months are re-read
+Done means: every reading since 5 July is on an invoice.
+**Met:** `office/meters.py::replay` re-read 1,204 readings from the gateway log.
+
+### 3. A ratchet refuses the bare float
+Done means: `tests/ratchets/test_meter_readings_are_parsed.py` is red on `float(reading.value)`.
+"""
+
+RECORD = """# Review — every metered kilowatt is billed
+
+**Plan:** docs/plans/done/2026-09-03-every-metered-kilowatt-is-billed.md
+**Findings:** 3 — 2 fixed, 1 filed.
+
+## The passes
+
+1. **The feature against the plan's "done means".** The replay skipped a day; the
+   ratchet read a comment; a berth with no meter.
+2. **The seams.** Nothing new.
+
+## Dispositions
+
+1. **The replay skipped 6 July.** FIXED in 1a2b3c.
+2. **The ratchet read a comment as a call.** FIXED in 2b3c4d.
+3. **A berth with no meter is billed nothing and says nothing.** Outside this change — filed.
+"""
+
+
+def test_the_card_counts_the_lanes_own_copy_and_its_record_and_nothing_once_the_worktree_is_gone(
+    client: TestClient, machine_floor: Floor, repo: Path
+):
+    """Items 2, 4 and 5: the brief asks for the stance once; a lane that writes
+    `**Met:**` on item 2 in its worktree shows 1 of 3 with item 2's title on
+    the next read while the main checkout's plan is unchanged; once every
+    item is met the record in the worktree is counted, red until a pass reads
+    clean; a worktree that is gone shows nothing."""
+    start(client)
+    brief = machine_floor.state()["launch_log"][0]["argv"][-1]
+    assert "end it in your plan with `**Met:** <what shows it>`" in brief
+    assert "`**Deviated:** <pointer>` when it landed otherwise" in brief
+    assert (
+        "Write the review record pass by pass" in brief
+        and "`**Plan:**` line naming your plan" in brief
+    )
+    assert "never by editing the board's own files" in brief
+
+    # The plan is one promise: no items, so the signed card and nothing new.
+    assert summary_of(client)["progress"] is None
+
+    mine = Path(lane_path(repo))
+    plan = "docs/plans/2026-09-03-every-metered-kilowatt-is-billed.md"
+    (mine / plan).write_text((mine / plan).read_text() + ITEMS)
+    reconcile(client)
+    progress = summary_of(client)["progress"]
+    assert (progress["met"], progress["deviated"], progress["total"]) == (1, 0, 3)
+    assert progress["last"] == "The two missed months are re-read"
+    assert progress["line"] == "1 of 3 met · last: The two missed months are re-read"
+    assert progress["review"] is None
+    assert [i["stance"] for i in progress["items"]] == [None, "met", None]
+    assert progress["items"][1]["text"] == (
+        "office/meters.py::replay re-read 1,204 readings from the gateway log."
+    )
+    # The main checkout's plan is as it stood at Start: the count is the lane's copy.
+    assert ITEMS not in (repo / plan).read_text()
+    assert detail(client)["document"]["items"] == []
+    assert detail(client)["lane"]["progress"]["met"] == 1
+
+    # Every item met, and a record in the worktree: the review counter, open.
+    whole = (
+        (mine / plan)
+        .read_text()
+        .replace(
+            'Done means: `"12.4 kWh"` and `12.4` both reach the invoice line.',
+            "Done means: both shapes reach the invoice line.\n"
+            "**Met:** test_reading_in_either_shape.",
+        )
+        .replace(
+            "is red on `float(reading.value)`.",
+            "is red on `float(reading.value)`.\n**Met:** the ratchet, red on the bare float.",
+        )
+    )
+    (mine / plan).write_text(whole)
+    (mine / "docs" / "reviews").mkdir(parents=True, exist_ok=True)
+    (mine / "docs" / "reviews" / "2026-09-05-every-metered-kilowatt.md").write_text(RECORD)
+    reconcile(client)
+    progress = summary_of(client)["progress"]
+    assert progress["met"] == 3 and progress["review"] is not None
+    assert progress["review"]["path"] == "docs/reviews/2026-09-05-every-metered-kilowatt.md"
+    assert progress["line"] == "review clean · 2 passes · 3 found, 2 fixed, 1 filed"
+    assert progress["review"]["filed_names"] == [
+        "A berth with no meter is billed nothing and says nothing"
+    ]
+
+    # An item unmet again: the item count, whatever the record says.
+    (mine / plan).write_text(whole.replace("**Met:** the ratchet, red on the bare float.", ""))
+    reconcile(client)
+    progress = summary_of(client)["progress"]
+    assert (
+        progress["review"] is None
+        and progress["line"] == "2 of 3 met · last: The two missed months are re-read"
+    )
+
+    # The worktree gone: nothing.
+    git(repo, "worktree", "remove", "--force", str(mine))
+    reconcile(client)
+    assert summary_of(client)["progress"] is None
+
+
 # ── plan 10: a running lane hears the board ────────────────────────────
 
 

@@ -109,6 +109,7 @@
                 },
                 "lane_state": "none",
                 "colliding": null,
+                "progress": null,
                 "standing": {
                   "actor": "corpus",
                   "evidence": null,
@@ -152,6 +153,7 @@
                 },
                 "lane_state": "none",
                 "colliding": null,
+                "progress": null,
                 "standing": {
                   "actor": "corpus",
                   "evidence": null,
@@ -197,6 +199,7 @@
                 },
                 "lane_state": "none",
                 "colliding": null,
+                "progress": null,
                 "standing": {
                   "actor": "import",
                   "evidence": null,
@@ -236,6 +239,7 @@
                 },
                 "lane_state": "none",
                 "colliding": null,
+                "progress": null,
                 "standing": {
                   "actor": "import",
                   "evidence": null,
@@ -277,6 +281,7 @@
                 },
                 "lane_state": "none",
                 "colliding": null,
+                "progress": null,
                 "standing": {
                   "actor": "import",
                   "evidence": null,
@@ -329,6 +334,7 @@
                 },
                 "lane_state": "none",
                 "colliding": null,
+                "progress": null,
                 "standing": {
                   "actor": "import",
                   "evidence": null,
@@ -374,6 +380,7 @@
                 },
                 "lane_state": "none",
                 "colliding": null,
+                "progress": null,
                 "standing": {
                   "actor": "corpus",
                   "evidence": null,
@@ -413,6 +420,7 @@
                 },
                 "lane_state": "none",
                 "colliding": null,
+                "progress": null,
                 "standing": {
                   "actor": "corpus",
                   "evidence": null,
@@ -452,6 +460,7 @@
                 },
                 "lane_state": "none",
                 "colliding": null,
+                "progress": null,
                 "standing": {
                   "actor": "corpus",
                   "evidence": null,
@@ -491,6 +500,7 @@
                 },
                 "lane_state": "none",
                 "colliding": null,
+                "progress": null,
                 "standing": {
                   "actor": "corpus",
                   "evidence": null,
@@ -555,6 +565,7 @@
                 },
                 "lane_state": "none",
                 "colliding": null,
+                "progress": null,
                 "standing": {
                   "actor": "import",
                   "evidence": null,
@@ -602,6 +613,7 @@
                 },
                 "lane_state": "none",
                 "colliding": null,
+                "progress": null,
                 "standing": {
                   "actor": "import",
                   "evidence": null,
@@ -649,6 +661,7 @@
                 },
                 "lane_state": "none",
                 "colliding": null,
+                "progress": null,
                 "standing": {
                   "actor": "import",
                   "evidence": null,
@@ -694,6 +707,7 @@
                 },
                 "lane_state": "none",
                 "colliding": null,
+                "progress": null,
                 "standing": {
                   "actor": "corpus",
                   "evidence": null,
@@ -733,6 +747,7 @@
                 },
                 "lane_state": "none",
                 "colliding": null,
+                "progress": null,
                 "standing": {
                   "actor": "corpus",
                   "evidence": null,
@@ -795,6 +810,7 @@
                 },
                 "lane_state": "none",
                 "colliding": null,
+                "progress": null,
                 "standing": {
                   "actor": "import",
                   "evidence": null,
@@ -834,6 +850,7 @@
                 },
                 "lane_state": "none",
                 "colliding": null,
+                "progress": null,
                 "standing": {
                   "actor": "import",
                   "evidence": null,
@@ -873,6 +890,7 @@
                 },
                 "lane_state": "none",
                 "colliding": null,
+                "progress": null,
                 "standing": {
                   "actor": "import",
                   "evidence": null,
@@ -912,6 +930,7 @@
                 },
                 "lane_state": "none",
                 "colliding": null,
+                "progress": null,
                 "standing": {
                   "actor": "import",
                   "evidence": null,
@@ -953,6 +972,7 @@
                 },
                 "lane_state": "none",
                 "colliding": null,
+                "progress": null,
                 "standing": {
                   "actor": "import",
                   "evidence": null,
@@ -1015,6 +1035,7 @@
                 },
                 "lane_state": "none",
                 "colliding": null,
+                "progress": null,
                 "standing": {
                   "actor": "import",
                   "evidence": "hands-on",
@@ -1054,6 +1075,7 @@
                 },
                 "lane_state": "none",
                 "colliding": null,
+                "progress": null,
                 "standing": {
                   "actor": "import",
                   "evidence": "hands-on",
@@ -1125,6 +1147,7 @@
                 },
                 "lane_state": "none",
                 "colliding": null,
+                "progress": null,
                 "standing": {
                   "actor": "import",
                   "evidence": null,
@@ -1174,6 +1197,7 @@
                 },
                 "lane_state": "none",
                 "colliding": null,
+                "progress": null,
                 "standing": {
                   "actor": "import",
                   "evidence": null,
@@ -1228,6 +1252,7 @@
                 },
                 "lane_state": "none",
                 "colliding": null,
+                "progress": null,
                 "standing": {
                   "actor": "import",
                   "evidence": null,
@@ -1282,6 +1307,7 @@
                 },
                 "lane_state": "none",
                 "colliding": null,
+                "progress": null,
                 "standing": {
                   "actor": "import",
                   "evidence": null,
@@ -1346,6 +1372,7 @@
                 },
                 "lane_state": "none",
                 "colliding": null,
+                "progress": null,
                 "standing": {
                   "actor": "import",
                   "evidence": "close-landed",
@@ -1432,6 +1459,7 @@
                 },
                 "lane_state": "none",
                 "colliding": null,
+                "progress": null,
                 "standing": {
                   "actor": "import",
                   "evidence": null,
@@ -1525,6 +1553,7 @@
         },
         "lane_state": "none",
         "colliding": null,
+        "progress": null,
         "standing": {
           "actor": "corpus",
           "evidence": null,
@@ -1564,6 +1593,7 @@
         "fix_note": "no Fix: line",
         "cites": [],
         "handouts": [],
+        "items": [],
         "head_fields": [
           {
             "key": "Found by",
@@ -1643,7 +1673,8 @@
         "main_synced": false,
         "edits": [],
         "declared": [],
-        "colliding": null
+        "colliding": null,
+        "progress": null
       },
       "doors": {
         "start": {
@@ -1782,6 +1813,7 @@
         },
         "lane_state": "none",
         "colliding": null,
+        "progress": null,
         "standing": {
           "actor": "corpus",
           "evidence": null,
@@ -1816,6 +1848,7 @@
         "fix_note": null,
         "cites": [],
         "handouts": [],
+        "items": [],
         "head_fields": [
           {
             "key": "Kind",
@@ -1873,7 +1906,8 @@
         "main_synced": false,
         "edits": [],
         "declared": [],
-        "colliding": null
+        "colliding": null,
+        "progress": null
       },
       "doors": {
         "start": {
@@ -2021,6 +2055,7 @@
         },
         "lane_state": "none",
         "colliding": null,
+        "progress": null,
         "standing": {
           "actor": "import",
           "evidence": null,
@@ -2060,6 +2095,7 @@
         "fix_note": "no Fix: line",
         "cites": [],
         "handouts": [],
+        "items": [],
         "head_fields": [
           {
             "key": "Found by",
@@ -2120,7 +2156,8 @@
         "main_synced": false,
         "edits": [],
         "declared": [],
-        "colliding": null
+        "colliding": null,
+        "progress": null
       },
       "doors": {
         "start": {
@@ -2268,6 +2305,7 @@
         },
         "lane_state": "none",
         "colliding": null,
+        "progress": null,
         "standing": {
           "actor": "import",
           "evidence": null,
@@ -2307,6 +2345,7 @@
         "fix_note": "no Fix: line",
         "cites": [],
         "handouts": [],
+        "items": [],
         "head_fields": [
           {
             "key": "Found by",
@@ -2367,7 +2406,8 @@
         "main_synced": false,
         "edits": [],
         "declared": [],
-        "colliding": null
+        "colliding": null,
+        "progress": null
       },
       "doors": {
         "start": {
@@ -2509,6 +2549,7 @@
         },
         "lane_state": "none",
         "colliding": null,
+        "progress": null,
         "standing": {
           "actor": "import",
           "evidence": null,
@@ -2570,7 +2611,8 @@
         "main_synced": false,
         "edits": [],
         "declared": [],
-        "colliding": null
+        "colliding": null,
+        "progress": null
       },
       "doors": {
         "start": {
@@ -2707,6 +2749,7 @@
         },
         "lane_state": "none",
         "colliding": null,
+        "progress": null,
         "standing": {
           "actor": "import",
           "evidence": null,
@@ -2757,7 +2800,8 @@
         "main_synced": false,
         "edits": [],
         "declared": [],
-        "colliding": null
+        "colliding": null,
+        "progress": null
       },
       "doors": {
         "start": {
@@ -2892,6 +2936,7 @@
         },
         "lane_state": "none",
         "colliding": null,
+        "progress": null,
         "standing": {
           "actor": "corpus",
           "evidence": null,
@@ -2922,6 +2967,7 @@
         "fix_note": "no Fix: line",
         "cites": [],
         "handouts": [],
+        "items": [],
         "head_fields": [
           {
             "key": "Found by",
@@ -2971,7 +3017,8 @@
         "main_synced": false,
         "edits": [],
         "declared": [],
-        "colliding": null
+        "colliding": null,
+        "progress": null
       },
       "doors": {
         "start": {
@@ -3106,6 +3153,7 @@
         },
         "lane_state": "none",
         "colliding": null,
+        "progress": null,
         "standing": {
           "actor": "corpus",
           "evidence": null,
@@ -3136,6 +3184,7 @@
         "fix_note": "no Fix: line",
         "cites": [],
         "handouts": [],
+        "items": [],
         "head_fields": [
           {
             "key": "Found by",
@@ -3185,7 +3234,8 @@
         "main_synced": false,
         "edits": [],
         "declared": [],
-        "colliding": null
+        "colliding": null,
+        "progress": null
       },
       "doors": {
         "start": {
@@ -3320,6 +3370,7 @@
         },
         "lane_state": "none",
         "colliding": null,
+        "progress": null,
         "standing": {
           "actor": "corpus",
           "evidence": null,
@@ -3350,6 +3401,7 @@
         "fix_note": "no Fix: line",
         "cites": [],
         "handouts": [],
+        "items": [],
         "head_fields": [
           {
             "key": "Found by",
@@ -3399,7 +3451,8 @@
         "main_synced": false,
         "edits": [],
         "declared": [],
-        "colliding": null
+        "colliding": null,
+        "progress": null
       },
       "doors": {
         "start": {
@@ -3534,6 +3587,7 @@
         },
         "lane_state": "none",
         "colliding": null,
+        "progress": null,
         "standing": {
           "actor": "corpus",
           "evidence": null,
@@ -3564,6 +3618,7 @@
         "fix_note": "no Fix: line",
         "cites": [],
         "handouts": [],
+        "items": [],
         "head_fields": [
           {
             "key": "Found by",
@@ -3613,7 +3668,8 @@
         "main_synced": false,
         "edits": [],
         "declared": [],
-        "colliding": null
+        "colliding": null,
+        "progress": null
       },
       "doors": {
         "start": {
@@ -3765,6 +3821,7 @@
         },
         "lane_state": "none",
         "colliding": null,
+        "progress": null,
         "standing": {
           "actor": "import",
           "evidence": null,
@@ -3804,6 +3861,7 @@
         "fix_note": null,
         "cites": [],
         "handouts": [],
+        "items": [],
         "head_fields": [
           {
             "key": "Status",
@@ -3876,7 +3934,8 @@
         "main_synced": false,
         "edits": [],
         "declared": [],
-        "colliding": null
+        "colliding": null,
+        "progress": null
       },
       "doors": {
         "start": {
@@ -4024,6 +4083,7 @@
         },
         "lane_state": "none",
         "colliding": null,
+        "progress": null,
         "standing": {
           "actor": "import",
           "evidence": null,
@@ -4059,6 +4119,7 @@
         "fix_note": null,
         "cites": [],
         "handouts": [],
+        "items": [],
         "head_fields": [
           {
             "key": "Status",
@@ -4131,7 +4192,8 @@
         "main_synced": false,
         "edits": [],
         "declared": [],
-        "colliding": null
+        "colliding": null,
+        "progress": null
       },
       "doors": {
         "start": {
@@ -4283,6 +4345,7 @@
         },
         "lane_state": "none",
         "colliding": null,
+        "progress": null,
         "standing": {
           "actor": "import",
           "evidence": null,
@@ -4322,6 +4385,7 @@
         "fix_note": null,
         "cites": [],
         "handouts": [],
+        "items": [],
         "head_fields": [
           {
             "key": "Status",
@@ -4394,7 +4458,8 @@
         "main_synced": false,
         "edits": [],
         "declared": [],
-        "colliding": null
+        "colliding": null,
+        "progress": null
       },
       "doors": {
         "start": {
@@ -4529,6 +4594,7 @@
         },
         "lane_state": "none",
         "colliding": null,
+        "progress": null,
         "standing": {
           "actor": "corpus",
           "evidence": null,
@@ -4559,6 +4625,7 @@
         "fix_note": null,
         "cites": [],
         "handouts": [],
+        "items": [],
         "head_fields": [
           {
             "key": "Status",
@@ -4620,7 +4687,8 @@
         "main_synced": false,
         "edits": [],
         "declared": [],
-        "colliding": null
+        "colliding": null,
+        "progress": null
       },
       "doors": {
         "start": {
@@ -4755,6 +4823,7 @@
         },
         "lane_state": "none",
         "colliding": null,
+        "progress": null,
         "standing": {
           "actor": "corpus",
           "evidence": null,
@@ -4785,6 +4854,36 @@
         "fix_note": null,
         "cites": [],
         "handouts": [],
+        "items": [
+          {
+            "number": 1,
+            "title": "Tonight's boats are one list",
+            "done_means": "the list at office/tonight.py names every boat with a booking tonight and its skipper's phone; eleven on the fixture.",
+            "stance": null,
+            "text": null
+          },
+          {
+            "number": 2,
+            "title": "One click sends the warning",
+            "done_means": "office/messages.py sends to every boat on the list from one click, and a test proves every boat was reached.",
+            "stance": null,
+            "text": null
+          },
+          {
+            "number": 3,
+            "title": "The log says who was reached",
+            "done_means": "a line per skipper, reached or not, in the office log.",
+            "stance": null,
+            "text": null
+          },
+          {
+            "number": 4,
+            "title": "The gale is rehearsed",
+            "done_means": "a test sends to eleven boats and finds five unreached in the log.",
+            "stance": null,
+            "text": null
+          }
+        ],
         "head_fields": [
           {
             "key": "Status",
@@ -4846,7 +4945,8 @@
         "main_synced": false,
         "edits": [],
         "declared": [],
-        "colliding": null
+        "colliding": null,
+        "progress": null
       },
       "doors": {
         "start": {
@@ -4998,6 +5098,7 @@
         },
         "lane_state": "none",
         "colliding": null,
+        "progress": null,
         "standing": {
           "actor": "import",
           "evidence": null,
@@ -5041,6 +5142,7 @@
         "fix_note": null,
         "cites": [],
         "handouts": [],
+        "items": [],
         "head_fields": [
           {
             "key": "Status",
@@ -5117,7 +5219,8 @@
         "main_synced": false,
         "edits": [],
         "declared": [],
-        "colliding": null
+        "colliding": null,
+        "progress": null
       },
       "doors": {
         "start": {
@@ -5273,6 +5376,7 @@
         },
         "lane_state": "none",
         "colliding": null,
+        "progress": null,
         "standing": {
           "actor": "import",
           "evidence": null,
@@ -5320,6 +5424,7 @@
         "fix_note": null,
         "cites": [],
         "handouts": [],
+        "items": [],
         "head_fields": [
           {
             "key": "Status",
@@ -5396,7 +5501,8 @@
         "main_synced": false,
         "edits": [],
         "declared": [],
-        "colliding": null
+        "colliding": null,
+        "progress": null
       },
       "doors": {
         "start": {
@@ -5541,6 +5647,7 @@
         },
         "lane_state": "none",
         "colliding": null,
+        "progress": null,
         "standing": {
           "actor": "import",
           "evidence": null,
@@ -5604,7 +5711,8 @@
         "main_synced": false,
         "edits": [],
         "declared": [],
-        "colliding": null
+        "colliding": null,
+        "progress": null
       },
       "doors": {
         "start": {
@@ -5756,6 +5864,7 @@
         },
         "lane_state": "none",
         "colliding": null,
+        "progress": null,
         "standing": {
           "actor": "import",
           "evidence": null,
@@ -5804,6 +5913,15 @@
             "role": "harbour-pilot",
             "what": "the race of two confirmations against the constraint",
             "verifies": "the losing confirmation's sentence"
+          }
+        ],
+        "items": [
+          {
+            "number": 1,
+            "title": "The constraint",
+            "done_means": null,
+            "stance": null,
+            "text": null
           }
         ],
         "head_fields": [
@@ -5878,7 +5996,8 @@
         "main_synced": false,
         "edits": [],
         "declared": [],
-        "colliding": null
+        "colliding": null,
+        "progress": null
       },
       "doors": {
         "start": {
@@ -6037,6 +6156,7 @@
         },
         "lane_state": "none",
         "colliding": null,
+        "progress": null,
         "standing": {
           "actor": "import",
           "evidence": null,
@@ -6087,6 +6207,22 @@
             "role": "execution",
             "what": "the move of each path into its module, and the suite after each move",
             "verifies": "the suite's own output by re-running the failing test it names"
+          }
+        ],
+        "items": [
+          {
+            "number": 1,
+            "title": "Name the seams",
+            "done_means": "a list of seams, each with the paths that cross it.",
+            "stance": null,
+            "text": null
+          },
+          {
+            "number": 2,
+            "title": "Split along them",
+            "done_means": "no module over 400 lines.",
+            "stance": null,
+            "text": null
           }
         ],
         "head_fields": [
@@ -6161,7 +6297,8 @@
         "main_synced": false,
         "edits": [],
         "declared": [],
-        "colliding": null
+        "colliding": null,
+        "progress": null
       },
       "doors": {
         "start": {
@@ -6330,6 +6467,7 @@
         },
         "lane_state": "none",
         "colliding": null,
+        "progress": null,
         "standing": {
           "actor": "import",
           "evidence": "hands-on",
@@ -6378,6 +6516,7 @@
         "fix_note": null,
         "cites": [],
         "handouts": [],
+        "items": [],
         "head_fields": [
           {
             "key": "Status",
@@ -6450,7 +6589,8 @@
         "main_synced": false,
         "edits": [],
         "declared": [],
-        "colliding": null
+        "colliding": null,
+        "progress": null
       },
       "doors": {
         "start": {
@@ -6602,6 +6742,7 @@
         },
         "lane_state": "none",
         "colliding": null,
+        "progress": null,
         "standing": {
           "actor": "import",
           "evidence": "hands-on",
@@ -6645,6 +6786,7 @@
         "fix_note": "no Fix: line",
         "cites": [],
         "handouts": [],
+        "items": [],
         "head_fields": [
           {
             "key": "Found by",
@@ -6705,7 +6847,8 @@
         "main_synced": false,
         "edits": [],
         "declared": [],
-        "colliding": null
+        "colliding": null,
+        "progress": null
       },
       "doors": {
         "start": {
@@ -6876,6 +7019,7 @@
         },
         "lane_state": "none",
         "colliding": null,
+        "progress": null,
         "standing": {
           "actor": "import",
           "evidence": null,
@@ -6928,6 +7072,7 @@
         "fix_note": null,
         "cites": [],
         "handouts": [],
+        "items": [],
         "head_fields": [
           {
             "key": "Status",
@@ -7000,7 +7145,8 @@
         "main_synced": false,
         "edits": [],
         "declared": [],
-        "colliding": null
+        "colliding": null,
+        "progress": null
       },
       "doors": {
         "start": {
@@ -7154,6 +7300,7 @@
         },
         "lane_state": "none",
         "colliding": null,
+        "progress": null,
         "standing": {
           "actor": "import",
           "evidence": null,
@@ -7217,7 +7364,8 @@
         "main_synced": false,
         "edits": [],
         "declared": [],
-        "colliding": null
+        "colliding": null,
+        "progress": null
       },
       "doors": {
         "start": {
@@ -7380,6 +7528,7 @@
         },
         "lane_state": "none",
         "colliding": null,
+        "progress": null,
         "standing": {
           "actor": "import",
           "evidence": null,
@@ -7423,6 +7572,7 @@
         "fix_note": null,
         "cites": [],
         "handouts": [],
+        "items": [],
         "head_fields": [
           {
             "key": "Status",
@@ -7495,7 +7645,8 @@
         "main_synced": false,
         "edits": [],
         "declared": [],
-        "colliding": null
+        "colliding": null,
+        "progress": null
       },
       "doors": {
         "start": {
@@ -7647,6 +7798,7 @@
         },
         "lane_state": "none",
         "colliding": null,
+        "progress": null,
         "standing": {
           "actor": "import",
           "evidence": null,
@@ -7710,7 +7862,8 @@
         "main_synced": false,
         "edits": [],
         "declared": [],
-        "colliding": null
+        "colliding": null,
+        "progress": null
       },
       "doors": {
         "start": {
@@ -7863,6 +8016,7 @@
         },
         "lane_state": "none",
         "colliding": null,
+        "progress": null,
         "standing": {
           "actor": "import",
           "evidence": "close-landed",
@@ -7902,6 +8056,7 @@
         "fix_note": null,
         "cites": [],
         "handouts": [],
+        "items": [],
         "head_fields": [
           {
             "key": "Status",
@@ -7976,7 +8131,8 @@
         "main_synced": false,
         "edits": [],
         "declared": [],
-        "colliding": null
+        "colliding": null,
+        "progress": null
       },
       "doors": {
         "start": {
@@ -8122,6 +8278,7 @@
         },
         "lane_state": "none",
         "colliding": null,
+        "progress": null,
         "standing": {
           "actor": "import",
           "evidence": null,
@@ -8188,7 +8345,8 @@
         "main_synced": false,
         "edits": [],
         "declared": [],
-        "colliding": null
+        "colliding": null,
+        "progress": null
       },
       "doors": {
         "start": {
@@ -8305,6 +8463,7 @@
         },
         "lane_state": "none",
         "colliding": null,
+        "progress": null,
         "standing": {
           "actor": "corpus",
           "evidence": null,
@@ -8347,6 +8506,7 @@
         },
         "lane_state": "none",
         "colliding": null,
+        "progress": null,
         "standing": {
           "actor": "corpus",
           "evidence": null,
@@ -8389,6 +8549,7 @@
         },
         "lane_state": "none",
         "colliding": null,
+        "progress": null,
         "standing": {
           "actor": "corpus",
           "evidence": null,
@@ -8431,6 +8592,7 @@
         },
         "lane_state": "none",
         "colliding": null,
+        "progress": null,
         "standing": {
           "actor": "corpus",
           "evidence": null,
@@ -8480,6 +8642,7 @@
         },
         "lane_state": "working",
         "colliding": null,
+        "progress": null,
         "standing": {
           "actor": "corpus",
           "evidence": null,
@@ -8529,6 +8692,7 @@
         },
         "lane_state": "asking",
         "colliding": null,
+        "progress": null,
         "standing": {
           "actor": "corpus",
           "evidence": null,
@@ -8583,6 +8747,7 @@
             241
           ]
         },
+        "progress": null,
         "standing": {
           "actor": "corpus",
           "evidence": null,
@@ -8628,6 +8793,7 @@
         },
         "lane_state": "ended",
         "colliding": null,
+        "progress": null,
         "standing": {
           "actor": "corpus",
           "evidence": null,
@@ -8672,6 +8838,7 @@
         },
         "lane_state": "none",
         "colliding": null,
+        "progress": null,
         "standing": {
           "actor": "machine",
           "evidence": "hands-on",
@@ -8716,6 +8883,7 @@
         },
         "lane_state": "none",
         "colliding": null,
+        "progress": null,
         "standing": {
           "actor": "corpus",
           "evidence": null,
@@ -8765,6 +8933,7 @@
         },
         "lane_state": "none",
         "colliding": null,
+        "progress": null,
         "standing": {
           "actor": "corpus",
           "evidence": null,
@@ -8810,6 +8979,7 @@
         },
         "lane_state": "none",
         "colliding": null,
+        "progress": null,
         "standing": {
           "actor": "corpus",
           "evidence": null,
@@ -8855,6 +9025,7 @@
         },
         "lane_state": "none",
         "colliding": null,
+        "progress": null,
         "standing": {
           "actor": "corpus",
           "evidence": null,
@@ -8907,6 +9078,7 @@
         },
         "lane_state": "none",
         "colliding": null,
+        "progress": null,
         "standing": {
           "actor": "corpus",
           "evidence": null,
@@ -8954,6 +9126,7 @@
         },
         "lane_state": "none",
         "colliding": null,
+        "progress": null,
         "standing": {
           "actor": "corpus",
           "evidence": null,
@@ -9010,6 +9183,7 @@
         },
         "lane_state": "none",
         "colliding": null,
+        "progress": null,
         "standing": {
           "actor": "corpus",
           "evidence": null,
@@ -9055,6 +9229,7 @@
         },
         "lane_state": "none",
         "colliding": null,
+        "progress": null,
         "standing": {
           "actor": "corpus",
           "evidence": null,
@@ -9097,6 +9272,7 @@
         },
         "lane_state": "none",
         "colliding": null,
+        "progress": null,
         "standing": {
           "actor": "corpus",
           "evidence": null,
@@ -9145,6 +9321,7 @@
         },
         "lane_state": "none",
         "colliding": null,
+        "progress": null,
         "standing": {
           "actor": "corpus",
           "evidence": null,
@@ -9164,5 +9341,270 @@
         }
       }
     }
-  ]
+  ],
+  "progress": {
+    "nothing": {
+      "items": [
+        {
+          "number": 1,
+          "title": "Tonight's boats are one list",
+          "done_means": "the list at office/tonight.py names every boat with a booking tonight and its skipper's phone; eleven on the fixture.",
+          "stance": null,
+          "text": null
+        },
+        {
+          "number": 2,
+          "title": "One click sends the warning",
+          "done_means": "office/messages.py sends to every boat on the list from one click, and a test proves every boat was reached.",
+          "stance": null,
+          "text": null
+        },
+        {
+          "number": 3,
+          "title": "The log says who was reached",
+          "done_means": "a line per skipper, reached or not, in the office log.",
+          "stance": null,
+          "text": null
+        },
+        {
+          "number": 4,
+          "title": "The gale is rehearsed",
+          "done_means": "a test sends to eleven boats and finds five unreached in the log.",
+          "stance": null,
+          "text": null
+        }
+      ],
+      "met": 0,
+      "deviated": 0,
+      "total": 4,
+      "last": null,
+      "read_at": "2026-09-04T08:30:00Z",
+      "review": null,
+      "line": "0 of 4 met"
+    },
+    "two_met": {
+      "items": [
+        {
+          "number": 1,
+          "title": "Tonight's boats are one list",
+          "done_means": "the list at office/tonight.py names every boat with a booking tonight and its skipper's phone; eleven on the fixture.",
+          "stance": "met",
+          "text": "the list at office/tonight.py; eleven boats on the fixture, each with its skipper's phone."
+        },
+        {
+          "number": 2,
+          "title": "One click sends the warning",
+          "done_means": "office/messages.py sends to every boat on the list from one click, and a test proves every boat was reached.",
+          "stance": "met",
+          "text": "Warn sends through office/messages.py; test_warn_reaches_every_boat passes."
+        },
+        {
+          "number": 3,
+          "title": "The log says who was reached",
+          "done_means": "a line per skipper, reached or not, in the office log.",
+          "stance": null,
+          "text": null
+        },
+        {
+          "number": 4,
+          "title": "The gale is rehearsed",
+          "done_means": "a test sends to eleven boats and finds five unreached in the log.",
+          "stance": null,
+          "text": null
+        }
+      ],
+      "met": 2,
+      "deviated": 0,
+      "total": 4,
+      "last": "One click sends the warning",
+      "read_at": "2026-09-04T08:30:00Z",
+      "review": null,
+      "line": "2 of 4 met · last: One click sends the warning"
+    },
+    "deviated": {
+      "items": [
+        {
+          "number": 1,
+          "title": "Tonight's boats are one list",
+          "done_means": "the list at office/tonight.py names every boat with a booking tonight and its skipper's phone; eleven on the fixture.",
+          "stance": "met",
+          "text": "the list at office/tonight.py; eleven boats on the fixture, each with its skipper's phone."
+        },
+        {
+          "number": 2,
+          "title": "One click sends the warning",
+          "done_means": "office/messages.py sends to every boat on the list from one click, and a test proves every boat was reached.",
+          "stance": "deviated",
+          "text": "sent from the tide clock, not a Warn button; see the review's pass 1."
+        },
+        {
+          "number": 3,
+          "title": "The log says who was reached",
+          "done_means": "a line per skipper, reached or not, in the office log.",
+          "stance": "met",
+          "text": "a line per skipper in office/log.py, reached or not."
+        },
+        {
+          "number": 4,
+          "title": "The gale is rehearsed",
+          "done_means": "a test sends to eleven boats and finds five unreached in the log.",
+          "stance": null,
+          "text": null
+        }
+      ],
+      "met": 2,
+      "deviated": 1,
+      "total": 4,
+      "last": "The log says who was reached",
+      "read_at": "2026-09-04T08:30:00Z",
+      "review": null,
+      "line": "2 of 4 met, 1 deviated · last: The log says who was reached"
+    },
+    "review_open": {
+      "items": [
+        {
+          "number": 1,
+          "title": "Tonight's boats are one list",
+          "done_means": "the list at office/tonight.py names every boat with a booking tonight and its skipper's phone; eleven on the fixture.",
+          "stance": "met",
+          "text": "the list at office/tonight.py; eleven boats on the fixture, each with its skipper's phone."
+        },
+        {
+          "number": 2,
+          "title": "One click sends the warning",
+          "done_means": "office/messages.py sends to every boat on the list from one click, and a test proves every boat was reached.",
+          "stance": "met",
+          "text": "Warn sends through office/messages.py; test_warn_reaches_every_boat passes."
+        },
+        {
+          "number": 3,
+          "title": "The log says who was reached",
+          "done_means": "a line per skipper, reached or not, in the office log.",
+          "stance": "met",
+          "text": "a line per skipper in office/log.py, reached or not."
+        },
+        {
+          "number": 4,
+          "title": "The gale is rehearsed",
+          "done_means": "a test sends to eleven boats and finds five unreached in the log.",
+          "stance": "met",
+          "text": "test_gale_rehearsed finds five unreached."
+        }
+      ],
+      "met": 4,
+      "deviated": 0,
+      "total": 4,
+      "last": "The gale is rehearsed",
+      "read_at": "2026-09-04T08:30:00Z",
+      "review": {
+        "path": "docs/reviews/2026-09-04-a-storm-warning-reaches-every-skipper.md",
+        "plan_stem": "2026-09-04-a-storm-warning-reaches-every-skipper",
+        "passes": [
+          {
+            "number": 1,
+            "lens": "The feature against the plan's \"done means\"",
+            "text": "A boat booked twice was warned twice; the log line said reached before the message left; two more.",
+            "clean": false
+          },
+          {
+            "number": 2,
+            "lens": "The seams",
+            "text": "Two offices warning at once; the send retried on a timeout and reached a skipper twice; two more.",
+            "clean": false
+          },
+          {
+            "number": 3,
+            "lens": "The boundaries",
+            "text": "The warning reaches the office's mailer directly — the fix is landing.",
+            "clean": false
+          }
+        ],
+        "clean": false,
+        "found": 9,
+        "fixed": 8,
+        "no_change": 0,
+        "filed": 1,
+        "filed_names": [
+          "A berth is let twice when two offices book in the same second"
+        ]
+      },
+      "line": "review · pass 3 · 9 found, 8 fixed, 1 filed"
+    },
+    "review_clean": {
+      "items": [
+        {
+          "number": 1,
+          "title": "Tonight's boats are one list",
+          "done_means": "the list at office/tonight.py names every boat with a booking tonight and its skipper's phone; eleven on the fixture.",
+          "stance": "met",
+          "text": "the list at office/tonight.py; eleven boats on the fixture, each with its skipper's phone."
+        },
+        {
+          "number": 2,
+          "title": "One click sends the warning",
+          "done_means": "office/messages.py sends to every boat on the list from one click, and a test proves every boat was reached.",
+          "stance": "met",
+          "text": "Warn sends through office/messages.py; test_warn_reaches_every_boat passes."
+        },
+        {
+          "number": 3,
+          "title": "The log says who was reached",
+          "done_means": "a line per skipper, reached or not, in the office log.",
+          "stance": "met",
+          "text": "a line per skipper in office/log.py, reached or not."
+        },
+        {
+          "number": 4,
+          "title": "The gale is rehearsed",
+          "done_means": "a test sends to eleven boats and finds five unreached in the log.",
+          "stance": "met",
+          "text": "test_gale_rehearsed finds five unreached."
+        }
+      ],
+      "met": 4,
+      "deviated": 0,
+      "total": 4,
+      "last": "The gale is rehearsed",
+      "read_at": "2026-09-04T08:30:00Z",
+      "review": {
+        "path": "docs/reviews/2026-09-04-a-storm-warning-reaches-every-skipper.md",
+        "plan_stem": "2026-09-04-a-storm-warning-reaches-every-skipper",
+        "passes": [
+          {
+            "number": 1,
+            "lens": "The feature against the plan's \"done means\"",
+            "text": "A boat booked twice was warned twice; the log line said reached before the message left; two more.",
+            "clean": false
+          },
+          {
+            "number": 2,
+            "lens": "The seams",
+            "text": "Two offices warning at once; the send retried on a timeout and reached a skipper twice; two more.",
+            "clean": false
+          },
+          {
+            "number": 3,
+            "lens": "The boundaries",
+            "text": "The warning reaches the office's mailer directly — the fix is landing.",
+            "clean": false
+          },
+          {
+            "number": 4,
+            "lens": "The fixed work again",
+            "text": "Re-read the three fix commits. Nothing new. Clean.",
+            "clean": true
+          }
+        ],
+        "clean": true,
+        "found": 9,
+        "fixed": 8,
+        "no_change": 0,
+        "filed": 1,
+        "filed_names": [
+          "A berth is let twice when two offices book in the same second"
+        ]
+      },
+      "line": "review clean · 4 passes · 9 found, 8 fixed, 1 filed"
+    }
+  }
 }

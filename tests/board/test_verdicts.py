@@ -106,6 +106,7 @@ def _plan(day: date, *, archived: bool = False) -> Document:
         suggestion_kind=None,
         cites=[],
         handouts=[],
+        items=[],
         head_fields=[],
         intent_heading=None,
         intent="",

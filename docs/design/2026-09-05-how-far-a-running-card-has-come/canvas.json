@@ -1,0 +1,13 @@
+{
+  "artboards": [
+    { "file": "Main.dc.html", "x": 0, "y": 0, "w": 1240, "h": 1180, "title": "The collapsed card in Executing — every progress state" },
+    { "file": "Column.dc.html", "x": 1340, "y": 0, "w": 760, "h": 720, "title": "The Executing column at its real width" },
+    { "file": "OpenCard.dc.html", "x": 0, "y": 1300, "w": 1160, "h": 860, "title": "The open card — the items with their stance" },
+    { "file": "OpenReview.dc.html", "x": 1260, "y": 1300, "w": 1160, "h": 900, "title": "The open card in the review loop" }
+  ],
+  "annotations": [
+    { "id": "brief", "x": 0, "y": -220, "w": 640, "text": "How far a running card has come — the comp to sign before the build.\nThe intent, in the owner's words: the progress of the task list as the live session reports it, on the collapsed card. The task list is the plan's items; the session marks each one in its own copy of the plan when its \"done means\" holds; the board reads that copy and shows the count. Once every item is met, the same line counts the review loop — pass, found, fixed, filed — from the review record the lane writes pass by pass.\nStaged: the four items on the storm-warning plan (Harbourmaster's fixture plans carry one promise each), the deviated stance, the review passes, the times and slots. Assumed: the signed colour language and card anatomy — only the strip row, the counter line and the two open-card sections are new." },
+    { "id": "position-note", "x": 0, "y": 2200, "w": 420, "text": "The head's \"Executing · 1 of 3\" on the first open card is the card's position in its column, exactly as signed. Beside a count of items it can misread; the review card drops it to show the difference. Say which reads right." }
+  ],
+  "launch": { "view": "canvas" }
+}

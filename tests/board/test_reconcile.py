@@ -35,6 +35,7 @@ def doc(
         suggestion_kind=None,
         cites=[],
         handouts=[],
+        items=[],
         head_fields=[],
         intent_heading=None,
         intent="",

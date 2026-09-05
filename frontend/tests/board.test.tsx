@@ -2,8 +2,8 @@ import { describe, expect, it, vi, beforeEach } from "vitest";
 import { cleanup, render, screen, within, waitFor, fireEvent, act } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { ApiError, type DoorName } from "../src/api";
-import { PROJECT, board, detail, language } from "./fixture";
-import type { BoardState, CardDetail } from "../src/types/board";
+import { PROJECT, board, detail, language, progress, type ProgressCase } from "./fixture";
+import type { BoardState, CardDetail, CardSummary } from "../src/types/board";
 import type { Place } from "../src/types/card";
 import type { DoorResult, Lane } from "../src/types/lane";
 import type { Project } from "../src/types/project";
@@ -122,6 +122,7 @@ function withLane(state: Lane["state"], sentence: string, question: string | nul
     edits: [],
     declared: [],
     colliding: null,
+    progress: null,
   };
   d.summary.lane_state = state;
   d.summary.state = {
@@ -966,6 +967,120 @@ describe("defects fix themselves (plan 11)", () => {
  * meaning is asserting the colour; and because the cards come from the
  * backend, a rule that changes a word fails here too.
  */
+describe("how far a running card has come (plan 13)", () => {
+  const STORM = "A storm warning reaches every skipper in the harbour";
+
+  /** The storm-warning card in Executing with hands on it, carrying this progress. */
+  function executing(b: BoardState, name: ProgressCase | null): CardSummary {
+    const number = numberOf(b, STORM);
+    const card = cardOf(b, number);
+    for (const column of b.columns) for (const group of column.groups) group.cards = group.cards.filter((c) => c.number !== number);
+    const executing = b.columns.find((c) => c.definition.column === "Executing")?.groups[0];
+    if (!executing) throw new Error("no Executing");
+    card.place = { column: "Executing", group: null, position: 0 };
+    card.lane_state = "working";
+    card.state = { word: "working · 41 min · fable on alpha", meaning: "live", detail: null, loop: null, door: null, hint: "open to see" };
+    card.progress = name ? progress(name) : null;
+    executing.cards = [card];
+    return card;
+  }
+
+  async function face(name: ProgressCase | null): Promise<HTMLElement> {
+    cleanup();
+    const b = board();
+    executing(b, name);
+    api.getBoard.mockResolvedValue(b);
+    render(<App />);
+    await screen.findByText(STORM);
+    return screen.getByText(STORM).closest("article") as HTMLElement;
+  }
+
+  it("shows the strip and the count on the collapsed Executing card, in the lane's words, and nothing on a plan with no items", async () => {
+    // Two of four met: two filled segments in the live colour, the last one named.
+    let card = await face("two_met");
+    let segments = Array.from(card.querySelectorAll<HTMLElement>(".strip .seg")).map((s) => s.className);
+    expect(segments).toEqual(["seg met", "seg met", "seg open", "seg open"]);
+    expect(card.querySelector(".strip")?.getAttribute("data-meaning")).toBe("live");
+    let line = card.querySelector(".howfar-line") as HTMLElement;
+    expect(line).toHaveTextContent("2 of 4 met · last: One click sends the warning");
+    expect(line.dataset["meaning"]).toBeUndefined();
+    // The state line, the door and the border are untouched.
+    expect(card.dataset["meaning"]).toBe("live");
+    expect(within(card).getByText("working · 41 min · fable on alpha")).toBeInTheDocument();
+
+    // Nothing marked yet: the zero is shown, never hidden.
+    card = await face("nothing");
+    expect(card.querySelector(".howfar-line")).toHaveTextContent("0 of 4 met");
+
+    // A deviated item is outlined, and the count says so.
+    card = await face("deviated");
+    segments = Array.from(card.querySelectorAll<HTMLElement>(".strip .seg")).map((s) => s.className);
+    expect(segments).toEqual(["seg met", "seg deviated", "seg met", "seg open"]);
+    expect(card.querySelector(".howfar-line")).toHaveTextContent("2 of 4 met, 1 deviated · last: The log says who was reached");
+
+    // Every item met and the loop open: the review counter, in the broken colour.
+    card = await face("review_open");
+    line = card.querySelector(".howfar-line") as HTMLElement;
+    expect(line).toHaveTextContent("review · pass 3 · 9 found, 8 fixed, 1 filed");
+    expect(line.dataset["meaning"]).toBe("broken");
+
+    // A clean pass: the counter goes quiet and says so.
+    card = await face("review_clean");
+    line = card.querySelector(".howfar-line") as HTMLElement;
+    expect(line).toHaveTextContent("review clean · 4 passes · 9 found, 8 fixed, 1 filed");
+    expect(line.dataset["meaning"]).toBeUndefined();
+
+    // A plan with no items is the signed card exactly.
+    card = await face(null);
+    expect(card.querySelector(".howfar")).toBeNull();
+  });
+
+  it("never paints the strip green, and only the strip and the open counter carry a meaning", async () => {
+    const card = await face("review_open");
+    const meanings = Array.from(card.querySelectorAll<HTMLElement>(".howfar [data-meaning]")).map((el) => el.dataset["meaning"]);
+    expect(meanings).toEqual(["live", "broken"]);
+  });
+
+  it("lists every item with its stance on the open card, and the review's passes once every item is met", async () => {
+    const b = board();
+    const card = executing(b, "two_met");
+    api.getBoard.mockResolvedValue(b);
+    const d = withLane("working", "Working, fable on alpha, hands on for 41 min.");
+    d.summary = { ...d.summary, ...card };
+    d.card.number = card.number;
+    if (d.lane) d.lane.progress = progress("two_met");
+    api.getCard.mockResolvedValue(d);
+    await renderBoard();
+    await userEvent.click(screen.getByText(STORM));
+    const items = await screen.findByRole("list", { name: "the plan's items" });
+    const rows = within(items).getAllByRole("listitem");
+    expect(rows.map((r) => r.querySelector(".ititle")?.textContent)).toEqual(["Tonight's boats are one list", "One click sends the warning", "The log says who was reached", "The gale is rehearsed"]);
+    expect(rows.map((r) => r.querySelector(".istance")?.textContent)).toEqual(["met", "met", "not yet", "not yet"]);
+    // A met item shows the evidence the lane wrote; one not yet met shows its own "done means".
+    expect(rows[0]).toHaveTextContent("the list at office/tonight.py; eleven boats on the fixture");
+    expect(rows[2]).toHaveTextContent("done means: a line per skipper, reached or not, in the office log.");
+    expect(screen.getByText(/2 of 4 met · read .* from the lane's copy/)).toBeInTheDocument();
+    expect(screen.queryByRole("list", { name: "the review's passes" })).not.toBeInTheDocument();
+
+    // In the review loop: one row per pass, the open one red, the filed finding named.
+    cleanup();
+    const inReview = withLane("working", "Working, fable on alpha, hands on for 2 h.");
+    inReview.summary = { ...inReview.summary, ...card, progress: progress("review_open") };
+    inReview.card.number = card.number;
+    if (inReview.lane) inReview.lane.progress = progress("review_open");
+    api.getCard.mockResolvedValue(inReview);
+    api.getBoard.mockResolvedValue(b);
+    await renderBoard();
+    await userEvent.click(screen.getByText(STORM));
+    const passes = await screen.findByRole("list", { name: "the review's passes" });
+    const passRows = within(passes).getAllByRole("listitem");
+    expect(passRows.map((r) => r.querySelector(".ititle")?.textContent)).toEqual(['The feature against the plan\'s "done means"', "The seams", "The boundaries", undefined]);
+    expect(passRows.map((r) => r.querySelector(".istance")?.textContent)).toEqual(["read", "read", "open", undefined]);
+    expect((passRows[2]?.querySelector(".istance") as HTMLElement).dataset["meaning"]).toBe("broken");
+    expect(passRows[3]).toHaveTextContent("A berth is let twice when two offices book in the same second — outside this change");
+  });
+});
+
 describe("the colour language", () => {
   const CASES = language();
 

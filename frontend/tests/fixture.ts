@@ -8,13 +8,20 @@
 
 import snapshot from "./fixture.json";
 import type { BoardState, CardDetail, CardSummary } from "../src/types/board";
+import type { Progress } from "../src/types/lane";
 import type { Project } from "../src/types/project";
 
 interface Snapshot {
   board: BoardState;
   details: Record<string, CardDetail>;
   language: LanguageCase[];
+  progress: Record<ProgressCase, Progress>;
 }
+
+/** How far the storm-warning lane has come, from the real derivation over
+ * its own copy of the plan (plan 13): nothing marked, two met, one deviated,
+ * every item met with the review loop open, and the loop closed. */
+export type ProgressCase = "nothing" | "two_met" | "deviated" | "review_open" | "review_clean";
 
 /** One card in one state, from the real derivation: the table the page test
  * reads back (plan 27, item 6). */
@@ -53,6 +60,10 @@ export function summary(number: number): CardSummary {
 /** Every state the rule can name, each with the card the board would send. */
 export function language(): LanguageCase[] {
   return structuredClone(SNAPSHOT.language);
+}
+
+export function progress(name: ProgressCase): Progress {
+  return structuredClone(SNAPSHOT.progress[name]);
 }
 
 export function detail(number: number): CardDetail {

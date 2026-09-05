@@ -7,7 +7,8 @@ import DOMPurify from "dompurify";
 import type { CardState, ClaimCount, FoldedCard, Meaning } from "../../types/board";
 import type { Column } from "../../types/column";
 import type { DialState } from "../../types/dial";
-import type { DocumentState, Fix, SuggestionKind } from "../../types/document";
+import type { DocumentState, Fix, Item, Review, SuggestionKind } from "../../types/document";
+import type { Progress } from "../../types/lane";
 import type { Standing } from "../../types/evidence";
 import type { RowKind } from "../../types/row";
 import { ASK_ROWS } from "../../types/row";
@@ -906,6 +907,102 @@ export function Clash({ children }: { children: ReactNode }) {
     <div className="clash" role="status" data-meaning="broken">
       <span className="bstate">Colliding</span>
       <span className="bsay">{children}</span>
+    </div>
+  );
+}
+
+/**
+ * How far a running lane has come, in its own words (plan 13): one segment
+ * per item of the plan — met in the live colour, the lane's own; deviated
+ * outlined; the rest quiet — and under it the count and the last item marked,
+ * or the review counter once every item is met. Nothing here is green: a met
+ * item is the lane's claim, and green is the board's word for a loop it
+ * closed itself (ruling 4). The counter is red while the loop is open and
+ * quiet once a pass reads clean (ruling 5). The line is the board's; the
+ * page invents no words.
+ */
+export function Strip({ items, label }: { items: readonly Item[]; label: string }) {
+  return (
+    <span className="strip" data-meaning="live" role="img" aria-label={label}>
+      {items.map((item) => (
+        <span key={item.number} className={`seg ${item.stance ?? "open"}`} title={`${item.number}. ${item.title}${item.stance ? ` — ${item.stance}` : ""}`} />
+      ))}
+    </span>
+  );
+}
+
+export function HowFar({ progress }: { progress: Progress }) {
+  const open = progress.review !== null && !progress.review.clean;
+  return (
+    <div className="howfar" role="status">
+      <Strip items={progress.items} label={progress.line} />
+      <span className="howfar-line" {...(open ? { "data-meaning": "broken" as const } : {})} title={`${progress.line} — as the lane wrote it in its own copy of the plan`}>
+        {progress.line}
+      </span>
+    </div>
+  );
+}
+
+const STANCE_WORD = { met: "met", deviated: "deviated" } as const;
+
+/**
+ * The plan's items on the open card, in order, each with its stance and
+ * what stands beside it: the evidence for a met item, the pointer for a
+ * deviated one, the item's own "done means" for one not yet met — so what
+ * is left is readable without opening the plan.
+ */
+export function Items({ items }: { items: readonly Item[] }) {
+  return (
+    <div className="items" role="list" aria-label="the plan's items">
+      {items.map((item) => (
+        <div key={item.number} className="item" role="listitem" data-stance={item.stance ?? "open"}>
+          <span className="inum">{item.number}</span>
+          <span className="ibody">
+            <span className="ihead">
+              <span className="ititle">{item.title}</span>
+              <span className="istance" {...(item.stance ? { "data-meaning": "live" as const } : {})}>
+                {item.stance ? STANCE_WORD[item.stance] : "not yet"}
+              </span>
+            </span>
+            {item.stance && item.text ? <span className="itext">{item.text}</span> : null}
+            {!item.stance && item.done_means ? <span className="itext quiet">done means: {item.done_means}</span> : null}
+          </span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+/** The review loop on the open card: one row per pass with its lens and what it found — the pass still open is the red one — and the findings this lane filed rather than fixed. */
+export function Passes({ review }: { review: Review }) {
+  const last = review.passes.length;
+  return (
+    <div className="passes" role="list" aria-label="the review's passes">
+      {review.passes.map((pass) => {
+        const open = pass.number === last && !pass.clean;
+        return (
+          <div key={pass.number} className="item" role="listitem">
+            <span className="inum">{pass.number}</span>
+            <span className="ibody">
+              <span className="ihead">
+                <span className="ititle">{pass.lens}</span>
+                <span className="istance" {...(open ? { "data-meaning": "broken" as const } : {})}>
+                  {pass.clean ? "clean" : open ? "open" : "read"}
+                </span>
+              </span>
+              {pass.text ? <span className="itext">{pass.text}</span> : null}
+            </span>
+          </div>
+        );
+      })}
+      {review.filed_names.map((name) => (
+        <div key={name} className="item filed" role="listitem">
+          <span className="inum">filed</span>
+          <span className="ibody">
+            <span className="itext">{name} — outside this change; a defect on the rail when the lane folds</span>
+          </span>
+        </div>
+      ))}
     </div>
   );
 }

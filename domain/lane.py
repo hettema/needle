@@ -14,6 +14,7 @@ from enum import StrEnum
 
 from pydantic import BaseModel
 
+from domain.document import Item, Review
 from domain.session import Session
 from domain.slot import Placement
 from domain.window import WindowKind
@@ -98,6 +99,29 @@ class Conversation(BaseModel):
     started_at: datetime
 
 
+class Progress(BaseModel):
+    """How far a running lane has come, in the lane's own words (plan 13):
+    the items of the card's plan as the lane's worktree copy carries them —
+    never the trunk's, which is the plan as it stood at Start — and, once
+    every item is met, the review loop as the lane's record counts it. The
+    board reads and counts; it judges nothing here."""
+
+    items: list[Item]
+    met: int
+    deviated: int
+    total: int
+    last: str | None
+    """The title of the last item the lane marked, in file order."""
+    read_at: datetime
+    review: Review | None
+    """The lane's review record, read only once every item is met: before
+    that the face counts items, whatever the record says."""
+    line: str
+    """What the face says under the strip — "2 of 4 met · last: …", or the
+    review counter once every item is met — composed by the board so the
+    page invents nothing (plan 27)."""
+
+
 class Lane(BaseModel):
     card_number: int
     name: str
@@ -132,6 +156,9 @@ class Lane(BaseModel):
     colliding: "Collision | None"
     """Another live lane is editing files this one is also editing, named;
     None while no live lane's edits overlap (plan 07, item 2)."""
+    progress: Progress | None = None
+    """How far the lane has come, from its own copy of the plan (plan 13);
+    None while no session has hands on it, or its plan has no items."""
 
 
 class DoorResult(BaseModel):

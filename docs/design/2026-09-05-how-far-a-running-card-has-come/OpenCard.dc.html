@@ -1,0 +1,117 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+  <style>
+    body { margin: 0; background: #121618; color: #E4E8E5; font-family: Archivo, "Helvetica Neue", system-ui, sans-serif; }
+    a { color: #63B5BD; } a:hover { color: #8fd0d6; }
+    .mono { font-family: "IBM Plex Mono", ui-monospace, SFMono-Regular, monospace; }
+  </style>
+</helmet>
+<div style="width: 1160px; min-height: 860px; box-sizing: border-box; padding: 40px 48px; background: #121618; display: flex; gap: 40px;">
+
+  <div style="width: 560px; flex-shrink: 0; display: flex; flex-direction: column; background: #1C2225; border: 1px solid #63B5BD; border-radius: 7px; overflow: hidden;">
+    <div style="display: flex; flex-direction: column; gap: 10px; padding: 16px 20px 14px;">
+      <div style="display: flex; align-items: center; gap: 10px;">
+        <span class="mono" style="font-size: 12px; color: #748086;">#262</span>
+        <span class="mono" style="font-size: 10px; letter-spacing: .08em; color: #95A1A7; border: 1px solid #3F4A51; border-radius: 3px; padding: 1px 6px;">HIGH</span>
+        <span class="mono" style="font-size: 10px; letter-spacing: .08em; color: #748086;">PLAN</span>
+        <span style="flex-grow: 1;"></span>
+        <span class="mono" style="font-size: 12px; color: #748086;">Executing · 1 of 3</span>
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="#95A1A7" stroke-width="1.5"><path d="M4 4l8 8M12 4l-8 8"></path></svg>
+      </div>
+      <div style="font-size: 22px; font-weight: 600; line-height: 1.2; letter-spacing: -.01em;">A storm warning reaches every skipper in the harbour</div>
+      <div style="display: flex; align-items: center; gap: 8px;">
+        <span style="width: 8px; height: 8px; border-radius: 50%; background: #63B5BD;"></span>
+        <span class="mono" style="font-size: 12px; color: #63B5BD;">working · 41 min · fable on hrclaude</span>
+        <span class="mono" style="font-size: 12px; color: #95A1A7;">— 2 of 4 met, as the lane says it</span>
+      </div>
+    </div>
+
+    <div style="display: flex; align-items: center; gap: 8px; padding: 12px 20px; background: #232A2D; border-top: 1px solid #303941; border-bottom: 1px solid #303941;">
+      <div style="height: 36px; padding: 0 16px; display: flex; align-items: center; border-radius: 5px; background: #E4E8E5; color: #121618; font-size: 13px; font-weight: 600;">Focus its window</div>
+      <div style="height: 36px; padding: 0 14px; display: flex; align-items: center; border-radius: 5px; border: 1px solid #3F4A51; color: #E4E8E5; font-size: 13px; font-weight: 500;">Discuss</div>
+      <div style="height: 36px; padding: 0 14px; display: flex; align-items: center; border-radius: 5px; border: 1px solid #3F4A51; color: #E4E8E5; font-size: 13px; font-weight: 500;">Stop</div>
+      <div style="flex-grow: 1;"></div>
+      <div class="mono" style="font-size: 12px; color: #748086;">Answer when it stops · Look when it is gone</div>
+    </div>
+
+    <div style="display: flex; flex-direction: column; gap: 22px; padding: 18px 20px 22px;">
+      <div style="display: flex; flex-direction: column; gap: 6px;">
+        <div class="mono" style="font-size: 10px; letter-spacing: .12em; text-transform: uppercase; color: #748086;">What it makes true</div>
+        <div style="font-size: 15px; line-height: 1.5; color: #E4E8E5;">Every boat in the harbour hears a gale warning the moment the office does. Last night the office phoned eleven skippers one by one and reached six; the five it did not reach found out from the wind.</div>
+      </div>
+
+      <div style="display: flex; flex-direction: column; gap: 8px;">
+        <div style="display: flex; align-items: center; gap: 10px;">
+          <div class="mono" style="font-size: 10px; letter-spacing: .12em; text-transform: uppercase; color: #748086;">The plan's items</div>
+          <div style="flex-grow: 1; display: flex; gap: 3px; max-width: 160px;"><span style="flex-grow: 1; height: 6px; border-radius: 3px; background: #63B5BD;"></span><span style="flex-grow: 1; height: 6px; border-radius: 3px; background: #63B5BD;"></span><span style="flex-grow: 1; height: 6px; border-radius: 3px; background: #303941;"></span><span style="flex-grow: 1; height: 6px; border-radius: 3px; background: #303941;"></span></div>
+          <div class="mono" style="font-size: 11px; color: #95A1A7;">2 of 4 met · read 40 s ago from the lane's copy</div>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 10px;">
+          <div style="display: flex; gap: 12px; font-size: 14px; line-height: 1.5;">
+            <span class="mono" style="font-size: 11px; color: #748086; min-width: 20px; padding-top: 3px;">1</span>
+            <div style="display: flex; flex-direction: column; gap: 2px; flex-grow: 1;">
+              <div style="display: flex; align-items: baseline; gap: 10px;"><span style="color: #E4E8E5;">Tonight's boats are one list</span><span class="mono" style="font-size: 11px; color: #63B5BD;">met</span></div>
+              <div style="font-size: 13px; color: #95A1A7;">the list at office/tonight.py; eleven boats on the fixture, each with its skipper's phone</div>
+            </div>
+          </div>
+          <div style="display: flex; gap: 12px; font-size: 14px; line-height: 1.5;">
+            <span class="mono" style="font-size: 11px; color: #748086; min-width: 20px; padding-top: 3px;">2</span>
+            <div style="display: flex; flex-direction: column; gap: 2px; flex-grow: 1;">
+              <div style="display: flex; align-items: baseline; gap: 10px;"><span style="color: #E4E8E5;">One click sends the warning</span><span class="mono" style="font-size: 11px; color: #63B5BD;">met</span></div>
+              <div style="font-size: 13px; color: #95A1A7;">Warn sends through office/messages.py; test_warn_reaches_every_boat passes</div>
+            </div>
+          </div>
+          <div style="display: flex; gap: 12px; font-size: 14px; line-height: 1.5;">
+            <span class="mono" style="font-size: 11px; color: #748086; min-width: 20px; padding-top: 3px;">3</span>
+            <div style="display: flex; flex-direction: column; gap: 2px; flex-grow: 1;">
+              <div style="display: flex; align-items: baseline; gap: 10px;"><span style="color: #E4E8E5;">The log says who was reached</span><span class="mono" style="font-size: 11px; color: #748086;">not yet</span></div>
+              <div style="font-size: 13px; color: #748086;">done means: a line per skipper, reached or not, in the office log</div>
+            </div>
+          </div>
+          <div style="display: flex; gap: 12px; font-size: 14px; line-height: 1.5;">
+            <span class="mono" style="font-size: 11px; color: #748086; min-width: 20px; padding-top: 3px;">4</span>
+            <div style="display: flex; flex-direction: column; gap: 2px; flex-grow: 1;">
+              <div style="display: flex; align-items: baseline; gap: 10px;"><span style="color: #E4E8E5;">The gale is rehearsed</span><span class="mono" style="font-size: 11px; color: #748086;">not yet</span></div>
+              <div style="font-size: 13px; color: #748086;">done means: a test sends to eleven boats and finds five unreached in the log</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div style="display: flex; flex-direction: column; gap: 6px;">
+        <div class="mono" style="font-size: 10px; letter-spacing: .12em; text-transform: uppercase; color: #748086;">The record</div>
+        <div style="display: flex; flex-direction: column; gap: 8px;">
+          <div style="display: flex; gap: 12px; font-size: 14px; line-height: 1.5;"><span class="mono" style="font-size: 11px; color: #748086; min-width: 84px; padding-top: 3px;">09:12</span><span style="color: #95A1A7;"><span style="color: #E4E8E5;">Moved Up next → Executing</span> — hands on: 3c91e2a7 on hrclaude</span></div>
+          <div style="display: flex; gap: 12px; font-size: 14px; line-height: 1.5;"><span class="mono" style="font-size: 11px; color: #748086; min-width: 84px; padding-top: 3px;">09:12</span><span style="color: #95A1A7;"><span style="color: #E4E8E5;">Started</span> by you, at high, on Fable</span></div>
+        </div>
+      </div>
+
+      <div style="display: flex; flex-direction: column; gap: 6px;">
+        <div class="mono" style="font-size: 10px; letter-spacing: .12em; text-transform: uppercase; color: #748086;">The plan</div>
+        <div style="display: flex; align-items: center; justify-content: space-between; padding: 10px 12px; background: #121618; border: 1px solid #303941; border-radius: 5px;">
+          <span class="mono" style="font-size: 12px; color: #E4E8E5; text-decoration: underline; text-decoration-color: #3F4A51;">docs/plans/2026-09-04-a-storm-warning-reaches-every-skipper.md</span>
+          <span class="mono" style="font-size: 11px; color: #748086;">read 40 s ago · open ▸</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div style="display: flex; flex-direction: column; gap: 18px; padding-top: 6px; max-width: 460px;">
+    <div class="mono" style="font-size: 11px; letter-spacing: .12em; color: #748086; text-transform: uppercase;">The open card — the items, with their stance</div>
+    <div style="font-size: 14px; color: #95A1A7; line-height: 1.55;">One section joins the signed open card, between what the card makes true and the record: the plan's items in order. A met item shows the evidence the lane wrote beside it. An item not yet met shows its own "done means", so what is left is readable without opening the plan. A deviated item would show its pointer in the same place.</div>
+    <div style="font-size: 14px; color: #95A1A7; line-height: 1.55;">The head says where the count comes from: the lane's copy of the plan, read by the board a moment ago. Every stance here is the lane's own word, and the review pass is where it is checked against the work.</div>
+    <div style="font-size: 14px; color: #95A1A7; line-height: 1.55;">The items section stays on the open card in every column, so a shipped card keeps the shape of how its run went. Only the collapsed face limits the strip to Executing — your call 2 on the first board.</div>
+    <div style="font-size: 13px; color: #748086; line-height: 1.55;">Staged: Harbourmaster's plans carry one promise each, so the four items on this plan are written for the comp in its own words; the lane that builds this adds a fixture plan in this shape.</div>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

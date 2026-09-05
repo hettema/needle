@@ -9,7 +9,7 @@ import type { Standing } from "./evidence";
 import type { Gate } from "./gate";
 import type { Handouts } from "./handout";
 import type { HeardMark } from "./hook";
-import type { Collision, Conversation, Doors, Lane, LaneState } from "./lane";
+import type { Collision, Conversation, Doors, Lane, LaneState, Progress } from "./lane";
 import type { Project } from "./project";
 import type { Row } from "./row";
 import type { Reading, Signal, SignalKind, WindowlessSession } from "./signal";
@@ -107,6 +107,7 @@ export interface CardSummary {
   place: Place;
   lane_state: LaneState;
   colliding: Collision | null;
+  progress: Progress | null;
   standing: Standing;
   reading: WindowlessSession | null;
   planning: WindowlessSession | null;

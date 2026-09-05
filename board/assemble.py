@@ -733,6 +733,7 @@ def summarize(
         place=card.place,
         lane_state=lane.state if lane is not None else LaneState.NONE,
         colliding=lane.colliding if lane is not None and lane.state in HANDS_ON else None,
+        progress=lane.progress if lane is not None and lane.state in HANDS_ON else None,
         standing=standing,
         reading=reading,
         planning=planning,
