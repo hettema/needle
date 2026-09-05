@@ -1,7 +1,7 @@
 # As many lanes as the machine can hold run side by side, and the fold settles what they share
 
 **Found by:** the owner, from the board's Idea door on 2026-09-05 (conversation a2d30083)
-**Status:** PENDING
+**Status:** DONE — built 2026-09-05 by the build session (Claude Fable 5.1 at high, the card's gate) in the lane `card-50-a-plan-the-board-cannot-start-ho`, reviewed in `docs/reviews/2026-09-05-as-many-lanes-as-the-machine-can-hold.md`, folded to `origin/develop` the same day; the served board restarted on the new code. Items 1 to 3 met on the fixtures; item 4 delivered with two words deviated (the review's dispositions 1 and 2). The loop's twenty-lane reading is the WATCH row.
 **Written:** 2026-09-05, the morning after the dial's first night on Hello Revenue. Four slots, six hours, five folds: for two and a half hours three slots waited behind a collision with the owner's own #350 lane on test files, a vocabulary module and a JSON manifest, and #383 waited on files #379's plan named and never opened. The owner: "I'm the one scared of collisions without actually understanding how a large team working on a system actually uses git to not kill each other's work. So I might've introduced a rule that makes no sense. The intent is to execute as fast as possible utilising our four (or more) claude subscriptions without jeopardising quality." Then, on the answer: "ok lets change the collaboration model so that it's easier for multiple sessions to work in parallel. The intent is to be able to let as many sessions as we want work concurrently safely whilst maintaining output quality and without crashing my system."
 **Carries:** `docs/slice-suggestions/2026-09-05-a-plan-the-board-cannot-start-holds-one-of-the-dials-slots.md` (item 3 is its ruling), `docs/slice-suggestions/2026-09-05-a-sequencing-line-that-names-cards-closes-start-until-they-ship.md` (item 2 is its ruling), `docs/slice-suggestions/2026-09-05-a-carried-suggestion-archived-a-read-before-its-plan-parks-the-card-and-nothing-unparks-it.md` (item 5 is its fix — first carried by the head citing its path, made deliberate the same morning because #384 and #386 sit parked on Hello Revenue and this plan is what frees them). All three stay live in `docs/slice-suggestions/` until the lane archives them at its close, because archiving a read before the plan lands is the parking this plan fixes, and this door writes nothing else into the repository.
 **Effort gate:** high — every mechanism below has a fixture (`tests/board/test_collision.py`, `test_lane.py`, `test_dial.py`, `tests/api/test_doors.py`, `test_dial.py`); the judgment is the words on the door, the rewrite of INTENT's fourth lesson in the owner's voice, and the memory floor's number with its why.
@@ -73,7 +73,25 @@ Recorded from the conversation; each overturnable by the owner on the card.
 5. **A finished lane is stopped; every other ending is left as evidence.** Rejected: stopping every ended session — a lane that died says why only while its scope stands.
 
 ## Close-out
-Written by the lane: the fixture cases by name, the Sequencing table across the corpora, memory held by lane scopes before and after item 4 on the real machine, INTENT's new fourth lesson quoted, and the twenty-lane reading's date.
+Written by the lane, 2026-09-05.
+
+**The fixture cases, by name.** `tests/api/test_doors.py::test_shared_ground_opens_start_shows_it_on_both_cards_and_briefs_the_lane`, `::test_a_sequencing_line_naming_a_card_in_flight_holds_start_until_it_ships`; `tests/api/test_dial.py::test_a_held_plan_does_not_count_and_the_memory_floor_stops_the_beat`, `::test_a_lane_that_folded_and_closed_gives_its_memory_back_and_no_other_ending_is_touched`; `tests/board/test_sequencing.py` (five, over the real corpora's lines); `tests/board/test_dial.py::test_a_planned_card_whose_start_is_closed_is_held_and_does_not_count`, `::test_the_memory_floor_is_read_against_available_memory_and_free_swap`; `tests/board/test_lane.py::test_shared_ground_opens_start_with_the_ground_in_its_label`, `::test_the_plans_own_word_is_the_one_hold_on_start`; `tests/board/test_language.py::test_shared_ground_before_start_is_proven_and_its_door_is_start`, `::test_a_plan_that_waits_on_a_named_card_is_quiet_and_says_which`; `tests/board/test_collision.py::test_every_lane_on_the_ground_is_named_an_edit_in_progress_first`; on the page, `frontend/tests/board.test.tsx` — *opens Start over shared ground with the ground in its label and the sentence beside it, and no second door*, *says on the open card why a plan waits on the cards its Sequencing names*, *reads a night of held plans as held, not running, and says when the machine is full*, and the colour language's *shares ground* and *waits* rows.
+
+**The Sequencing table across the corpora**, read 2026-09-05 (eighteen head lines; the search ran on the main thread, the review's disposition 6):
+
+| Plan | Names | Held? |
+| --- | --- | --- |
+| Hello Revenue #411 (the plan-grammar plan of 2026-09-05) | omarchy #17 (Up next), Needle #20 (Up next) | **held** |
+| Hello Revenue's plan of 2026-09-03 on the authors' cascade | #222 (Done), #235 (Executed); #228 and #219 in later sentences are prose | no |
+| Hello Revenue #386 (the currency plan of 2026-09-05) | *#384* mid-sentence: prose | no |
+| Hello Revenue — thirteen others; Omarchy — plan 15 (*beside Needle's plan 16*); Needle — 08, 14, 15, 16, this plan (*beside 15 and 16*) | none | no |
+| Harbourmaster (the fixture) — The waiting list offers every berth that fits (#196) | #139 (Decision moment) | **held** |
+
+**Memory held by lane scopes on this machine.** Before the fold, nine scopes of cards already in Executed or Done held 1,092 MB between them (Needle #17 117 MB, #38 7 MB; Hello Revenue #350 226 MB, #361 161 MB, #377 89 MB, #379 132 MB, #383 87 MB, #385 127 MB, #391 146 MB), with 5.3 GB available and 9.1 GB of swap free. After the fold and the restart: in the review record's last section.
+
+**INTENT's new fourth lesson**, in full: *Shared ground is a cost the board shows, never a door it closes.* … *The fold is the guard: a lane rebases on the trunk, runs the full suite on the levelled tree, and fast-forwards, or it does not land. That is how a team on git works — nobody locks a file, the second to land pays the merge, the suite is the judge, and the one conflict that matters (two lanes changing one behaviour with no textual overlap) is caught by the suite and by nothing a lock could see. So the board still declares and still shows: what a plan shares with the lanes that run is on both cards and in the lane's brief, so the session rebases early and often. The one reason a Start waits on another card is the plan's own word, its `Sequencing:` line naming the cards it must follow. The machine's memory is the other ceiling, and the board lowers its number to it; it never raises the number the owner set.*
+
+**The twenty-lane reading's date:** not yet; it is read at twenty fix lanes after this fold, and the card's WATCH row names it.
 
 ## Estimate
 Execution clock: two lane-days. Gate clock: twenty fix lanes after the fold.

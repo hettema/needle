@@ -1,5 +1,6 @@
 # A Sequencing line that names cards closes Start until they ship
 
+**Carried by:** docs/plans/done/2026-09-05-as-many-lanes-as-the-machine-can-hold-run-side-by-side-and-the-fold-settles-what-they-share.md (item 2)
 **Found by:** the owner, from Hello Revenue's Idea door on 2026-09-05 (conversation bbd1dd9c), writing a plan that depends on omarchy #17 and Needle #20: "lets make it check if the dependencies in machine and needle are actually executed before it executes (I am not going to remember)".
 **Kind:** idea
 **Fix:** his

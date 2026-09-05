@@ -1,5 +1,6 @@
 # A plan the board cannot start holds one of the dial's slots
 
+**Carried by:** docs/plans/done/2026-09-05-as-many-lanes-as-the-machine-can-hold-run-side-by-side-and-the-fold-settles-what-they-share.md (item 3, shape 1: a held plan does not count, and the head says *held*)
 **Found by:** the owner, from the board's Idea door on 2026-09-05 (conversation a2d30083), watching the dial's first night on Hello Revenue: at 02:57 the dial reported four live fix lanes and not one had hands on a tree.
 **Kind:** defect
 **Fix:** his — the remedy trades planning spend (a Fable session per plan written while its Start is closed) against the rail draining on a night one long lane runs; both shapes below are a few lines in `board/dial.py::LIVE_STAGES` or `api/dial.py::_take_next`, and which one is the owner's call.
