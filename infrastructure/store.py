@@ -31,6 +31,7 @@ from domain.card import Actor, Card, CardOrigin, DocumentLink, Place
 from domain.column import COLUMN_DEFINITIONS, DEFECTS_RAIL, DEFECTS_RAIL_POSITION, Column
 from domain.dial import Dial, DialChange, Filer, FixLane, FixStage, RailCount
 from domain.document import DocumentKind, DocumentRef, SuggestionKind
+from domain.entrance import Entrance
 from domain.evidence import Evidence
 from domain.gate import Gate
 from domain.hook import HeardMark, HookEvent, HookKind, HookPosted
@@ -202,6 +203,16 @@ class Store:
                     imported_01_at=None,
                 )
             )
+
+    def note_entrance(self, slug: str, entrance: Entrance) -> None:
+        """Record what a session started in this project reads as its
+        constitution, as the door last read it. Overwrites: the answer that
+        matters is the one true now (migration 0011)."""
+        with self._session() as session, session.begin():
+            row = session.get(ProjectRow, slug)
+            if row is None:
+                raise StoreRefusal(f'No project "{slug}" is on the board.')
+            row.entrance = entrance.model_dump(mode="json")
 
     def projects(self) -> list[Project]:
         with self._session() as session:
@@ -1541,7 +1552,13 @@ def _fix_lane(row: FixLaneRow) -> FixLane:
 
 
 def _project(row: ProjectRow) -> Project:
-    return Project(slug=row.slug, name=row.name, path=row.path, registered_at=row.registered_at)
+    return Project(
+        slug=row.slug,
+        name=row.name,
+        path=row.path,
+        registered_at=row.registered_at,
+        entrance=Entrance.model_validate(row.entrance) if row.entrance is not None else None,
+    )
 
 
 def _link(row: CardRow) -> DocumentLink | None:

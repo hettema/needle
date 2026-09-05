@@ -50,6 +50,7 @@ class ProjectRow(Base):
     registered_at: Mapped[datetime] = mapped_column(UtcDateTime)
     next_card_number: Mapped[int] = mapped_column(Integer)
     imported_01_at: Mapped[datetime | None] = mapped_column(UtcDateTime, nullable=True)
+    entrance: Mapped[dict[str, object] | None] = mapped_column(JSON, nullable=True)
 
 
 class GroupRow(Base):

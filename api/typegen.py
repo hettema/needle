@@ -23,6 +23,7 @@ MODULES: list[str] = [
     "row",
     "card",
     "audit",
+    "entrance",
     "project",
     "board",
     "slot",

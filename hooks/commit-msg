@@ -1,0 +1,35 @@
+#!/bin/bash
+# commit-msg — a doctrine edit lands on a card, never as a tidy (plan 18, item 5).
+#
+# docs/HOW-WE-WORK.md is the one text every project on every machine reads at its next session
+# start, and docs/INTENT.md is the fixed point it serves. A change to either is intent-bearing by
+# definition, so it travels as a suggestion marked "Fix: his", becomes a card, and the card's close
+# makes the edit. This hook refuses the other route: an edit to either file in a commit whose
+# message names no card.
+#
+# A card is named by "#12" or "card 12" anywhere in the message. Staging a plan is not enough, unlike
+# the machine repo's hook for home/: a plan under docs/plans/ is a card the board makes, but a plan
+# that edits the constitution in the same commit is the tidy this rule exists to stop — the plan
+# lands first, gets a number, and the edit names it.
+#
+# Armed by `needle hook install <repo>`, which sets core.hooksPath to this directory by ABSOLUTE
+# path: a relative one resolves against each worktree's own root, so every lane under
+# .claude/worktrees/ silently loses the hook — which is precisely where a doctrine edit would be
+# made. `tests/ratchets/test_a_doctrine_edit_lands_on_a_card.py` reads the bypass (--no-verify, or a
+# clone where core.hooksPath was never set), so an unarmed hook is a finding rather than a silence.
+#
+# Rejected: a pre-commit hook. It has no message to read, so it could refuse a doctrine edit but
+# never accept one that names its card, and every legitimate close would need --no-verify.
+msg=$1
+doctrine='^docs/(HOW-WE-WORK|INTENT)\.md$'
+staged=$(git diff --cached --name-only)
+grep -qE "$doctrine" <<<"$staged" || exit 0
+grep -qiE '(#|\bcard )[0-9]+\b' "$msg" && exit 0
+cat >&2 <<'MSG'
+refused: this commit edits the one text (docs/HOW-WE-WORK.md or docs/INTENT.md) and no card knows
+about it. A doctrine edit is intent-bearing: it belongs to a card the owner ruled on, so that every
+project on every machine can read why the rule changed.
+  File the learning as a suggestion under docs/slice-suggestions/ with "**Fix:** his", let it become
+  a card, and make the edit on that card — naming it in the message: "#12" or "card 12".
+MSG
+exit 1

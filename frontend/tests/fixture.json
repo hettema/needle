@@ -4,7 +4,8 @@
       "slug": "harbourmaster",
       "name": "Harbourmaster",
       "path": "/srv/harbourmaster",
-      "registered_at": "2026-09-04T08:30:00Z"
+      "registered_at": "2026-09-04T08:30:00Z",
+      "entrance": null
     },
     "version": 2,
     "generated_at": "2026-09-04T08:30:00Z",

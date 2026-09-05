@@ -183,6 +183,23 @@ def head_of(repo: str | Path, ref: str) -> str | None:
     return out.strip() if out else None
 
 
+def arm_hooks_path(repo: str | Path, hooks: Path) -> str:
+    """Point the repository's git at `hooks`, and say what it pointed at before.
+
+    Absolute, always: the setting lives in the shared config that every
+    worktree of the repository reads, and a relative value resolves against
+    each worktree's own root — so a lane under `.claude/worktrees/` would
+    silently run no hook, which is exactly where the commits are made (plan 18,
+    item 5; the machine repo learned the same thing on its own hook).
+    """
+    if not hooks.is_absolute():
+        raise GitFailed(f"{hooks} is relative; a lane's worktree would not find it")
+    was = (_try(repo, "config", "--get", "core.hooksPath") or "").strip()
+    if was != str(hooks):
+        _git(repo, "config", "core.hooksPath", str(hooks))
+    return was
+
+
 # ── the trunk ──────────────────────────────────────────────────────────
 
 

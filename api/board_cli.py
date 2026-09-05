@@ -9,7 +9,7 @@ needle close SLUG N --delivered … --watch … [--review PATH] [--column COL]
 needle reading SLUG N delivered|not-delivered|cannot-tell "…" [--watch "…"]
 needle fold [--main] [--worktree PATH]   # fast-forward push to origin/develop, trunk synced
 needle start-card SLUG N                # Start, through the running board
-needle hook install REPO                 # register the session hook in REPO/.claude/settings.json
+needle hook install REPO                 # the session hook in REPO/.claude/settings.json, and REPO/hooks as git's
 needle sync [SLUG]                       # level each main checkout with origin/develop now
 needle signals [SLUG]                    # read every due signal now
 needle lanes SLUG                        # every card's lane, as the board reads it
@@ -52,6 +52,7 @@ from infrastructure import clock
 from infrastructure.live import Live
 from infrastructure.paths import db_path
 from infrastructure.store import Store, StoreRefusal
+from runtime.git import GitFailed, arm_hooks_path
 from runtime.service import Runtime
 
 DEFAULT_URL = "http://127.0.0.1:8480"
@@ -323,6 +324,34 @@ def hook_install(args: argparse.Namespace) -> int:
         print(f"registered Needle's hook in {settings} for {', '.join(added)}")
     else:
         print(f"Needle's hook is already registered in {settings}")
+    return _arm_git_hooks(repo)
+
+
+def _arm_git_hooks(repo: Path) -> int:
+    """Point git at the repository's own `hooks/` when it keeps git hooks there.
+
+    By ABSOLUTE path, and this is the whole reason the arming is a command
+    rather than a line in a README: the setting lives in the shared config, and
+    a relative value resolves against each worktree's own root — so every lane
+    under `.claude/worktrees/` would silently run no hook, which is exactly
+    where the commits are made.
+
+    Silent for a repository with no `hooks/commit-msg`: only the project that
+    owns the one text has a doctrine to guard, and pointing git at a directory
+    with no hooks in it would disable the default hooks directory for
+    nothing."""
+    hooks = repo / "hooks"
+    if not (hooks / "commit-msg").is_file():
+        return 0
+    try:
+        was = arm_hooks_path(repo, hooks)
+    except GitFailed as error:
+        print(f"the commit hook was not armed: {error}", file=sys.stderr)
+        return 1
+    if was == str(hooks):
+        print(f"git already runs {repo.name}'s hooks from {hooks}")
+    else:
+        print(f"armed {repo.name}'s git hooks: core.hooksPath = {hooks}" + (f" (was {was})" if was else ""))
     return 0
 
 
@@ -609,8 +638,9 @@ def register(sub: "argparse._SubParsersAction[argparse.ArgumentParser]") -> None
     hook_sub = p_hook.add_subparsers(dest="hook_command", required=True)
     p_install = hook_sub.add_parser(
         "install",
-        help="register the hook in a project's .claude/settings.json for every event it "
-        "serves; idempotent, so run it again when an event is added",
+        help="register the session hook in a project's .claude/settings.json for every event "
+        "it serves, and point git at the project's own hooks/ when it keeps git hooks there; "
+        "idempotent, so run it again when an event is added",
     )
     p_install.add_argument("repo")
     p_install.set_defaults(run=hook_install)

@@ -29,6 +29,7 @@ from domain.corpus import CorpusIndex
 from domain.project import Project
 from infrastructure import clock
 from infrastructure.corpus import NotACorpus, check_corpus, scan
+from infrastructure.entrance import read_entrance
 from infrastructure.live import Live, sweep
 from infrastructure.paths import db_path
 from infrastructure.store import Store, StoreRefusal
@@ -58,12 +59,24 @@ def describe_read(index: CorpusIndex, effects: Effects) -> str:
     )
 
 
+def say_entrance(store: Store, slug: str) -> None:
+    """What a session started in this project will read as its constitution.
+
+    A finding, never a refusal (plan 18, ruling 5): a project on a machine with
+    no entrance is still a project on the board. The line is recorded on the
+    project so the board shows the person the same words the door printed."""
+    entrance = read_entrance(Path.home(), clock.now())
+    store.note_entrance(slug, entrance)
+    print(entrance.line)
+
+
 def reread(store: Store, project: Project, root: Path) -> int:
     print(f"{root} is already on the board as {project.slug} ({project.name}).")
     if (root / CARD_FILE_01).is_file():
         print("Its 0.1 card file was imported at registration and is not read again.")
     index, effects = sweep(store, project, origin=CardOrigin.ARRIVED, at=clock.now())
     print(describe_read(index, effects))
+    say_entrance(store, project.slug)
     return 0
 
 
@@ -132,6 +145,7 @@ def _register(store: Store, root: Path, args: argparse.Namespace, database: Path
 
     index, effects = sweep(store, project, origin=CardOrigin.FOUNDING, at=clock.now())
     print(describe_read(index, effects))
+    say_entrance(store, project.slug)
     print(f"Store: {database}")
     return 0
 
