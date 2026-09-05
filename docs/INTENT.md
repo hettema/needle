@@ -1,5 +1,11 @@
 # Needle — the founding intent
 
+Needle enables AI colleagues with different capabilities to jointly own
+implementation, expansion and maintenance, while the human owns intent. The
+organisation discovers how they collaborate best through measured work,
+preserves what it learns, and requires no human understanding or handling of
+code.
+
 **Written:** 2026-09-03, by the owner and the coordinating session, the evening
 the first board (Needle 0.1, inside the Hello Revenue repository) needed its
 ninth fix of the day. This document is the fixed point of the project. Plans
