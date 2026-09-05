@@ -43,7 +43,12 @@ _LIST_MARKER = re.compile(r"^(?:[-*+>]|\d+[.)])\s+")
 _SENTENCE_END = re.compile(r"(?<=[.!?])\s+(?=[A-Z0-9\"'(`*])")
 _SUGGESTION_PATH = re.compile(r"docs/slice-suggestions/(?:done/)?([\w.-]+?)\.md")
 _KIND = re.compile(r"^\W*(defect|idea)\b", re.I)
-_FIX = re.compile(r"^\W*(now|his|when)\b\W*(.*)$", re.I | re.S)
+_FIX = re.compile(r"^\W*(now|his|when)\b[ \t]*(.*)$", re.I | re.S)
+r"""Only whitespace between the mark and its reason: a second `\W*` here ate
+the reason's first character, and the character a mark's reason most often
+starts with is a backtick around the source it cites — so the best-written
+marks were the ones whose source nothing could find (plan 59's review). The
+dashes and colons the corpus separates with are stripped below."""
 """The `Fix:` line's vocabulary (plan 11, item 2): the first word is the
 mark; after `now` or `his` the rest is the why, after `when` the trigger.
 Any other line is prose and the suggestion is unmarked."""

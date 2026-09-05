@@ -175,6 +175,33 @@ def test_the_bar_refuses_an_empty_reason_and_a_category_word_and_takes_the_valid
     assert why_of("his the two shapes #435 chose between are still both open") is None
 
 
+def test_a_reason_keeps_the_backticks_the_source_it_cites_is_written_in():
+    """The way a mark is best written — the mark, then the source in
+    backticks — is the way that lost its first character to the parser's
+    separator, so the marks with a source were exactly the ones nothing
+    could find one in (plan 59's review, the last pass)."""
+    document = parse_document(
+        "# T\n\n**Kind:** defect\n**Fix:** now `docs/HOW-WE-WORK.md` §10 already writes it"
+        "\n\n## O\n\nx\n",
+        kind=DocumentKind.SUGGESTION,
+        path="docs/slice-suggestions/t.md",
+        archived=False,
+        read_at=datetime.now(UTC),
+    )
+    assert document.fix is not None
+    assert document.fix.why == "`docs/HOW-WE-WORK.md` §10 already writes it"
+    assert source_ref_of(document.fix.why) == "docs/HOW-WE-WORK.md"
+    # The dashes and colons the corpus separates with are still stripped.
+    dashed = parse_document(
+        "# T\n\n**Kind:** defect\n**Fix:** now — the tide table plan says so\n\n## O\n\nx\n",
+        kind=DocumentKind.SUGGESTION,
+        path="docs/slice-suggestions/t.md",
+        archived=False,
+        read_at=datetime.now(UTC),
+    )
+    assert dashed.fix is not None and dashed.fix.why == "the tide table plan says so"
+
+
 def test_nothing_reads_a_source_shaped_reason_as_a_verified_source():
     """The affordance reader finds a path in a reason; it never claims the
     path exists. `docs/no-such-plan.md` reads exactly like a real path, and

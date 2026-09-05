@@ -87,12 +87,12 @@ def why_is_a_reason(why: str | None) -> str | None:
         return "the mark names no reason; say what selects this outcome"
     if plain in CATEGORY_ONLY:
         return (
-            f'"{why.strip()}" names the shape of the decision, not the decision; '
+            f'"{plain}" names the shape of the decision, not the decision; '
             "say which outcome it selects and what selects it"
         )
     if len(plain.split()) < REASON_WORDS:
         return (
-            f'"{why.strip()}" is too short to be a reason; a source on its own is not one — '
+            f'"{plain}" is too short to be a reason; a source on its own is not one — '
             "say what in it selects the outcome"
         )
     return None

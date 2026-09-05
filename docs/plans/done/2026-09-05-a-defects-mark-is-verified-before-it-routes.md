@@ -105,4 +105,79 @@ We think an independent reading that verifies a mark against the text it actuall
 
 ## Close-out
 
-Written by the lane: the first `answered` row and the commit it produced; the triage rows on the founding five with their fingerprints; the ratchet's two refusals demonstrated; a stale row refused and retriaged; a split followed to both fates by one identity; the doctrine sentence before and after; every review pass and correction; full-suite results; and item 6's list as it stood at the close, with directions, so the loop's first audit has its sample.
+**Shipped, and on the served board.** Folded to `origin/develop` at f078438, the
+dist rebuilt and `needle-serve` restarted, so the board at 8480 runs it. Its own
+rail proves it: twenty-two defects across three projects that used to route on a
+word one session wrote now read `needs triage` — *marked now, and no reading has
+verified it; it is nobody's yet* — and seven of Needle's own and six of Hello
+Revenue's that read as the owner's by default are nobody's until something looks
+at them. Nothing on any rail routes to the machine tonight, which is the point:
+the mark was never the verification.
+
+**The doctrine sentence, before and after.** §10 read *"The board's dial is the
+person's standing ruling that a `now` defect enters execution without them; an
+unmarked defect reads as theirs."* It now reads that a `now` or a `his` says why
+on the same line, that the mark is verified before it routes by one independent
+reading bound to the text it read, that a reading is stricter at once and never
+looser than the corpus, that the dial's ruling is about a *verified* `now`, and
+that *"an unmarked defect, and one no reading has verified, is nobody's yet: not
+the machine's, and not theirs by default."* §1 gained the ownership test in the
+owner's own words, with the measurement that produced it. `docs/HOW-WE-HOLD-IT.md`
+now says what holds both, and `~/.claude/CLAUDE.md` resolves to the same text, so
+every project on this machine reads it at its next session start.
+
+**The ratchet's refusals, demonstrated on real lines.**
+
+    Fix: now                                    -> the mark names no reason; say what selects this outcome
+    Fix: his — a product call                   -> "product call" names the shape of the decision, not the
+                                                   decision; say which outcome it selects and what selects it
+    Fix: now `docs/HOW-WE-WORK.md`              -> "docs/how-we-work.md" is too short to be a reason; a source
+                                                   on its own is not one — say what in it selects the outcome
+    Fix: now `docs/HOW-WE-WORK.md` §10 already
+         writes this rule                       -> ACCEPTED
+    Fix: his the two shapes #435 chose between
+         are both still open                    -> ACCEPTED
+
+    source_ref_of finds 'docs/no-such-plan.md' in a reason, and then:
+        docs/no-such-plan.md is not a file in this project: the source resolved nowhere
+        docs/HOW-WE-WORK.md, 19596 characters, fingerprint e54a870d6d278ec3
+
+**A stale row, a split to both fates, the seat's whole lifecycle** — every one on
+the floor, through the real beat, the real launcher and the real verb in its own
+process against a shared store: `tests/api/test_the_triage_seat.py`, thirteen
+scenarios. The two fingerprints are proved separately: a document edited under a
+valid reading, and a source edited under one whose document did not move. The
+split is followed by `needle decisions` from one identity to two fates.
+
+**The page, live.** A throwaway store on a copy of the fixture project, served and
+driven through Chromium's DevTools protocol at 1512×945: the two faces this card
+adds read as intended, the head counts *1 defect waiting on your ruling* under
+Your move, and the open card's **Who fixes it** section carries the routing
+sentence, the provenance line, the source with its fingerprint and the Rule form.
+It is also what found the last visual defect. The review record has the pass.
+
+**The review.** Seven passes, thirteen findings: eleven fixed in the lane, two
+filed. The one that earned the loop was the last: the parser ate the opening
+backtick of a mark's reason, so the marks that cited a source were exactly the
+ones nothing could find one in — found by running the bar over five real marks
+by hand rather than through its own fixtures.
+`docs/reviews/2026-09-05-a-defects-mark-is-verified-before-it-routes.md`.
+
+**Full suite at the close:** 473 backend tests including every ratchet, `tsc`
+clean, 68 page scenarios, `ruff` clean on this lane's files.
+
+**Item 6's list, as it stands: empty.** `needle decisions all` says *no decision
+has been taken on the rail yet*, and that is the honest state — the seat is
+opened by the dial's beat, and the dial is off (turned off 2026-09-05 18:34Z).
+The first `answered` row and the founding readings need his move, not another
+commit: the loop's sample starts at the first beat after he turns it on. Every
+path is proved on the floor; none has run on his own rail, and this close does
+not pretend otherwise.
+
+**Two findings filed rather than fixed** —
+`docs/slice-suggestions/2026-09-05-a-lane-the-board-opened-and-nobody-closes-leaves-nothing-behind.md`
+(`Fix: now`) and
+`docs/slice-suggestions/2026-09-05-one-word-names-two-different-things-on-the-board.md`
+(`Fix: his`). Both are on the rail as cards, and both are now `needs triage`
+under the rule this card shipped, which is the first thing it proves about
+itself.
