@@ -32,8 +32,8 @@ table and refuses to agree unless every paragraph is named by a row.
 | **machine fact** | true of this laptop, not of the way we work | the machine's own `CLAUDE.md`, or the line `machine check --brief` already prints — the machine's card, not this one |
 | **missing portable doctrine** | a rule every project needs that HOW-WE-WORK lacks | HOW-WE-WORK, in the words quoted, on this card |
 
-**The count, as it stands: drop 41 · owner preference 5 · machine fact 8 ·
-missing portable doctrine 18 = 72 rows over 60 paragraphs.** Five further rows,
+**The count, as it stands: drop 41 · owner preference 5 · machine fact 9 ·
+missing portable doctrine 20 = 75 rows over 60 paragraphs.** Five further rows,
 **A**–**E**, are the placement questions the plan named; they rule on no
 paragraph.
 
@@ -58,13 +58,48 @@ row says which clause and why.
 Rows **A**–**E** need a placement each, or "your call" and I will place them and
 say where in the close-out.
 
-**A different-make colleague has been invited to challenge this table** (Codex,
-through the machine's discussion directory and this project's watercooler). At
-the moment this question reaches you that round may not have landed. If it lands
-before your answer, the lane reconciles its material corrections, and any row the
-two colleagues still read differently reaches you with both readings and neither
-marked correct. If it does not, the close-out will say the round did not happen
-rather than implying it did.
+## The different-make challenge, and what it changed
+
+Codex read this table before you did — `codex exec -s read-only`, the reviewer
+form the machine's record prescribes — with the global CLAUDE.md and HOW-WE-WORK
+open beside it. It reports checking **all 72 rows** as the table then stood
+against HOW-WE-WORK's actual text, rather than accepting my `Restates:` claims.
+
+**It found no wrong `drop`.** That was the expensive category and the reason the
+round was worth running: a wrong `drop` deletes a sentence from every session on
+every project, with nothing to catch it. Forty-one of them survived a full read
+by a colleague of another make.
+
+It made twelve findings. Nine changed the table:
+
+| row | what changed | whose finding |
+| --- | --- | --- |
+| **55** | "Reading is free — read everything" was a permission I had no business generalising: true of this laptop, dangerous on a project holding customer data or a paid API. Replaced with Codex's scoped wording. | Codex |
+| **56b** | machine fact → **missing portable doctrine**. A process-matcher matching its own caller is a general failure mode; I had confused where the lesson was learned with what it is about. | Codex |
+| **49** | split into **49a** (drop) and **49b** (missing). "This is not a software rule; it applies to the machine, the config, and the way we work" extends the rule's domain rather than glossing it. | mine, on a second reading before Codex reported |
+| **27f** | proposal trimmed: I had carried the `Hands out:` mechanism into the constitution. §2's own test says the intent is the durable half. | Codex |
+| **40** | proposal trimmed: three of its clauses were already in §7, so it would have said them twice. | Codex |
+| **54** | proposal trimmed: "the answer was one command away" is this laptop's diagnosis, not a portable instruction. | Codex |
+| **26** | now three rows: the transcript measurement, the model-doctrine sentence (**contested**), and "work is handed to a role". | Codex |
+| **27b/27c** | split: the role paths stay a machine fact; "a dispatch names the role, never a model" is **contested**. | Codex |
+| **C**, **D** | placements changed to Codex's, and for **D** a collision between two items of this same plan decided it. | Codex |
+
+**Three things we did not agree on, and they reach you with both readings and
+neither marked correct**, as the plan requires:
+
+- **Rows 26b and 27c — does the model doctrine belong to the organisation or to
+  the machine?** One question, two rows; answer it once. It is written today as a
+  machine ruling; Codex says a rule about which model gets judgment travels with
+  you to any laptop.
+- **Row A** — I say the head of HOW-WE-WORK, Codex says `docs/INTENT.md`, and the
+  disagreement surfaced a third option: generalise the wording and both readings
+  collapse.
+- **Row E** — I say a Steering section inside HOW-WE-WORK, Codex says a separate
+  owner-steering text. Its separation-of-concerns argument is sound; my counter is
+  that a file nothing injects reaches no session, and a second injected file is
+  the thing this card's own entrance line exists to refuse.
+
+Codex's answer in full is quoted in the review record for this card.
 
 ---
 
@@ -344,23 +379,47 @@ mechanism's name and goes to the machine's file with the role paths.
 #### 26a · machine fact
 > "Two days of transcripts (2026-09-04) showed where the allowance goes: every
 > search, test run and log read on the main thread, each one re-read on every
-> later request of a session that runs to a million tokens of context. The model
-> doctrine puts judgment on the strongest model; it does not put every `grep`
-> there."
+> later request of a session that runs to a million tokens of context."
 
 **Restates:** nothing.
-**Why:** a measurement of this laptop's transcripts and a pointer to the model
-doctrine, which lives in the machine repo by its own ruling. The finding is real
-and dated; it belongs where its evidence is.
+**Why:** a measurement of this laptop's transcripts. The finding is real and
+dated; it belongs where its evidence is.
 
-#### 26b · missing portable doctrine
+#### 26b · machine fact
+> "The model doctrine puts judgment on the strongest model; it does not put every
+> `grep` there."
+
+**Restates:** nothing.
+**Why:** a pointer to the model doctrine, which lives in the machine repo by its
+own ruling ("deterministic with judgment", 2026-09-04) and which the global file
+itself says "lives there too".
+**Codex reads it as *missing portable doctrine*:** "an owner/organisation rule
+that would remain true on Dennis's second laptop, so it is not a machine fact."
+**Contested, and yours to settle** — the two readings are not about this
+sentence, they are about **whether the model doctrine belongs to the
+organisation or to the machine.** It is written today as a machine ruling; Codex
+says allocating judgment to the strongest model is a rule about how work is
+done, and travels. See row 27c, which is the same question. If you rule that it
+travels, both rows become *missing portable doctrine* and the machine's card
+leaves the model doctrine's *mechanism* behind while the rule moves here.
+
+#### 26c · missing portable doctrine
 > "So work is handed to a role, and a role's answer is checked."
 
 **Restates:** nothing. HOW-WE-WORK never mentions a session delegating.
-**Why:** with row 1b in front of it, this is portable: a colleague with no roles
-does the work on its own thread and says so. Without it, the four rules below
-(27a–e) have nothing to hang from, and a project on a second machine would read
-HOW-WE-WORK and never learn that a session's context is a budget.
+**Why:** with row 1b at the head of the document, this is portable: a colleague
+with no roles does the work on its own thread and says which mechanism it
+lacked. Without it, the rules below (27a–f) have nothing to hang from, and a
+project on a second machine would read HOW-WE-WORK and never learn that a
+session's context is a budget.
+**Codex read it as unconditional and objected:** "not true of my make when
+delegation is unavailable or, as in this session, explicitly unauthorized."
+Reconciled by placement rather than by rewording: row 1b is proposed **at the
+head of the document**, where it governs every rule that names a mechanism,
+including this one. Restating the condition inside each such rule is the
+duplication §3 refuses. Codex's own proposed wording — "delegate context-heavy,
+cheaply verifiable work when the colleague has an authorized mechanism;
+otherwise do it on its own thread" — is 1b and 27a said together.
 **Proposed for HOW-WE-WORK (voice only), opening a new paragraph in §3:**
 > Work is handed to a role, and a role's answer is checked.
 
@@ -380,15 +439,28 @@ mechanism. The examples are generic (a search, a suite, a log).
 
 #### 27b · machine fact
 > "The roles are `search` and `execution` (`~/.claude/agents/`, held to
-> `~/.claude-accounts/roles.json`); a dispatch names the role, never a model."
+> `~/.claude-accounts/roles.json`)"
 
 **Restates:** nothing.
 **Why:** two absolute paths on this laptop and two role names one provider
-defines. "A dispatch names the role, never a model" is the model doctrine's
-clause and lives with it in the machine repo. None of it is true on a second
-laptop until that laptop installs it.
+defines. None of it is true on a second laptop until that laptop installs it.
+Codex agrees.
 
-#### 27c · missing portable doctrine
+#### 27c · machine fact
+> "a dispatch names the role, never a model."
+
+**Restates:** nothing.
+**Why:** the model doctrine's clause, and it lives with the model doctrine in
+the machine repo.
+**Codex reads it as *missing portable doctrine*:** "an organisation-level model
+rule [that] travels with Dennis."
+**Contested, and yours to settle — the same question as row 26b**, and it should
+be answered once for both. If the model doctrine travels, this row and 26b move
+to HOW-WE-WORK together; if it stays the machine's, both stay machine facts.
+Answering them differently would put half a rule in each file, which is the
+state this whole card exists to end.
+
+#### 27d · missing portable doctrine
 > "**Keep every judgment:** what to build, what a result means, what to do next,
 > anything Dennis will read. Silence in a plan means the item is judgment and
 > runs here."
@@ -404,7 +476,7 @@ so a plan cannot delegate by omission.
 > anything the person will read. Silence in a plan means the item is judgment and
 > is not handed out.
 
-#### 27d · missing portable doctrine
+#### 27e · missing portable doctrine
 > "**A delegated result is a claim, not a fact.** Before acting on it, verify
 > what the action rests on: read the file at the line it names, re-run the
 > failing test it reports."
@@ -422,7 +494,7 @@ a redo, and "the loop in the machine repo decides" names a loop that lives there
 > reports. If a role's results need redoing, that is evidence about the role, not
 > a reason to quietly stop handing work out.
 
-#### 27e · missing portable doctrine
+#### 27f · missing portable doctrine
 > "**A plan says what it hands out** (`Hands out:` per item —
 > `docs/plans/README.md`), so the split is decided when the work is planned, not
 > remembered when it is done."
@@ -433,9 +505,16 @@ means", terrain, acceptance — and does not include this.
 done") is §5's discriminator applied to delegation, and it is portable. The
 grammar (`Hands out:`) and the file (`docs/plans/README.md`) are the corpus's
 method, taught per project, and stay out of the proposal.
-**Proposed for HOW-WE-WORK (voice only), into §8's list of what a plan carries:**
-> …and what the item hands out, so the split is decided when the work is planned,
-> not remembered when it is done.
+**Codex challenged the proposal and I accepted:** "requiring plans to declare
+delegation … is a mechanism for holding the judgment/delegation boundary, not
+itself a rule every project needs in this form." It is right, and §2's own test
+proves it: ask *why* of "a plan says what it hands out" and the answer — the
+split is decided deliberately rather than drifted into — is the more durable
+half. My first proposal carried the method into the constitution. Trimmed to the
+intent; the plan field stays the corpus's method.
+**Proposed for HOW-WE-WORK (voice only), into §8:**
+> What an item hands out is decided when the work is planned, not remembered when
+> it is done.
 
 ## §We live in iterations
 
@@ -610,11 +689,16 @@ write, including the ones in this plan. Without this sentence, "A is fixed befor
 the data exists" is satisfied by a metric only the session can read, and every
 loop closes green. "Count traces" is the operative instruction and is why the
 board reads a URL, a file or a command rather than a session's opinion.
+**Codex challenged the proposal and I accepted:** "'Design the measure before the
+result', writing the prediction, and naming falsification already appear in §7.
+The missing rule is the self-judgment hazard and its answer." Correct — §7
+already has "written before the data exists" and "A is fixed before the result",
+so my first proposal would have said them a second time, which §3 refuses.
+Trimmed to the part §7 does not have.
 **Proposed for HOW-WE-WORK (voice only), into §7:**
-> Design the measure before the result and write the prediction down. A session
-> is usually both the change and its judge, so a metric that needs its judgment
-> will agree with it. Count traces, name in advance what would falsify it, and
-> expect the first metric to be wrong.
+> A session is usually both the change and its judge, so a metric that needs its
+> judgment will agree with it. Count traces, and expect the first metric to be
+> wrong.
 
 ## §The /clear cliff
 
@@ -679,16 +763,32 @@ a gloss on "bad information" and §6 dropped it.
 **Restates:** §5's title, "Convention is the weakest defence".
 **Why:** same section; the published spelling is the British one.
 
-#### 49 · drop
+#### 49a · drop
 > "A boundary that depends on someone remembering it will erode. When an
 > invariant matters, mechanize it — a hook, a permission, a database grant, a
-> test, a default that makes the wrong thing impossible. This is not a software
-> rule; it applies to the machine, the config, and the way we work."
+> test, a default that makes the wrong thing impossible."
 
 **Restates:** §5's first two sentences, near-verbatim.
-**Why:** already published. The third sentence names this laptop's two other
-codebases as examples; §5's own placement in a document about the way of working
-makes the scope, and this card is the proof of it.
+**Why:** already published.
+
+#### 49b · missing portable doctrine
+> "This is not a software rule; it applies to the machine, the config, and the
+> way we work."
+
+**Restates:** nothing.
+**Why:** **my own correction, found on a second reading before Codex reported.**
+I first called this a gloss and marked the whole paragraph *drop*, on the
+reasoning that §5's placement in a document about the way of working makes the
+scope. That was weaker than it looked. The sentence does not restate the rule, it
+*extends the rule's domain* — and it extends it to exactly the places where
+failure is silent: a permission, a config default, a working convention. §5 as
+published lists "a test, a refusal at a door, a default", so a session reading
+only HOW-WE-WORK can consistently mechanise its tests and leave a config boundary
+to convention. It also passes the portability test: "the machine" and "the
+config" are categories, not this laptop.
+**Proposed for HOW-WE-WORK (voice only), into §5:**
+> This is not a software rule; it applies to the machine, the config, and the way
+> we work.
 
 #### 50 · drop
 > "**But not everything deserves a mechanism.** The discriminator is how failure
@@ -736,15 +836,17 @@ The machine's card keeps it.
 > default is a choice someone made and wrote down, not a law."
 
 **Restates:** nothing.
-**Why:** "the answer was one command away and I stopped early" is the failure
-mode, and "a default is a choice someone made and wrote down, not a law" is the
-sentence that makes a session read the config rather than accept the behaviour.
-Both are true of any codebase. The clause left out is "here" — the claim that
-*this machine* hides little, which is row 53's.
+**Why:** "don't settle for probably" and "a default is a choice someone made and
+wrote down, not a law" are the sentences that make a session read the config
+rather than accept the behaviour, and both are true of any codebase.
+**Codex challenged the proposal and I accepted:** "'the answer was one command
+away' generalizes this unusually inspectable laptop too far; many answers require
+unavailable authority, remote evidence, or experimentation." Right, and it is the
+same error as row 53 one clause deeper — the diagnosis is this machine's, even
+though the instruction is not. Dropped from the proposal; it stays with row 53.
 **Proposed for HOW-WE-WORK (voice only), into the new section:**
-> Don't settle for "probably". "That's just how it is" usually means the answer
-> was one command away and the session stopped early. A default is a choice
-> someone made and wrote down, not a law.
+> Don't settle for "probably". A default is a choice someone made and wrote down,
+> not a law.
 
 #### 55 · missing portable doctrine
 > "The same openness cuts both ways: what makes investigation cheap makes damage
@@ -756,10 +858,19 @@ nothing says an *irreversible* act is one, or that reading is unbounded.
 **Why:** the asymmetry is portable and load-bearing: it is the licence that makes
 a session read a whole corpus without asking, and the brake that makes it ask
 before a migration. Every project has a system that can be damaged.
+**Codex challenged the proposal and I accepted — this is the one I am most glad
+it caught.** "Read-only investigation is not universally free: repositories
+contain secrets and personal data; APIs can cost money or expose information;
+scope still matters." That is correct and it is the exact failure this challenge
+round existed to find: "reading is free — read everything" is true on *this*
+laptop, whose contents are all Dennis's own, and it is a dangerous rule the day a
+project holds customer data or a paid API. I generalised a permission that was
+never general. Codex's replacement wording is adopted, and the sentence about
+irreversibility — the half that *is* portable — is kept.
 **Proposed for HOW-WE-WORK (voice only), into the new section:**
-> What makes investigation cheap makes damage cheap. Reading is free — read
-> everything. Changing the person's system is not: name what changed, keep it
-> reversible, ask when it isn't.
+> What makes investigation cheap makes damage cheap. Investigate freely within
+> the scope you are authorised for; changing the person's system is not free —
+> name what changed, keep it reversible, and ask before anything irreversible.
 
 #### 56a · missing portable doctrine
 > "- Assertion without a check is guessing in a confident voice. - Rehearse
@@ -780,14 +891,22 @@ tested. The reporting rule is what makes a correction cheap enough to make.
 > faithfully, including a session's own misses: a correction stated plainly costs
 > a sentence, a wrong claim left standing costs a decision.
 
-#### 56b · machine fact
+#### 56b · missing portable doctrine
 > "- A tool that matches on process or command text can match my own command —
 > test that it distinguishes the target from the caller."
 
 **Restates:** nothing.
-**Why:** a real and hard-won lesson, and it is about writing shell tooling on a
-machine where the caller is in the process table. It is the machine repo's — its
-readers are exactly the class of tool that hits it.
+**Why:** **Codex changed my mind on this one, and it was right to.** I marked it
+a machine fact because the lesson was learned writing this laptop's tooling —
+which is where the lesson came from, not what the lesson is about. Codex: "a
+general Unix/tooling failure mode [that] would remain true on another laptop."
+Any session anywhere that writes a process-matching command is in the process
+table it is matching. This is exactly the direction I was asked to check myself
+in — a machine fact costs me nothing to declare, a missing-doctrine row costs you
+a reading — and I failed it here.
+**Proposed for HOW-WE-WORK (voice only), into the new section:**
+> A tool that matches on process or command text can match the session's own
+> command — test that it distinguishes the target from the caller.
 
 ## §The machine is a project
 
@@ -852,6 +971,14 @@ today.
 fixed point — what the instrument is for. This sentence is what the *doctrine* is
 for, and HOW-WE-WORK opens today with a note about adopting it rather than a
 reason to.
+**Codex recommends `docs/INTENT.md`, and we did not converge:** "its subject is
+explicitly projects Dennis puts on Needle, so it states what Needle is for rather
+than a universal working rule." That is a fair reading of the words as written,
+and it exposes a third option neither of us proposed: the sentence names its
+instrument, so **generalising the wording** ("a project I start", not "a project I
+put on Needle") would make HOW-WE-WORK the right home, while keeping it as
+written makes INTENT.md the right one. The words are yours, so the choice of
+which is yours too. Both readings stand; neither is marked correct.
 
 #### B · his ruling — the second intent sentence
 > **Every rule we work by is held by a check that refuses, a trace someone else
@@ -881,9 +1008,13 @@ it does not belong.
 
 **Your call:** into HOW-WE-WORK (and the machine's card removes it there), or
 into `docs/INTENT.md`, or left where it is.
-**My recommendation:** HOW-WE-WORK, at the head with A and B. It is the only
-sentence in any of the three files that says what the whole arrangement is *for*,
-and it is true on a second laptop.
+**My recommendation, changed by Codex's challenge:** `docs/INTENT.md`. I first
+said HOW-WE-WORK, at the head with A and B. Codex: "'Needle enables…' is
+unambiguously product/organisation intent; putting it in HOW-WE-WORK would make
+the doctrine depend on its current instrument." It is right, and more plainly
+than for row A — this sentence *opens* with the instrument's name. A doctrine
+that names the tool it is currently served by cannot be adopted by a project that
+changes tools, which is the portability this whole card is about. Moved.
 
 #### D · his ruling — where the stance lines live
 Item 4 of the plan puts one line at the end of every rule section saying what
@@ -894,11 +1025,19 @@ yet, `*Undefended until:* #<card> by <date> — <what will hold it>`.
 **Your call:** in the published `docs/HOW-WE-WORK.md` itself, or beside it in
 `docs/HOW-WE-HOLD-IT.md` keyed by section title. Either way a ratchet reads it
 both ways, so no stance can be tidied away.
-**My recommendation:** in the published text. The intent in row B ends "and I can
-see which without reading code" — a second file is one more click, and a reader
-who opens HOW-WE-WORK to learn the rule is exactly the reader who should see that
-nothing holds it. The cost is that the document reads slightly more like a
-register; the benefit is that the debt is unavoidable.
+**My recommendation, changed by Codex's challenge:** `docs/HOW-WE-HOLD-IT.md`.
+I first said the published text, on the argument that row B's intent ends "and I
+can see which without reading code" and a second file is one more click. Codex:
+"the doctrine should carry durable rules; the changing inventory of ratchets,
+traces, and temporary undefended states is an operational register." Its
+separation-of-concerns argument moved me, but what decided it is a collision
+neither of us had noticed, between two items of this same plan: **item 5's commit
+hook refuses any edit to HOW-WE-WORK that does not name a card.** Stance lines
+change every time a ratchet lands or a debt is paid — several times a week — so
+putting them in the constitution would demand a card for every one of those, and
+the pressure to bypass the hook would come from the mechanism itself. A keyed
+register file, read two ways so nothing can be tidied away, keeps the visibility
+and takes that pressure off. Moved.
 
 #### E · his ruling — the five owner-preference rows
 Rows 4–8: `## Steering` and its four paragraphs. They travel with you, not with
@@ -911,9 +1050,18 @@ from every session.
 **My recommendation:** into HOW-WE-WORK, as its own section, kept last. They are
 not doctrine — another owner would want different ones — but HOW-WE-WORK is
 already a document written by you and a session together and published as such,
-and a section marked as the owner's own preferences is honest about that. The
-alternative I rejected: a separate `docs/STEERING.md`, because it is a third
-injected file and this card exists to end the second one.
+and a section marked as the owner's own preferences is honest about that.
+**Codex recommends a separate owner-steering text, and we did not converge:**
+"rows 4–8 are valuable and portable across Dennis's machines, but the table
+correctly says they are not doctrine. Calling the separate layer a harmful 'third
+text' conflates duplication with separation of concerns." The distinction it
+draws is right — the danger is the same rule in two files, not different content
+in two files. What it does not weigh is delivery: a file nothing injects is in
+front of no session, so a separate `STEERING.md` either reaches nobody or becomes
+a second injected file — and then the door built on this same card (`needle add`'s
+entrance line) can no longer say `one-text`, because there would be two. That is
+the cost I would be paying for the cleaner separation. Both readings stand;
+neither is marked correct.
 
 ---
 
