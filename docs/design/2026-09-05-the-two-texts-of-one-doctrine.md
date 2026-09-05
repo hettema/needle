@@ -4,9 +4,16 @@
 **Reads:** `~/.claude/CLAUDE.md` → `~/Work/omarchy-machine/home/.claude/CLAUDE.md`
 (287 lines, 60 paragraphs, 12 `## ` sections, as it stood 2026-09-05) against
 `docs/HOW-WE-WORK.md` (193 lines, 13 sections).
-**Rules on:** nothing. Nothing in either file has changed. This document is the
-instrument; your answer through the board's Answer door is the ruling, and only
-then does `docs/HOW-WE-WORK.md` get edited, on this card.
+**Ruled 2026-09-05, in conversation with the lane: "as it stands", with one
+edit of his own.** Every row's stance below is therefore his ruling, the
+contested rows (26b, 27c, A, E, 56b) resolved to the stance as written, and
+row 7's quoted sentence lands with "he holds the market, the customers, the
+intent" become "he holds the intent" — his reason: "I know the market and the
+customers but often you have better data than me. I know what I want, that's
+the only thing I'm confident about that only I know." The same claim in §1 was
+changed on the same reason and is named in the review record for him to strike.
+`docs/HOW-WE-WORK.md` was edited on this card in commit `877a9d4`; the rows are
+kept below as they were put to him.
 
 ## How to read it, and how to answer
 
