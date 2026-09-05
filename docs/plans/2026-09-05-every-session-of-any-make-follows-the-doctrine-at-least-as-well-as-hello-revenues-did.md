@@ -57,6 +57,49 @@ The measure never depends on memory (§7). The lane counts, in the review record
 
 ## Loop
 
+**The baseline, read 2026-09-05 by the lane, before item 2's commit.** The
+records do not carry the class in a countable form: no finding line says what
+kind of finding it is, so the count below is a keyword sieve over every
+disposition line (the words *claimed, hedged, assumed, guessed, unverified,
+duplicate, second way, already exist* and their kin), each hit then judged by
+hand against the class as defined here — a written assertion about the world
+(in a plan, a record, a docstring, a comment, a commit message, a board
+sentence, or code hedging an unverified shape) that a check available to the
+author would have shown false or unknown; a hedge shipped as a fact; a primitive
+built beside an existing one. It is a lower bound.
+
+| corpus | carded closes | finding lines | verification-class, sieved | per close |
+| --- | --- | --- | --- | --- |
+| Hello Revenue `docs/reviews/`, 2026-09-01 to 05 | 72 | 721 | 30, in 23 records | 0.42 |
+| Needle `docs/reviews/`, 2026-09-03 to 05 | 21 | 154 | 1, in 1 record | 0.05 |
+| the cross-make notes, `~/.cache/omarchy/claude-acct/discussion/`, 2026-09-05 | — | — | 3, none of them in any review record | — |
+
+The three in the notes: a hedge shipped as a fact (*"expected to work from"*,
+`from-codex-doctrine-reliability.md`); a mechanism built beside `needle call`
+without a search (`from-codex-doctrine-first-hit.md`); a causal claim with no
+source, retracted on challenge (`from-codex-hr-as-doctrine-source.md`).
+
+**What the asymmetry means, said before the data so it cannot be read either
+way afterwards.** Hello Revenue's rate is eight times Needle's, and the plan's
+thesis predicts the opposite. The sieve counts what a *reviewer* wrote down, and
+Hello Revenue's review lens names the class (its file's ground-truth rule, its
+review skill's *"verify before flagging"*) where Needle's does not; the three
+misses that prompted this card were on Needle's side and never reached a record
+at all. So the pre-trace numbers measure who looked, not who slipped, and are
+kept only as the anchor they are. **The loop therefore begins by creating the
+trace:** from this card on, every finding line in a review record, in both
+repositories, begins with its class in brackets — `[verification]` for this
+class, else `[feature]`, `[seam]`, `[boundary]` or `[record]` — and the review's
+boundaries pass reads for the class by name. In Needle a ratchet refuses a
+record dated on or after 2026-09-06 with an unclassed finding
+(`tests/ratchets/test_every_finding_says_its_class.py`); in Hello Revenue the
+rule is in `docs/reviews/README.md` and the reader counts the unclassed lines
+beside the classed ones. **The first read** is at the tenth carded close after
+the fold in each project, by a session, from the classed lines; the comparison
+that decides is Needle's classed rate against Hello Revenue's classed rate over
+the same window — the same lens on both — and a Needle rate that *rises* on the
+first read is the trace working, not the text failing.
+
 We think rebuilding the one text on Hello Revenue's shape with its verification and search rules, and delivering the re-anchor to every session of every make, will move the verification-class findings per carded close on Needle from today's rate to at or below Hello Revenue's, because those rules were absent from the text outside Hello Revenue and their re-anchor was project-local, not because sessions are careless. Fixed before the data: the baseline is item 5's count, written here by the lane before item 2 lands, per project; the sample is the next ten carded closes across Needle and Hello Revenue after the fold, read from their review records and the cross-make notes. The observation that discriminates: the drop appears on Needle and in Codex sessions, which never had the rule, and not on Hello Revenue, which already had it. If Hello Revenue's rate falls as much as Needle's, the lever was something else (the brevity, or the owner's attention while this was being built) and the finding about the missing rule does not travel. If after ten closes Needle's rate is not at or below Hello Revenue's baseline, the text is not the lever: the holder for verification becomes a check that refuses (a backbrief that names no source is refused at the door), the register's line changes from traced to held, and this card reopens. The owner is asked once, at the tenth close, with the counts attached, whether the working relation reads as restored; his answer is the judgment of taste the counts cannot give. It is asked in the form the carried #64 prescribes: the same brief on fresh sessions of one make and model, one entered on the retired text (`git show 7894dfc:home/.claude/CLAUDE.md` in `~/Work/omarchy-machine`) and one on the rewritten text, over a small set of briefs chosen to exercise the paragraphs that were dropped — a backbrief on an ambiguous request, a plan, a report of a partly finished job, a technical call the session should make alone — read by him shuffled and unlabelled, saying which he would sign. #64's `his` — whether to run the comparison at all — is answered by carrying it here: the lane runs it and brings back the arms.
 
 ## Deliberately not
