@@ -180,7 +180,11 @@ folded card nobody wrote up to the person's attention, never to shipped.
 
 When something goes wrong twice, the second time is a signal about the
 method, not the task. Fix the method: write the rule down, mechanise it, or
-change the default. This document is meant to be edited, not obeyed.
+change the default. Frustrating things are opportunities: friction is the same
+signal felt rather than counted, so when a step frustrates the person or a
+session, even once, find the root cause, propose a fix, try it, and let a loop
+written as section 7 asks decide whether it stays. This document is meant to
+be edited, not obeyed.
 
 ---
 
