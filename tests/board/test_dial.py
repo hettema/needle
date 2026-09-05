@@ -204,7 +204,7 @@ def test_the_memory_floor_is_read_against_available_memory_and_free_swap():
     # A reading the runtime could not make is full, and says so.
     unread = headroom(None, floor, NOW)
     assert unread.full and unread.sentence == "the machine is full: its memory could not be read"
-    assert floor == MEMORY_FLOOR_BYTES, "3 GB: a fix lane peaked at 3.1 GB on 2026-09-05"
+    assert MEMORY_FLOOR_BYTES == 5 * 1024**3, "the owner's 5 GB after #386's 4.7 GB kill"
     state = dial_state(
         Dial(on=True, lanes=4, changed_at=NOW, first_on_at=NOW),
         [fix(FixStage.PLANNED, n) for n in range(1, 5)],

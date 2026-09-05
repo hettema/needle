@@ -342,7 +342,7 @@ def test_a_held_plan_does_not_count_and_the_memory_floor_stops_the_beat(
     tick(client)
     assert len(machine_floor.state()["launch_log"]) == 2, "nothing opened under the floor"
     assert column_of(client, tide) == "Planned", "the held plan's Start waited on the floor too"
-    full = "the machine is full: 2.0 GB available, 3 GB needed"
+    full = "the machine is full: 2.0 GB available, 5 GB needed"
     assert board(client)["dial"]["full"] == full
     assert any(h["detail"] == f"Start waits: {full}" for h in detail(client, tide)["history"])
     assert main(["fixes", "proj"]) == 0
@@ -358,7 +358,7 @@ def test_a_held_plan_does_not_count_and_the_memory_floor_stops_the_beat(
     # Free swap short counts the same, on a machine that has swap.
     machine_floor.set_memory(available_gb=16.0, swap_free_gb=1.0)
     tick(client)
-    assert board(client)["dial"]["full"] == "the machine is full: 1.0 GB swap free, 3 GB needed"
+    assert board(client)["dial"]["full"] == "the machine is full: 1.0 GB swap free, 5 GB needed"
     assert len(machine_floor.state()["launch_log"]) == 2
     # Room again: the beat opens the held plan's Start — into shared ground,
     # which the door names and the fold settles (item 1).

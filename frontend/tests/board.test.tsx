@@ -902,13 +902,13 @@ describe("the board at a glance (plan 06)", () => {
 describe("defects fix themselves (plan 11)", () => {
   it("reads a night of held plans as held, not running, and says when the machine is full", async () => {
     const b = board();
-    b.dial = { dial: { on: true, lanes: 4, changed_at: "2026-09-05T08:00:00+00:00", first_on_at: "2026-09-05T08:00:00+00:00" }, running: 0, held: 4, full: "the machine is full: 2.0 GB available, 3 GB needed", quiet: true };
+    b.dial = { dial: { on: true, lanes: 4, changed_at: "2026-09-05T08:00:00+00:00", first_on_at: "2026-09-05T08:00:00+00:00" }, running: 0, held: 4, full: "the machine is full: 2.0 GB available, 5 GB needed", quiet: true };
     api.getBoard.mockResolvedValue(b);
     await renderBoard();
     const dial = screen.getByRole("group", { name: "Auto-fix" });
     expect(within(dial).getByText("0 of 4 live").dataset["meaning"]).toBeUndefined();
     expect(within(dial).getByText("4 held")).toBeInTheDocument();
-    const full = within(dial).getByText("the machine is full: 2.0 GB available, 3 GB needed");
+    const full = within(dial).getByText("the machine is full: 2.0 GB available, 5 GB needed");
     expect(full.dataset["meaning"]).toBe("broken");
   });
 

@@ -181,13 +181,20 @@ def is_quiet(lanes_by_project: dict[str, dict[int, Lane]]) -> bool:
     )
 
 
-MEMORY_FLOOR_BYTES = 3 * 1024**3
+MEMORY_FLOOR_BYTES = 5 * 1024**3
 """Below this much available memory, or free swap on a machine that has
-swap, the beat takes nothing. 3 GB, because a fix lane peaked at 3.1 GB on
-the dial's first night (Hello Revenue #385, `systemctl show MemoryCurrent`,
-2026-09-05) and systemd-oomd acts at 90 percent of both memory and swap: one
-more lane at that peak is the kill. The plan's loop moves it — a lane or the
-board killed for memory raises it by the killed scope's peak."""
+swap, the beat takes nothing. It shipped at 3 GB, because a fix lane peaked
+at 3.1 GB on the dial's first night (Hello Revenue #385, `systemctl show
+MemoryCurrent`, 2026-09-05) and systemd-oomd acts at 90 percent of both
+memory and swap. It rose to 5 GB the same day: forty seconds after the
+board restarted on the floor, oomd killed Hello Revenue #386's lane, whose
+scope peaked at 4.7 GB after the dial had let it in — the plan's loop said
+the floor rises by a killed scope's peak, the reading said so, and the owner
+set 5 GB (the peak with headroom) rather than the rule's 7.7 GB, which would
+have let the dial open little on a 16 GB machine. The floor is read at the
+beat, before a start; a lane that grows past the machine after it is in is
+the card "a lane that grows toward the machine's ceiling pauses new starts
+before oomd has to kill it"."""
 
 
 def _gb(byte_count: int) -> str:

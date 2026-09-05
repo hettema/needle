@@ -240,7 +240,7 @@ def lay(root: Path) -> Floor:
     handoffs.mkdir(parents=True)
     transcripts = root / "projects"
     transcripts.mkdir()
-    # A machine with room: the dial's memory floor is 3 GB (board/dial.py).
+    # A machine with room: the dial's memory floor is 5 GB (board/dial.py).
     meminfo = root / "meminfo"
     write_meminfo(meminfo, available_gb=16.0, swap_free_gb=8.0, swap_total_gb=8.0)
     state = root / "fake-state.json"
