@@ -186,7 +186,9 @@ def detach(argv: list[str], *, cwd: str | Path, log: Path) -> int:
     What it prints goes to `log`, so a death has its words and a live
     worker never blocks on a full pipe. Answers the worker's pid; a
     command that cannot be executed is a worker that ends at once with
-    the error in the log, which the caller reads as a death."""
+    the error in the log, which the caller reads as a death. A fork, so
+    only a single-threaded caller (the command line) may use it; the
+    board's server never calls a colleague."""
     reader, writer = os.pipe()
     pid = os.fork()
     if pid == 0:  # the intermediate: leaves the session, hands the pid over, exits
@@ -212,6 +214,8 @@ def detach(argv: list[str], *, cwd: str | Path, log: Path) -> int:
     handed = os.read(reader, 32)
     os.close(reader)
     os.waitpid(pid, 0)
+    if not handed.isdigit():
+        raise OSError(f"the launcher for {argv[0]} handed back no pid")
     return int(handed)
 
 
