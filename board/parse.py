@@ -76,6 +76,11 @@ it, and `; the lane verifies by <what>` as plan 13 wrote it before the
 README fixed the form (review pass 1)."""
 _ITEM_HEADING = re.compile(r"^(#{2,4})\s+(\d+)[.)]?\s+(.+?)\s*$")
 _ITEM_LIST = re.compile(r"^\s{0,3}(\d+)[.)]\s+(.+?)\s*$")
+_ITEM_BOLD_NUMBER = re.compile(r"^\*\*(\d+)[.)]\s+(.+?)\*\*\s*(.*)$")
+"""The third shape Hello Revenue's plans use, found on the first live card
+after the fold: a paragraph led by `**N. Title.**` with the number inside
+the bold, numbered from 0 when a task 0 gates the rest. Read as a list
+item whose bold lead is the title."""
 _ITEM_BOLD = re.compile(r"^\*\*(.+?)\*\*")
 ITEM_LABEL_MAX = 60
 _STANCE = re.compile(r"(?:^\s*|(?<=[.!?]\s))\*\*(met|deviated):\*\*\s*(.*)$", re.I)
@@ -457,15 +462,33 @@ def _numbered_entries(lines: list[str | None]) -> list[tuple[int, str, list[str 
     return entries
 
 
+def _listed(line: str) -> tuple[int, str, re.Match[str] | None] | None:
+    """A line that opens a list item, in either list shape: `N. **Title.**`
+    or `**N. Title.**`. The number, the rest of the line, and the bold lead
+    within it when there is one."""
+    plain = _ITEM_LIST.match(line)
+    if plain:
+        return int(plain.group(1)), plain.group(2), _ITEM_BOLD.match(plain.group(2))
+    bold_number = _ITEM_BOLD_NUMBER.match(line)
+    if bold_number:
+        rest = f"**{bold_number.group(2)}**{bold_number.group(3)}"
+        return int(bold_number.group(1)), rest, _ITEM_BOLD.match(rest)
+    return None
+
+
+def _opens_entry(line: str) -> bool:
+    return line.startswith("#") or _listed(line) is not None
+
+
 def _list_runs(lines: list[str | None]) -> list[tuple[str, list[Item]]]:
-    """Every run of consecutive top-level numbers that starts at a bold 1,
-    each with the heading it sits under. A heading or a break in the
+    """Every run of consecutive top-level numbers that starts at a bold 0 or
+    1, each with the heading it sits under. A heading or a break in the
     numbering ends a run. A plain numbered list — acceptance criteria, a
     ruling's reasons — starts no run, which is what the bold lead decides."""
     runs: list[tuple[str, list[Item]]] = []
     heading = ""
     items: list[Item] = []
-    expected = 1
+    expected = 0
     for index, line in enumerate(lines):
         if line is None:
             continue
@@ -474,41 +497,40 @@ def _list_runs(lines: list[str | None]) -> list[tuple[str, list[Item]]]:
                 runs.append((heading, items))
                 items = []
             heading = line.lstrip("#").strip()
-            expected = 1
+            expected = 0
             continue
-        listed = _ITEM_LIST.match(line)
+        listed = _listed(line)
         if listed is None:
             continue
-        number, rest = int(listed.group(1)), listed.group(2)
-        bold = _ITEM_BOLD.match(rest)
-        if not items and (number != 1 or bold is None):
+        number, rest, bold = listed
+        opens = number in (0, 1) and bold is not None
+        if not items and not opens:
             continue
-        if number != expected:
-            if items:
-                runs.append((heading, items))
-                items = []
-            expected = 1
-            if number != 1 or bold is None:
+        if items and number != expected:
+            runs.append((heading, items))
+            items = []
+            if not opens:
                 continue
         end = index + 1
         while end < len(lines):
             nxt = lines[end]
-            if nxt is not None and (_ITEM_LIST.match(nxt) or nxt.startswith("#")):
+            if nxt is not None and _opens_entry(nxt):
                 break
             end += 1
         after = rest[bold.end() :] if bold else ""
         items.append(_item(number, rest, after, lines[index + 1 : end]))
-        expected += 1
+        expected = number + 1
     if items:
         runs.append((heading, items))
     return runs
 
 
 def _list_items(lines: list[str | None]) -> list[Item]:
-    """Items as a top-level `1. **Title.**` list, Hello Revenue's shape: the
-    bold run under the section a plan calls its tasks, slices, items or
-    work when it has one — a decision log or a ruling list can come first
-    in the file — else the first bold run."""
+    """Items as a top-level `1. **Title.**` list or a `**1. Title.**`
+    paragraph, Hello Revenue's shapes: the bold run under the section a
+    plan calls its tasks, slices, items or work when it has one — a
+    decision log or a ruling list can come first in the file — else the
+    first bold run."""
     runs = _list_runs(lines)
     named = next((items for heading, items in runs if _TASK_HEADING.search(heading)), None)
     return named if named is not None else (runs[0][1] if runs else [])

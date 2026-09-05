@@ -100,6 +100,48 @@ def test_a_list_plan_reads_the_bold_run_and_the_inline_habit_as_met():
     assert items[4].done_means == "one table per campaign."
 
 
+BOLD_NUMBER = """# The pipeline lives in the client's CRM
+
+## Acceptance criteria — behaviors
+
+1. A client pastes URL, login and key and sees the company name.
+2. A bad key reads a sentence naming the problem.
+
+## Tasks — by intent
+
+**0. Ground truth on the fixture before any production code.** Stand up the image locally.
+*Done means:* every verify in this plan has a recorded verdict.
+**Met:** the verdicts under Task 0 verdicts, probed 2026-09-05.
+
+**1. Odoo is a connectable provider.** The four template surfaces, the credential shape.
+*Done means:* acceptance 1 and 2 hold on the fixture; the template ratchets pass.
+
+**2. The client's stages become HR's ladder, by judgment once.** The stage-map specialist.
+*Done means:* the specialist proposes a map that assigns every stage.
+
+---
+
+## The loop
+"""
+
+
+def test_a_bold_numbered_paragraph_from_zero_is_a_task_list():
+    """The shape on the first live Hello Revenue card after the fold: the
+    number inside the bold, a task 0 that gates the rest, and an italic
+    "Done means" — read as items, while the plain acceptance list is not."""
+    items = items_of(BOLD_NUMBER)
+    assert [(i.number, i.title) for i in items] == [
+        (0, "Ground truth on the fixture before any production code"),
+        (1, "Odoo is a connectable provider"),
+        (2, "The client's stages become HR's ladder, by judgment once"),
+    ]
+    assert [i.stance for i in items] == [Stance.MET, None, None]
+    assert items[0].text == "the verdicts under Task 0 verdicts, probed 2026-09-05."
+    assert items[1].done_means == (
+        "acceptance 1 and 2 hold on the fixture; the template ratchets pass."
+    )
+
+
 def test_a_plain_numbered_list_is_not_a_task_list():
     """Acceptance criteria and a ruling's reasons are numbered too; the bold
     lead on the first entry is what says "these are the items"."""

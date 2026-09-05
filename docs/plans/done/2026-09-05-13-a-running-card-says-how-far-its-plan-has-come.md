@@ -65,13 +65,13 @@ Recorded as the build makes them, each with the alternative rejected. The first 
 
 ## Close-out
 
-**Hello Revenue's archive, read with the item reader** (504 plans in `docs/plans/done/`, no errors):
+**Hello Revenue's archive, read with the item reader** (505 plans in `docs/plans/done/`, no errors):
 
 | shape | plans | items | met | deviated |
 |---|---|---|---|---|
 | `### N.` sections | 49 | 294 | 0 | 0 |
-| `N. **Title.**` list | 417 | 2,402 | 16 | 0 |
-| no items | 38 | 0 | 0 | 0 |
+| `N. **Title.**` list, and `**N. Title.**` paragraphs (read since the close, see the record) | 421 | 2,448 | 16 | 0 |
+| no items | 34 | 0 | 0 | 0 |
 
 Nine plans carry a stance, all by the inline habit (SHIPPED, DONE, a tick); the plan's "17 in five spellings" counted ticks on bullets and table rows too, which are not items. Four opened by eye: three marked as the table says, and one the table first said was not — its task list sat under a bold decision log, which was the review's first finding and the reason a task-named heading wins.
 
