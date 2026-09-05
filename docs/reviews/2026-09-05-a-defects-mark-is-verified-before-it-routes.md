@@ -3,7 +3,7 @@
 **Plan:** docs/plans/done/2026-09-05-a-defects-mark-is-verified-before-it-routes.md
 **Reviewer:** the build session (Claude Opus 5), reading its own work through the three lenses in turn
 **Diff range:** f0e821b..HEAD
-**Findings:** 13 — 11 fixed in this lane, 2 filed as suggestions
+**Findings:** 14 — 11 fixed in this lane, 3 filed as suggestions
 
 ## The passes
 
@@ -33,6 +33,8 @@ The review ran as a loop (`CLAUDE.md`): each pass one lens, the fixes landed, th
 12. **The reading's words appeared three times on one open card** — in the routing sentence, in the reading line under it, and again in the `TRIAGED` row on the record. Only the live board showed it; the page test asserts presence, not repetition. FIXED: the reading line is now provenance only — *Read 2026-09-05 · landed his · decision 9f31c0d84b7a4e26* — and the words are said once, where they mean something.
 
 13. **The parser ate the first character of a mark's reason.** `_FIX`'s second `\W*` ran after the word boundary and swallowed whatever punctuation followed the mark — including the backtick a reason opens with when it cites its source, which is how a good mark is written. So `source_ref_of` found nothing in exactly the reasons that named a source, and the triage brief told the reading its mark cited none. Found by running the bar over five real marks by hand rather than through its own fixtures. FIXED: the separator is whitespace only, the dashes and colons the corpus uses are still stripped by the `lstrip` below it, and a ratchet holds both — the reason keeps its backticks and `now — the tide table plan says so` still reads without the dash.
+
+14. **This card's own first WATCH row closed its loop the moment it was written.** A `command` signal with no `expect` is delivered on a zero exit, so *"the pile drains faster than it grows — command `needle kinds needle`"* read delivered on its first pass and the card left Executed for Done with a green reading that said only that a program ran. Caught at this close, minutes after it shipped, by reading the card back. FIXED here for this card — the row is a `session` signal that says what would decide it, and the card moved back to Executed — and FILED for the class: `docs/slice-suggestions/2026-09-05-a-loop-cannot-close-itself-the-moment-it-is-written.md` (`Fix: now`). The close is where the refusal belongs, beside the one that already refuses a code lane with no review record; that is outside this change.
 
 ## What was checked
 
