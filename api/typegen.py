@@ -37,6 +37,7 @@ MODULES: list[str] = [
     "verdict",
     "watercooler",
     "handout",
+    "triage",
     "dial",
     "call",
 ]

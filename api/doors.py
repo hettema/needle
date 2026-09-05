@@ -13,8 +13,10 @@ from pathlib import Path
 from api.loops import Loops
 from board.assemble import is_trigger_card
 from board.brief import (
+    corpus_lane_name,
     filing_rule,
     lane_name,
+    lane_path,
     needle_command,
     neighbours_text,
     render,
@@ -23,10 +25,12 @@ from board.brief import (
 from board.handouts import handouts_row
 from board.lane import HANDS_ON
 from board.signals import GRAMMAR, read_or_decline, where_after, where_after_finding
+from board.triage import routing_now, triaged_row
 from domain.audit import AuditKind
 from domain.board import CardDetail
 from domain.card import Actor, Place
 from domain.column import Column
+from domain.document import DocumentKind, SuggestionKind
 from domain.evidence import Evidence, EvidenceState
 from domain.gate import Gate
 from domain.lane import CollisionVerdict, DoorResult, Lane, LaneRecord, LaneState
@@ -34,6 +38,7 @@ from domain.launch import LaunchVerdict, Start
 from domain.project import Project
 from domain.row import Row, RowKind
 from domain.signal import Finding, SessionWork
+from domain.triage import CorpusLane, CorpusLaneKind, Direction, Routing, TriageResult
 from domain.verdict import EvidenceClass, VerdictsRuled
 from domain.window import WindowKind
 from infrastructure import clock
@@ -45,6 +50,10 @@ from runtime.windows import WindowRefused
 REPO_ROOT = Path(__file__).resolve().parent.parent
 DISCUSS_EFFORT = Gate.XHIGH
 """Talking a card through is thinking work, whatever the build gate says (0.1's rule)."""
+CORPUS_LANE_EFFORT = Gate.MEDIUM
+"""A corpus lane writes what a record already selected: one document edit,
+one commit, one push. It is not thinking work — the thinking was the reading
+that produced the record, or the owner's own sentence."""
 DOCS = "docs/"
 """A lane whose every file is under here shipped no code, and its close
 needs no review record (plan 11, item 1)."""
@@ -330,12 +339,21 @@ class Doors:
         return lane, lane.session
 
     def answer(self, slug: str, number: int, text: str) -> DoorResult:
+        """The owner's sentence, on a lane or on a parked card. On a lane it
+        resumes the session with it, as it always has. On a card with no
+        lane at all — a defect a reading put on his pile — it is his durable
+        ruling: it lands as the `ANSWERED` row and the board opens a lane
+        that makes the corpus say it (plan 59, item 5). Before this, a
+        parked `his` defect had no door at all, which is why the pile drained
+        at zero for the board's whole life."""
         text = text.strip()
         if not text:
             raise DoorRefused("An empty answer resumes nothing.")
         detail = self._detail(slug, number)
         if not detail.doors.answer.offered:
             raise DoorRefused(detail.doors.answer.why)
+        if detail.lane is None or detail.lane.session is None:
+            return self._rule_on_a_parked_card(slug, number, text, detail)
         lane, session = self._lane_session(detail, "answer")
         result = self.runtime.resume(session.short_id, prompt=text, card=lane.name)
         if result.verdict != LaunchVerdict.ALIVE or result.session is None:
@@ -348,6 +366,33 @@ class Doors:
         self.live.note(slug, number, AuditKind.ANSWERED, Actor.OWNER, said)
         self.loops.reconcile_now()
         return DoorResult(door="answer", said=said)
+
+    def _rule_on_a_parked_card(
+        self, slug: str, number: int, text: str, detail: CardDetail
+    ) -> DoorResult:
+        """His answer on a defect nobody has hands on. The row is written
+        first and is the durable thing: every failure after it leaves the row
+        standing, the card saying the half-state in words, and the machine
+        retrying — so he is never asked the same question twice, whatever
+        the lane does next."""
+        routed = detail.summary.routing
+        if routed is None or routed.state != Routing.TRIAGED_HIS:
+            raise DoorRefused(
+                f"#{number} is not on your pile: it routes as "
+                + (routed.state.value if routed is not None else "nothing to rule on")
+                + "."
+            )
+        said = f"Ruled: {text}"
+        self.live.note(slug, number, AuditKind.ANSWERED, Actor.OWNER, said)
+        self.live.bump()
+        self.loops.reconcile_now()
+        return DoorResult(
+            door="answer",
+            said=(
+                f"{said} — the board opens a lane that rewrites the mark citing your ruling; "
+                "the card says so until the corpus does."
+            ),
+        )
 
     def watch(self, slug: str, number: int) -> DoorResult:
         detail = self._detail(slug, number)
@@ -755,6 +800,187 @@ class Doors:
             + ("; the WATCH row replaced" if watch is not None else "")
             + ".",
         )
+
+
+    # ── a triage reading's result (plan 59, item 3) ────────────────────
+
+    def triage(
+        self,
+        slug: str,
+        number: int,
+        *,
+        result: TriageResult,
+        words: str,
+        source: str | None,
+        direction: Direction | None,
+    ) -> DoorResult:
+        """A triage reading's result, in one act: the typed result validated
+        against what it must name, the two fingerprints taken from the text
+        it actually judged, the record written with the decision identity it
+        mints, the `TRIAGED` row on the card, the end of that exact reading's
+        record, and a reconcile — the shape `reading` has, for the same
+        reason: a verb that writes a row and leaves the session's record open
+        makes the seat look busy forever, and one that writes a row without
+        a fingerprint routes tomorrow's document on yesterday's reading.
+
+        Nothing here decides what the routing becomes: that is
+        `board/triage.py::routing_of`, from this record and the document
+        together. This door only refuses a result that does not carry what
+        its own kind has to carry."""
+        words = words.strip()
+        if not words:
+            raise DoorRefused(
+                "A result without its reasoning records nothing; say what the source said."
+            )
+        detail = self._detail(slug, number)
+        document = detail.document
+        if (
+            document is None
+            or document.archived
+            or document.kind != DocumentKind.SUGGESTION
+            or document.suggestion_kind != SuggestionKind.DEFECT
+        ):
+            raise DoorRefused(
+                f"#{number} is not a live defect suggestion; a triage reads a defect's mark."
+            )
+        open_now = next(
+            (
+                r
+                for r in self.live.store.windowless_sessions(
+                    slug, work=SessionWork.TRIAGE, open_only=True
+                )
+                if r.card_number == number
+            ),
+            None,
+        )
+        if open_now is None:
+            raise DoorRefused(
+                f"No triage is open for #{number}. A result lands from the reading the board "
+                "started and nowhere else; that is what makes it independent."
+            )
+        resolved = self.live.sources(slug).resolve(source)
+        if result == TriageResult.NOW:
+            if resolved is None or resolved.fingerprint is None:
+                raise DoorRefused(
+                    "A `now` needs a source the board can read: "
+                    + (resolved.note if resolved is not None else "this result names none")
+                    + ". Prose shaped like a source is not a source."
+                )
+            if direction is None:
+                raise DoorRefused(
+                    "A `now` records which way it moves the product; name one of: "
+                    + ", ".join(d.value for d in Direction)
+                )
+        if result == TriageResult.SPLIT and (resolved is None or resolved.fingerprint is None):
+            raise DoorRefused(
+                "A split names the source that settles its settled half: "
+                + (resolved.note if resolved is not None else "this result names none")
+            )
+        if result == TriageResult.WHEN:
+            trigger, why = read_or_decline(words)
+            if trigger is None:
+                raise DoorRefused(f"A `when` names a trigger the board can read: {why}")
+        now = clock.now()
+        previous = self.live.store.latest_triages(slug).get(number)
+        record = self.live.store.record_triage(
+            slug,
+            number,
+            at=now,
+            actor=Actor.SESSION,
+            result=result,
+            words=words,
+            decision=uuid.uuid4().hex[:16],
+            parent=previous.decision if previous is not None else None,
+            direction=direction,
+            source_ref=resolved.ref if resolved is not None else None,
+            source_path=resolved.path if resolved is not None else None,
+            source_fingerprint=resolved.fingerprint if resolved is not None else None,
+            document_fingerprint=document.fingerprint,
+            session_id=open_now.session_id,
+        )
+        self.live.add_row(
+            slug,
+            number,
+            Row(kind=RowKind.TRIAGED, text=triaged_row(record, resolved)),
+            Actor.SESSION,
+        )
+        self.live.store.end_windowless_session(open_now.id, now)
+        self.live.bump()
+        self.loops.reconcile_now()
+        routed = routing_now(document, record, self.live.sources(slug))
+        return DoorResult(
+            door="triage",
+            said=(
+                f"#{number} read as {result.value}; it routes as {routed.state.value} "
+                f"(decision {record.decision})."
+            ),
+        )
+
+    # ── the short lanes that write the corpus (items 4 and 5) ──────────
+
+    def corpus_lane(
+        self,
+        slug: str,
+        number: int,
+        *,
+        kind: CorpusLaneKind,
+        decision: str,
+        brief: str,
+        attempt: int,
+    ) -> CorpusLane:
+        """Open one isolated worktree whose only job is a corpus write the
+        record already selected: a split to separate, or the owner's ruling
+        to apply. It is not the card's lane — its worktree is named
+        `<kind>-<n>-<slug>` so neither the lane directory reader nor the
+        branch reader sees `card-<n>-`, the card never moves to Executing,
+        and no lane record is written — because a card whose defect is being
+        separated has no hands on its work.
+
+        A launch that fails is a lane that ended before it began: the record
+        says so with the machine's words and the board's next beat decides
+        whether to try again."""
+        live = self.live.projects[slug]
+        card = self.live.card(slug, number)
+        name = corpus_lane_name(kind, number, card.title)
+        now = clock.now()
+        launch = self.runtime.start(
+            Start(
+                repo=live.project.path,
+                card=name,
+                brief=brief,
+                effort=CORPUS_LANE_EFFORT,
+                from_slot=None,
+            )
+        )
+        session = launch.session
+        opened = self.live.store.open_corpus_lane(
+            slug,
+            number,
+            kind=kind,
+            decision=decision,
+            name=name,
+            path=(session.worktree if session is not None else None)
+            or lane_path(live.project.path, name),
+            session_id=session.session_id if session is not None else None,
+            attempt=attempt,
+            at=now,
+        )
+        if launch.verdict != LaunchVerdict.ALIVE or session is None:
+            words = f"The {kind.value} lane did not start: {launch.reason}"
+            self.live.store.end_corpus_lane(opened.id, now, words)
+            self.live.note(slug, number, AuditKind.DIAL, Actor.MACHINE, words)
+            return opened
+        placement = launch.placement
+        where = f"{placement.model.value} on {placement.slot}" if placement else session.slot
+        self.live.note(
+            slug,
+            number,
+            AuditKind.DIAL,
+            Actor.MACHINE,
+            f"A {kind.value} lane opened for decision {decision}: {session.short_id}, {where}, "
+            f"in {name}; it writes the corpus and nothing else",
+        )
+        return opened
 
     # ── a session's close ──────────────────────────────────────────────
 

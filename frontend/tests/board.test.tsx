@@ -944,16 +944,26 @@ describe("defects fix themselves (plan 11)", () => {
     await waitFor(() => expect(api.turnDial).toHaveBeenLastCalledWith(true, 3));
   });
 
-  it("says who fixes a defect beside its kind, and unmarked when nobody said", async () => {
+  it("says where a defect routes beside its kind, and nobody's yet until a reading says otherwise", async () => {
+    // Plan 59, item 1: the word on the face is the routing state, not the
+    // `Fix:` mark. The mark is what one session wrote from inside its own
+    // context; the routing state is that mark plus an independent reading
+    // of it, and both defects here are still unread — including the marked
+    // one, which used to read as the machine's on the strength of the word
+    // alone.
     await renderBoard();
     const backlog = document.querySelector('[data-column="Backlog"]') as HTMLElement;
     await userEvent.click(within(backlog).getByRole("button", { name: /Defects/ }));
     const tide = screen.getByText("The tide clock drifts a minute a day").closest("article") as HTMLElement;
-    const marked = within(tide).getByText("defect · now");
-    expect(marked).toHaveAttribute("title", expect.stringContaining("the dial may plan and start it without the owner"));
+    const marked = within(tide).getByText("defect · needs triage");
+    expect(marked).toHaveAttribute("title", expect.stringContaining("Fix: now"));
+    expect(marked).toHaveAttribute("title", expect.stringContaining("it routes as needs triage"));
+    expect(marked.dataset["routing"]).toBe("needs triage");
     expect(marked.dataset["meaning"]).toBeUndefined();
     const boat = screen.getByText("The night audit re-reads the whole harbour log").closest("article") as HTMLElement;
-    expect(within(boat).getByText("defect · unmarked")).toHaveAttribute("title", expect.stringContaining("an unmarked defect reads as his"));
+    const unmarked = within(boat).getByText("defect · needs triage");
+    expect(unmarked).toHaveAttribute("title", expect.stringContaining("Fix: unmarked"));
+    expect(unmarked).toHaveAttribute("title", expect.stringContaining("it is nobody's yet"));
     // An idea says nothing about who fixes it.
     expect(screen.queryByText(/idea · /)).toBeNull();
   });

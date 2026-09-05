@@ -43,7 +43,12 @@ class FixMark(StrEnum):
     rather than an instance; `when <signal>` — a fix that waits for a trigger
     in the WATCH grammar, read by the signal loop; `his` — a decision the
     owner has to make first. A suggestion with no line, or a line outside
-    this vocabulary, is unmarked and reads as `his` (the safe default)."""
+    this vocabulary, is unmarked — and an unmarked defect is nobody's yet,
+    never his by default (plan 59, item 1): the default was applied once, by
+    the session that filed the defect, and eight decisions sat on him
+    unanswered because of it. Where a defect routes is
+    `board/triage.py::routing_of`, from this mark and an independent reading
+    of it together; nothing derives it from the mark alone."""
 
     NOW = "now"
     WHEN = "when"
@@ -198,6 +203,10 @@ class Document(BaseModel):
     """The plan's task list with each item's stance (plan 13, item 1); empty
     for a plan written as one promise, and for a suggestion."""
     head_fields: list[HeadField]
+    fingerprint: str
+    """A hash of the whole file text (`board/triage.py::fingerprint`): what
+    a triage row binds itself to, so a reading of yesterday's proposition
+    cannot route today's document (plan 59, item 3)."""
     intent_heading: str | None
     intent: str
     """The body of the intent section, as markdown."""

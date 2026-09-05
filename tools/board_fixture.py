@@ -120,6 +120,7 @@ def _document(*, archived: bool = False, kind: DocumentKind = DocumentKind.PLAN)
         handouts=[],
         items=[],
         head_fields=[],
+        fingerprint="f1x7ur3f1n6erpr",
         intent_heading=None,
         intent="",
         essence="Every berth is billed by the metre.",

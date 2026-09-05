@@ -35,6 +35,7 @@ from domain.document import Document, DocumentKind, FixMark, SuggestionKind
 from domain.lane import HANDS_ON, Lane, LaneState
 from domain.row import RowKind
 from domain.signal import Reading
+from domain.triage import Routed, Routing
 
 LIVE_STAGES: frozenset[FixStage] = frozenset(
     {FixStage.PLANNING, FixStage.PLANNED, FixStage.STARTED}
@@ -118,20 +119,23 @@ def why_not_eligible(
     card: Card,
     document: Document,
     *,
+    routed: Routed,
     last: Reading | None,
     lane: Lane | None,
     planning_open: bool,
+    triage_open: bool,
     ran_before: bool,
 ) -> str | None:
     """Why the dial leaves this defect where it is, in one sentence, or None
-    when it may take it. Every reason is a fact the card or its document
-    carries, so the owner can change it by changing the fact."""
+    when it may take it. Every reason is a fact the card, its document or
+    its reading carries, so the owner can change it by changing the fact.
+
+    The mark alone no longer opens the door (plan 59): `routed` is the state
+    every reader derives from the document's mark and the card's latest
+    reading together, and anything but `triaged now` — or a verified `when`
+    whose own trigger has fired — is a reason in its own words."""
     fix = document.fix
-    if fix is None:
-        return f"unmarked ({document.fix_note}); an unmarked defect reads as his"
-    if fix.mark == FixMark.HIS:
-        return "marked his"
-    if fix.mark == FixMark.WHEN:
+    if routed.state == Routing.TRIAGED_WHEN and fix is not None and fix.mark == FixMark.WHEN:
         if fix.trigger is None:
             return "marked when, and the line names no trigger"
         if last is None:
@@ -139,6 +143,10 @@ def why_not_eligible(
         if not last.delivered:
             read = "not delivered" if last.delivered is False else "unreadable"
             return f"marked when, and its trigger last read {read}"
+    elif routed.state != Routing.TRIAGED_NOW:
+        return routed.why
+    if triage_open:
+        return "a reading is verifying its mark now"
     if lane is not None and (lane.state != LaneState.NONE or lane.path is not None):
         return f"a lane exists for it ({lane.state.value})"
     if planning_open:
@@ -166,12 +174,20 @@ def held_lanes(
     ]
 
 
-def running(fix_lanes: list[FixLane], held: list[FixLane] | None = None) -> int:
+def running(
+    fix_lanes: list[FixLane], held: list[FixLane] | None = None, *, triaging: int = 0
+) -> int:
     """What counts against the number: every fix lane at a live stage that
-    is not held. The planning stage always counts, which bounds how many
-    plans are written ahead."""
+    is not held, plus every open triage reading. The planning stage always
+    counts, which bounds how many plans are written ahead; a triage counts
+    for the same reason — it is a live session on a machine whose ceiling is
+    memory, and a rail of forty untriaged defects would otherwise open forty
+    of them under a dial set to one (plan 59, item 3)."""
     held_ids = {lane.id for lane in held or []}
-    return sum(1 for lane in fix_lanes if lane.stage in LIVE_STAGES and lane.id not in held_ids)
+    return (
+        sum(1 for lane in fix_lanes if lane.stage in LIVE_STAGES and lane.id not in held_ids)
+        + triaging
+    )
 
 
 def is_quiet(lanes_by_project: dict[str, dict[int, Lane]]) -> bool:
@@ -239,10 +255,12 @@ def dial_state(
     *,
     held: list[FixLane],
     room: Headroom | None,
+    triaging: int = 0,
 ) -> DialState:
     return DialState(
         dial=dial,
-        running=running(fix_lanes, held),
+        running=running(fix_lanes, held, triaging=triaging),
+        triaging=triaging,
         held=len(held),
         full=room.sentence if room is not None and room.full else None,
         quiet=is_quiet(lanes_by_project),

@@ -43,6 +43,7 @@ from domain.row import RowKind
 from domain.session import Session, SessionKind, SessionState
 from domain.signal import Signal
 from domain.slot import Placement
+from domain.triage import Routed, Routing
 from domain.window import Window, WindowKind
 
 _LANE_DIR = re.compile(r"/\.claude/worktrees/card-(\d+)-[^/]*(?:/|$)")
@@ -721,13 +722,18 @@ def doors_for(
     signal_evidence: str | None,
     suggestion_live: bool,
     waits: list[Wait],
+    routed: Routed | None = None,
+    ruled: str | None = None,
 ) -> Doors:
     """`suggestion_live`: the card's document is a suggestion still in its
     live folder, so Plan may write the plan that carries it. `signal_evidence`
     is a reading session's cannot-tell in its words, when that is why the
     owner is asked (plan 09, item 4). `waits` is every card the plan's
     Sequencing line names, placed: the one hold on a Start that is another
-    card's (`board/sequencing.py`)."""
+    card's (`board/sequencing.py`). `routed` is where a defect routes right
+    now and `ruled` his own answer to this reading when he has already given
+    one: together they are what opens Answer on a card with no session at
+    all, exactly once (plan 59, item 5)."""
     live = lane.session is not None and lane.session.pid is not None and lane.state in HANDS_ON
     background = live and lane.session is not None and lane.session.kind == SessionKind.BACKGROUND
     shares = collision is not None and collision.verdict == CollisionVerdict.COLLIDES
@@ -817,6 +823,17 @@ def doors_for(
         answer = _closed("Answer", "The session is working; answer it when it stops.")
     elif live:
         answer = _closed("Answer", "The session runs in your own terminal; answer it there.")
+    elif ruled is not None:
+        answer = _closed("Answer", ruled)
+    elif routed is not None and routed.state == Routing.TRIAGED_HIS:
+        # The one card with no session that has a door (plan 59, item 5): a
+        # defect an independent reading put on his pile. Before this it had
+        # none, and the pile drained at zero for the board's whole life.
+        answer = _open(
+            "Answer",
+            "A reading says this decision is yours. Your sentence is the ruling; a short lane "
+            "writes it into the document, citing your answer.",
+        )
     else:
         answer = _closed("Answer", "No live session to answer.")
     discuss = (

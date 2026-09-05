@@ -82,14 +82,21 @@ class SessionWork(StrEnum):
     """Reading one card's signal, and ending with a finding (plan 09, item 1)."""
     PLANNING = "planning"
     """Writing the plan for a marked defect under the dial (plan 11, item 4)."""
+    TRIAGE = "triage"
+    """Reading one defect's mark against the source it cites, with no share
+    of the finding session's context, and ending with one typed result
+    (plan 59, item 3)."""
 
 
 class WindowlessSession(BaseModel):
     """A session the board started with no window and no worktree, in the
-    project's own checkout: to read one card's signal (plan 09, item 1) or
-    to plan a marked defect (plan 11, item 4). Listed on the card while it
-    runs, never hands on any tree, ended when its finding or its plan lands
-    or its process is gone."""
+    project's own checkout: to read one card's signal (plan 09, item 1), to
+    plan a marked defect (plan 11, item 4), or to verify a defect's mark
+    (plan 59, item 3). Listed on the card while it runs, never hands on any
+    tree, ended when its finding, its plan or its result lands or its
+    process is gone. At most one is open per card and kind: the store
+    refuses the second, so a duplicate triager cannot exist however the
+    beat raced."""
 
     id: int
     project: str

@@ -77,9 +77,16 @@ by the next read. Every suggestion also says who fixes it, on a `**Fix:**`
 line under the kind (plan 11): `now` when the intent it breaks is written,
 the fix stays inside its ring and removes a class rather than an instance;
 `when <signal>` in the WATCH grammar when it waits for a trigger the board
-can read; `his` when it implies a decision the owner has to make first. An
-unmarked defect reads as his. The dial on the head applies the owner's
-standing ruling: a `now` defect is planned and started without him. A
+can read; `his` when it implies a decision the owner has to make first. A
+`now` or a `his` says why on the same line, in words a reader who was not
+there can act on; a category ("a product call", "UX") names the shape of the
+decision and not the decision, and a ratchet refuses it. An unmarked defect
+is nobody's yet — not his by default, which is how eight decisions sat on
+him unanswered. A mark is verified before it routes: one independent reading
+resolves the source it cites and lands one typed result, and the routing
+state every reader shows comes from `board/triage.py::routing_of` and never
+from matching the words. The dial on the head applies the owner's standing
+ruling: a *verified* `now` defect is planned and started without him. A
 ratchet refuses a live suggestion here without both lines.
 The fix loop runs over the inner two rings until a pass finds nothing new; the
 outer ring never loops, it files. A lane that fixes outside its change is the

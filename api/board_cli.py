@@ -47,6 +47,7 @@ from domain.document import DocumentKind, SuggestionKind
 from domain.lane import HANDS_ON, LaneState
 from domain.row import Row, RowKind
 from domain.signal import Finding
+from domain.triage import Direction, TriageResult
 from domain.verdict import EvidenceClass
 from infrastructure import clock
 from infrastructure.live import Live
@@ -173,6 +174,68 @@ def reading(
         watch=args.watch,
     )
     print(result.said)
+    return 0
+
+
+def triage(
+    args: argparse.Namespace, live: Live, runtime: Runtime, loops: Loops, doors: Doors
+) -> int:
+    """A triage reading's result on the card, and the routing it implies
+    (plan 59, item 3): the one verb a reading of a defect's mark ends its
+    turn with."""
+    result = doors.triage(
+        args.slug,
+        args.number,
+        result=TriageResult(args.result),
+        words=args.words,
+        source=args.source,
+        direction=Direction(args.direction) if args.direction else None,
+    )
+    print(result.said)
+    return 0
+
+
+def decisions(
+    args: argparse.Namespace, live: Live, runtime: Runtime, loops: Loops, doors: Doors
+) -> int:
+    """Every decision a colleague took on the rail, in order, with its
+    source, its direction and its fate (plan 59, item 6): the sample the
+    loop's cold audit reads, printed rather than tracked."""
+    slug = None if args.slug == "all" else args.slug
+    if slug is not None and slug not in live.projects:
+        print(f'no project "{slug}" is on the board', file=sys.stderr)
+        return 1
+    loops.reconcile_now()
+    rows = Dial(live, runtime, loops, doors).decisions(slug)
+    if args.first:
+        rows = rows[: args.first]
+    if not rows:
+        print("no decision has been taken on the rail yet")
+        return 0
+    for line in rows:
+        came = f" (out of {line.parent})" if line.parent else ""
+        print(
+            f"{line.at.date().isoformat()}  {line.project} #{line.card_number:<4} "
+            f"{line.result.value:<12} {line.decision}{came}"
+        )
+        print(f"      {line.title}")
+        print(f"      says: {line.words}")
+        print(f"      source: {line.source}")
+        print(f"      direction: {line.direction.value if line.direction else 'none recorded'}")
+        print(f"      routes as: {line.routing.value}; fate: {line.fate.words}")
+    taken = [line for line in rows if line.result == TriageResult.NOW]
+    counts: dict[str, int] = {}
+    for line in taken:
+        if line.direction is not None:
+            counts[line.direction.value] = counts.get(line.direction.value, 0) + 1
+    print(
+        f"{len(rows)} decisions, {len(taken)} taken off your rail as `now`"
+        + (
+            "; directions: " + ", ".join(f"{n} {d}" for d, n in sorted(counts.items()))
+            if counts
+            else "; no direction recorded"
+        )
+    )
     return 0
 
 
@@ -563,6 +626,11 @@ def fixes(
         f"record, {asked} stopped to ask, {undone} undone (a defect filed against it, or the "
         f"fold reverted), {closers} carried a class-closer"
     )
+    taken = [d for d in report.decisions if d.result == TriageResult.NOW]
+    print(
+        f"{len(report.decisions)} readings of a mark, {len(taken)} of them taking the decision "
+        "off your rail; `needle decisions` follows each to its fate"
+    )
     for waiting in report.waiting:
         print(f"rail  {waiting.project} #{waiting.card_number:<4} {waiting.title} — {waiting.why}")
     at_on = {r.project: r for r in report.rail_at_first_on}
@@ -620,6 +688,28 @@ def register(sub: "argparse._SubParsersAction[argparse.ArgumentParser]") -> None
         "--watch", help="a replacement WATCH row when the measure could not be read"
     )
     p_reading.set_defaults(run=_with_board(reading))
+
+    p_triage = sub.add_parser(
+        "triage", help="a triage reading's result on a defect's mark, with the source it read"
+    )
+    p_triage.add_argument("slug")
+    p_triage.add_argument("number", type=int)
+    p_triage.add_argument("result", choices=[r.value for r in TriageResult])
+    p_triage.add_argument("words", help="what the source said, in the words the result needs")
+    p_triage.add_argument("--source", help="the path or #N the result rests on")
+    p_triage.add_argument(
+        "--direction",
+        choices=[d.value for d in Direction],
+        help="which way it moves the product; required with now",
+    )
+    p_triage.set_defaults(run=_with_board(triage))
+
+    p_decisions = sub.add_parser(
+        "decisions", help="every decision a colleague took on the rail, with source and fate"
+    )
+    p_decisions.add_argument("slug", help="a project's slug, or all")
+    p_decisions.add_argument("--first", type=int, help="only the first N, for the cold audit")
+    p_decisions.set_defaults(run=_with_board(decisions))
 
     p_fold = sub.add_parser(
         "fold", help="fast-forward push this lane to origin/develop; level the trunk"

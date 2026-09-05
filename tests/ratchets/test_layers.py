@@ -32,6 +32,7 @@ STDLIB_HINT = {
     "dataclasses",
     "pathlib",
     "json",
+    "hashlib",
     "os",
     "sys",
     "inspect",

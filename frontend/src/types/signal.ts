@@ -4,7 +4,7 @@ import type { Actor } from "./card";
 export const FINDING_VALUES = ["delivered", "not-delivered", "cannot-tell"] as const;
 export type Finding = (typeof FINDING_VALUES)[number];
 
-export const SESSION_WORK_VALUES = ["reading", "planning"] as const;
+export const SESSION_WORK_VALUES = ["reading", "planning", "triage"] as const;
 export type SessionWork = (typeof SESSION_WORK_VALUES)[number];
 
 export const SIGNAL_KIND_VALUES = ["url", "file", "command", "session", "owner"] as const;

@@ -101,7 +101,7 @@ export function CardBody({ card, open, onOpen, onClose, selected = false, select
         <Grow />
         {open ? <Chip title="Where this card sits">{card.place.column}</Chip> : null}
         {open ? <StandingMark standing={card.standing} /> : null}
-        <Kind state={card.document_state} kind={card.kind} fix={card.fix} path={card.document_path} />
+        <Kind state={card.document_state} kind={card.kind} fix={card.fix} routing={card.routing} path={card.document_path} />
         {open && onClose ? (
           <Chip onClick={onClose} title="Close">
             ✕

@@ -13,6 +13,7 @@ import type { Collision, Conversation, Doors, Lane, LaneState, Progress } from "
 import type { Project } from "./project";
 import type { Row } from "./row";
 import type { Reading, Signal, SignalKind, WindowlessSession } from "./signal";
+import type { Routed, Source, Triage } from "./triage";
 import type { Verdict, VerdictLine } from "./verdict";
 import type { WatercoolerLine } from "./watercooler";
 
@@ -77,6 +78,9 @@ export interface CardDetail {
   watercooler: WatercoolerLine[];
   heard: HeardMark | null;
   handouts: Handouts;
+  triage: Triage | null;
+  triaging: WindowlessSession | null;
+  source: Source | null;
 }
 
 export interface CardState {
@@ -99,6 +103,7 @@ export interface CardSummary {
   document_path: string | null;
   kind: SuggestionKind | null;
   fix: Fix | null;
+  routing: Routed | null;
   state: CardState;
   claims: Claim[];
   folded: FoldedCard[];
@@ -111,6 +116,8 @@ export interface CardSummary {
   standing: Standing;
   reading: WindowlessSession | null;
   planning: WindowlessSession | null;
+  triaging: WindowlessSession | null;
+  triage: Triage | null;
 }
 
 export interface ClaimCount {

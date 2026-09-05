@@ -11,6 +11,7 @@ import type { DocumentState, Fix, Item, Review, SuggestionKind } from "../../typ
 import type { Progress } from "../../types/lane";
 import type { Standing } from "../../types/evidence";
 import type { RowKind } from "../../types/row";
+import type { Routed } from "../../types/triage";
 import { ASK_ROWS } from "../../types/row";
 
 // ── text ──────────────────────────────────────────────────────────────
@@ -707,8 +708,8 @@ const DOC_WHY: Record<DocumentState, string> = {
 };
 
 const FIX_WHY: Record<Fix["mark"], string> = {
-  now: "its finder marked it a straight fix: the dial may plan and start it without the owner",
-  when: "its fix waits for a trigger the board reads; delivered makes it a now",
+  now: "its finder marked it a straight fix, against a written intent, inside its ring",
+  when: "its fix waits for a trigger the board reads",
   his: "its fix implies a decision the owner has to make first",
 };
 
@@ -716,18 +717,26 @@ const FIX_WHY: Record<Fix["mark"], string> = {
  * What is written behind a card, right-aligned on its first line: a fact,
  * never a claim, so it is quiet monospace and never a hue. A suggestion says
  * which kind it is — defects and ideas are two rails, not two colours — and
- * a defect says who fixes it, from its `Fix:` line (plan 11, item 2):
- * `now`, `when`, `his`, or `unmarked` when the line is missing, which the
- * dial reads as his.
+ * a defect says where it routes.
+ *
+ * The word shown is the routing state, not the `Fix:` mark (plan 59, item
+ * 1). The mark is what one session wrote from inside its own context; the
+ * routing state is that mark plus an independent reading of it, derived by
+ * one function on the backend that the CLI and the dial read too. An
+ * unmarked defect reads `needs triage` — nobody's yet — where it used to
+ * read as the owner's without anyone deciding that. The mark itself stays,
+ * in the tooltip, because it is the corpus fact the routing rests on.
  */
-export function Kind({ state, kind, fix, path }: { state: DocumentState; kind: SuggestionKind | null; fix?: Fix | null; path: string | null }) {
+export function Kind({ state, kind, fix, routing, path }: { state: DocumentState; kind: SuggestionKind | null; fix?: Fix | null; routing?: Routed | null; path: string | null }) {
   const marked = state === "suggestion" && kind === "defect";
-  const mark = marked ? (fix ? fix.mark : "unmarked") : null;
   const word = state === "suggestion" && kind ? kind : DOC_LABEL[state];
-  const why = mark ? `; Fix: ${mark} — ${fix ? FIX_WHY[fix.mark] + (fix.trigger ? ` (${fix.trigger})` : fix.why ? ` (${fix.why})` : "") : "no Fix: line on its head; an unmarked defect reads as his"}` : "";
+  const where = marked ? (routing ? routing.state : "needs triage") : null;
+  const mark = marked ? (fix ? fix.mark : "unmarked") : null;
+  const said = fix ? FIX_WHY[fix.mark] + (fix.trigger ? ` (${fix.trigger})` : fix.why ? ` (${fix.why})` : "") : "no Fix: line on its head";
+  const why = where ? `; Fix: ${mark} — ${said}; it routes as ${where}: ${routing ? routing.why : "the board has not read this card yet"}` : "";
   return (
-    <span className="kind" data-doc={state} {...(mark ? { "data-fix": mark } : {})} title={(path ? `${DOC_WHY[state]}: ${path}` : DOC_WHY[state]) + why}>
-      {mark ? `${word} · ${mark}` : word}
+    <span className="kind" data-doc={state} {...(mark ? { "data-fix": mark } : {})} {...(where ? { "data-routing": where } : {})} title={(path ? `${DOC_WHY[state]}: ${path}` : DOC_WHY[state]) + why}>
+      {where ? `${word} · ${where}` : word}
     </span>
   );
 }

@@ -23,6 +23,7 @@ from board.assemble import assemble_board, assemble_detail, folded_under
 from board.dial import dial_state, held_lanes
 from board.lane import nothing_read
 from board.reconcile import Effects, reconcile
+from board.triage import Sources
 from domain.audit import AuditKind
 from domain.board import BoardState, CardDetail, MachineState
 from domain.card import Actor, Card, CardOrigin, Place
@@ -242,6 +243,20 @@ class Live:
             raise StoreRefusal(f'No project "{slug}" is on the board.')
         return live
 
+    def sources(self, slug: str) -> Sources:
+        """A source reader for one read of one project: the corpus's own
+        paths resolved against the project root, and a card number resolved
+        to the document behind it (plan 59, item 3). One per read, never
+        kept: a cached fingerprint that outlived its read would be exactly
+        the stale row the fingerprint exists to catch."""
+        live = self._live(slug)
+
+        def card_document(number: int) -> str | None:
+            card = self.store.card(slug, number)
+            return card.link.path() if card is not None and card.link is not None else None
+
+        return Sources(Path(live.project.path), card_document)
+
     def board(self, slug: str) -> BoardState:
         live = self._live(slug)
         return assemble_board(
@@ -261,6 +276,9 @@ class Live:
             watercooler=self.store.watercooler(slug, limit=WATERCOOLER_SHOWN),
             reading_sessions=self.store.open_windowless_sessions(slug, SessionWork.READING),
             planning_sessions=self.store.open_windowless_sessions(slug, SessionWork.PLANNING),
+            triage_sessions=self.store.open_windowless_sessions(slug, SessionWork.TRIAGE),
+            triages=self.store.latest_triages(slug),
+            sources=self.sources(slug),
             dial=self.dial_state(),
         )
 
@@ -275,12 +293,17 @@ class Live:
             if live.snapshot is not None
         }
         fix_lanes = self.store.fix_lanes()
+        triaging = sum(
+            len(self.store.open_windowless_sessions(slug, SessionWork.TRIAGE))
+            for slug in self.projects
+        )
         return dial_state(
             self.store.dial(),
             fix_lanes,
             lanes,
             held=held_lanes(fix_lanes, self.start_offered),
             room=self.headroom,
+            triaging=triaging,
         )
 
     def start_offered(self, slug: str, number: int) -> bool | None:
@@ -324,6 +347,9 @@ class Live:
             heard=self.store.heard_mark(slug, number),
             machine=self.machine,
             planning=self.store.open_windowless_sessions(slug, SessionWork.PLANNING).get(number),
+            triaging=self.store.open_windowless_sessions(slug, SessionWork.TRIAGE).get(number),
+            triage=self.store.latest_triages(slug).get(number),
+            sources=self.sources(slug),
         )
 
     def lane_and_doors(self, slug: str, card: Card) -> tuple[Lane | None, Doors]:

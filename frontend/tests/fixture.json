@@ -60,6 +60,7 @@
         "first_on_at": null
       },
       "running": 0,
+      "triaging": 0,
       "held": 0,
       "full": null,
       "quiet": true
@@ -93,6 +94,10 @@
                 "document_path": "docs/slice-suggestions/2026-09-01-the-night-audit-re-reads-the-whole-harbour-log.md",
                 "kind": "defect",
                 "fix": null,
+                "routing": {
+                  "state": "needs triage",
+                  "why": "unmarked (no Fix: line), and no reading has verified it; it is nobody's yet"
+                },
                 "state": {
                   "word": "no plan yet",
                   "meaning": "quiet",
@@ -120,7 +125,9 @@
                   "words": null
                 },
                 "reading": null,
-                "planning": null
+                "planning": null,
+                "triaging": null,
+                "triage": null
               },
               {
                 "number": 267,
@@ -136,6 +143,10 @@
                   "mark": "now",
                   "why": "the tide table plan says the harbour's own clock is the reference, and the quay display keeps its own",
                   "trigger": null
+                },
+                "routing": {
+                  "state": "needs triage",
+                  "why": "marked now, and no reading has verified it; it is nobody's yet"
                 },
                 "state": {
                   "word": "no plan yet",
@@ -164,7 +175,9 @@
                   "words": null
                 },
                 "reading": null,
-                "planning": null
+                "planning": null,
+                "triaging": null,
+                "triage": null
               }
             ],
             "rail": true
@@ -183,6 +196,7 @@
                 "document_path": "docs/slice-suggestions/2026-09-03-the-quay-display-polls-the-office-all-night.md",
                 "kind": "idea",
                 "fix": null,
+                "routing": null,
                 "state": {
                   "word": "no plan yet",
                   "meaning": "quiet",
@@ -210,7 +224,9 @@
                   "words": null
                 },
                 "reading": null,
-                "planning": null
+                "planning": null,
+                "triaging": null,
+                "triage": null
               },
               {
                 "number": 242,
@@ -223,6 +239,7 @@
                 "document_path": "docs/slice-suggestions/2026-09-02-the-welcome-board-shows-one-boats-whole-stay.md",
                 "kind": "idea",
                 "fix": null,
+                "routing": null,
                 "state": {
                   "word": "no plan yet",
                   "meaning": "quiet",
@@ -250,7 +267,9 @@
                   "words": null
                 },
                 "reading": null,
-                "planning": null
+                "planning": null,
+                "triaging": null,
+                "triage": null
               },
               {
                 "number": 120,
@@ -263,6 +282,7 @@
                 "document_path": "docs/slice-suggestions/2026-07-12-berth-list-keys.md · 2026-08-19-office-screen-refresh.md",
                 "kind": null,
                 "fix": null,
+                "routing": null,
                 "state": {
                   "word": "document nowhere",
                   "meaning": "broken",
@@ -292,7 +312,9 @@
                   "words": null
                 },
                 "reading": null,
-                "planning": null
+                "planning": null,
+                "triaging": null,
+                "triage": null
               }
             ],
             "rail": false
@@ -318,6 +340,7 @@
                 "document_path": null,
                 "kind": null,
                 "fix": null,
+                "routing": null,
                 "state": {
                   "word": "no document",
                   "meaning": "quiet",
@@ -345,7 +368,9 @@
                   "words": null
                 },
                 "reading": null,
-                "planning": null
+                "planning": null,
+                "triaging": null,
+                "triage": null
               }
             ],
             "rail": false
@@ -364,6 +389,7 @@
                 "document_path": "docs/slice-suggestions/2026-08-29-two-meters-on-one-pontoon-disagree.md",
                 "kind": "idea",
                 "fix": null,
+                "routing": null,
                 "state": {
                   "word": "no plan yet",
                   "meaning": "quiet",
@@ -391,7 +417,9 @@
                   "words": null
                 },
                 "reading": null,
-                "planning": null
+                "planning": null,
+                "triaging": null,
+                "triage": null
               },
               {
                 "number": 264,
@@ -404,6 +432,7 @@
                 "document_path": "docs/slice-suggestions/2026-08-31-the-same-slip-is-mailed-twice.md",
                 "kind": "idea",
                 "fix": null,
+                "routing": null,
                 "state": {
                   "word": "no plan yet",
                   "meaning": "quiet",
@@ -431,7 +460,9 @@
                   "words": null
                 },
                 "reading": null,
-                "planning": null
+                "planning": null,
+                "triaging": null,
+                "triage": null
               },
               {
                 "number": 265,
@@ -444,6 +475,7 @@
                 "document_path": "docs/slice-suggestions/2026-09-01-the-waiting-list-forgets-who-asked-first.md",
                 "kind": "idea",
                 "fix": null,
+                "routing": null,
                 "state": {
                   "word": "no plan yet",
                   "meaning": "quiet",
@@ -471,7 +503,9 @@
                   "words": null
                 },
                 "reading": null,
-                "planning": null
+                "planning": null,
+                "triaging": null,
+                "triage": null
               },
               {
                 "number": 266,
@@ -484,6 +518,7 @@
                 "document_path": "docs/slice-suggestions/2026-09-04-a-boat-longer-than-its-berth-is-accepted.md",
                 "kind": "idea",
                 "fix": null,
+                "routing": null,
                 "state": {
                   "word": "no plan yet",
                   "meaning": "quiet",
@@ -511,7 +546,9 @@
                   "words": null
                 },
                 "reading": null,
-                "planning": null
+                "planning": null,
+                "triaging": null,
+                "triage": null
               }
             ],
             "rail": false
@@ -549,6 +586,7 @@
                 "document_path": "docs/plans/2026-09-01-the-waiting-list-offers-every-berth-that-fits.md",
                 "kind": null,
                 "fix": null,
+                "routing": null,
                 "state": {
                   "word": "not read yet",
                   "meaning": "quiet",
@@ -576,7 +614,9 @@
                   "words": null
                 },
                 "reading": null,
-                "planning": null
+                "planning": null,
+                "triaging": null,
+                "triage": null
               }
             ],
             "rail": false
@@ -597,6 +637,7 @@
                 "document_path": "docs/plans/2026-09-02-the-skipper-sees-the-price-before-the-berth.md",
                 "kind": null,
                 "fix": null,
+                "routing": null,
                 "state": {
                   "word": "not read yet",
                   "meaning": "quiet",
@@ -624,7 +665,9 @@
                   "words": null
                 },
                 "reading": null,
-                "planning": null
+                "planning": null,
+                "triaging": null,
+                "triage": null
               }
             ],
             "rail": false
@@ -645,6 +688,7 @@
                 "document_path": "docs/plans/2026-08-26-a-screen-nobody-opens-is-removed.md",
                 "kind": null,
                 "fix": null,
+                "routing": null,
                 "state": {
                   "word": "not read yet",
                   "meaning": "quiet",
@@ -672,7 +716,9 @@
                   "words": null
                 },
                 "reading": null,
-                "planning": null
+                "planning": null,
+                "triaging": null,
+                "triage": null
               }
             ],
             "rail": false
@@ -691,6 +737,7 @@
                 "document_path": "docs/plans/2026-09-04-the-tide-table-is-the-harbours-own.md",
                 "kind": null,
                 "fix": null,
+                "routing": null,
                 "state": {
                   "word": "not read yet",
                   "meaning": "quiet",
@@ -718,7 +765,9 @@
                   "words": null
                 },
                 "reading": null,
-                "planning": null
+                "planning": null,
+                "triaging": null,
+                "triage": null
               },
               {
                 "number": 268,
@@ -731,6 +780,7 @@
                 "document_path": "docs/plans/2026-09-04-a-storm-warning-reaches-every-skipper.md",
                 "kind": null,
                 "fix": null,
+                "routing": null,
                 "state": {
                   "word": "not read yet",
                   "meaning": "quiet",
@@ -758,7 +808,9 @@
                   "words": null
                 },
                 "reading": null,
-                "planning": null
+                "planning": null,
+                "triaging": null,
+                "triage": null
               }
             ],
             "rail": false
@@ -794,6 +846,7 @@
                 "document_path": "docs/plans/2026-09-03-every-metered-kilowatt-is-billed.md",
                 "kind": null,
                 "fix": null,
+                "routing": null,
                 "state": {
                   "word": "not read yet",
                   "meaning": "quiet",
@@ -821,7 +874,9 @@
                   "words": null
                 },
                 "reading": null,
-                "planning": null
+                "planning": null,
+                "triaging": null,
+                "triage": null
               },
               {
                 "number": 241,
@@ -834,6 +889,7 @@
                 "document_path": "docs/plans/2026-09-02-a-gate-code-arrives-before-the-boat-does.md",
                 "kind": null,
                 "fix": null,
+                "routing": null,
                 "state": {
                   "word": "not read yet",
                   "meaning": "quiet",
@@ -861,7 +917,9 @@
                   "words": null
                 },
                 "reading": null,
-                "planning": null
+                "planning": null,
+                "triaging": null,
+                "triage": null
               },
               {
                 "number": 228,
@@ -874,6 +932,7 @@
                 "document_path": null,
                 "kind": null,
                 "fix": null,
+                "routing": null,
                 "state": {
                   "word": "not read yet",
                   "meaning": "quiet",
@@ -901,7 +960,9 @@
                   "words": null
                 },
                 "reading": null,
-                "planning": null
+                "planning": null,
+                "triaging": null,
+                "triage": null
               },
               {
                 "number": 237,
@@ -914,6 +975,7 @@
                 "document_path": "docs/plans/2026-08-28-a-berth-is-never-let-twice.md",
                 "kind": null,
                 "fix": null,
+                "routing": null,
                 "state": {
                   "word": "not read yet",
                   "meaning": "quiet",
@@ -941,7 +1003,9 @@
                   "words": null
                 },
                 "reading": null,
-                "planning": null
+                "planning": null,
+                "triaging": null,
+                "triage": null
               },
               {
                 "number": 174,
@@ -956,6 +1020,7 @@
                 "document_path": "docs/plans/2026-08-30-the-booking-office-stops-growing-into-one-file.md",
                 "kind": null,
                 "fix": null,
+                "routing": null,
                 "state": {
                   "word": "not read yet",
                   "meaning": "quiet",
@@ -983,7 +1048,9 @@
                   "words": null
                 },
                 "reading": null,
-                "planning": null
+                "planning": null,
+                "triaging": null,
+                "triage": null
               }
             ],
             "rail": false
@@ -1019,6 +1086,7 @@
                 "document_path": "docs/plans/done/2026-08-25-the-fuel-pontoon-takes-cards.md",
                 "kind": null,
                 "fix": null,
+                "routing": null,
                 "state": {
                   "word": "no hands on it",
                   "meaning": "quiet",
@@ -1046,7 +1114,9 @@
                   "words": "imported from Needle 0.1; evidence unknown until the first read"
                 },
                 "reading": null,
-                "planning": null
+                "planning": null,
+                "triaging": null,
+                "triage": null
               },
               {
                 "number": 223,
@@ -1059,6 +1129,7 @@
                 "document_path": "docs/slice-suggestions/2026-08-20-the-gate-code-goes-out-in-plain-text.md",
                 "kind": "idea",
                 "fix": null,
+                "routing": null,
                 "state": {
                   "word": "no plan yet",
                   "meaning": "quiet",
@@ -1086,7 +1157,9 @@
                   "words": "imported from Needle 0.1; evidence unknown until the first read"
                 },
                 "reading": null,
-                "planning": null
+                "planning": null,
+                "triaging": null,
+                "triage": null
               }
             ],
             "rail": false
@@ -1124,6 +1197,7 @@
                 "document_path": "docs/plans/2026-09-02-the-pricing-rule-judged-against-a-real-season.md",
                 "kind": null,
                 "fix": null,
+                "routing": null,
                 "state": {
                   "word": "your move",
                   "meaning": "yours",
@@ -1158,7 +1232,9 @@
                   "words": null
                 },
                 "reading": null,
-                "planning": null
+                "planning": null,
+                "triaging": null,
+                "triage": null
               },
               {
                 "number": 147,
@@ -1174,6 +1250,7 @@
                 "document_path": null,
                 "kind": null,
                 "fix": null,
+                "routing": null,
                 "state": {
                   "word": "your move",
                   "meaning": "yours",
@@ -1208,7 +1285,9 @@
                   "words": null
                 },
                 "reading": null,
-                "planning": null
+                "planning": null,
+                "triaging": null,
+                "triage": null
               }
             ],
             "rail": false
@@ -1229,6 +1308,7 @@
                 "document_path": "docs/plans/2026-08-18-berth-first-booking.md",
                 "kind": null,
                 "fix": null,
+                "routing": null,
                 "state": {
                   "word": "your move",
                   "meaning": "yours",
@@ -1263,7 +1343,9 @@
                   "words": null
                 },
                 "reading": null,
-                "planning": null
+                "planning": null,
+                "triaging": null,
+                "triage": null
               }
             ],
             "rail": false
@@ -1284,6 +1366,7 @@
                 "document_path": null,
                 "kind": null,
                 "fix": null,
+                "routing": null,
                 "state": {
                   "word": "your move",
                   "meaning": "yours",
@@ -1318,7 +1401,9 @@
                   "words": null
                 },
                 "reading": null,
-                "planning": null
+                "planning": null,
+                "triaging": null,
+                "triage": null
               }
             ],
             "rail": false
@@ -1356,6 +1441,7 @@
                 "document_path": "docs/plans/done/2026-08-30-the-office-runs-its-own-checks.md",
                 "kind": null,
                 "fix": null,
+                "routing": null,
                 "state": {
                   "word": "no signal named",
                   "meaning": "quiet",
@@ -1383,7 +1469,9 @@
                   "words": "imported from Needle 0.1; evidence unknown until the first read"
                 },
                 "reading": null,
-                "planning": null
+                "planning": null,
+                "triaging": null,
+                "triage": null
               }
             ],
             "rail": false
@@ -1441,6 +1529,7 @@
                 "document_path": "docs/plans/done/2026-09-01-a-confirmed-booking-waits-for-the-tide.md",
                 "kind": null,
                 "fix": null,
+                "routing": null,
                 "state": {
                   "word": "document nowhere",
                   "meaning": "broken",
@@ -1470,7 +1559,9 @@
                   "words": null
                 },
                 "reading": null,
-                "planning": null
+                "planning": null,
+                "triaging": null,
+                "triage": null
               }
             ],
             "rail": false
@@ -1537,6 +1628,10 @@
         "document_path": "docs/slice-suggestions/2026-09-01-the-night-audit-re-reads-the-whole-harbour-log.md",
         "kind": "defect",
         "fix": null,
+        "routing": {
+          "state": "needs triage",
+          "why": "unmarked (no Fix: line), and no reading has verified it; it is nobody's yet"
+        },
         "state": {
           "word": "no plan yet",
           "meaning": "quiet",
@@ -1564,7 +1659,9 @@
           "words": null
         },
         "reading": null,
-        "planning": null
+        "planning": null,
+        "triaging": null,
+        "triage": null
       },
       "brief": [
         {
@@ -1604,6 +1701,7 @@
             "value": "the cost review of 2026-09-01."
           }
         ],
+        "fingerprint": "27953dd4aeff154a",
         "intent_heading": "Observation",
         "intent": "The night audit reads only what changed since the last one. Today it reads all 14,000 log lines every night, and the log grows by the season.",
         "essence": "The night audit reads only what changed since the last one.",
@@ -1751,7 +1849,10 @@
         "named": [],
         "unknown": [],
         "verdict": null
-      }
+      },
+      "triage": null,
+      "triaging": null,
+      "source": null
     },
     "267": {
       "card": {
@@ -1795,6 +1896,10 @@
           "why": "the tide table plan says the harbour's own clock is the reference, and the quay display keeps its own",
           "trigger": null
         },
+        "routing": {
+          "state": "needs triage",
+          "why": "marked now, and no reading has verified it; it is nobody's yet"
+        },
         "state": {
           "word": "no plan yet",
           "meaning": "quiet",
@@ -1822,7 +1927,9 @@
           "words": null
         },
         "reading": null,
-        "planning": null
+        "planning": null,
+        "triaging": null,
+        "triage": null
       },
       "brief": [],
       "record": [],
@@ -1865,6 +1972,7 @@
             "value": "the review of card #241 (`docs/reviews/2026-09-03-the-deploy.md`, finding 2), carried out."
           }
         ],
+        "fingerprint": "1e75aa91898eea4c",
         "intent_heading": "Observation",
         "intent": "The quay display shows high water from a clock it winds itself at boot. It gains about a minute a day, and after a fortnight the board on the pontoon disagrees with the office by a quarter of an hour.",
         "essence": "The quay display shows high water from a clock it winds itself at boot.",
@@ -1982,7 +2090,10 @@
         "named": [],
         "unknown": [],
         "verdict": null
-      }
+      },
+      "triage": null,
+      "triaging": null,
+      "source": null
     },
     "252": {
       "card": {
@@ -2035,6 +2146,7 @@
         "document_path": "docs/slice-suggestions/2026-09-03-the-quay-display-polls-the-office-all-night.md",
         "kind": "idea",
         "fix": null,
+        "routing": null,
         "state": {
           "word": "no plan yet",
           "meaning": "quiet",
@@ -2062,7 +2174,9 @@
           "words": null
         },
         "reading": null,
-        "planning": null
+        "planning": null,
+        "triaging": null,
+        "triage": null
       },
       "brief": [
         {
@@ -2102,6 +2216,7 @@
             "value": "the close of card #249, carried out."
           }
         ],
+        "fingerprint": "6510824a8ae91dd8",
         "intent_heading": "Observation",
         "intent": "The office costs nothing while nothing happens — but only because the quay display is not installed. It asks the office for the berth list every eight seconds via `/api/quay`, all night, and installing it as it stands quietly breaks that.",
         "essence": "The office costs nothing while nothing happens — but only because the quay display is not installed.",
@@ -2230,7 +2345,10 @@
         "named": [],
         "unknown": [],
         "verdict": null
-      }
+      },
+      "triage": null,
+      "triaging": null,
+      "source": null
     },
     "242": {
       "card": {
@@ -2283,6 +2401,7 @@
         "document_path": "docs/slice-suggestions/2026-09-02-the-welcome-board-shows-one-boats-whole-stay.md",
         "kind": "idea",
         "fix": null,
+        "routing": null,
         "state": {
           "word": "no plan yet",
           "meaning": "quiet",
@@ -2310,7 +2429,9 @@
           "words": null
         },
         "reading": null,
-        "planning": null
+        "planning": null,
+        "triaging": null,
+        "triage": null
       },
       "brief": [
         {
@@ -2350,6 +2471,7 @@
             "value": "the owner, walking the pontoon on 2026-09-02."
           }
         ],
+        "fingerprint": "000491eb0c6e6f10",
         "intent_heading": "Observation",
         "intent": "A skipper walking up the pontoon sees berth, gate code and departure on one board. Today they are three screens and the departure is on none of them.",
         "essence": "A skipper walking up the pontoon sees berth, gate code and departure on one board.",
@@ -2478,7 +2600,10 @@
         "named": [],
         "unknown": [],
         "verdict": null
-      }
+      },
+      "triage": null,
+      "triaging": null,
+      "source": null
     },
     "120": {
       "card": {
@@ -2523,6 +2648,7 @@
         "document_path": "docs/slice-suggestions/2026-07-12-berth-list-keys.md · 2026-08-19-office-screen-refresh.md",
         "kind": null,
         "fix": null,
+        "routing": null,
         "state": {
           "word": "document nowhere",
           "meaning": "broken",
@@ -2552,7 +2678,9 @@
           "words": null
         },
         "reading": null,
-        "planning": null
+        "planning": null,
+        "triaging": null,
+        "triage": null
       },
       "brief": [],
       "record": [],
@@ -2680,7 +2808,10 @@
         "named": [],
         "unknown": [],
         "verdict": null
-      }
+      },
+      "triage": null,
+      "triaging": null,
+      "source": null
     },
     "105": {
       "card": {
@@ -2722,6 +2853,7 @@
         "document_path": null,
         "kind": null,
         "fix": null,
+        "routing": null,
         "state": {
           "word": "no document",
           "meaning": "quiet",
@@ -2749,7 +2881,9 @@
           "words": null
         },
         "reading": null,
-        "planning": null
+        "planning": null,
+        "triaging": null,
+        "triage": null
       },
       "brief": [],
       "record": [],
@@ -2866,7 +3000,10 @@
         "named": [],
         "unknown": [],
         "verdict": null
-      }
+      },
+      "triage": null,
+      "triaging": null,
+      "source": null
     },
     "263": {
       "card": {
@@ -2906,6 +3043,7 @@
         "document_path": "docs/slice-suggestions/2026-08-29-two-meters-on-one-pontoon-disagree.md",
         "kind": "idea",
         "fix": null,
+        "routing": null,
         "state": {
           "word": "no plan yet",
           "meaning": "quiet",
@@ -2933,7 +3071,9 @@
           "words": null
         },
         "reading": null,
-        "planning": null
+        "planning": null,
+        "triaging": null,
+        "triage": null
       },
       "brief": [],
       "record": [],
@@ -2964,6 +3104,7 @@
             "value": "the meter reconcile of 2026-08-29."
           }
         ],
+        "fingerprint": "8175ec127b9b462c",
         "intent_heading": "Observation",
         "intent": "Pontoon C's two meters report a total that is 11% more than the shore meter for the same week. One of them is wrong and the office cannot say which.",
         "essence": "Pontoon C's two meters report a total that is 11% more than the shore meter for the same week.",
@@ -3081,7 +3222,10 @@
         "named": [],
         "unknown": [],
         "verdict": null
-      }
+      },
+      "triage": null,
+      "triaging": null,
+      "source": null
     },
     "264": {
       "card": {
@@ -3121,6 +3265,7 @@
         "document_path": "docs/slice-suggestions/2026-08-31-the-same-slip-is-mailed-twice.md",
         "kind": "idea",
         "fix": null,
+        "routing": null,
         "state": {
           "word": "no plan yet",
           "meaning": "quiet",
@@ -3148,7 +3293,9 @@
           "words": null
         },
         "reading": null,
-        "planning": null
+        "planning": null,
+        "triaging": null,
+        "triage": null
       },
       "brief": [],
       "record": [],
@@ -3179,6 +3326,7 @@
             "value": "a skipper's reply, 2026-08-31."
           }
         ],
+        "fingerprint": "d4713a8b7f647c92",
         "intent_heading": "Observation",
         "intent": "A skipper who books and then changes the departure gets the confirmation slip twice, with the same number. The second mail says nothing about what changed.",
         "essence": "A skipper who books and then changes the departure gets the confirmation slip twice, with the same number.",
@@ -3296,7 +3444,10 @@
         "named": [],
         "unknown": [],
         "verdict": null
-      }
+      },
+      "triage": null,
+      "triaging": null,
+      "source": null
     },
     "265": {
       "card": {
@@ -3336,6 +3487,7 @@
         "document_path": "docs/slice-suggestions/2026-09-01-the-waiting-list-forgets-who-asked-first.md",
         "kind": "idea",
         "fix": null,
+        "routing": null,
         "state": {
           "word": "no plan yet",
           "meaning": "quiet",
@@ -3363,7 +3515,9 @@
           "words": null
         },
         "reading": null,
-        "planning": null
+        "planning": null,
+        "triaging": null,
+        "triage": null
       },
       "brief": [],
       "record": [],
@@ -3394,6 +3548,7 @@
             "value": "the owner, 2026-09-01."
           }
         ],
+        "fingerprint": "d02843b22f2180fc",
         "intent_heading": "Observation",
         "intent": "Two boats waiting for the same berth are offered it in the order the list was last edited, not the order they asked. The first to ask is the one who complains.",
         "essence": "Two boats waiting for the same berth are offered it in the order the list was last edited, not the order they asked.",
@@ -3511,7 +3666,10 @@
         "named": [],
         "unknown": [],
         "verdict": null
-      }
+      },
+      "triage": null,
+      "triaging": null,
+      "source": null
     },
     "266": {
       "card": {
@@ -3551,6 +3709,7 @@
         "document_path": "docs/slice-suggestions/2026-09-04-a-boat-longer-than-its-berth-is-accepted.md",
         "kind": "idea",
         "fix": null,
+        "routing": null,
         "state": {
           "word": "no plan yet",
           "meaning": "quiet",
@@ -3578,7 +3737,9 @@
           "words": null
         },
         "reading": null,
-        "planning": null
+        "planning": null,
+        "triaging": null,
+        "triage": null
       },
       "brief": [],
       "record": [],
@@ -3609,6 +3770,7 @@
             "value": "the harbourmaster, 2026-09-04."
           }
         ],
+        "fingerprint": "ed5c7e4aa7b876b8",
         "intent_heading": "Observation",
         "intent": "A 12-metre boat booked a 10-metre berth and the office said yes. The form knows the boat's length and the berth's; it compares neither.",
         "essence": "A 12-metre boat booked a 10-metre berth and the office said yes.",
@@ -3726,7 +3888,10 @@
         "named": [],
         "unknown": [],
         "verdict": null
-      }
+      },
+      "triage": null,
+      "triaging": null,
+      "source": null
     },
     "196": {
       "card": {
@@ -3783,6 +3948,7 @@
         "document_path": "docs/plans/2026-09-01-the-waiting-list-offers-every-berth-that-fits.md",
         "kind": null,
         "fix": null,
+        "routing": null,
         "state": {
           "word": "not read yet",
           "meaning": "quiet",
@@ -3810,7 +3976,9 @@
           "words": null
         },
         "reading": null,
-        "planning": null
+        "planning": null,
+        "triaging": null,
+        "triage": null
       },
       "brief": [
         {
@@ -3867,6 +4035,7 @@
             "value": "after #139, the four berth-first rulings."
           }
         ],
+        "fingerprint": "e73a7915c5061e48",
         "intent_heading": "Intent",
         "intent": "A boat on the waiting list is offered every berth it fits, not only the one it asked for. Today the list matches on the berth number the skipper typed, so a 9-metre boat waiting for C14 is never told that C11 came free on Tuesday, and C11 stays empty while the skipper anchors outside.",
         "essence": "A boat on the waiting list is offered every berth it fits, not only the one it asked for.",
@@ -3995,7 +4164,10 @@
         "named": [],
         "unknown": [],
         "verdict": null
-      }
+      },
+      "triage": null,
+      "triaging": null,
+      "source": null
     },
     "109": {
       "card": {
@@ -4048,6 +4220,7 @@
         "document_path": "docs/plans/2026-09-02-the-skipper-sees-the-price-before-the-berth.md",
         "kind": null,
         "fix": null,
+        "routing": null,
         "state": {
           "word": "not read yet",
           "meaning": "quiet",
@@ -4075,7 +4248,9 @@
           "words": null
         },
         "reading": null,
-        "planning": null
+        "planning": null,
+        "triaging": null,
+        "triage": null
       },
       "brief": [
         {
@@ -4123,6 +4298,7 @@
             "value": "independent of every open card."
           }
         ],
+        "fingerprint": "dc6b4e16f1c04826",
         "intent_heading": "Intent",
         "intent": "A skipper knows what a night costs before choosing where to lie. Today the price appears on the confirmation, after the berth is chosen.",
         "essence": "A skipper knows what a night costs before choosing where to lie.",
@@ -4251,7 +4427,10 @@
         "named": [],
         "unknown": [],
         "verdict": null
-      }
+      },
+      "triage": null,
+      "triaging": null,
+      "source": null
     },
     "172": {
       "card": {
@@ -4308,6 +4487,7 @@
         "document_path": "docs/plans/2026-08-26-a-screen-nobody-opens-is-removed.md",
         "kind": null,
         "fix": null,
+        "routing": null,
         "state": {
           "word": "not read yet",
           "meaning": "quiet",
@@ -4335,7 +4515,9 @@
           "words": null
         },
         "reading": null,
-        "planning": null
+        "planning": null,
+        "triaging": null,
+        "triage": null
       },
       "brief": [
         {
@@ -4387,6 +4569,7 @@
             "value": "independent of every open card."
           }
         ],
+        "fingerprint": "7a35aa38c7e3746a",
         "intent_heading": "Intent",
         "intent": "Every future session reading the office's code sees only screens that are actually opened — nothing dead to extend, fix or learn from.",
         "essence": "Every future session reading the office's code sees only screens that are actually opened — nothing dead to extend, fix or learn from.",
@@ -4515,7 +4698,10 @@
         "named": [],
         "unknown": [],
         "verdict": null
-      }
+      },
+      "triage": null,
+      "triaging": null,
+      "source": null
     },
     "262": {
       "card": {
@@ -4555,6 +4741,7 @@
         "document_path": "docs/plans/2026-09-04-the-tide-table-is-the-harbours-own.md",
         "kind": null,
         "fix": null,
+        "routing": null,
         "state": {
           "word": "not read yet",
           "meaning": "quiet",
@@ -4582,7 +4769,9 @@
           "words": null
         },
         "reading": null,
-        "planning": null
+        "planning": null,
+        "triaging": null,
+        "triage": null
       },
       "brief": [],
       "record": [],
@@ -4625,6 +4814,7 @@
             "value": "independent of every open card."
           }
         ],
+        "fingerprint": "0a93e13ddf349562",
         "intent_heading": "Intent",
         "intent": "The tide the office plans by is the one measured at the harbour mouth, not the one published for the estuary twenty miles up. A boat drawing two metres is told when it can actually come in.",
         "essence": "The tide the office plans by is the one measured at the harbour mouth, not the one published for the estuary twenty miles up.",
@@ -4742,7 +4932,10 @@
         "named": [],
         "unknown": [],
         "verdict": null
-      }
+      },
+      "triage": null,
+      "triaging": null,
+      "source": null
     },
     "268": {
       "card": {
@@ -4782,6 +4975,7 @@
         "document_path": "docs/plans/2026-09-04-a-storm-warning-reaches-every-skipper.md",
         "kind": null,
         "fix": null,
+        "routing": null,
         "state": {
           "word": "not read yet",
           "meaning": "quiet",
@@ -4809,7 +5003,9 @@
           "words": null
         },
         "reading": null,
-        "planning": null
+        "planning": null,
+        "triaging": null,
+        "triage": null
       },
       "brief": [],
       "record": [],
@@ -4881,6 +5077,7 @@
             "value": "independent of every open card."
           }
         ],
+        "fingerprint": "bdc0a5a1f7f5dae6",
         "intent_heading": "Intent",
         "intent": "Every boat in the harbour hears a gale warning the moment the office does. Last night the office phoned eleven skippers one by one and reached six; the five it did not reach found out from the wind.",
         "essence": "Every boat in the harbour hears a gale warning the moment the office does.",
@@ -4998,7 +5195,10 @@
         "named": [],
         "unknown": [],
         "verdict": null
-      }
+      },
+      "triage": null,
+      "triaging": null,
+      "source": null
     },
     "253": {
       "card": {
@@ -5055,6 +5255,7 @@
         "document_path": "docs/plans/2026-09-03-every-metered-kilowatt-is-billed.md",
         "kind": null,
         "fix": null,
+        "routing": null,
         "state": {
           "word": "not read yet",
           "meaning": "quiet",
@@ -5082,7 +5283,9 @@
           "words": null
         },
         "reading": null,
-        "planning": null
+        "planning": null,
+        "triaging": null,
+        "triage": null
       },
       "brief": [
         {
@@ -5142,6 +5345,7 @@
             "value": "#253 (Up next)"
           }
         ],
+        "fingerprint": "0eec6af8f46f387f",
         "intent_heading": "Intent",
         "intent": "Power truth. Every kilowatt a boat draws on the pontoon lands on that boat's invoice the moment the meter reports it, so the season invoice stops understating every boat that plugged in. Today the office has dropped every meter reading since 5 July: the handler reads the reading as a number and the meters send a string.",
         "essence": "Power truth.",
@@ -5270,7 +5474,10 @@
         "named": [],
         "unknown": [],
         "verdict": null
-      }
+      },
+      "triage": null,
+      "triaging": null,
+      "source": null
     },
     "241": {
       "card": {
@@ -5331,6 +5538,7 @@
         "document_path": "docs/plans/2026-09-02-a-gate-code-arrives-before-the-boat-does.md",
         "kind": null,
         "fix": null,
+        "routing": null,
         "state": {
           "word": "not read yet",
           "meaning": "quiet",
@@ -5358,7 +5566,9 @@
           "words": null
         },
         "reading": null,
-        "planning": null
+        "planning": null,
+        "triaging": null,
+        "triage": null
       },
       "brief": [
         {
@@ -5422,6 +5632,7 @@
             "value": "#241"
           }
         ],
+        "fingerprint": "11958db6539f29b0",
         "intent_heading": "Intent",
         "intent": "A skipper who booked from sea finds the gate code waiting on the phone when the boat is tied up. Today the code goes out when the office opens the next morning, so a boat arriving at 21:00 is locked out of the showers until 08:30.",
         "essence": "A skipper who booked from sea finds the gate code waiting on the phone when the boat is tied up.",
@@ -5550,7 +5761,10 @@
         "named": [],
         "unknown": [],
         "verdict": null
-      }
+      },
+      "triage": null,
+      "triaging": null,
+      "source": null
     },
     "228": {
       "card": {
@@ -5600,6 +5814,7 @@
         "document_path": null,
         "kind": null,
         "fix": null,
+        "routing": null,
         "state": {
           "word": "not read yet",
           "meaning": "quiet",
@@ -5627,7 +5842,9 @@
           "words": null
         },
         "reading": null,
-        "planning": null
+        "planning": null,
+        "triaging": null,
+        "triage": null
       },
       "brief": [
         {
@@ -5757,7 +5974,10 @@
         "named": [],
         "unknown": [],
         "verdict": null
-      }
+      },
+      "triage": null,
+      "triaging": null,
+      "source": null
     },
     "237": {
       "card": {
@@ -5814,6 +6034,7 @@
         "document_path": "docs/plans/2026-08-28-a-berth-is-never-let-twice.md",
         "kind": null,
         "fix": null,
+        "routing": null,
         "state": {
           "word": "not read yet",
           "meaning": "quiet",
@@ -5841,7 +6062,9 @@
           "words": null
         },
         "reading": null,
-        "planning": null
+        "planning": null,
+        "triaging": null,
+        "triage": null
       },
       "brief": [
         {
@@ -5912,6 +6135,7 @@
             "value": "independent of every open card."
           }
         ],
+        "fingerprint": "33f16c66997fd7cc",
         "intent_heading": "Intent",
         "intent": "Two boats never hold the same berth for the same night. A double-let is a boat turned away at the pontoon at dusk, and the office learns of it from the skipper.",
         "essence": "Two boats never hold the same berth for the same night.",
@@ -6047,7 +6271,10 @@
         ],
         "unknown": [],
         "verdict": null
-      }
+      },
+      "triage": null,
+      "triaging": null,
+      "source": null
     },
     "174": {
       "card": {
@@ -6104,6 +6331,7 @@
         "document_path": "docs/plans/2026-08-30-the-booking-office-stops-growing-into-one-file.md",
         "kind": null,
         "fix": null,
+        "routing": null,
         "state": {
           "word": "not read yet",
           "meaning": "quiet",
@@ -6131,7 +6359,9 @@
           "words": null
         },
         "reading": null,
-        "planning": null
+        "planning": null,
+        "triaging": null,
+        "triage": null
       },
       "brief": [
         {
@@ -6211,6 +6441,7 @@
             "value": "independent of every open card."
           }
         ],
+        "fingerprint": "d9d7b939441ec658",
         "intent_heading": "Intent",
         "intent": "The file that applies every booking is a set of readable, single-concern modules — not a 4,100-line catch-all like the one that killed the old office.",
         "essence": "The file that applies every booking is a set of readable, single-concern modules — not a 4,100-line catch-all like the one that killed the old office.",
@@ -6352,7 +6583,10 @@
         ],
         "unknown": [],
         "verdict": null
-      }
+      },
+      "triage": null,
+      "triaging": null,
+      "source": null
     },
     "259": {
       "card": {
@@ -6413,6 +6647,7 @@
         "document_path": "docs/plans/done/2026-08-25-the-fuel-pontoon-takes-cards.md",
         "kind": null,
         "fix": null,
+        "routing": null,
         "state": {
           "word": "no hands on it",
           "meaning": "quiet",
@@ -6440,7 +6675,9 @@
           "words": "imported from Needle 0.1; evidence unknown until the first read"
         },
         "reading": null,
-        "planning": null
+        "planning": null,
+        "triaging": null,
+        "triage": null
       },
       "brief": [
         {
@@ -6501,6 +6738,7 @@
             "value": "independent of every open card."
           }
         ],
+        "fingerprint": "a50062248008e97d",
         "intent_heading": "Intent",
         "intent": "A skipper pays for fuel at the pump with a card and the litres land on the same invoice as the berth. Today it is cash and a paper slip.",
         "essence": "A skipper pays for fuel at the pump with a card and the litres land on the same invoice as the berth.",
@@ -6629,7 +6867,10 @@
         "named": [],
         "unknown": [],
         "verdict": null
-      }
+      },
+      "triage": null,
+      "triaging": null,
+      "source": null
     },
     "223": {
       "card": {
@@ -6686,6 +6927,7 @@
         "document_path": "docs/slice-suggestions/2026-08-20-the-gate-code-goes-out-in-plain-text.md",
         "kind": "idea",
         "fix": null,
+        "routing": null,
         "state": {
           "word": "no plan yet",
           "meaning": "quiet",
@@ -6713,7 +6955,9 @@
           "words": "imported from Needle 0.1; evidence unknown until the first read"
         },
         "reading": null,
-        "planning": null
+        "planning": null,
+        "triaging": null,
+        "triage": null
       },
       "brief": [
         {
@@ -6757,6 +7001,7 @@
             "value": "the security read of 2026-08-20."
           }
         ],
+        "fingerprint": "5a79f10904ff2117",
         "intent_heading": "Observation",
         "intent": "A gate code reaches only the skipper it was issued to. Today it is in the subject line of the confirmation email, so anyone with the email opens the gate.",
         "essence": "A gate code reaches only the skipper it was issued to.",
@@ -6885,7 +7130,10 @@
         "named": [],
         "unknown": [],
         "verdict": null
-      }
+      },
+      "triage": null,
+      "triaging": null,
+      "source": null
     },
     "219": {
       "card": {
@@ -6954,6 +7202,7 @@
         "document_path": "docs/plans/2026-09-02-the-pricing-rule-judged-against-a-real-season.md",
         "kind": null,
         "fix": null,
+        "routing": null,
         "state": {
           "word": "your move",
           "meaning": "yours",
@@ -6988,7 +7237,9 @@
           "words": null
         },
         "reading": null,
-        "planning": null
+        "planning": null,
+        "triaging": null,
+        "triage": null
       },
       "brief": [
         {
@@ -7053,6 +7304,7 @@
             "value": "independent of every open card."
           }
         ],
+        "fingerprint": "05b2765b3af23133",
         "intent_heading": "Intent",
         "intent": "A season's real bookings say whether length-based pricing or berth-based pricing fills the harbour, and the answer is written down with its evidence so it can be repeated.",
         "essence": "A season's real bookings say whether length-based pricing or berth-based pricing fills the harbour, and the answer is written down with its evidence so it can be repeated.",
@@ -7181,7 +7433,10 @@
         "named": [],
         "unknown": [],
         "verdict": null
-      }
+      },
+      "triage": null,
+      "triaging": null,
+      "source": null
     },
     "147": {
       "card": {
@@ -7233,6 +7488,7 @@
         "document_path": null,
         "kind": null,
         "fix": null,
+        "routing": null,
         "state": {
           "word": "your move",
           "meaning": "yours",
@@ -7267,7 +7523,9 @@
           "words": null
         },
         "reading": null,
-        "planning": null
+        "planning": null,
+        "triaging": null,
+        "triage": null
       },
       "brief": [
         {
@@ -7397,7 +7655,10 @@
         "named": [],
         "unknown": [],
         "verdict": null
-      }
+      },
+      "triage": null,
+      "triaging": null,
+      "source": null
     },
     "139": {
       "card": {
@@ -7458,6 +7719,7 @@
         "document_path": "docs/plans/2026-08-18-berth-first-booking.md",
         "kind": null,
         "fix": null,
+        "routing": null,
         "state": {
           "word": "your move",
           "meaning": "yours",
@@ -7492,7 +7754,9 @@
           "words": null
         },
         "reading": null,
-        "planning": null
+        "planning": null,
+        "triaging": null,
+        "triage": null
       },
       "brief": [
         {
@@ -7548,6 +7812,7 @@
             "value": "independent of every open card."
           }
         ],
+        "fingerprint": "1b250deb8c59d95b",
         "intent_heading": "Intent",
         "intent": "May a booking page open with the harbour map itself, instead of a form? A skipper who wants a berth picks one in one motion.",
         "essence": "May a booking page open with the harbour map itself, instead of a form?",
@@ -7676,7 +7941,10 @@
         "named": [],
         "unknown": [],
         "verdict": null
-      }
+      },
+      "triage": null,
+      "triaging": null,
+      "source": null
     },
     "149": {
       "card": {
@@ -7726,6 +7994,7 @@
         "document_path": null,
         "kind": null,
         "fix": null,
+        "routing": null,
         "state": {
           "word": "your move",
           "meaning": "yours",
@@ -7760,7 +8029,9 @@
           "words": null
         },
         "reading": null,
-        "planning": null
+        "planning": null,
+        "triaging": null,
+        "triage": null
       },
       "brief": [
         {
@@ -7890,7 +8161,10 @@
         "named": [],
         "unknown": [],
         "verdict": null
-      }
+      },
+      "triage": null,
+      "triaging": null,
+      "source": null
     },
     "134": {
       "card": {
@@ -7948,6 +8222,7 @@
         "document_path": "docs/plans/done/2026-08-30-the-office-runs-its-own-checks.md",
         "kind": null,
         "fix": null,
+        "routing": null,
         "state": {
           "word": "no signal named",
           "meaning": "quiet",
@@ -7975,7 +8250,9 @@
           "words": "imported from Needle 0.1; evidence unknown until the first read"
         },
         "reading": null,
-        "planning": null
+        "planning": null,
+        "triaging": null,
+        "triage": null
       },
       "brief": [],
       "record": [
@@ -8027,6 +8304,7 @@
             "value": "independent of every open card."
           }
         ],
+        "fingerprint": "27ff4c82e3457440",
         "intent_heading": "Intent",
         "intent": "The suite runs every night on the office machine and the morning report says what broke.",
         "essence": "The suite runs every night on the office machine and the morning report says what broke.",
@@ -8157,7 +8435,10 @@
         "named": [],
         "unknown": [],
         "verdict": null
-      }
+      },
+      "triage": null,
+      "triaging": null,
+      "source": null
     },
     "201": {
       "card": {
@@ -8206,6 +8487,7 @@
         "document_path": "docs/plans/done/2026-09-01-a-confirmed-booking-waits-for-the-tide.md",
         "kind": null,
         "fix": null,
+        "routing": null,
         "state": {
           "word": "document nowhere",
           "meaning": "broken",
@@ -8235,7 +8517,9 @@
           "words": null
         },
         "reading": null,
-        "planning": null
+        "planning": null,
+        "triaging": null,
+        "triage": null
       },
       "brief": [],
       "record": [
@@ -8368,7 +8652,10 @@
         "named": [],
         "unknown": [],
         "verdict": null
-      }
+      },
+      "triage": null,
+      "triaging": null,
+      "source": null
     }
   },
   "language": [
@@ -8385,6 +8672,7 @@
         "document_path": "docs/plans/2026-09-04-a-card-in-every-state.md",
         "kind": null,
         "fix": null,
+        "routing": null,
         "state": {
           "word": "free to start",
           "meaning": "proven",
@@ -8417,7 +8705,9 @@
           "words": null
         },
         "reading": null,
-        "planning": null
+        "planning": null,
+        "triaging": null,
+        "triage": null
       }
     },
     {
@@ -8433,6 +8723,7 @@
         "document_path": "docs/plans/2026-09-04-a-card-in-every-state.md",
         "kind": null,
         "fix": null,
+        "routing": null,
         "state": {
           "word": "shares ground with #241",
           "meaning": "proven",
@@ -8465,7 +8756,9 @@
           "words": null
         },
         "reading": null,
-        "planning": null
+        "planning": null,
+        "triaging": null,
+        "triage": null
       }
     },
     {
@@ -8481,6 +8774,7 @@
         "document_path": "docs/plans/2026-09-04-a-card-in-every-state.md",
         "kind": null,
         "fix": null,
+        "routing": null,
         "state": {
           "word": "waits on #139",
           "meaning": "quiet",
@@ -8508,7 +8802,9 @@
           "words": null
         },
         "reading": null,
-        "planning": null
+        "planning": null,
+        "triaging": null,
+        "triage": null
       }
     },
     {
@@ -8524,6 +8820,7 @@
         "document_path": "docs/plans/2026-09-04-a-card-in-every-state.md",
         "kind": null,
         "fix": null,
+        "routing": null,
         "state": {
           "word": "no gate",
           "meaning": "quiet",
@@ -8551,7 +8848,9 @@
           "words": null
         },
         "reading": null,
-        "planning": null
+        "planning": null,
+        "triaging": null,
+        "triage": null
       }
     },
     {
@@ -8567,6 +8866,7 @@
         "document_path": "docs/plans/2026-09-04-a-card-in-every-state.md",
         "kind": null,
         "fix": null,
+        "routing": null,
         "state": {
           "word": "nowhere to run",
           "meaning": "quiet",
@@ -8594,7 +8894,9 @@
           "words": null
         },
         "reading": null,
-        "planning": null
+        "planning": null,
+        "triaging": null,
+        "triage": null
       }
     },
     {
@@ -8610,6 +8912,7 @@
         "document_path": "docs/plans/2026-09-04-a-card-in-every-state.md",
         "kind": null,
         "fix": null,
+        "routing": null,
         "state": {
           "word": "working · 12 min · fable on alpha",
           "meaning": "live",
@@ -8644,7 +8947,9 @@
           "words": null
         },
         "reading": null,
-        "planning": null
+        "planning": null,
+        "triaging": null,
+        "triage": null
       }
     },
     {
@@ -8660,6 +8965,7 @@
         "document_path": "docs/plans/2026-09-04-a-card-in-every-state.md",
         "kind": null,
         "fix": null,
+        "routing": null,
         "state": {
           "word": "asking you",
           "meaning": "yours",
@@ -8694,7 +9000,9 @@
           "words": null
         },
         "reading": null,
-        "planning": null
+        "planning": null,
+        "triaging": null,
+        "triage": null
       }
     },
     {
@@ -8710,6 +9018,7 @@
         "document_path": "docs/plans/2026-09-04-a-card-in-every-state.md",
         "kind": null,
         "fix": null,
+        "routing": null,
         "state": {
           "word": "colliding with #241",
           "meaning": "broken",
@@ -8749,7 +9058,9 @@
           "words": null
         },
         "reading": null,
-        "planning": null
+        "planning": null,
+        "triaging": null,
+        "triage": null
       }
     },
     {
@@ -8765,6 +9076,7 @@
         "document_path": "docs/plans/2026-09-04-a-card-in-every-state.md",
         "kind": null,
         "fix": null,
+        "routing": null,
         "state": {
           "word": "lane ended",
           "meaning": "broken",
@@ -8795,7 +9107,9 @@
           "words": null
         },
         "reading": null,
-        "planning": null
+        "planning": null,
+        "triaging": null,
+        "triage": null
       }
     },
     {
@@ -8811,6 +9125,7 @@
         "document_path": "docs/plans/2026-09-04-a-card-in-every-state.md",
         "kind": null,
         "fix": null,
+        "routing": null,
         "state": {
           "word": "doubted",
           "meaning": "broken",
@@ -8840,7 +9155,9 @@
           "words": "the board doubts this: no lane exists for it — no worktree on disk and no session"
         },
         "reading": null,
-        "planning": null
+        "planning": null,
+        "triaging": null,
+        "triage": null
       }
     },
     {
@@ -8856,6 +9173,7 @@
         "document_path": "docs/plans/nowhere.md",
         "kind": null,
         "fix": null,
+        "routing": null,
         "state": {
           "word": "document nowhere",
           "meaning": "broken",
@@ -8885,7 +9203,9 @@
           "words": null
         },
         "reading": null,
-        "planning": null
+        "planning": null,
+        "triaging": null,
+        "triage": null
       }
     },
     {
@@ -8901,6 +9221,7 @@
         "document_path": "docs/plans/2026-09-04-a-card-in-every-state.md",
         "kind": null,
         "fix": null,
+        "routing": null,
         "state": {
           "word": "your move",
           "meaning": "yours",
@@ -8935,7 +9256,9 @@
           "words": null
         },
         "reading": null,
-        "planning": null
+        "planning": null,
+        "triaging": null,
+        "triage": null
       }
     },
     {
@@ -8951,6 +9274,7 @@
         "document_path": "docs/plans/done/2026-09-04-a-card-in-every-state.md",
         "kind": null,
         "fix": null,
+        "routing": null,
         "state": {
           "word": "loop open · a session reads it 11 Sep",
           "meaning": "quiet",
@@ -8981,7 +9305,9 @@
           "words": null
         },
         "reading": null,
-        "planning": null
+        "planning": null,
+        "triaging": null,
+        "triage": null
       }
     },
     {
@@ -8997,6 +9323,7 @@
         "document_path": "docs/plans/done/2026-09-04-a-card-in-every-state.md",
         "kind": null,
         "fix": null,
+        "routing": null,
         "state": {
           "word": "loop open · you read it 11 Sep",
           "meaning": "quiet",
@@ -9027,7 +9354,9 @@
           "words": null
         },
         "reading": null,
-        "planning": null
+        "planning": null,
+        "triaging": null,
+        "triage": null
       }
     },
     {
@@ -9043,6 +9372,7 @@
         "document_path": "docs/plans/done/2026-09-04-a-card-in-every-state.md",
         "kind": null,
         "fix": null,
+        "routing": null,
         "state": {
           "word": "signal for you to read",
           "meaning": "yours",
@@ -9080,7 +9410,9 @@
           "words": null
         },
         "reading": null,
-        "planning": null
+        "planning": null,
+        "triaging": null,
+        "triage": null
       }
     },
     {
@@ -9096,6 +9428,7 @@
         "document_path": "docs/plans/done/2026-09-04-a-card-in-every-state.md",
         "kind": null,
         "fix": null,
+        "routing": null,
         "state": {
           "word": "loop open · a session reads it now · beta",
           "meaning": "live",
@@ -9137,7 +9470,9 @@
           "started_at": "2026-09-04T08:28:00Z",
           "ended_at": null
         },
-        "planning": null
+        "planning": null,
+        "triaging": null,
+        "triage": null
       }
     },
     {
@@ -9153,6 +9488,7 @@
         "document_path": "docs/plans/done/2026-09-04-a-card-in-every-state.md",
         "kind": null,
         "fix": null,
+        "routing": null,
         "state": {
           "word": "loop open · 1 Sep passed, unread",
           "meaning": "broken",
@@ -9185,7 +9521,9 @@
           "words": null
         },
         "reading": null,
-        "planning": null
+        "planning": null,
+        "triaging": null,
+        "triage": null
       }
     },
     {
@@ -9201,6 +9539,7 @@
         "document_path": "docs/plans/done/2026-09-04-a-card-in-every-state.md",
         "kind": null,
         "fix": null,
+        "routing": null,
         "state": {
           "word": "loop closed · read 09:30, delivered",
           "meaning": "proven",
@@ -9231,7 +9570,9 @@
           "words": null
         },
         "reading": null,
-        "planning": null
+        "planning": null,
+        "triaging": null,
+        "triage": null
       }
     },
     {
@@ -9247,6 +9588,7 @@
         "document_path": "docs/plans/2026-09-04-a-card-in-every-state.md",
         "kind": null,
         "fix": null,
+        "routing": null,
         "state": {
           "word": "not now",
           "meaning": "quiet",
@@ -9274,7 +9616,9 @@
           "words": null
         },
         "reading": null,
-        "planning": null
+        "planning": null,
+        "triaging": null,
+        "triage": null
       }
     },
     {
@@ -9293,6 +9637,10 @@
           "mark": "now",
           "why": null,
           "trigger": null
+        },
+        "routing": {
+          "state": "needs triage",
+          "why": "marked now, and no reading has verified it; it is nobody's yet"
         },
         "state": {
           "word": "being planned · alpha",
@@ -9332,7 +9680,9 @@
           "slot": "alpha",
           "started_at": "2026-09-04T08:27:00Z",
           "ended_at": null
-        }
+        },
+        "triaging": null,
+        "triage": null
       }
     }
   ],

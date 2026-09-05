@@ -45,6 +45,15 @@ class RowKind(StrEnum):
     VERDICT = "VERDICT"
     """A proposal on the card's own fate, unread until the owner accepts or
     overturns it (plan 05)."""
+    TRIAGED = "TRIAGED"
+    """What one independent reading of this defect's mark landed, with the
+    source it resolved and the decision identity it minted (plan 59, item
+    3). The fact the dial reads is the triage record; this row is the
+    sentence the owner reads on the card."""
+    SPLIT = "SPLIT"
+    """A document that held two decisions was separated, and this card is
+    one of the halves — with the other named and the decision identity
+    carried (plan 59, item 4)."""
     HANDED_OUT = "HANDED OUT"
     """What the plan named against what the lane dispatched, per role,
     written by the close from the lane's transcripts (plan 12, item 3)."""
@@ -75,6 +84,8 @@ ROW_HALF: dict[RowKind, RowHalf] = {
     RowKind.RULED: RowHalf.RECORD,
     RowKind.DONE: RowHalf.RECORD,
     RowKind.VERDICT: RowHalf.RECORD,
+    RowKind.TRIAGED: RowHalf.RECORD,
+    RowKind.SPLIT: RowHalf.RECORD,
     RowKind.HANDED_OUT: RowHalf.RECORD,
 }
 

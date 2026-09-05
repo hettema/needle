@@ -3,7 +3,7 @@
 export const ROW_HALF_VALUES = ["essence", "brief", "record"] as const;
 export type RowHalf = (typeof ROW_HALF_VALUES)[number];
 
-export const ROW_KIND_VALUES = ["SERVES", "TODAY", "COST", "YOUR TIME", "WAITS", "PLAN", "REC", "Q", "ASK", "WHY", "WHY NOW", "STAKES", "STATE", "ITEMS", "OPEN", "WHAT", "WEEK", "DELIVERED", "WATCH", "REVIEW", "RULING", "RULED", "DONE", "VERDICT", "HANDED OUT"] as const;
+export const ROW_KIND_VALUES = ["SERVES", "TODAY", "COST", "YOUR TIME", "WAITS", "PLAN", "REC", "Q", "ASK", "WHY", "WHY NOW", "STAKES", "STATE", "ITEMS", "OPEN", "WHAT", "WEEK", "DELIVERED", "WATCH", "REVIEW", "RULING", "RULED", "DONE", "VERDICT", "TRIAGED", "SPLIT", "HANDED OUT"] as const;
 export type RowKind = (typeof ROW_KIND_VALUES)[number];
 
 export interface Row {
@@ -36,6 +36,8 @@ export const ROW_HALF: Record<RowKind, RowHalf> = {
   "RULED": "record",
   "DONE": "record",
   "VERDICT": "record",
+  "TRIAGED": "record",
+  "SPLIT": "record",
   "HANDED OUT": "record",
 };
 

@@ -108,6 +108,7 @@ def _plan(day: date, *, archived: bool = False) -> Document:
         handouts=[],
         items=[],
         head_fields=[],
+        fingerprint="deadbeefdeadbeef",
         intent_heading=None,
         intent="",
         essence=None,

@@ -15,6 +15,7 @@ from enum import StrEnum
 from pydantic import BaseModel, Field
 
 from domain.card import Actor
+from domain.triage import Decision
 
 
 class Dial(BaseModel):
@@ -75,6 +76,10 @@ class DialState(BaseModel):
     """Fix lanes the dial has started that have not folded or ended, plus
     the planning sessions it has open: what counts against the number. A
     planned card whose Start is closed is no process and is not counted."""
+    triaging: int = 0
+    """Triage readings open right now: live sessions against the same
+    number, so a rail of untriaged defects cannot open one session per card
+    (plan 59, item 3)."""
     held: int
     """Fix lanes at the planned stage whose Start door is closed — parked,
     waiting on a Sequencing card, nowhere to run: what the head shows
@@ -121,6 +126,10 @@ class FixLane(BaseModel):
     """When the lane folded, asked, or ended: from here it no longer counts."""
     note: str | None
     """Why it ended or asked, in one sentence, when it did."""
+    decision: str | None
+    """The decision identity the reading minted, carried in so one command
+    follows a decision from its verification to its fold (plan 59, item 6);
+    None for the fix lanes the dial ran before the triage seat existed."""
 
 
 class Filer(StrEnum):
@@ -186,3 +195,7 @@ class Fixes(BaseModel):
     rail_now: list[RailCount]
     rail_at_first_on: list[RailCount]
     waiting: list[Waiting]
+    decisions: list[Decision]
+    """Every decision a colleague took off the owner's rail, oldest first,
+    with its source, its direction and its fate (plan 59, item 6): the
+    sample the loop's cold audit reads."""

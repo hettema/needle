@@ -37,6 +37,7 @@ def doc(
         handouts=[],
         items=[],
         head_fields=[],
+        fingerprint="deadbeefdeadbeef",
         intent_heading=None,
         intent="",
         essence=None,

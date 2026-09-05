@@ -31,6 +31,7 @@ from board.assemble import (
     asked_evidence,
     document_of,
     is_trigger_card,
+    routing_for,
     signal_asks_owner,
     signal_wants_reading,
     trigger_asks_owner,
@@ -58,6 +59,7 @@ from board.lane import (
     with_footprints,
 )
 from board.progress import progress_of
+from board.triage import already_ruled
 from board.sequencing import waits_for
 from board.signals import where_after
 from board.word import compose, notes_word
@@ -891,6 +893,9 @@ class Loops:
         declared = {n: set(lanes[n].declared) for n in live_lanes}
         readings = self.live.store.last_readings(live.project.slug)
         names = {slug: p.project.name for slug, p in self.live.projects.items()}
+        triages = self.live.store.latest_triages(live.project.slug)
+        sources = self.live.sources(live.project.slug)
+        answers = self.live.store.answers(live.project.slug)
         doors: dict[int, Doors] = {}
         for card in cards:
             lane = lanes[card.number]
@@ -936,6 +941,8 @@ class Loops:
                 and document.kind == DocumentKind.SUGGESTION
                 and not document.archived,
                 waits=waits,
+                routed=routing_for(card, document, triages.get(card.number), sources),
+                ruled=already_ruled(triages.get(card.number), answers.get(card.number)),
             )
         return doors
 

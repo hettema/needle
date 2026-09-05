@@ -345,6 +345,10 @@ class FixLaneRow(Base):
     started_at: Mapped[datetime | None] = mapped_column(UtcDateTime, nullable=True)
     ended_at: Mapped[datetime | None] = mapped_column(UtcDateTime, nullable=True)
     note: Mapped[str | None] = mapped_column(Text, nullable=True)
+    decision: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    """The decision identity the triage minted, carried into the lane so one
+    command follows a decision from its reading to its fold (plan 59, item
+    6). None for the fix lanes the dial ran before the triage seat."""
 
 
 class RailAtOnRow(Base):
@@ -432,3 +436,58 @@ class HeardNoteRow(Base):
     card_number: Mapped[int] = mapped_column(Integer, primary_key=True)
     path: Mapped[str] = mapped_column(Text, primary_key=True)
     at: Mapped[datetime] = mapped_column(UtcDateTime)
+
+
+class TriageRow(Base):
+    """One independent reading of a defect's mark (plan 59, item 3): what it
+    landed, the source it resolved, and the two fingerprints that bind it to
+    the exact text it read. The `TRIAGED` row on the card is this sentence
+    for the owner; this is the fact the dial reads, because a row is prose
+    and prose cannot carry a fingerprint."""
+
+    __tablename__ = "triages"
+    __table_args__ = (
+        Index("ix_triages_card", "project_slug", "card_number"),
+        Index("ix_triages_decision", "decision"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    project_slug: Mapped[str] = mapped_column(String(80))
+    card_number: Mapped[int] = mapped_column(Integer)
+    at: Mapped[datetime] = mapped_column(UtcDateTime)
+    actor: Mapped[str] = mapped_column(String(20))
+    result: Mapped[str] = mapped_column(String(20))
+    words: Mapped[str] = mapped_column(Text)
+    decision: Mapped[str] = mapped_column(String(32))
+    """The decision identity minted here and carried by everything after it."""
+    parent: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    direction: Mapped[str | None] = mapped_column(String(40), nullable=True)
+    source_ref: Mapped[str | None] = mapped_column(Text, nullable=True)
+    source_path: Mapped[str | None] = mapped_column(Text, nullable=True)
+    source_fingerprint: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    document_fingerprint: Mapped[str] = mapped_column(String(64))
+    session_id: Mapped[str | None] = mapped_column(String(36), nullable=True)
+
+
+class CorpusLaneRow(Base):
+    """One short lane the board opened to write the corpus (plan 59, items 4
+    and 5): a split it was told to separate, or a ruling it was told to
+    apply. Kept apart from `lanes` because a corpus lane is not the card's
+    lane — the card never moves to Executing for it, and a lane loop that
+    read it as one would say hands are on work nobody planned."""
+
+    __tablename__ = "corpus_lanes"
+    __table_args__ = (Index("ix_corpus_lanes_card", "project_slug", "card_number"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    project_slug: Mapped[str] = mapped_column(String(80))
+    card_number: Mapped[int] = mapped_column(Integer)
+    kind: Mapped[str] = mapped_column(String(20))
+    decision: Mapped[str] = mapped_column(String(32))
+    name: Mapped[str] = mapped_column(String(200))
+    path: Mapped[str | None] = mapped_column(Text, nullable=True)
+    session_id: Mapped[str | None] = mapped_column(String(36), nullable=True)
+    attempt: Mapped[int] = mapped_column(Integer)
+    opened_at: Mapped[datetime] = mapped_column(UtcDateTime)
+    ended_at: Mapped[datetime | None] = mapped_column(UtcDateTime, nullable=True)
+    note: Mapped[str | None] = mapped_column(Text, nullable=True)

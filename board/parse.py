@@ -10,6 +10,7 @@ document with no recognisable head is still a document with a title.
 import re
 from datetime import date, datetime
 
+from board.triage import fingerprint
 from domain.document import (
     Document,
     DocumentKind,
@@ -725,6 +726,7 @@ def parse_document(
         handouts=handouts_of(text),
         items=items_of(text) if kind == DocumentKind.PLAN else [],
         head_fields=fields,
+        fingerprint=fingerprint(text),
         intent_heading=heading,
         intent=intent,
         essence=essence_of(intent),

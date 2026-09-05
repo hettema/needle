@@ -320,6 +320,30 @@ export function OpenCard({ card, onMoveTo }: { card: CardSummary; onMoveTo: (num
         </Section>
       ) : null}
 
+      {detail.summary.routing ? (
+        <Section title="Who fixes it" from={`Fix: ${detail.summary.fix ? detail.summary.fix.mark : "unmarked"} · routes as ${detail.summary.routing.state}`}>
+          <Quiet>{detail.summary.routing.why}</Quiet>
+          {detail.triage ? (
+            <Quiet>
+              The reading of {detail.triage.at.slice(0, 10)} landed <b>{detail.triage.result}</b>, decision {detail.triage.decision}
+              {detail.triage.direction ? `, direction: ${detail.triage.direction}` : ""}. {detail.triage.words}
+            </Quiet>
+          ) : null}
+          {detail.source ? <Quiet>The source it read: {detail.source.note}</Quiet> : null}
+          {detail.summary.triaging ? (
+            <Quiet>
+              A reading is verifying this mark now: {detail.summary.triaging.session_id.slice(0, 8)} on {detail.summary.triaging.slot}, since {ago(detail.summary.triaging.started_at)}. It has no share of the context that filed the defect, and it writes nothing but its result.
+            </Quiet>
+          ) : null}
+          {doors.answer.offered && detail.summary.routing.state === "triaged his" ? (
+            <Ask>
+              {doors.answer.why}
+              <AnswerBox onSend={(text) => void through("answer", { text })} disabled={opening !== null} hint="Your sentence is the ruling; a short lane writes it into the document" label="Rule" />
+            </Ask>
+          ) : null}
+        </Section>
+      ) : null}
+
       {detail.trigger || (detail.summary.fix?.mark === "when" && detail.trigger_note) ? (
         <Section title="The trigger" from={detail.trigger ? `Fix: when · ${detail.trigger.kind} · due ${detail.trigger.due} · every ${detail.trigger.every_hours}h` : "Fix: when, and the board cannot read it"}>
           {detail.trigger ? (

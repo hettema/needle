@@ -23,7 +23,7 @@ card for every edit to it — so the register lives where it can change without
 that ceremony, and the ratchet keeps it honest.*
 
 ## 1. Two kinds of decisions, never conflated
-*Convention because:* a decision taken as the colleague's that was the person's is loud — an outcome they did not ask for, seen at the next report; the one mechanised clause is entry into execution, `tests/ratchets/test_start_is_the_owners_click.py`.
+*Traced by:* every decision a colleague took under the ownership test, listed with the source it read, the direction it moved the product and its fate (`needle decisions`), which the person audits cold; entry into execution is mechanised, `tests/ratchets/test_start_is_the_owners_click.py`, and a defect's mark cannot route until a reading has verified it, `board/triage.py::routing_of`.
 
 ## 2. Intent over orders, and the test for a rule
 *Traced by:* the walk that read every section by this test (`docs/design/2026-09-05-the-doctrine-walked-as-its-readers-would-read-it.md`) and the review's boundaries pass, which reads a plan's new rules by it; nothing guarantees the person detects a method in an intent's clothes at the gate.
@@ -50,7 +50,7 @@ that ceremony, and the ratchet keeps it honest.*
 *Traced by:* the suggestions folder, where a learning about the way we work arrives marked `his`, read on the board's rail.
 
 ## 10. The corpus is the way in
-*Traced by:* the board's own read of the corpus, which shows a plan or suggestion it cannot parse on its card; two clauses are held — a project needs a plans folder (`api/cli.py::add`) and a suggestion names its kind and fix (`tests/ratchets/test_every_suggestion_names_its_kind_and_fix.py`).
+*Traced by:* the board's own read of the corpus, which shows a plan or suggestion it cannot parse on its card; three clauses are held — a project needs a plans folder (`api/cli.py::add`), a suggestion names its kind and fix and a `now` or `his` names a reason (`tests/ratchets/test_every_suggestion_names_its_kind_and_fix.py`), and an unverified mark routes to nobody (`board/triage.py::routing_of`).
 
 ## 11. The board is the team's memory, and one move is the person's
 *Traced by:* the card's history, which names the actor and the reason of every move, presented to the person on the card; the page shows only held state, `tests/ratchets/test_the_page_shows_only_held_state.py`.

@@ -19,6 +19,7 @@ from domain.lane import Collision, Conversation, Doors, Lane, LaneState, Progres
 from domain.project import Project
 from domain.row import Row
 from domain.signal import Reading, Signal, SignalKind, WindowlessSession
+from domain.triage import Routed, Source, Triage
 from domain.verdict import Verdict, VerdictLine
 from domain.watercooler import WatercoolerLine
 
@@ -171,6 +172,10 @@ class CardSummary(BaseModel):
     """A suggestion's `Fix:` mark, from its document (plan 11, item 2); None
     behind a plan or a note, and None for an unmarked suggestion, which the
     face says."""
+    routing: Routed | None
+    """Where a defect routes right now, derived once for every reader
+    (plan 59, item 1): the mark and the reading that verified it, together.
+    None for anything that is not a live defect."""
     state: CardState
     """The state line: one word, its meaning, the one door (plan 27, item 2)."""
     claims: list[Claim]
@@ -196,6 +201,11 @@ class CardSummary(BaseModel):
     planning: WindowlessSession | None
     """The session the dial has planning this defect right now, when one
     runs (plan 11, item 4)."""
+    triaging: WindowlessSession | None
+    """The session verifying this defect's mark right now, when one runs
+    (plan 59, item 3)."""
+    triage: Triage | None
+    """The latest reading of this defect's mark, when one has landed."""
 
 
 class GroupView(BaseModel):
@@ -344,3 +354,11 @@ class CardDetail(BaseModel):
     what (plan 10, item 1); None when it has never been told anything."""
     handouts: Handouts
     """What the plan hands out, per item, against the machine's roles (plan 12, item 2)."""
+    triage: Triage | None
+    """The latest independent reading of this defect's mark (plan 59, item
+    3); None while none has landed."""
+    triaging: WindowlessSession | None
+    """The session verifying this defect's mark right now, when one runs."""
+    source: Source | None
+    """The source that reading relied on, as it resolves today: how the card
+    shows a row whose ground has moved."""

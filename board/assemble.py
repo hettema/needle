@@ -22,6 +22,7 @@ from board.lane import (
 from board.moves import GroupLayout
 from board.reconcile import carried_stems, ref
 from board.signals import is_due, past_due, read_or_decline
+from board.triage import Sources, routing_now, routing_of
 from board.verdicts import read_or_decline as read_verdict_or_decline
 from domain.audit import AuditEntry
 from domain.board import (
@@ -65,6 +66,7 @@ from domain.lane import HANDS_ON, Doors, Lane, LaneSnapshot, LaneState, StartSta
 from domain.project import Project
 from domain.row import ROW_HALF, Row, RowHalf, RowKind
 from domain.signal import Reading, Signal, SignalKind, WindowlessSession
+from domain.triage import Routed, Triage
 from domain.verdict import Verdict, VerdictLine
 from domain.watercooler import WatercoolerLine
 
@@ -186,6 +188,30 @@ def is_trigger_card(card: Card, document: Document | None) -> bool:
         and document.fix is not None
         and document.fix.mark == FixMark.WHEN
     )
+
+
+def routing_for(
+    card: Card,
+    document: Document | None,
+    triage: Triage | None,
+    sources: Sources | None,
+) -> Routed | None:
+    """Where a defect routes, for the one card. None for anything that is
+    not a live defect suggestion — a plan, an idea, an archived document —
+    because routing is a question only a defect on the rail asks. `sources`
+    is absent only where no reader can reach the project's files (a summary
+    built for a test or a fixture); the row's source then reads as gone,
+    which is the safe answer, never a looser one."""
+    if (
+        document is None
+        or document.archived
+        or document.kind != DocumentKind.SUGGESTION
+        or document.suggestion_kind != SuggestionKind.DEFECT
+    ):
+        return None
+    if sources is None:
+        return routing_of(document, triage, source_fingerprint=None)
+    return routing_now(document, triage, sources)
 
 
 def verdict_lines(cards: list[Card]) -> list[VerdictLine]:
@@ -697,13 +723,17 @@ def summarize(
     folded: list[FoldedCard] | None = None,
     reading: WindowlessSession | None = None,
     planning: WindowlessSession | None = None,
+    triaging: WindowlessSession | None = None,
+    triage: Triage | None = None,
+    sources: Sources | None = None,
     project_path: str = "",
 ) -> CardSummary:
     """`doors` is the card's doors as the loop last read them; before its
     first read they are the closed doors of `nothing_read`. The state line and
     the claims are named here from the same facts (plan 27). `reading` is the
     session reading the card's signal right now (plan 09); `planning` the
-    dial's session writing its plan (plan 11)."""
+    dial's session writing its plan (plan 11); `triaging` the session
+    verifying its mark and `triage` its latest verified reading (plan 59)."""
     document = document_of(card, index)
     text, source = essence(card, document)
     state = document_state(card, document)
@@ -723,6 +753,7 @@ def summarize(
         document_path=path,
         kind=document.suggestion_kind if document is not None else None,
         fix=document.fix if document is not None else None,
+        routing=routing_for(card, document, triage, sources),
         state=state_of(
             card,
             document_state=state,
@@ -762,6 +793,8 @@ def summarize(
         standing=standing,
         reading=reading,
         planning=planning,
+        triaging=triaging,
+        triage=triage,
     )
 
 
@@ -823,6 +856,9 @@ def assemble_board(
     watercooler: list[WatercoolerLine] | None = None,
     reading_sessions: dict[int, WindowlessSession] | None = None,
     planning_sessions: dict[int, WindowlessSession] | None = None,
+    triage_sessions: dict[int, WindowlessSession] | None = None,
+    triages: dict[int, Triage] | None = None,
+    sources: Sources | None = None,
     dial: DialState | None = None,
 ) -> BoardState:
     """`snapshot`, `readings`, `trunk` and `machine` are what the loop has
@@ -834,6 +870,8 @@ def assemble_board(
     readings = readings or {}
     reading_sessions = reading_sessions or {}
     planning_sessions = planning_sessions or {}
+    triage_sessions = triage_sessions or {}
+    triages = triages or {}
     watercooler = watercooler or []
     placements = placements or {}
     trunk = trunk or TrunkState(level=None, behind=0, note=None, read_at=None)
@@ -862,6 +900,9 @@ def assemble_board(
             folded=folded.get(n),
             reading=reading_sessions.get(n),
             planning=planning_sessions.get(n),
+            triaging=triage_sessions.get(n),
+            triage=triages.get(n),
+            sources=sources,
         )
         for n, c in by_number.items()
     }
@@ -971,6 +1012,9 @@ def assemble_detail(
     heard: HeardMark | None = None,
     machine: MachineState | None = None,
     planning: WindowlessSession | None = None,
+    triaging: WindowlessSession | None = None,
+    triage: Triage | None = None,
+    sources: Sources | None = None,
 ) -> CardDetail:
     """`readings` newest first; `read` is whether the loop has read the
     machine; `folded` the cards folded under this one; `reading` the
@@ -997,6 +1041,9 @@ def assemble_detail(
             folded=folded,
             reading=reading,
             planning=planning,
+            triaging=triaging,
+            triage=triage,
+            sources=sources,
         ),
         brief=brief,
         record=record,
@@ -1015,4 +1062,7 @@ def assemble_detail(
         watercooler=watercooler or [],
         heard=heard,
         handouts=handouts_for(document, machine.roles if machine is not None else None, read=read),
+        triage=triage,
+        triaging=triaging,
+        source=sources.resolve(triage.source_ref) if sources is not None and triage else None,
     )

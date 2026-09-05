@@ -11,6 +11,7 @@ from domain.lane import HANDS_ON, Lane
 from domain.project import Project
 from domain.row import RowKind
 from domain.signal import Signal
+from domain.triage import CorpusLaneKind, Direction, Source, Triage
 from domain.watercooler import WatercoolerLine
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
@@ -21,6 +22,8 @@ READING_PREFIX = "reading-"
 """A reading session is named after the lane it is not: `reading-card-<n>-<slug>`."""
 PLANNING_PREFIX = "planning-"
 """The dial's planning session, the same way: `planning-card-<n>-<slug>` (plan 11, item 4)."""
+TRIAGE_PREFIX = "triage-"
+"""The reading that verifies a mark: `triage-card-<n>-<slug>` (plan 59, item 3)."""
 
 
 def needle_command() -> str:
@@ -140,6 +143,19 @@ def planning_name(number: int, title: str) -> str:
     return PLANNING_PREFIX + lane_name(number, title)
 
 
+def triage_name(number: int, title: str) -> str:
+    return TRIAGE_PREFIX + lane_name(number, title)
+
+
+def corpus_lane_name(kind: CorpusLaneKind, number: int, title: str) -> str:
+    """A corpus lane's worktree, named so nothing reads it as the card's own
+    lane: `split-<n>-<slug>`, never `card-<n>-…`. Two readers search for
+    `card-<digits>-` — the lane directory (`board/lane.py`) and the lane
+    branch (`runtime/git.py`) — and a corpus lane that matched either would
+    put phantom hands on a card nobody planned (plan 59, item 4)."""
+    return f"{kind.value}-{number}-{lane_slug(title)}"
+
+
 FIX_BAR = (
     "`now` when all three hold — the intent it breaks is written (a CLAUDE.md rule, a "
     "shipped plan's intent, a validator that already states the bar), the fix stays inside "
@@ -147,11 +163,18 @@ FIX_BAR = (
     "validator, a ratchet, an alarm; never a special case); `when <signal>` in the WATCH "
     "grammar (`<what> — session|url|file|command <target> by <YYYY-MM-DD> [every <N>h|<N>d]`) "
     "when the fix waits for a trigger the board can read; `his` when the fix implies a "
-    "decision the owner has to make first"
+    "decision the owner has to make first. A `now` or a `his` says why on the same line, in "
+    "words a reader who was not there can act on: name the written thing that selects the "
+    "outcome and what in it selects it. A category — \"a product call\", \"UX\", \"a bound\" — "
+    "names the shape of the decision and not the decision, and a backticked path on its own "
+    "is a source, not a reason; a ratchet refuses both"
 )
-"""The three-part bar for `Fix: now`, from the owner's own question ("find a
-bug, fix it, because you can; but is it that black and white?") and the
-answer that it is not, in exactly three places (plan 11, item 2)."""
+"""The three-part bar for `Fix: now`, and the bar on the reason beside it
+(plan 59, item 2). From the owner's own question ("find a bug, fix it,
+because you can; but is it that black and white?") and the answer that it is
+not. The reason half is what an independent reading has to work with: the
+mark is written from inside one session's context and read from outside it,
+so a reason nobody else can act on is a mark nobody else can check."""
 
 
 def filing_rule(found_by: str) -> str:
@@ -330,4 +353,196 @@ def planning_brief(
         )
         + "\n\nYour turn ends with the push, or with the ASK row, and one plain sentence "
         "after it. Ask the owner nothing in this window: nobody is reading it."
+    )
+
+
+THE_RULE = (
+    "A decision is Dennis's only when the written record does not select among materially "
+    "different outcomes he owns, or when acting would create external exposure beyond a bound "
+    "he has already authorised. Applying an existing intent, ruling, precedent or authorised "
+    "bound is execution, not a new decision. Effect-level reversibility is evidence about how "
+    "safely to act under uncertainty; it is never the test of who owns the call."
+)
+"""The owner's own words, ruled true 2026-09-05, and the whole test a triage
+applies. Carried verbatim into every brief that has to apply it, because a
+paraphrase of an ownership rule is a different ownership rule."""
+
+PUSH_LINE = (
+    "and push (`git push origin develop`); if the push is refused because the trunk moved, "
+    "`git pull --rebase origin develop` and push again."
+)
+"""The one way a windowless session lands a corpus write, as plan 11's
+planning brief already says it; written once so the three briefs cannot
+drift into three ways of pushing."""
+
+
+def triage_brief(
+    detail: CardDetail,
+    project: Project,
+    today: str,
+    *,
+    document_text: str,
+    source: Source | None,
+) -> str:
+    """What the reading that verifies a mark opens with (plan 59, item 3).
+
+    Everything it needs is in the brief and nothing else is: the rule in the
+    owner's words, the document whole, and the source the mark cites as this
+    board resolved it — or the fact that it resolved nowhere. It never reads
+    the session that filed the defect, because independence of context is
+    the whole point of the seat; a second reader that inherits the first
+    reader's reasons is not a second reader.
+
+    It asks one question. Not *is this a good fix* and not *what should we
+    do* — those are the plan's and the lane's. Only: does the record the
+    mark cites select this outcome?"""
+    card = detail.card
+    needle = needle_command()
+    slug = card.project
+    document = detail.document
+    mark = "unmarked"
+    if document is not None and document.fix is not None:
+        fix = document.fix
+        mark = fix.mark.value + (
+            f" — {fix.trigger}" if fix.trigger else f" — {fix.why}" if fix.why else ""
+        )
+    elif document is not None:
+        mark = f"unmarked ({document.fix_note})"
+    where = (
+        f"{source.note}\n\n--- the source, as the board read it ---\n{source.text}\n--- ends ---"
+        if source is not None and source.text is not None
+        else source.note
+        if source is not None
+        else "the mark cites no source the board could find a reference in"
+    )
+    return (
+        f"A reading of #{card.number}'s mark on {project.name} ({project.path}), {today}. "
+        "The session that filed this defect decided who fixes it from inside its own context, "
+        "and nothing has read that decision again. You are that second reading. You have no "
+        "share of its context and you must not go looking for one: decide from the document "
+        "and the source below, and from the project's own written rules.\n\n"
+        "This session is never a lane: no worktree (never EnterWorktree), no edit to any file, "
+        "no commit, no push, no window. It writes nothing but its one result.\n\n"
+        + render(detail, project)
+        + f"\n\nThe mark as it stands: **Fix: {mark}**\n"
+        f"\n--- the document ({detail.summary.document_path}) ---\n{document_text}\n--- ends ---"
+        f"\n\nThe source the mark relies on: {where}"
+        f"\n\nThe rule, in the owner's words, ruled true on 2026-09-05:\n\n{THE_RULE}\n\n"
+        "Your one question: **does the source select this outcome?** Not whether the fix is "
+        "good, not what to build — those belong to the plan and the lane. Only whether the "
+        "written record the mark leans on already settles who decides.\n\n"
+        "End your turn with exactly one result, through the needle command line, never by "
+        "editing a file:\n"
+        f'  {needle} triage {slug} {card.number} now "<the resolved source and the proposition '
+        'in it that selects this outcome>" --source <path or #N> --direction <direction>\n'
+        f'  {needle} triage {slug} {card.number} his "<the alternatives, which owner-held '
+        "outcome differs between them, and why no written ruling selects one — or the exact "
+        'exposure and the missing authorised bound>"\n'
+        f'  {needle} triage {slug} {card.number} when "<trigger in the WATCH grammar: <what> — '
+        'session|url|file|command <target> by YYYY-MM-DD [every <N>h|<N>d]>"\n'
+        f'  {needle} triage {slug} {card.number} split "<the two halves, each with its source>" '
+        "--source <path or #N>\n"
+        f'  {needle} triage {slug} {card.number} cannot-tell "<the missing evidence and where '
+        'it should come from>"\n\n'
+        "What each result has to hold:\n"
+        "- `now` needs a source that resolved and a proposition in it that selects this "
+        "outcome. An absent or unresolvable source cannot produce `now`, however obvious the "
+        "fix looks: prose shaped like a source is not a source. A `now` that leans on a spend "
+        "or risk bound names the artefact, the bound, this action's measured exposure and the "
+        "comparison showing it inside.\n"
+        "- `his` is for a record that does not select: name the alternatives, say which "
+        "owner-held outcome differs between them, and say why no written ruling picks one.\n"
+        "- `split` is for a document holding an outcome the record settles beside one it does "
+        "not. Name both halves and each half's source. You authorise neither: a short lane "
+        "separates them and both halves come back for a fresh reading.\n"
+        "- `cannot-tell` is the honest answer when the evidence that would decide it is "
+        "missing. Say what is missing and where it should come from. It routes to nobody; it "
+        "does not route to the owner unless the missing thing is itself his decision, in "
+        "which case the result is `his`.\n"
+        "- A `--direction` is required with `now`, from this set, and says which way the "
+        "product moves if the machine acts: "
+        + ", ".join(f"`{d.value}`" for d in Direction)
+        + ".\n\n"
+        "Your result is a verification, not an authorisation. It can close the dial at once — "
+        "a `his` or a `cannot-tell` on a document marked `now` stops the machine immediately — "
+        "and it can never open it wider than the corpus: a `now` on a document the corpus does "
+        "not mark `now` authorises nothing until a session rewrites the mark in a commit that "
+        "cites your reading.\n\n"
+        "Your turn ends with the needle triage command and one plain sentence after it. Ask "
+        "the owner nothing: nobody is reading this window."
+    )
+
+
+def split_brief(detail: CardDetail, project: Project, today: str, *, triage: Triage) -> str:
+    """What the lane that separates a split document opens with (plan 59,
+    item 4). It writes the corpus and nothing else, and it authorises
+    neither half: the reading proposed the separation, this lane performs
+    it, and both halves come back for a fresh reading afterwards."""
+    card = detail.card
+    path = detail.summary.document_path or ""
+    return (
+        f"A document to separate on {project.name} ({project.path}), {today}. A reading of "
+        f"#{card.number}'s mark found two decisions in one document: one the written record "
+        "settles, and one it does not. Your one job is to separate them in the corpus. You "
+        "decide neither.\n\n"
+        f"What the reading said:\n\n{triage.words}\n\n"
+        + render(detail, project)
+        + f"\n\nThe document: {path}\n\n"
+        "Do exactly this and nothing else:\n"
+        "1. File the settled half as its own suggestion in docs/slice-suggestions/, titled by "
+        "docs/plans/README.md's rule — what will be true when it is fixed, in the owner's "
+        "words, never a mechanism or a term from the code. Give it `**Kind:** defect`, the "
+        "`**Fix:**` mark the reading named for that half with its reason, `**Found by:** the "
+        f"split of #{card.number} ({today})`, and `**Split from:** {path}`.\n"
+        f"2. Narrow {path} to the half the record does not settle: leave its `**Fix:**` line "
+        "as the reading named it for that half, and add `**Split into:** <the new suggestion's "
+        "path>` under its title. Move nothing to done/.\n"
+        "3. Commit both files on develop with a body saying the split came from the reading "
+        f"of #{card.number} and naming the decision `{triage.decision}`, " + PUSH_LINE + "\n\n"
+        "Write nothing else to the repository: no code, no plan, no review record. The "
+        "founding case is Hello Revenue's split of 2026-09-05 (commit `59661dcd9`, which "
+        "produced card #435): one document held a fix the record settled and a product call it "
+        "did not, and the settled half had waited behind the unsettled one for weeks.\n\n"
+        "Both halves go back to `needs triage` when you are done: the reading that proposed "
+        "this separation authorised neither of them, and the board will read each afresh.\n\n"
+        "Your turn ends with the push and one plain sentence after it. Ask the owner nothing: "
+        "nobody is reading this window."
+    )
+
+
+def ruling_brief(
+    detail: CardDetail, project: Project, today: str, *, triage: Triage, answer: str
+) -> str:
+    """What the lane that applies the owner's answer opens with (plan 59,
+    item 5). His sentence is already the durable record on the card; this
+    lane's one job is to make the corpus say what he said, citing the row,
+    so the next cold session reads his ruling from the document and not from
+    a database."""
+    card = detail.card
+    path = detail.summary.document_path or ""
+    return (
+        f"A ruling to apply on {project.name} ({project.path}), {today}. The owner answered "
+        f"#{card.number} on the board. His answer is already on the card's record; the corpus "
+        "does not say it yet, and the corpus is what the next session reads. Your one job is "
+        "to make the document say what he said.\n\n"
+        f"His answer, verbatim:\n\n{answer}\n\n"
+        f"The reading that put the question to him:\n\n{triage.words}\n\n"
+        + render(detail, project)
+        + f"\n\nThe document: {path}\n\n"
+        "Do exactly this and nothing else:\n"
+        f"1. Rewrite {path}'s `**Fix:**` line to what his answer settles — `now <reason>`, "
+        "`when <trigger in the WATCH grammar>`, or a narrowed `his <reason>` — and nothing "
+        "else on that line. The reason is his answer in the fewest words that still say what "
+        "selects the outcome; a category word alone is refused by the ratchet.\n"
+        f"2. Add `**Ruled by:** the owner on {today}, on #{card.number} "
+        f"(decision {triage.decision})` under the title, so the document carries where the "
+        "mark came from.\n"
+        "3. Commit on develop with a body naming his answer and the decision "
+        f"`{triage.decision}`, " + PUSH_LINE + "\n\n"
+        "Write nothing else to the repository: no code, no plan, no review record. If his "
+        "answer does not settle the mark — it asks a question back, or it rules on something "
+        "the document does not carry — change nothing, and say so in one sentence; the board "
+        "leaves the row standing and the card says the half-state.\n\n"
+        "Your turn ends with the push and one plain sentence after it. Ask the owner nothing: "
+        "nobody is reading this window."
     )

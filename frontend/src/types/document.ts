@@ -39,6 +39,7 @@ export interface Document {
   handouts: Handout[];
   items: Item[];
   head_fields: HeadField[];
+  fingerprint: string;
   intent_heading: string | null;
   intent: string;
   essence: string | null;

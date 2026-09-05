@@ -42,6 +42,13 @@ from domain.row import Row, RowKind
 from domain.session import SessionSlot
 from domain.signal import Reading, SessionWork, WindowlessSession
 from domain.slot import Model, Rung
+from domain.triage import (
+    CorpusLane,
+    CorpusLaneKind,
+    Direction,
+    Triage,
+    TriageResult,
+)
 from domain.watercooler import WatercoolerLine
 from domain.window import Window, WindowKind
 from infrastructure.schema import (
@@ -49,6 +56,7 @@ from infrastructure.schema import (
     CallRow,
     CardRow,
     CardRowRow,
+    CorpusLaneRow,
     DialChangeRow,
     DialRow,
     DiscussionRow,
@@ -63,6 +71,7 @@ from infrastructure.schema import (
     ReadingRow,
     RescueRow,
     SessionSlotRow,
+    TriageRow,
     TrunkRow,
     WatercoolerRow,
     WindowlessSessionRow,
@@ -283,6 +292,23 @@ class Store:
                 if row.to_column is not None:
                     out[row.card_number] = _audit_entry(row)
             return out
+
+    def answers(self, slug: str) -> dict[int, AuditEntry]:
+        """Each card's latest `answered` row, in one query. The owner's
+        ruling on a parked defect lives here (plan 59, item 5), and the
+        board asks after it on every read: one query per project, never one
+        per card, because a board with six hundred cards reads four times a
+        second."""
+        with self._session() as session:
+            rows = session.scalars(
+                select(AuditRow)
+                .where(
+                    AuditRow.project_slug == slug,
+                    AuditRow.kind == AuditKind.ANSWERED.value,
+                )
+                .order_by(AuditRow.id)
+            )
+            return {row.card_number: _audit_entry(row) for row in rows}
 
     # ── writing ────────────────────────────────────────────────────────
 
@@ -1085,7 +1111,25 @@ class Store:
         slot: str,
         at: datetime,
     ) -> WindowlessSession:
+        """One open session per card and kind, refused here rather than
+        remembered by every caller (plan 59, item 3). Both callers before
+        this checked first and then opened, which is a check and an act with
+        a beat in between; a second triager is exactly the duplicate the
+        seat cannot have, so the invariant lives at the door of the table."""
         with self._session() as session, session.begin():
+            standing = session.scalars(
+                select(WindowlessSessionRow).where(
+                    WindowlessSessionRow.project_slug == slug,
+                    WindowlessSessionRow.card_number == number,
+                    WindowlessSessionRow.work == work.value,
+                    WindowlessSessionRow.ended_at.is_(None),
+                )
+            ).first()
+            if standing is not None:
+                raise StoreRefusal(
+                    f"#{number} already has a {work.value} session open "
+                    f"({standing.session_id[:8]}, since {standing.started_at.isoformat()})."
+                )
             row = WindowlessSessionRow(
                 project_slug=slug,
                 card_number=number,
@@ -1200,9 +1244,131 @@ class Store:
                 for slug, counts in by_project.items()
             ]
 
+    # ── the readings that verify a mark (plan 59) ──────────────────────
+
+    def record_triage(
+        self,
+        slug: str,
+        number: int,
+        *,
+        at: datetime,
+        actor: Actor,
+        result: TriageResult,
+        words: str,
+        decision: str,
+        parent: str | None,
+        direction: Direction | None,
+        source_ref: str | None,
+        source_path: str | None,
+        source_fingerprint: str | None,
+        document_fingerprint: str,
+        session_id: str | None,
+    ) -> Triage:
+        """One reading's result, kept whole. Never replaced: a card's
+        readings are a history, so the audit the loop asks for can see a
+        mark that was verified one way and then another."""
+        with self._session() as session, session.begin():
+            if session.get(CardRow, (slug, number)) is None:
+                raise StoreRefusal(f"There is no card #{number} on this board.")
+            row = TriageRow(
+                project_slug=slug,
+                card_number=number,
+                at=at,
+                actor=actor.value,
+                result=result.value,
+                words=words,
+                decision=decision,
+                parent=parent,
+                direction=direction.value if direction is not None else None,
+                source_ref=source_ref,
+                source_path=source_path,
+                source_fingerprint=source_fingerprint,
+                document_fingerprint=document_fingerprint,
+                session_id=session_id,
+            )
+            session.add(row)
+            session.flush()
+            return _triage(row)
+
+    def triages(self, slug: str | None = None, number: int | None = None) -> list[Triage]:
+        """Every reading, oldest first; of one project or one card when named."""
+        with self._session() as session:
+            query = select(TriageRow)
+            if slug is not None:
+                query = query.where(TriageRow.project_slug == slug)
+            if number is not None:
+                query = query.where(TriageRow.card_number == number)
+            return [_triage(r) for r in session.scalars(query.order_by(TriageRow.id))]
+
+    def latest_triages(self, slug: str) -> dict[int, Triage]:
+        """The newest reading on each of the project's cards: what routing
+        is read from."""
+        latest: dict[int, Triage] = {}
+        for triage in self.triages(slug):
+            latest[triage.card_number] = triage
+        return latest
+
+    # ── the short lanes that write the corpus (plan 59, items 4 and 5) ──
+
+    def open_corpus_lane(
+        self,
+        slug: str,
+        number: int,
+        *,
+        kind: CorpusLaneKind,
+        decision: str,
+        name: str,
+        path: str | None,
+        session_id: str | None,
+        attempt: int,
+        at: datetime,
+    ) -> CorpusLane:
+        with self._session() as session, session.begin():
+            row = CorpusLaneRow(
+                project_slug=slug,
+                card_number=number,
+                kind=kind.value,
+                decision=decision,
+                name=name,
+                path=path,
+                session_id=session_id,
+                attempt=attempt,
+                opened_at=at,
+                ended_at=None,
+                note=None,
+            )
+            session.add(row)
+            session.flush()
+            return _corpus_lane(row, applied=False)
+
+    def end_corpus_lane(self, corpus_lane_id: int, at: datetime, note: str) -> None:
+        with self._session() as session, session.begin():
+            row = session.get(CorpusLaneRow, corpus_lane_id)
+            if row is None:
+                raise StoreRefusal(f"There is no corpus lane {corpus_lane_id}.")
+            if row.ended_at is None:
+                row.ended_at = at
+            row.note = note
+
+    def corpus_lanes(
+        self, slug: str | None = None, *, decision: str | None = None, open_only: bool = False
+    ) -> list[CorpusLane]:
+        with self._session() as session:
+            query = select(CorpusLaneRow)
+            if slug is not None:
+                query = query.where(CorpusLaneRow.project_slug == slug)
+            if decision is not None:
+                query = query.where(CorpusLaneRow.decision == decision)
+            if open_only:
+                query = query.where(CorpusLaneRow.ended_at.is_(None))
+            rows = session.scalars(query.order_by(CorpusLaneRow.id))
+            return [_corpus_lane(r, applied=False) for r in rows]
+
     # ── the fix lanes the dial ran (plan 11) ───────────────────────────
 
-    def open_fix_lane(self, slug: str, number: int, at: datetime) -> FixLane:
+    def open_fix_lane(
+        self, slug: str, number: int, at: datetime, *, decision: str | None = None
+    ) -> FixLane:
         with self._session() as session, session.begin():
             row = FixLaneRow(
                 project_slug=slug,
@@ -1213,6 +1379,7 @@ class Store:
                 started_at=None,
                 ended_at=None,
                 note=None,
+                decision=decision,
             )
             session.add(row)
             session.flush()
@@ -1548,6 +1715,45 @@ def _fix_lane(row: FixLaneRow) -> FixLane:
         started_at=row.started_at,
         ended_at=row.ended_at,
         note=row.note,
+        decision=row.decision,
+    )
+
+
+def _triage(row: TriageRow) -> Triage:
+    return Triage(
+        id=row.id,
+        project=row.project_slug,
+        card_number=row.card_number,
+        at=row.at,
+        actor=Actor(row.actor),
+        result=TriageResult(row.result),
+        words=row.words,
+        decision=row.decision,
+        parent=row.parent,
+        direction=Direction(row.direction) if row.direction is not None else None,
+        source_ref=row.source_ref,
+        source_path=row.source_path,
+        source_fingerprint=row.source_fingerprint,
+        document_fingerprint=row.document_fingerprint,
+        session_id=row.session_id,
+    )
+
+
+def _corpus_lane(row: CorpusLaneRow, *, applied: bool) -> CorpusLane:
+    return CorpusLane(
+        id=row.id,
+        project=row.project_slug,
+        card_number=row.card_number,
+        kind=CorpusLaneKind(row.kind),
+        decision=row.decision,
+        name=row.name,
+        path=row.path,
+        session_id=row.session_id,
+        attempt=row.attempt,
+        opened_at=row.opened_at,
+        ended_at=row.ended_at,
+        note=row.note,
+        applied=applied,
     )
 
 
