@@ -16,6 +16,20 @@ A running AI colleague can ask a warm colleague of another make a bounded questi
 - `runtime.colleague()` and `runtime/launch.py::call` resolve and resume only Claude transcripts today.
 - `runtime/registry.py::sessions` reads Claude slot directories only. Codex rollouts under `~/.codex/sessions/**/rollout-*.jsonl` carry cwd, timestamps and a readable tool-call tail.
 - `codex exec resume <SESSION_ID> <PROMPT>` exists in Codex 0.152.1. An earlier contrary note was a flag-ordering error.
+- **A called Codex worker cannot write its answer by default, and this is a
+  config fact, not a one-off.** `codex exec` runs `sandbox: read-only` unless the
+  caller passes `-s`; `~/.codex/config.toml` sets no `sandbox_mode`. Proved on
+  2026-09-05 ~16:30: the Claude Opus session f4d2a309 resumed rollout
+  `01a071ee-cfd3-7fd2-a9dd-cdbff4fec194` with a question and a named answer path;
+  Sol composed the whole reply and then said the sandbox rejected the write. The
+  exchange survived only because the caller captured stdout by hand — which is
+  exactly the manual relay item 2 exists to remove.
+- **`workspace-write` is not enough on today's paths.** The shared record lives at
+  `~/.cache/omarchy/claude-acct/discussion/`, outside any workspace, so a call that
+  merely widens the sandbox one notch still cannot answer. Either the call places
+  note and answer inside the worker's own workspace, or the caller reads the
+  worker's stdout as the answer. The second is the smaller door and needs no
+  sandbox widening at all.
 
 ## Items
 
@@ -25,7 +39,7 @@ Resolve a Codex rollout id, and the unambiguous name `codex`, beside today's Cla
 
 ### 2. The one call resumes Codex and the existing wait judges its answer
 
-Resume the worker with `codex exec resume <id> <brief>` in a transient scope, verify that the new process is alive, and record the existing `Call` fields and watercooler files without a second protocol. Codex calls have only truthful verdicts: `LANDED`, `ENDED`, or `NOTHING`; Claude account movement remains Claude's lifecycle fact. Done means: a fixture call resumes the named rollout with the brief, an answer file lands through the existing record, `needle wait` returns it without polling, and launch failure leaves no false running call.
+Resume the worker with `codex exec resume <id> <brief>` in a transient scope, verify that the new process is alive, and record the existing `Call` fields and watercooler files without a second protocol. Codex calls have only truthful verdicts: `LANDED`, `ENDED`, or `NOTHING`; Claude account movement remains Claude's lifecycle fact. A Codex worker's answer is taken from the channel the sandbox actually permits — its stdout, or a path inside its own workspace — never from a write to the shared record that the default sandbox refuses; a call that would need the caller's hands to save the answer is not an answer path. Done means: a fixture call resumes the named rollout with the brief, the answer lands through the existing record without any manual relay and without widening the sandbox to `danger-full-access`, `needle wait` returns it without polling, a worker whose sandbox refuses its write is reported as refused rather than silently empty, and launch failure leaves no false running call.
 
 ### 3. One session list shows Codex doing
 
