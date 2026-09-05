@@ -67,24 +67,40 @@ is for a rewrite: every paragraph of the text before it is kept verbatim,
 tightened in place, moved to a named section, or dropped with the reason —
 so that brevity is never a deletion nobody saw."""
 
-DEFAULT_FILE = Path("~/.claude/CLAUDE.md")
+DEFAULT_FILE_AT = "7894dfc:home/.claude/CLAUDE.md"
+"""Card #54's table ruled on the former global file as it stood on 2026-09-05
+(287 lines, 60 paragraphs — the machine repository's commit 7894dfc, the last
+before card 23 made the file a link to the one text), so a bare run reads it
+from that history, never from the live path, which now counts the one text's
+paragraphs and faults every row past its count."""
 DEFAULT_TABLE = Path("docs/design/2026-09-05-the-two-texts-of-one-doctrine.md")
+MACHINE_REPO = Path("~/Work/omarchy-machine").expanduser()
 
 
 def paragraphs(text: str) -> list[str]:
     return [block for block in re.split(r"\n\s*\n", text) if block.strip()]
 
 
-def text_at(revision_and_path: str) -> str:
+def text_at(revision_and_path: str, repo: Path | None = None) -> str:
     """`<rev>:<path>` read through git, so a table can be held to the file as
-    it stood before the rewrite it accounts for."""
+    it stood before the rewrite it accounts for; `repo` names another
+    repository's history when the file is not this one's."""
     return subprocess.run(
-        ["git", "show", revision_and_path], capture_output=True, text=True, check=True
+        ["git", *(["-C", str(repo)] if repo else []), "show", revision_and_path],
+        capture_output=True,
+        text=True,
+        check=True,
     ).stdout
 
 
-def report(file: Path | None, table: Path, stances: tuple[str, ...], file_at: str | None = None) -> int:
-    source = text_at(file_at) if file_at else file.read_text(encoding="utf-8")
+def report(
+    file: Path | None,
+    table: Path,
+    stances: tuple[str, ...],
+    file_at: str | None = None,
+    repo: Path | None = None,
+) -> int:
+    source = text_at(file_at, repo) if file_at else file.read_text(encoding="utf-8")
     blocks = paragraphs(source)
     file = Path(file_at) if file_at else file
     text = table.read_text(encoding="utf-8")
@@ -146,16 +162,21 @@ def report(file: Path | None, table: Path, stances: tuple[str, ...], file_at: st
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--file", type=Path, default=DEFAULT_FILE)
+    parser.add_argument("--file", type=Path, help="the ruled file, live")
     parser.add_argument("--file-at", help="read the ruled file as `<rev>:<path>` through git")
+    parser.add_argument("--repo", type=Path, help="the repository `--file-at` reads from (default: this one)")
     parser.add_argument("--table", type=Path, default=DEFAULT_TABLE)
     parser.add_argument("--stances", choices=sorted(STANCE_SETS), default="two-texts")
     args = parser.parse_args(argv)
+    file_at, repo = args.file_at, args.repo
+    if args.file is None and file_at is None:
+        file_at, repo = DEFAULT_FILE_AT, MACHINE_REPO
     return report(
-        None if args.file_at else args.file.expanduser().resolve(),
+        None if file_at else args.file.expanduser().resolve(),
         args.table.expanduser().resolve(),
         STANCE_SETS[args.stances],
-        args.file_at,
+        file_at,
+        repo.expanduser() if repo else None,
     )
 
 

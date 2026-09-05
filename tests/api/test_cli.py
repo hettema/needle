@@ -140,11 +140,15 @@ def test_kinds_prints_every_live_suggestions_kind_and_why(corpus: Path, database
 def test_hook_install_registers_every_event_once_and_names_the_word_hooks_ceiling(
     tmp_path: Path, capsys
 ):
-    """Plan 10, item 2: `needle hook install` adds PostToolUse to a project
-    that has the four session events, keeps what is there, and is idempotent."""
+    """Plan 10, item 2, and card #60: `needle hook install` adds PostToolUse and
+    UserPromptSubmit to a project that has the four session events, keeps
+    what is there — a project's own hook on the same event stays beside ours,
+    which is how Hello Revenue's backbrief hook and Needle's re-anchor would
+    both fire on the word until that project's card retires one — and is
+    idempotent."""
     import json
 
-    from api.board_cli import HOOK_EVENTS, hook_command
+    from api.board_cli import HOOK_EVENTS, READ_EVENTS, hook_command
 
     settings = tmp_path / ".claude" / "settings.json"
     settings.parent.mkdir()
@@ -162,15 +166,20 @@ def test_hook_install_registers_every_event_once_and_names_the_word_hooks_ceilin
     )
     assert main(["hook", "install", str(tmp_path)]) == 0
     out = capsys.readouterr().out
-    assert out.strip().endswith("for SessionStart, SessionEnd, StopFailure, PostToolUse")
+    assert out.strip().endswith(
+        "for SessionStart, SessionEnd, StopFailure, PostToolUse, UserPromptSubmit"
+    )
     blob = json.loads(settings.read_text())
     for event in HOOK_EVENTS:
         hooks = [h for entry in blob["hooks"][event] for h in entry["hooks"]]
-        assert [h["command"] for h in hooks] == [hook_command()], event
-    word = blob["hooks"]["PostToolUse"][0]["hooks"][0]
-    assert word["timeout"] == 5, "the PostToolUse entry names its own ceiling"
+        assert [h["command"] for h in hooks].count(hook_command()) == 1, event
+    for event in READ_EVENTS:
+        read = [h for entry in blob["hooks"][event] for h in entry["hooks"] if h["command"] == hook_command()]
+        assert read[0]["timeout"] == 5, f"the {event} entry names its own ceiling"
     assert "timeout" not in blob["hooks"]["Stop"][0]["hooks"][0]
-    assert blob["hooks"]["UserPromptSubmit"][0]["hooks"][0] == theirs
+    prompt_hooks = [h for entry in blob["hooks"]["UserPromptSubmit"] for h in entry["hooks"]]
+    assert prompt_hooks[0] == theirs, "a project's own hook on the event is kept, first"
+    assert prompt_hooks[1]["command"] == hook_command()
 
     assert main(["hook", "install", str(tmp_path)]) == 0
     assert "already registered" in capsys.readouterr().out

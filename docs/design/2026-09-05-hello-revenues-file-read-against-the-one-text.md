@@ -126,8 +126,9 @@ base whose sections no longer exist. Filed in Hello Revenue's corpus as
 `**Kind:** defect`, fixed on its own card once this text lands.
 
 #### 5 · global wins
-`### Backbrief expectation` — the heading. Its content is rows 6–10; after this
-card the one text carries every portable sentence under it (§1, §8).
+`### Backbrief expectation` — a heading, so there is no sentence to quote on
+either side; its content is rows 6–10, and after this card the one text carries
+every portable sentence under it (§1, §8).
 
 #### 6 · global wins
 > "You are expected to push back when the owner's direction is technically
@@ -507,8 +508,10 @@ the card at the effort gate the plan names, which the person's click
 confirms"*.
 **Why:** the same contract. The incident behind it — *"2026-09-04, five of the
 eleven live plans spelled their gate in a form the board's parser skipped"*
-(`docs/research/2026-09-04-a-method-nothing-holds-is-a-wish-loop.md:54`) — is
-the shaping incident the rewrite's §10 cites.
+(Hello Revenue's research note of 2026-09-04 on its register's loop, under
+`docs/research/`, line 54; the path is not written here because its name is a
+card title and this repository is public) — is the shaping incident the
+rewrite's §10 cites.
 
 #### 43c · contested
 > "a plan carries the owner's own words, dated, before anyone translates them —
@@ -1064,7 +1067,11 @@ want otherwise.
 > you from creating drift … A bar a human would find exhausting is the low bar
 > for you."
 
-**Restates:** §3, whole. One clause is sharper and is the next row.
+**Restates:** §3, whole — *"a human's shortcut is rational … and none of what
+makes it so — scarce attention, expensive perfection, a reputation to lose —
+applies to a session, whose cost to do the thing right is a rounding error. So
+the shortcut patterns in its training data … are rot in its hands."* One clause
+is sharper and is the next row.
 
 #### E · missing portable doctrine
 > "This applies to verification specifically: re-reading files you just wrote,
