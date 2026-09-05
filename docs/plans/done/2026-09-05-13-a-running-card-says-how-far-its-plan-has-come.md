@@ -1,7 +1,7 @@
 # 13 — A running card says how far its plan has come
 
 **Found by:** the owner, from the board's Idea door on 2026-09-04 (conversation 4610215d)
-**Status:** PENDING
+**Status:** DONE — 2026-09-05, folded to develop; review record at docs/reviews/2026-09-05-a-running-card-says-how-far-its-plan-has-come.md.
 **Written:** 2026-09-05, from the Idea door. The owner asked whether he can "easily and reliably see how far a plan has progressed on a collapsed card whilst it's executing". Today a collapsed card in Executing says which subscription has hands on it, for how long, and the last thing the board told the lane; nothing on the board reads the plan's items against the work. He ruled the shape in one line: "the progress of the task list as the live session reports it". The first board carried a `progress` field on its lanes and the import dropped it as runtime (`board/import_01.py`); Hello Revenue's sessions mark items done by hand in 17 of 500 archived plans, in five spellings, and nothing reads them.
 **Comp:** https://claude.ai/code/artifact/3e8cbf5c-22a2-45de-aaef-4f2c58cf1d13 — the collapsed card in every progress state, the Executing column at its real width, the open card's items, and the open card in its review loop (added the same morning on the owner's ask: "how many loops it has gone through and the count of found/fixed bugs and the count of reported defects"). The owner signs it before the build; its calls are listed on the first board, the session's apart from his.
 **Effort gate:** medium — the mechanics are small and named below, two readers over shapes the corpus already has; the judgment is in keeping the mark one line a session writes as an item lands, never a form the plan has to be, and in reading the lane's own copies of the plan and the record without the board ever writing into a repository.
@@ -64,7 +64,26 @@ Recorded as the build makes them, each with the alternative rejected. The first 
 5. **The review counter is red while the loop is open and quiet once a pass reads clean.** Red is what the language already means by it: something found wrong and not yet closed. Rejected: a sixth colour for "in review" — a colour for a category, which the five-word rule (plan 27) refuses; and green on the clean pass, which is the lane's word, not the board's. The owner's call 4 on the comp can veto the red for quiet throughout; the alternative is drawn in the text.
 
 ## Close-out
-Written by the lane: the counts from Hello Revenue's archive per shape; the measured cost of the worktree read; the screenshot of the served board; which of the comp's owner calls he ruled and how; the commit that wrote the first real stance.
+
+**Hello Revenue's archive, read with the item reader** (504 plans in `docs/plans/done/`, no errors):
+
+| shape | plans | items | met | deviated |
+|---|---|---|---|---|
+| `### N.` sections | 49 | 294 | 0 | 0 |
+| `N. **Title.**` list | 417 | 2,402 | 16 | 0 |
+| no items | 38 | 0 | 0 | 0 |
+
+Nine plans carry a stance, all by the inline habit (SHIPPED, DONE, a tick); the plan's "17 in five spellings" counted ticks on bullets and table rows too, which are not items. Four opened by eye: three marked as the table says, and one the table first said was not — its task list sat under a bold decision log, which was the review's first finding and the reason a task-named heading wins.
+
+**The thirteen records under `docs/reviews/`, read with the record reader:** no errors; eight with a `## The passes` section (the five earliest predate the loop), all eight clean on their last pass; found 6 to 14 each. Two count differently from their own `Findings:` line because a disposition says FIXED or NO CHANGE where the line says filed or no change (review finding 5, no change).
+
+**The cost of the read**, over this lane's worktree with 13 records, 50 samples: the plan read and count 1.16 ms median (4.6 ms max) per live lane per beat — under the 2 ms predicted; the review read once every item is met 1.19 ms median after matching records by head (6.9 ms before). The git edits read the loop already did costs 7 to 10 ms.
+
+**The served board:** the throwaway board on the fixture floor showed the strip and count on a real Executing lane in all five states — nothing marked, two met, one deviated, the review counter red at pass 3, and quiet after a clean fourth pass — each within one beat of the file write; the open card listed the items with their stance and the review's passes with the filed finding named. The screenshots went to the owner with the close; the reading is in the review record.
+
+**The comp's owner calls:** all four stood as drawn — the last met item's title on the face, the strip on Executing only with the open card carrying the items in every column, `Met:`/`Deviated:` as the grammar, and the review counter red while the loop is open. The launch at the card's gate was the signing; none was vetoed.
+
+**The first real stance:** every `**Met:**` line in this plan was written in the feature commit that made it true (`feat(board): a running card says how far its plan has come`), as the grammar asks. The handouts to `execution` could not be dispatched from this account (the role files are invisible under an account config dir); both were run here as scripts, and the record says so.
 
 ## Estimate
 Execution clock: one lane-day. Gate clock: the owner signs the comp before Start.
