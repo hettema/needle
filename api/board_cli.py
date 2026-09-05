@@ -57,12 +57,17 @@ from runtime.git import GitFailed, arm_hooks_path
 from runtime.service import Runtime
 
 DEFAULT_URL = "http://127.0.0.1:8480"
-HOOK_EVENTS = ("SessionStart", "Stop", "SessionEnd", "StopFailure", "PostToolUse")
+HOOK_EVENTS = ("SessionStart", "Stop", "SessionEnd", "StopFailure", "PostToolUse", "UserPromptSubmit")
 HOOK_SCRIPT = REPO_ROOT / "hooks" / "needle_hook.py"
+READ_EVENTS = ("PostToolUse", "UserPromptSubmit")
+"""The two events on which the hook reads something into the session rather
+than posting an event to the board: the board's word on every tool call, the
+doctrine's two sections on the word "backbrief" (card #60)."""
 WORD_HOOK_TIMEOUT_SECONDS = 5
-"""Claude Code's own ceiling on the PostToolUse hook, in the settings entry:
-the script's half second is the real one, this is the belt for an
-interpreter that cannot start, where Claude Code's default is 600 s."""
+"""Claude Code's own ceiling on the read hooks, in the settings entry: the
+script's half second (the word) and its one file read (the re-anchor) are
+the real ones, this is the belt for an interpreter that cannot start, where
+Claude Code's default is 600 s."""
 
 
 def _board() -> tuple[Store, Live, Runtime, Loops, Doors]:
@@ -377,7 +382,7 @@ def hook_install(args: argparse.Namespace) -> int:
         if present:
             continue
         hook: dict = {"type": "command", "command": command}
-        if event == "PostToolUse":
+        if event in READ_EVENTS:
             hook["timeout"] = WORD_HOOK_TIMEOUT_SECONDS
         entries.append({"matcher": "", "hooks": [hook]})
         added.append(event)

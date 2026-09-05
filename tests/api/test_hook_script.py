@@ -234,6 +234,102 @@ def test_on_a_tool_use_the_hook_prints_the_boards_word_as_context_and_nothing_el
         board.server_close()
 
 
+DOCTRINE_FIXTURE = """# How we work
+
+words at the head.
+
+## 3. A session's economics are inverted
+
+A session does the whole thing right. NONCE-TORTOISE-7731
+
+Keep every judgment.
+
+## 4. Only what is written survives
+
+Not read back.
+
+## 8. Verify, don't assume — and the answer is usually there
+
+Every claim a session makes stands on something it did.
+*Shaped by:* a date.
+
+## 9. Raise the standard, not just the output
+
+Not read back either.
+"""
+
+
+def prompt(text: str, **extra) -> dict:
+    payload = {
+        "hook_event_name": "UserPromptSubmit",
+        "session_id": "aaaa0002-0000-4000-8000-000000000000",
+        "cwd": LANE,
+        "prompt": text,
+    }
+    payload.update(extra)
+    return payload
+
+
+def run_anchor(payload: dict, data_dir: Path, doctrine: Path | None) -> subprocess.CompletedProcess[str]:
+    env = {"NEEDLE_DATA_DIR": str(data_dir), "NEEDLE_URL": "http://127.0.0.1:1", "PATH": "/usr/bin:/bin"}
+    if doctrine is not None:
+        env["NEEDLE_DOCTRINE"] = str(doctrine)
+    return subprocess.run(
+        [sys.executable, str(HOOK)], input=json.dumps(payload), capture_output=True, text=True, env=env, timeout=20
+    )
+
+
+def test_on_the_word_the_hook_reads_the_named_sections_back_verbatim_and_nothing_else(tmp_path: Path):
+    """Card #60, item 4: on "backbrief" the doctrine's named sections reach
+    the session as the prompt's context, verbatim from the file, with no
+    words of the hook's own beyond the preface; a prompt without the word,
+    a subagent's prompt, and a doctrine file that is missing or lacks a
+    named section print nothing; nothing is queued or posted."""
+    doctrine = tmp_path / "HOW-WE-WORK.md"
+    doctrine.write_text(DOCTRINE_FIXTURE, encoding="utf-8")
+    queue = tmp_path / "hook-queue.jsonl"
+
+    said = run_anchor(prompt("please backbrief the plan"), tmp_path, doctrine)
+    assert said.returncode == 0 and said.stderr == ""
+    out = json.loads(said.stdout)["hookSpecificOutput"]
+    assert out["hookEventName"] == "UserPromptSubmit"
+    context = out["additionalContext"]
+    assert context.startswith(f"BACKBRIEF — two sections of the one text, read back verbatim from {doctrine}:")
+    assert "## 3. A session's economics are inverted\nA session does the whole thing right. NONCE-TORTOISE-7731\n\nKeep every judgment." in context
+    assert "## 8. Verify, don't assume — and the answer is usually there\nEvery claim a session makes stands on something it did.\n*Shaped by:* a date." in context
+    assert "Not read back" not in context and "words at the head" not in context
+    assert not queue.exists(), "a read, never an event"
+
+    for word in ("Back brief it", "bb", "please BB now", "backbriefed"):
+        assert json.loads(run_anchor(prompt(word), tmp_path, doctrine).stdout)["hookSpecificOutput"]
+
+    for silent in ("fix the bug", "the hobby and the rabbit", "brief back"):
+        quiet = run_anchor(prompt(silent), tmp_path, doctrine)
+        assert quiet.returncode == 0 and quiet.stdout == "" and quiet.stderr == "", silent
+
+    sub = run_anchor(prompt("backbrief", agent_id="sub-1"), tmp_path, doctrine)
+    assert sub.returncode == 0 and sub.stdout == ""
+
+    gone = run_anchor(prompt("backbrief"), tmp_path, tmp_path / "missing.md")
+    assert gone.returncode == 0 and gone.stdout == "" and gone.stderr == ""
+
+    partial = tmp_path / "partial.md"
+    partial.write_text(DOCTRINE_FIXTURE.replace("## 8. Verify", "## 8. Check"), encoding="utf-8")
+    renamed = run_anchor(prompt("backbrief"), tmp_path, partial)
+    assert renamed.returncode == 0 and renamed.stdout == "", "half an anchor is no anchor"
+
+
+def test_the_real_doctrine_reads_back_under_the_context_cap(tmp_path: Path):
+    """Claude Code caps a hook's additionalContext at 10,000 characters; the
+    two sections of the real one text stay under it, or the cap would cut
+    §8 silently."""
+    said = run_anchor(prompt("backbrief"), tmp_path, None)
+    context = json.loads(said.stdout)["hookSpecificOutput"]["additionalContext"]
+    assert len(context) < 10_000, len(context)
+    assert "## 3. A session's economics are inverted" in context
+    assert "## 8. Verify, don't assume — and the answer is usually there" in context
+
+
 def test_the_hook_names_the_file_a_writing_tool_wrote_and_nothing_for_the_rest(tmp_path: Path):
     """Plan 17, item 2: a note the lane puts on the machine's watercooler
     must never be read back to it, and only the hook knows what the tool

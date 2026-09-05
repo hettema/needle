@@ -7,29 +7,41 @@ The model rule lives in `claude-acct` (INTENT.md lesson 6): inside Needle a
 (`runtime/launch.py`). A third place would be a second chooser, which is
 how 0.1 came to give two answers.
 
-The session hook runs inside every session's every tool call on this
-machine (plan 03, item 3; plan 10, item 2). It must never block a session
-and must survive the board being down: it imports the standard library
-only and wraps everything in one catch-all. And the hook's own failures
-never reach the session: the only thing it may write to stdout is the
-board's word for the lane, from the one function that answers PostToolUse,
-whose every path runs inside its own catch-all — a traceback, a stray
-debug line or a partial answer on stdout would land in the model's context
-as if the board had said it. Until plan 10 the rule was "no `print(` in the
-script", which held the method; this holds the intent. The hook is
-registered in this repository's own Claude settings for every event it
-serves, so Needle's own sessions push and hear too.
+The session hook runs inside every session's every tool call and every
+prompt on this machine (plan 03, item 3; plan 10, item 2; card #60). It
+must never block a session and must survive the board being down: it
+imports the standard library only and wraps everything in one catch-all.
+And the hook's own failures never reach the session: the only things it
+may write to stdout are the board's word for the lane and the doctrine's
+own sections, from the one function that answers a read event, whose every
+path runs inside its own catch-all — a traceback, a stray debug line or a
+partial answer on stdout would land in the model's context as if the board
+had said it. Until plan 10 the rule was "no `print(` in the script", which
+held the method; this holds the intent. The hook is registered in this
+repository's own Claude settings for every event it serves, so Needle's
+own sessions push and hear too.
+
+The re-anchor holds no doctrine words of its own (card #60, from Hello
+Revenue's 2026-08-07 incident: a paraphrase in a louder place inverted the
+canon and stood for months). It names sections of `docs/HOW-WE-WORK.md` and
+reads them at fire time, so this ratchet holds that every section it names
+is a heading the one text has — a rename that orphaned the anchor would
+otherwise make it silently print nothing.
 """
 
 import ast
+import importlib.util
 import json
+import re
 import sys
 
 from tests.ratchets.paths import REPO, python_files
 
 PLACEMENT_MAKERS = {"runtime/rule.py", "runtime/launch.py"}
 HOOK = REPO / "hooks" / "needle_hook.py"
-HOOK_EVENTS = {"SessionStart", "Stop", "SessionEnd", "StopFailure", "PostToolUse"}
+DOCTRINE = REPO / "docs" / "HOW-WE-WORK.md"
+HOOK_EVENTS = {"SessionStart", "Stop", "SessionEnd", "StopFailure", "PostToolUse", "UserPromptSubmit"}
+READ_EVENTS = {"PostToolUse", "UserPromptSubmit"}
 ANSWERS = "answer"
 """The one function in the hook that may write to stdout."""
 
@@ -142,7 +154,8 @@ def test_the_hooks_own_failures_never_reach_the_session():
     outside = stdout_writes_outside(source, ANSWERS)
     assert not outside, (
         f"the hook writes to stdout outside {ANSWERS}() at {outside}: only the board's word "
-        "may reach the session, from the one function that answers PostToolUse"
+        "and the doctrine's own sections may reach the session, from the one function that "
+        "answers a read event"
     )
     answers = _function(source, ANSWERS)
     assert _catches_all(answers), (
@@ -152,6 +165,46 @@ def test_the_hooks_own_failures_never_reach_the_session():
     assert any(_writes_stdout(n) for n in ast.walk(answers)), (
         f"{ANSWERS}() is where the word is printed; if that moved, move {ANSWERS} with it"
     )
+
+
+def _hook_module():
+    spec = importlib.util.spec_from_file_location("needle_hook", HOOK)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+def test_every_section_the_anchor_names_is_a_heading_of_the_one_text():
+    hook = _hook_module()
+    headings = set(re.findall(r"^## (.+?)\s*$", DOCTRINE.read_text(encoding="utf-8"), re.M))
+    missing = [title for title in hook.ANCHOR_SECTIONS if title not in headings]
+    assert not missing, (
+        f"the re-anchor names {missing}, which docs/HOW-WE-WORK.md has no heading for: the "
+        "hook would print nothing on the word and nobody would know. Rename the section in "
+        "ANCHOR_SECTIONS with the text, on the same card."
+    )
+    assert len(hook.ANCHOR_SECTIONS) >= 1
+
+
+def test_the_anchor_holds_no_doctrine_words_of_its_own():
+    """The hook's own text is the preface and the section titles; every
+    sentence it prints comes from the file. So no string literal in the
+    script is a sentence of the one text — the check reads the script's
+    literals against the doctrine's sentences."""
+    source = HOOK.read_text(encoding="utf-8")
+    doctrine = DOCTRINE.read_text(encoding="utf-8")
+    sentences = {
+        s.strip()
+        for s in re.split(r"(?<=[.;:])\s+", re.sub(r"\s+", " ", doctrine))
+        if len(s.split()) >= 6
+    }
+    literals = {
+        node.value.strip()
+        for node in ast.walk(ast.parse(source))
+        if isinstance(node, ast.Constant) and isinstance(node.value, str)
+    }
+    copied = [lit for lit in literals if any(lit in s for s in sentences) and len(lit.split()) >= 6]
+    assert not copied, f"the hook carries doctrine sentences of its own: {copied}"
 
 
 def _line_of(source: str, text: str) -> int:
@@ -190,7 +243,12 @@ def test_the_hook_is_registered_in_this_repositorys_own_settings():
         assert any(c.endswith("hooks/needle_hook.py") for c in commands), (
             f"{event} does not run the Needle hook"
         )
-    word_hooks = [h for entry in hooks["PostToolUse"] for h in entry.get("hooks", [])]
-    assert all(isinstance(h.get("timeout"), int) and h["timeout"] <= 10 for h in word_hooks), (
-        "the PostToolUse entry names its own ceiling; Claude Code's default is 600 s"
-    )
+    for event in READ_EVENTS:
+        read_hooks = [h for entry in hooks[event] for h in entry.get("hooks", [])]
+        assert all(isinstance(h.get("timeout"), int) and h["timeout"] <= 10 for h in read_hooks), (
+            f"the {event} entry names its own ceiling; Claude Code's default is 600 s"
+        )
+    for event, entries in hooks.items():
+        commands = [h["command"] for entry in entries for h in entry.get("hooks", [])]
+        needle = [c for c in commands if c.endswith("hooks/needle_hook.py")]
+        assert len(needle) <= 1, f"{event} runs the Needle hook {len(needle)} times; once is the way"
