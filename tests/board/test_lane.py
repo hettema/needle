@@ -672,6 +672,38 @@ def test_entered_executing_at_reads_the_last_entry_into_executing():
 # ── plan 06: the archived rule, the pill, the Plan door ────────────────
 
 
+def test_a_card_the_machine_parked_goes_back_to_planned_once_a_live_plan_carries_it():
+    """The plan "as many lanes as the machine can hold", item 5: the machine
+    undoes its own park when the evidence for it is gone, and only its own."""
+    from board.lane import unpark
+    from domain.evidence import Evidence
+
+    none = lane_for(card(), facts(worktrees={}))
+    parked = moved(Column.BACKLOG, Column.DECISION_MOMENT, Actor.MACHINE, NOW, id=3).model_copy(
+        update={"evidence": Evidence.DOCUMENT_ARCHIVED}
+    )
+    back = unpark(card(column=Column.DECISION_MOMENT), none, [parked])
+    assert back is not None and back.column == Column.PLANNED
+    assert back.evidence == Evidence.PLAN_LIVE
+    assert back.reason == (
+        "parked when its suggestion was archived, but a live plan carries it now "
+        "(docs/plans/p.md): back to Planned"
+    )
+    # Still archived: stays parked. The owner's move: his. Hands on: the
+    # lane loop's business. Another column: nothing to undo.
+    assert unpark(card(column=Column.DECISION_MOMENT, archived=True), none, [parked]) is None
+    his = moved(Column.BACKLOG, Column.DECISION_MOMENT, Actor.OWNER, NOW, id=4)
+    assert unpark(card(column=Column.DECISION_MOMENT), none, [his, parked]) is None
+    ended = moved(Column.EXECUTING, Column.DECISION_MOMENT, Actor.MACHINE, NOW, id=5).model_copy(
+        update={"evidence": Evidence.LANE_ENDED}
+    )
+    assert unpark(card(column=Column.DECISION_MOMENT), none, [ended]) is None
+    working = lane_for(card(column=Column.DECISION_MOMENT), facts(sessions=[session()]))
+    assert unpark(card(column=Column.DECISION_MOMENT), working, [parked]) is None
+    assert unpark(card(column=Column.PLANNED), none, [parked]) is None
+    assert unpark(card(column=Column.DECISION_MOMENT), none, []) is None
+
+
 def test_an_archived_document_moves_a_card_nobody_has_hands_on():
     from datetime import date
 

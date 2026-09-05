@@ -54,6 +54,7 @@ from board.lane import (
     exit_for,
     lane_for,
     should_enter_executing,
+    unpark,
     with_footprints,
 )
 from board.progress import progress_of
@@ -569,6 +570,13 @@ class Loops:
                 leaving = exit_for(card, lane, history, folded=folded, signal=signal, since=since)
             if leaving is None:
                 leaving = after_archive(card, lane, signal)
+            if (
+                leaving is None
+                and card.place.column == Column.DECISION_MOMENT
+                and card.link is not None
+                and not card.link.archived
+            ):
+                leaving = unpark(card, lane, self.live.store.history(slug, card.number))
             if leaving is None:
                 continue
             try:

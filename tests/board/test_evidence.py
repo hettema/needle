@@ -4,8 +4,8 @@ on every read, pure over domain values."""
 
 from datetime import UTC, datetime, timedelta
 
-from board.evidence import DOUBT, evidence_of, missing_fact, placement_from, standing_for
-from board.lane import lane_for
+from board.evidence import DOUBT, evidence_of, missing_fact, standing_for
+from board.lane import lane_for, placement_from
 from domain.audit import AuditEntry, AuditKind
 from domain.card import Actor, Card, Place
 from domain.column import Column

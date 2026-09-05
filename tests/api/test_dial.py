@@ -460,6 +460,82 @@ def test_a_lane_that_folded_and_closed_gives_its_memory_back_and_no_other_ending
     assert len(machine_floor.state()["stops"]) == 1
 
 
+def test_a_suggestion_archived_a_read_before_its_plan_parks_the_card_and_the_plan_unparks_it(
+    client: TestClient, repo: Path, store: Store
+):
+    """The plan "as many lanes as the machine can hold", item 5: the rename
+    read one pass before the plan file parks the card (the seam Hello Revenue
+    #384 and #386 hit); the plan landing on the next read sends it back to
+    Planned with Start offered and the row on the card. In the other order
+    nothing is parked. The one-read case is `tests/board/test_reconcile.py`."""
+    tide = number_of(client, TIDE)
+    live = client.app.state.loops.live
+
+    def carry(suggestion_path: str, stem: str, title: str) -> None:
+        plan = repo / "docs" / "plans" / f"{stem}.md"
+        plan.write_text(
+            f"# {title}\n\n**Status:** PENDING\n**Effort gate:** medium — one edit\n"
+            f"**Carries:** {suggestion_path}\n\n## Intent\n\nThe clock.\n\n"
+            "### 1. The clock\n\nDone means: it reads right.\n",
+            encoding="utf-8",
+        )
+
+    def archive(suggestion_path: str, stem: str) -> None:
+        done = repo / "docs" / "slice-suggestions" / "done" / Path(suggestion_path).name
+        done.parent.mkdir(exist_ok=True)
+        lines = (repo / suggestion_path).read_text(encoding="utf-8").split("\n")
+        lines.insert(2, f"**Carried by:** docs/plans/{stem}.md")
+        done.write_text("\n".join(lines), encoding="utf-8")
+        (repo / suggestion_path).unlink()
+
+    def land() -> None:
+        git(repo, "add", "-A")
+        git(repo, "commit", "-q", "-m", "a read")
+        live.rescan("proj")
+        reconcile(client)
+
+    # The rename first: the board parks the card, as it did on Hello Revenue.
+    stem = "2026-09-05-the-quay-clock-is-the-offices"
+    archive(TIDE_PATH, stem)
+    land()
+    assert column_of(client, tide) == "Decision moment"
+    parked = detail(client, tide)["history"][0]
+    assert parked["kind"] == "moved" and parked["evidence"] == "document-archived"
+    # The plan a read later: the machine undoes its own move.
+    carry(TIDE_PATH, stem, "The quay clock is the office's")
+    land()
+    assert column_of(client, tide) == "Planned"
+    opened = detail(client, tide)
+    assert opened["doors"]["start"]["offered"], opened["doors"]["start"]["why"]
+    back = next(h for h in opened["history"] if h["kind"] == "moved")
+    assert back["actor"] == "machine" and back["evidence"] == "plan-live"
+    assert back["detail"].endswith(
+        "parked when its suggestion was archived, but a live plan carries it now "
+        f"(docs/plans/{stem}.md): back to Planned"
+    )
+    assert opened["summary"]["standing"]["state"] == "held"
+    reconcile(client)
+    assert column_of(client, tide) == "Planned", "and it stays"
+
+    # The other order: the plan first, then the rename — nothing is parked.
+    path = write_defect(
+        repo,
+        "2026-09-05-the-gate-log-loses-its-last-line",
+        "The gate log loses its last line",
+        "**Fix:** now",
+    )
+    land()
+    gate_log = number_of(client, "The gate log loses its last line")
+    other = "2026-09-05-the-gate-log-keeps-every-line"
+    carry(path, other, "The gate log keeps every line")
+    land()
+    assert column_of(client, gate_log) == "Planned"
+    archive(path, other)
+    land()
+    assert column_of(client, gate_log) == "Planned"
+    assert all(h["evidence"] != "document-archived" for h in detail(client, gate_log)["history"])
+
+
 def test_his_and_unmarked_defects_are_never_started_and_a_question_leaves_the_card_to_the_owner(
     client: TestClient, machine_floor: Floor, repo: Path, store: Store
 ):

@@ -8,9 +8,16 @@ file with nobody syncing anything.
 
 from datetime import datetime, timedelta
 
-from board.evidence import placement_from, standing_for
+from board.evidence import standing_for
 from board.handouts import handouts_for
-from board.lane import STARTABLE_COLUMNS, ago, first_line, last_line, nothing_read
+from board.lane import (
+    STARTABLE_COLUMNS,
+    ago,
+    first_line,
+    last_line,
+    nothing_read,
+    placement_from,
+)
 from board.moves import GroupLayout
 from board.reconcile import carried_stems, ref
 from board.signals import is_due, past_due, read_or_decline

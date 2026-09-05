@@ -1,5 +1,6 @@
 # A carried suggestion archived a read before its plan lands parks the card, and nothing unparks it
 
+**Carried by:** docs/plans/done/2026-09-05-as-many-lanes-as-the-machine-can-hold-run-side-by-side-and-the-fold-settles-what-they-share.md (item 5, the first shape: the machine undoes its own move)
 **Found by:** the owner, from the board's Idea door on 2026-09-05 (conversation a2d30083), watching the dial's first night on Hello Revenue: #384's plan landed at 02:41 and the dial could not open Start on it, because the board had parked the card in Decision moment ten seconds earlier.
 **Kind:** defect
 **Fix:** now — the intent is plan 11's ("the board plans and starts a marked defect" with no hand on it) and INTENT's lesson 2 (true without anyone remembering); the fix is inside `board/reconcile.py` and `board/lane.py::after_archive`, the seam plan 11 already fixed once; it removes the class — every plan whose commit archives the suggestion it carries, read on a checkout the runtime levels — not the one card.

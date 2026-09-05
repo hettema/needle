@@ -575,6 +575,48 @@ moment already has the owner's eye; Not now is his ruling; Executed and Done
 are where the rule sends things."""
 
 
+def placement_from(history: list[AuditEntry]) -> AuditEntry | None:
+    """The audit row that put the card where it is: the newest move, else its
+    birth. `history` is newest first, as the store answers it."""
+    for entry in history:
+        if entry.kind in (AuditKind.MOVED, AuditKind.BORN) and entry.to_place is not None:
+            return entry
+    return None
+
+
+def unpark(card: Card, lane: Lane, history: list[AuditEntry]) -> Exit | None:
+    """The machine undoes its own park when the evidence for it is gone (the
+    plan "as many lanes as the machine can hold", item 5): a card in
+    Decision moment whose last move was the machine's *archived* move, and
+    whose link is a live plan now, goes back to Planned. On a checkout the
+    runtime levels by fast-forward, the watcher read Hello Revenue #384's
+    suggestion rename ten seconds before its plan and parked the card; the
+    one-read fix from plan 11 never applied, and no machine move left the
+    column. A card whose link is still archived stays parked; a card the
+    owner moved is his."""
+    if card.folded_into is not None or card.place.column != Column.DECISION_MOMENT:
+        return None
+    if card.link is None or card.link.archived or card.link.kind != DocumentKind.PLAN:
+        return None
+    if lane.state in HANDS_ON:
+        return None
+    placement = placement_from(history)
+    if (
+        placement is None
+        or placement.actor != Actor.MACHINE
+        or placement.evidence != Evidence.DOCUMENT_ARCHIVED
+    ):
+        return None
+    return Exit(
+        column=Column.PLANNED,
+        reason=(
+            "parked when its suggestion was archived, but a live plan carries it now "
+            f"({card.link.path()}): back to Planned"
+        ),
+        evidence=Evidence.PLAN_LIVE,
+    )
+
+
 def after_archive(card: Card, lane: Lane, signal: Signal | None) -> Exit | None:
     """Where a card goes when its document is archived and no lane has hands
     on it, or None to leave it. Shipped means archived (INTENT.md): to

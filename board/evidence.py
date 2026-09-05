@@ -10,7 +10,7 @@ loop makes, so a claim never outlives its evidence in silence.
 
 from board.lane import has_row
 from board.signals import read_or_decline
-from domain.audit import AuditEntry, AuditKind
+from domain.audit import AuditEntry
 from domain.card import Actor, Card
 from domain.column import Column
 from domain.evidence import Evidence, EvidenceState, Standing
@@ -29,15 +29,6 @@ own grammar made Done the owner's move ("verification stays yours"), so an
 unnamed placement there is his word and is trusted, never doubted."""
 
 DOUBT = "the board doubts this: "
-
-
-def placement_from(history: list[AuditEntry]) -> AuditEntry | None:
-    """The audit row that put the card where it is: the newest move, else its
-    birth. `history` is newest first, as the store answers it."""
-    for entry in history:
-        if entry.kind in (AuditKind.MOVED, AuditKind.BORN) and entry.to_place is not None:
-            return entry
-    return None
 
 
 def evidence_of(card: Card, placement: AuditEntry | None) -> tuple[Actor, Evidence | None]:
@@ -92,6 +83,12 @@ def missing_fact(
             return "no document is written behind it any more"
         if not card.link.archived:
             return f"its document is live again ({card.link.stem})"
+    if evidence == Evidence.PLAN_LIVE:
+        if card.link is None:
+            return "no document is written behind it any more"
+        if card.link.archived:
+            return f"its plan is archived ({card.link.path()})"
+        return None
     if lane is not None and lane.state in HANDS_ON:
         return f"a session has hands on it again: {lane.sentence}"
     return None

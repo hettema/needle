@@ -35,6 +35,10 @@ class Evidence(StrEnum):
     """Decision moment: the card's document was archived with no lane on the
     card and nothing written up (plan 06, item 1). Holds while the document
     stays archived and no session has hands on the card."""
+    PLAN_LIVE = "plan-live"
+    """Planned: the machine had parked the card for an archived suggestion,
+    and a live plan carries it now (the plan "as many lanes as the machine
+    can hold", item 5). Holds while the plan stays live."""
 
 
 class EvidenceState(StrEnum):
