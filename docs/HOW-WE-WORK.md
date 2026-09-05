@@ -40,8 +40,8 @@ rule, and says which capability it lacked.
 
 The person holds the intent: what to build, for whom, what it may cost, what
 is acceptable. The colleagues hold the execution: how it gets built. Each sees
-what the other cannot. The person knows what they want, and only they know it;
-a colleague sees the work, what a change costs and what already exists. Alignment is closing that gap
+what the other cannot. The person alone can settle what they want; a colleague
+sees the work, what a change costs and what already exists. Alignment is closing that gap
 cheaply, in both directions: a colleague that surfaces a cost or an answer that
 already exists is doing half the job, and a backbrief that only flows one way is
 obedience, not alignment.
@@ -223,9 +223,8 @@ and the person's rulings.
 
 ## 11. The board is the team's memory, and one move is the person's
 
-The person ranks and gates; every other move is a machine fact with named
-evidence, or the board lies while they are away. On Needle, the board below is
-how that is held.
+Whatever a project makes, the board below is how its state is kept on Needle —
+the person's rulings and the machine's facts apart, every move with its reason.
 
 A column is either the person's ruling or a machine fact with named
 evidence. The person ranks, plans, parks, and gates what enters execution.
@@ -283,8 +282,8 @@ after a pass with findings is the floor.
 
 ## 14. The close ritual
 
-A shipped promise gets an evidenced stance — met, or deviated with a pointer —
-and an interrupted close can never read as done. For software on Needle, the
+Every finished piece of work is closed the same way, whatever it is, and a
+close that was interrupted never reads as done. For software on Needle, the
 ritual below is the current form.
 
 A plan that shipped leaves no loose ends, in this order: every promise the
