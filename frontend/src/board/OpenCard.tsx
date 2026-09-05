@@ -325,8 +325,8 @@ export function OpenCard({ card, onMoveTo }: { card: CardSummary; onMoveTo: (num
           <Quiet>{detail.summary.routing.why}</Quiet>
           {detail.triage ? (
             <Quiet>
-              The reading of {detail.triage.at.slice(0, 10)} landed <b>{detail.triage.result}</b>, decision {detail.triage.decision}
-              {detail.triage.direction ? `, direction: ${detail.triage.direction}` : ""}. {detail.triage.words}
+              Read {detail.triage.at.slice(0, 10)} · landed <b>{detail.triage.result}</b> · decision {detail.triage.decision}
+              {detail.triage.direction ? ` · ${detail.triage.direction}` : ""}
             </Quiet>
           ) : null}
           {detail.source ? <Quiet>The source it read: {detail.source.note}</Quiet> : null}

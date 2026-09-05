@@ -593,6 +593,16 @@ def state_of(
             Meaning.LIVE,
             detail="The dial took it: a session is writing its plan in the project's checkout.",
         )
+    # Yours before live, as every branch above it is: a defect waiting on his
+    # sentence outranks one a session is reading, and the two cannot both be
+    # true anyway — a reading only opens on a card nobody has verified.
+    if routed is not None and routed.state == Routing.TRIAGED_HIS and doors.answer.offered:
+        return _state(
+            "your ruling",
+            Meaning.YOURS,
+            detail=routed.why,
+            door=_door(FaceDoorName.OPEN, "Rule", doors.answer.why, primary=True),
+        )
     if document_state == DocumentState.SUGGESTION and triaging is not None:
         return _state(
             f"mark being read · {triaging.slot}",
@@ -601,13 +611,6 @@ def state_of(
                 "A reading with no share of the finding session's context is verifying who "
                 "fixes this, against the source the mark cites."
             ),
-        )
-    if routed is not None and routed.state == Routing.TRIAGED_HIS and doors.answer.offered:
-        return _state(
-            "your ruling",
-            Meaning.YOURS,
-            detail=routed.why,
-            door=_door(FaceDoorName.OPEN, "Rule", doors.answer.why, primary=True),
         )
     if document_state == DocumentState.SUGGESTION:
         return _state(

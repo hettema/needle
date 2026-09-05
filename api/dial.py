@@ -205,12 +205,16 @@ class Dial:
         card — whether or not the dial is still on; then, with it on, room
         under the number and room on the machine, take the next defect."""
         self.live.set_headroom(headroom(self.runtime.meminfo(), MEMORY_FLOOR_BYTES, clock.now()))
-        self._follow()
+        # One read of the machine for the whole beat: the two halves that
+        # follow judge the same sessions, and a beat costs one walk of the
+        # registries rather than two.
+        by_id = {s.session_id: s for s in self.runtime.sessions() if not s.stale}
+        self._follow(by_id)
         # A corpus lane applies what a record already selected — the owner's
         # own answer, or a separation the reading proposed — so it runs
         # whether or not the dial is on. The dial is his ruling about what
         # enters execution *without* him; his own ruling is not that.
-        self._corpus_lanes()
+        self._corpus_lanes(by_id)
         setting = self.live.store.dial()
         if not setting.on:
             return
@@ -453,7 +457,7 @@ class Dial:
 
     # ── following what the dial opened ─────────────────────────────────
 
-    def _follow(self) -> None:
+    def _follow(self, by_id) -> None:
         fix_lanes = self.live.store.fix_lanes()
         if any(f.stage in LIVE_STAGES for f in fix_lanes):
             # A plan that landed changed the card's gate and its footprint,
@@ -461,8 +465,6 @@ class Dial:
             # is judged by are this read's, not the beat before.
             self.loops.reconcile_now()
         now = clock.now()
-        sessions = self.runtime.sessions()
-        by_id = {s.session_id: s for s in sessions if not s.stale}
         for fix in fix_lanes:
             live = self.live.projects.get(fix.project)
             if live is None:
@@ -667,13 +669,12 @@ class Dial:
 
     # ── the short lanes that write the corpus (items 4 and 5) ──────────
 
-    def _corpus_lanes(self) -> None:
+    def _corpus_lanes(self, by_id) -> None:
         """Follow every corpus lane the board has open, then open at most one
         more. They are not fix lanes and do not count against the dial's
         number, so they carry their own ceiling — one at a time, board-wide —
         and they wait on the machine's memory like everything else."""
         now = clock.now()
-        by_id = {s.session_id: s for s in self.runtime.sessions() if not s.stale}
         for live in self.live.projects.values():
             self._follow_corpus_lanes(live, by_id, now)
         if self._full() is not None:
@@ -734,12 +735,25 @@ class Dial:
                 continue
             document = document_of(card, live.index)
             landed = self._applied(live, lane, document)
-            if landed is not None:
+            overran = (now - lane.opened_at).total_seconds() >= CORPUS_LANE_SECONDS
+            if landed is not None and not overran:
+                # `_land_corpus_lane` leaves the lane open when a split's new
+                # document is there and its card is a watcher away; the
+                # ceiling below is what stops that waiting for ever and
+                # holding the one seat these lanes have.
                 self._land_corpus_lane(live, lane, card, document, landed, by_id, now)
+                continue
+            if landed is not None:
+                words = (
+                    f"the {lane.kind.value} lane's write is in the corpus and the board could "
+                    "not finish reading it onto the cards"
+                )
+                store.end_corpus_lane(lane.id, now, words)
+                self.live.note(slug, lane.card_number, AuditKind.DIAL, Actor.MACHINE, words)
+                self.live.bump()
                 continue
             session = by_id.get(lane.session_id) if lane.session_id else None
             alive = session is not None and session.pid is not None
-            overran = (now - lane.opened_at).total_seconds() >= CORPUS_LANE_SECONDS
             if alive and not overran:
                 if session.state == SessionState.WORKING:
                     continue
