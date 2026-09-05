@@ -1,5 +1,6 @@
 # A project's own file holds only what is that project's
 
+**Carried by:** docs/plans/2026-09-05-every-session-of-any-make-follows-the-doctrine-at-least-as-well-as-hello-revenues-did.md — the owner's ruling at the Discuss door on 2026-09-05 (below) reframed the deliverable: the one text rebuilt on Hello Revenue's file as the model, the carriers made global, the adherence loop written first; the duplicate-trimming reader waits for a later card.
 **Found by:** the lane on card #54 (docs/plans/2026-09-05-18-a-new-project-follows-the-way-we-work-on-any-machine-and-teaches-it-back.md), in the walk of HOW-WE-WORK as its readers would read it, from the owner's words on 2026-09-05: "my doctrine has drifted in different projects and I want Needle to be the one true doctrine. Then there are project specific properties that might need to survive, but operating doctrine comes from Needle."
 **Kind:** defect
 **Fix:** his
