@@ -1,5 +1,6 @@
 # A loop cannot close itself the moment it is written
 
+**Carried by:** docs/plans/2026-09-05-16-every-loop-a-plan-names-is-watched-until-it-closes.md — folded from the board's Idea door on 2026-09-05 (conversation 6b683c8b), which read it as plan 16's item 2 written a second time
 **Kind:** defect
 **Fix:** now `docs/INTENT.md` already says done is a closed loop and not a claim, and the close already refuses a row for one reason, so the refusal has somewhere to live
 **Found by:** the lane on card #59 (docs/plans/done/2026-09-05-a-defects-mark-is-verified-before-it-routes.md), at its own close — this card's first WATCH row did it

@@ -1,5 +1,6 @@
 # Nothing moves a walled lane; the board only says it is blocked
 
+**Carried by:** docs/plans/2026-09-05-a-lane-the-machine-ended-comes-back-by-itself-and-the-boards-word-on-how-it-ended-is-true.md — folded from the board's Idea door on 2026-09-05 (conversation 6b683c8b), which read it beside #32, #33 and #68 as four findings about one loop; its first finding is already fixed, its second is item 3
 **Kind:** defect
 **Fix:** now
 **Found by:** work-0c on the Omarchy board (2026-09-04 21:00), after the wall

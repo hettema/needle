@@ -1,5 +1,6 @@
 # A card keeps its birth title after its document changes
 
+**Carried by:** docs/plans/2026-09-04-08-identity-and-the-record.md — folded from the board's Idea door on 2026-09-05 (conversation 6b683c8b), which read it as plan 08's item 1 from the title's side
 **Kind:** defect
 **Fix:** now
 **Found by:** the owner, from the board's Idea door on 2026-09-04 (conversation

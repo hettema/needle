@@ -1,5 +1,6 @@
 # A WATCH row the reader cannot run is accepted at the close and fails a day later
 
+**Carried by:** docs/plans/2026-09-05-16-every-loop-a-plan-names-is-watched-until-it-closes.md — folded from the board's Idea door on 2026-09-05 (conversation 6b683c8b), which read it as a refusal at the door plan 16's item 2 already changes
 **Kind:** defect
 **Fix:** now
 **Found by:** the machine repo's card 16 (plan 13 there), 2026-09-05, opening

@@ -27,6 +27,8 @@ protects less than its sentence claims, and costs more than it says:
   all` says so on every one: "the board's own rail waits until no lane is
   live anywhere".
 
+- The plan carrying #53 (a full machine admits nothing new) will hold Needle's rail more often still: a full machine and a busy one are usually the same evening, and its floor gates every Start, Needle's included. The ruling here is made knowing that (added from the Idea door on 2026-09-05, conversation 6b683c8b).
+
 ## What would change it
 
 Two shapes, one line each in the eligibility check, and the choice is the

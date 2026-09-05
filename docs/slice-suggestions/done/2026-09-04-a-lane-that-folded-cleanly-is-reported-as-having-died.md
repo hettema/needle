@@ -1,5 +1,6 @@
 # A lane that folded cleanly is reported as having died
 
+**Carried by:** docs/plans/2026-09-05-a-lane-the-machine-ended-comes-back-by-itself-and-the-boards-word-on-how-it-ended-is-true.md — folded from the board's Idea door on 2026-09-05 (conversation 6b683c8b), which read it beside #31, #33 and #68 as four findings about one loop
 **Kind:** defect
 **Fix:** now
 **Found by:** the owner, from the board's Idea door on 2026-09-04 (conversation

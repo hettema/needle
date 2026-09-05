@@ -1,5 +1,6 @@
 # The board asks for a rescue on work it recorded as done
 
+**Carried by:** docs/plans/2026-09-05-a-lane-the-machine-ended-comes-back-by-itself-and-the-boards-word-on-how-it-ended-is-true.md — folded from the board's Idea door on 2026-09-05 (conversation 6b683c8b), which read it beside #31, #32 and #68 as four findings about one loop
 **Kind:** defect
 **Fix:** now
 **Found by:** the owner, from the board's Idea door on 2026-09-04 (conversation

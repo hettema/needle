@@ -1,5 +1,6 @@
 # A lane that grows toward the machine's ceiling pauses new starts before oomd has to kill it
 
+**Carried by:** docs/plans/2026-09-05-a-full-machine-admits-nothing-new-and-a-lane-that-comes-back-is-one-lane.md — folded from the board's Idea door on 2026-09-05 (conversation 6b683c8b), which read it and #52 as one loop pass from one conversation
 **Kind:** defect
 **Fix:** now — the intent is written (the plan "as many lanes as the machine can hold": "without crashing the machine"; ruling 4, the number is a ceiling the machine lowers); the fix stays inside the dial and the runtime's one door to the machine; it removes the class — every lane that grows after the beat let it in — not the one kill.
 **Found by:** the owner, from card #50's close-out conversation on 2026-09-05, after the card's first signal reading found the kill the review had missed. The owner: "I want to stop the machine from crashing and I want to work at max capacity."

@@ -1,5 +1,6 @@
 # A finished card names its plan once, where the plan actually is
 
+**Carried by:** docs/plans/2026-09-04-08-identity-and-the-record.md — folded from the board's Idea door on 2026-09-05 (conversation 6b683c8b), which read it as plan 08's item 1 from the citation's side
 **Found by:** the lane on card #57 (docs/plans/done/2026-09-05-a-colleague-of-any-make-can-be-called-warm-and-seen-at-work.md), in the review's seams pass
 **Kind:** defect
 **Fix:** now

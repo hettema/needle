@@ -1,5 +1,6 @@
 # We find out whether the new doctrine reads better than the one it replaced, before a bad month tells us
 
+**Carried by:** docs/plans/2026-09-05-every-session-of-any-make-follows-the-doctrine-at-least-as-well-as-hello-revenues-did.md — folded from the board's Idea door on 2026-09-05 (conversation 6b683c8b), which read it as the blind form of plan 60's own tenth-close question
 **Kind:** defect
 **Fix:** his
 **Found by:** the main thread on Omarchy #23, from the owner's question on 2026-09-05: "if interaction I have with you or codex feels notably worse than before then I guess our starting instructions are notably worse."

@@ -1,5 +1,6 @@
 # A lane the machine ended is resumed by the machine once the reason it ended has passed, and only then
 
+**Carried by:** docs/plans/2026-09-05-a-lane-the-machine-ended-comes-back-by-itself-and-the-boards-word-on-how-it-ended-is-true.md — folded from the board's Idea door on 2026-09-05 (conversation 6b683c8b), which read it beside #31, #32 and #33 as four findings about one loop
 **Kind:** defect
 **Fix:** now — the intent is written (HOW-WE-WORK §11: a move that follows a machine fact is the machine's, and a board the owner has to move by hand lies while he is away; plan 03's "one automatic retry per run-out" is the precedent, and the dial is his standing ruling that a verified defect runs without him); the owner asked for it tonight in his own words ("I don't think they revive by themselves"); the fix stays inside the lane loop's rescue and the dial's gate; it removes the class — every lane ended by the machine rather than by its own work — not the eight cards below.
 **Found by:** the owner, from the board's Idea door on 2026-09-05 (conversation 6b683c8b), looking at Hello Revenue's Planned column: "I see a lot of broken cards in Hello Revenue's plan lane. I think they are crashed processes. I don't think they revive by themselves."
