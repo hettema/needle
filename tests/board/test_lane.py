@@ -92,6 +92,8 @@ def session(
         intent="the brief",
         created_at=created,
         updated_at=NOW - timedelta(minutes=1),
+        resumed_from=None,
+        doing=None,
     )
 
 

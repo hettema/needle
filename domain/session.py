@@ -35,6 +35,18 @@ class SessionState(StrEnum):
     """No process behind the row, whatever the registry says."""
 
 
+class Doing(BaseModel):
+    """What a session is doing right now, read from the tail of its own
+    transcript (plan 17, item 3): the last tool it ran and on what, and
+    when. The registry's `detail` is the session's own summary of its work
+    and moves when the session chooses; this moves on every tool call, so
+    a caller can see a colleague reading, reasoning or stuck."""
+
+    step: str
+    """`Read docs/plans/x.md`, `Bash uv run pytest`, in the tool's own words."""
+    at: datetime
+
+
 class Session(BaseModel):
     slot: str
     config_dir: str
@@ -65,6 +77,13 @@ class Session(BaseModel):
     """The prompt the session was born with, from the registry."""
     created_at: datetime | None
     updated_at: datetime | None
+    resumed_from: str | None
+    """The session id this one was resumed from, when the registry says it
+    was: a resume forks the id, and a record that followed the old id
+    (a call, plan 17) follows it here without a second mover."""
+    doing: Doing | None
+    """The last step of a live session, from its transcript; None for a row
+    with no process or no transcript."""
 
 
 class SessionSlot(BaseModel):

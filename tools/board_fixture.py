@@ -155,6 +155,8 @@ def _session(
         intent="",
         created_at=NOW - timedelta(minutes=12),
         updated_at=NOW - timedelta(minutes=1),
+        resumed_from=None,
+        doing=None,
     )
 
 

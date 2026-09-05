@@ -21,7 +21,7 @@ import asyncio
 import contextlib
 import logging
 from collections.abc import Awaitable, Callable
-from datetime import datetime
+from datetime import datetime, timedelta
 from enum import StrEnum
 from pathlib import Path
 
@@ -60,9 +60,10 @@ from board.lane import (
 from board.progress import progress_of
 from board.sequencing import waits_for
 from board.signals import where_after
-from board.word import compose
+from board.word import compose, notes_word
 from domain.audit import AuditKind
 from domain.board import MachineState, TrunkState
+from domain.call import Call, CallOutcome
 from domain.card import Actor, Card, Place
 from domain.column import Column
 from domain.document import DocumentKind
@@ -83,11 +84,12 @@ from domain.launch import LaunchVerdict, WindowlessStart
 from domain.session import Session, SessionKind, SessionState
 from domain.signal import SessionWork, Signal, SignalKind, WindowlessSession
 from domain.slot import Placement
+from domain.watercooler import Note
 from domain.window import Window, WindowKind
 from infrastructure import clock
 from infrastructure.live import Live, LiveProject
 from infrastructure.paths import data_dir
-from runtime import machine
+from runtime import discussion, launch, machine
 from runtime.service import Runtime
 from runtime.windows import WindowRefused
 
@@ -98,6 +100,8 @@ FLOOR_SECONDS = 30.0
 reboot) is on the board within this, whatever else is quiet."""
 SIGNAL_SECONDS = 60.0
 TRUNK_SECONDS = 300.0
+PARTY_HORIZON_SECONDS = 86400.0
+"""How long a call keeps a lane party to its note and answer (plan 17)."""
 RESCUE_HORIZON_SECONDS = 3600.0
 """One automatic retry per run-out: a second wall on the same lane within
 this window parks the lane with the reason instead of thrashing."""
@@ -159,6 +163,11 @@ class Loops:
         """Sessions stopped because their lane folded and closed: one stop
         each, so a stop that did not end the process is said once."""
         """Session ids whose second wall was parked, so the card is told once."""
+        self._notes: list[Note] = []
+        """The machine's watercooler as the last read saw it (plan 17)."""
+        self._parties: dict[tuple[str, int], set[str]] = {}
+        """Per lane, the notes its card names: read with the plan's
+        footprint, once per beat, so the word never reads a plan."""
         self._word_lock = asyncio.Lock()
         """The word's own lock (plan 10): a read of a lane's word and the
         move of its heard-mark are one act, so two hooks firing from one
@@ -211,6 +220,7 @@ class Loops:
         is a file write, and the board hears it instead of asking."""
         roots = [Path(s.config_dir) / "jobs" for s in self.runtime.slots()]
         roots.append(machine.handoff_dir())
+        roots.append(machine.discussion_dir())
         existing = [str(p) for p in roots if p.is_dir()]
         if not existing:
             return
@@ -253,11 +263,13 @@ class Loops:
         await self.reconcile()
         return recorded
 
-    async def word(self, cwd: str) -> Word | None:
+    async def word(self, cwd: str, wrote: str | None = None) -> Word | None:
         """What the board has not yet told the lane at `cwd` (plan 10, item
         1), and the mark moved so it is told once; None when the directory
         is no lane of a registered project. Reads the loop's last read and
-        the store, never git."""
+        the store, never git. `wrote` is the file the tool call just wrote,
+        when the hook says so: a note the lane wrote on the machine's
+        watercooler is stamped as heard, so it never hears its own."""
         project = project_of_cwd(cwd, self.live.projects)
         if project is None:
             return None
@@ -265,9 +277,9 @@ class Loops:
         if number is None:
             return None
         async with self._word_lock:
-            return await asyncio.to_thread(self.word_now, project, number)
+            return await asyncio.to_thread(self.word_now, project, number, wrote)
 
-    def word_now(self, live: LiveProject, number: int) -> Word:
+    def word_now(self, live: LiveProject, number: int, wrote: str | None = None) -> Word:
         """The word for one lane, and its mark moved. Before the loop's
         first read the board knows no lane's drift and says nothing rather
         than guess. The mark is written by this server's own store, so the
@@ -293,13 +305,43 @@ class Loops:
         )
         if mark is not None:
             store.mark_heard(mark)
-            # Only a word that said something changed what the card shows;
-            # a mark that moved silently (the baseline, the lane's own lines
-            # going by) would otherwise turn every open page over for a line
-            # that reads the same, on every tool call of every lane.
-            if word.sentences:
-                self.live.bump()
+        party_to = self._party_to(slug, number, lane)
+        if party_to:
+            stamps = store.heard_notes(slug, number)
+            if wrote and discussion.in_directory(wrote):
+                own = discussion.note_of(Path(wrote))
+                if own is not None:
+                    stamps[own.path] = own.at
+                    store.stamp_notes(slug, number, {own.path: own.at})
+            said, moved = notes_word(self._notes, stamps, party_to=party_to)
+            if moved:
+                store.stamp_notes(slug, number, moved)
+                word = word.model_copy(update={"sentences": [*word.sentences, *said]})
+        # Only a word that said something changed what the card shows; a
+        # mark that moved silently (the baseline, the lane's own lines
+        # going by) would otherwise turn every open page over for a line
+        # that reads the same, on every tool call of every lane.
+        if word.sentences:
+            self.live.bump()
         return word
+
+    def _party_to(self, slug: str, number: int, lane: Lane) -> set[str]:
+        """The notes on the machine's watercooler this lane is party to: the
+        ones its card names, and the note and answer of every call it made
+        or was called with (plan 17, item 2)."""
+        named = set(self._parties.get((slug, number), set()))
+        session_id = lane.session.session_id if lane.session is not None else None
+        # Bounded: this runs on every tool call of every lane, and the calls
+        # table only grows. A call older than a day is a thread the lane's
+        # card names if it still matters.
+        since = clock.now() - timedelta(seconds=PARTY_HORIZON_SECONDS)
+        for call in self.live.store.calls(since=since):
+            mine = call.caller == lane.path or (
+                lane.path is not None and call.caller.startswith(lane.path + "/")
+            )
+            if mine or (session_id is not None and call.session_id == session_id):
+                named.update((call.note, call.answer))
+        return named
 
     def record_hooks(self, posted: list[HookPosted]) -> list[HookEvent]:
         attributed: list[tuple[HookPosted, str | None, int | None]] = []
@@ -323,6 +365,7 @@ class Loops:
         sessions = self.runtime.sessions()
         windows = self.runtime.open_windows()
         placement, note = self._placement()
+        self._notes = self.runtime.notes()
         for live in list(self.live.projects.values()):
             try:
                 self._reconcile_project(live, sessions, windows, placement, note)
@@ -330,6 +373,101 @@ class Loops:
                 log.warning(
                     "reconciling %s failed (%s: %s)", live.project.slug, type(error).__name__, error
                 )
+        self._tend_calls()
+
+    def _tend_calls(self) -> None:
+        """Every open call against the one list (plan 17): the record
+        follows the fork when the runtime moved the colleague — the
+        registry says which session resumed which — and ends with the
+        runtime's words when the colleague ends without its note, or when
+        the note landed. A wall is moved once, by whoever tends the
+        session: a lane's by the lane loop, a reading's by its tending, and
+        a colleague that is nobody's by this loop, with the same one hop
+        and the same park on a second wall within the hour (ruling 5);
+        the record follows the session that lives either way."""
+        store = self.live.store
+        open_calls = store.calls(open_only=True)
+        if not open_calls:
+            return
+        sessions = self.runtime.sessions()
+        now = clock.now()
+        tended = self._tended_elsewhere()
+        for call in open_calls:
+            verdict = self.runtime.judge_call(call, sessions)
+            if verdict is None:
+                continue
+            if verdict.outcome == CallOutcome.MOVED:
+                store.move_call(call.id, verdict.session_id, verdict.slot, verdict.words)
+                continue
+            if verdict.outcome == CallOutcome.BLOCKED:
+                session = next((s for s in sessions if s.session_id == call.session_id), None)
+                if session is None or session.wall is None or session.session_id in tended:
+                    # A question, or a wall that is another loop's to move:
+                    # the call stays open and a waiter is told the state.
+                    continue
+                self._move_called(call, session, now)
+                continue
+            store.end_call(call.id, now, verdict.words)
+
+    def _tended_elsewhere(self) -> set[str]:
+        """The sessions another loop moves on a wall: every lane's, and
+        every open windowless session's."""
+        held: set[str] = set()
+        for live in self.live.projects.values():
+            snapshot = live.snapshot
+            if snapshot is not None:
+                # Any lane with a live session, whatever its state: a wall
+                # reads as MOVING, which is exactly the one the lane loop moves.
+                held.update(
+                    lane.session.session_id
+                    for lane in snapshot.lanes.values()
+                    if lane.session is not None and lane.session.pid is not None
+                )
+            for work in SessionWork:
+                held.update(
+                    r.session_id
+                    for r in self.live.store.open_windowless_sessions(
+                        live.project.slug, work
+                    ).values()
+                )
+        return held
+
+    def _move_called(self, call: Call, session: Session, now: datetime) -> None:
+        """One hop for a called colleague that hit a limit and is nobody
+        else's: the lane loop's rule, one automatic retry per run-out."""
+        store = self.live.store
+        assert session.wall is not None
+        recent = [
+            r
+            for r in store.rescues(session.session_id)
+            if (now - r.at).total_seconds() < RESCUE_HORIZON_SECONDS and launch.on_a_wall(r)
+        ]
+        if recent:
+            store.end_call(
+                call.id,
+                now,
+                f"{session.short_id} hit a limit again within the hour ({session.wall.reason}); "
+                "one automatic retry per run-out, so this one is the owner's",
+            )
+            return
+        moved = self.runtime.move(session.short_id, None)
+        if moved.verdict != LaunchVerdict.ALIVE or moved.session is None:
+            store.end_call(
+                call.id,
+                now,
+                f"{session.short_id} hit a limit on {session.slot} ({session.wall.reason}) and "
+                f"could not be moved: {moved.reason}",
+            )
+            return
+        placement = moved.placement
+        where = f"{placement.model.value} on {placement.slot}" if placement else moved.session.slot
+        store.move_call(
+            call.id,
+            moved.session.session_id,
+            moved.session.slot,
+            f"{call.name} moved to {where} as {moved.session.short_id}: {session.wall.reason}; "
+            "the call follows it",
+        )
 
     def _placement(self) -> tuple[Placement | None, str]:
         where = self.runtime.where(None, [], cached=True)
@@ -480,7 +618,7 @@ class Loops:
             recent = [
                 r
                 for r in store.rescues(session.session_id)
-                if (now - r.at).total_seconds() < RESCUE_HORIZON_SECONDS
+                if (now - r.at).total_seconds() < RESCUE_HORIZON_SECONDS and launch.on_a_wall(r)
             ]
             if recent:
                 if session.session_id not in self._parked:
@@ -674,6 +812,7 @@ class Loops:
             text = (root / document.path).read_text(encoding="utf-8", errors="replace")
         except OSError:
             return set()
+        self._parties[(live.project.slug, card.number)] = discussion.named_in(text)
         return footprint(text, lambda path: (root / path).is_file())
 
     def _footprints(

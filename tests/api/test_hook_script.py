@@ -35,6 +35,7 @@ class Board(HTTPServer):
         self.slow = False
         self.words: dict[str, dict] = {LANE: WORD}
         self.reads: list[str] = []
+        self.wrote: list[str | None] = []
 
 
 class Handler(BaseHTTPRequestHandler):
@@ -57,6 +58,7 @@ class Handler(BaseHTTPRequestHandler):
         parts = urlsplit(self.path)
         cwd = parse_qs(parts.query).get("cwd", [""])[0]
         server.reads.append(cwd)
+        server.wrote.append(parse_qs(parts.query).get("wrote", [None])[0])
         if server.slow:
             time.sleep(1.5)
         if not server.up:
@@ -227,6 +229,28 @@ def test_on_a_tool_use_the_hook_prints_the_boards_word_as_context_and_nothing_el
 
         gone = run_hook(tool_use(), tmp_path, "http://127.0.0.1:1")
         assert gone.returncode == 0 and gone.stdout == "" and gone.stderr == ""
+    finally:
+        board.shutdown()
+        board.server_close()
+
+
+def test_the_hook_names_the_file_a_writing_tool_wrote_and_nothing_for_the_rest(tmp_path: Path):
+    """Plan 17, item 2: a note the lane puts on the machine's watercooler
+    must never be read back to it, and only the hook knows what the tool
+    call wrote — so a Write or Edit names its file in the read, and a Read
+    or a Bash names nothing."""
+    board, url = serving()
+    try:
+        wrote = tool_use()
+        wrote.update({"tool_name": "Write", "tool_input": {"file_path": "/srv/d/from-x.md"}})
+        assert run_hook(wrote, tmp_path, url).returncode == 0
+        read = tool_use()
+        read.update({"tool_name": "Read", "tool_input": {"file_path": "/srv/d/from-x.md"}})
+        assert run_hook(read, tmp_path, url).returncode == 0
+        relative = tool_use()
+        relative.update({"tool_name": "Edit", "tool_input": {"file_path": "notes/from-x.md"}})
+        assert run_hook(relative, tmp_path, url).returncode == 0
+        assert board.wrote == ["/srv/d/from-x.md", None, None]
     finally:
         board.shutdown()
         board.server_close()

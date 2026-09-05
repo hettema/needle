@@ -25,3 +25,16 @@ class WatercoolerLine(BaseModel):
     actor: Actor
     at: datetime
     text: str
+
+
+class Note(BaseModel):
+    """One note on the machine's watercooler: the discussion directory where
+    sessions of any make on this laptop talk through files (the machine's
+    CLAUDE.md). The two watercoolers stay two (plan 17, ruling 3): this one
+    is read by the board so a lane party to a discussion hears a note the
+    way it hears a watercooler line, and never written by it."""
+
+    path: str
+    first_line: str
+    at: datetime
+    """The file's last change."""

@@ -9,7 +9,9 @@ keeps the fields the board reads, queues the event on disk, and posts the
 whole queue to the running board; the board being down loses nothing, the
 queue stays and drains on the next event. For PostToolUse it asks the board
 for the word of the lane at its working directory — what the board learned
-about the lane since it last listened (plan 10) — with half a second to
+about the lane since it last listened (plan 10), naming the file the tool
+call wrote when it wrote one, so a note the lane put on the machine's
+watercooler is never read back to it (plan 17) — with half a second to
 spare, and prints it as the event's context for the model; nothing is
 queued, nothing is posted, and a board that is down, slow or has nothing
 to say prints nothing. It never raises, never blocks a session for more
@@ -139,7 +141,25 @@ def word_target(payload: dict) -> tuple[str, int, str] | None:
     url = urlsplit(board_url())
     if not url.hostname:
         return None
-    return url.hostname, url.port or 80, "/api/word?" + urlencode({"cwd": cwd})
+    query = {"cwd": cwd}
+    wrote = written(payload)
+    if wrote:
+        query["wrote"] = wrote
+    return url.hostname, url.port or 80, "/api/word?" + urlencode(query)
+
+
+WRITING_TOOLS = ("Write", "Edit", "MultiEdit", "NotebookEdit")
+
+
+def written(payload: dict) -> str | None:
+    """The file this tool call wrote, when the tool was one that writes a
+    file it names: what the board needs so a note the session put on the
+    machine's watercooler is never read back to it (plan 17, item 2)."""
+    if payload.get("tool_name") not in WRITING_TOOLS:
+        return None
+    given = payload.get("tool_input")
+    path = given.get("file_path") if isinstance(given, dict) else None
+    return path if isinstance(path, str) and path.startswith("/") else None
 
 
 def answer(payload: dict) -> None:

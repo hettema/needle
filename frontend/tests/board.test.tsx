@@ -100,6 +100,8 @@ function withLane(state: Lane["state"], sentence: string, question: string | nul
     intent: "",
     created_at: null,
     updated_at: null,
+    resumed_from: null,
+    doing: null,
   };
   d.lane = {
     card_number: 253,

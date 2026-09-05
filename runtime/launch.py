@@ -16,8 +16,8 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from domain.gate import Gate
-from domain.launch import Attempt, Launch, LaunchVerdict, Start, Stopped, WindowlessStart
-from domain.session import Session, SessionKind, SessionSlot
+from domain.launch import Attempt, Launch, LaunchVerdict, Rescue, Start, Stopped, WindowlessStart
+from domain.session import Session, SessionKind, SessionSlot, SessionState
 from domain.slot import Handoff, Model, Placement, Rung, Slot
 from infrastructure import clock
 from infrastructure.store import Store
@@ -67,6 +67,23 @@ CONTINUE = (
     "Continue where you stopped. The subscription you were running on ran out, "
     "so the runtime moved you to one that has headroom — nothing else changed."
 )
+
+MOVED_BY_REQUEST = "moved by request"
+RESUMED_WITH_ANSWER = "resumed with the owner's answer"
+"""The ledger's reasons for a move nobody's wall caused: `needle move`, and a
+resume with a brief (the Answer door, a call). A wall's move carries the
+wall's own words instead."""
+
+
+def on_a_wall(rescue: Rescue) -> bool:
+    """Whether a rescue in the ledger was a wall's move. The park rule — one
+    automatic retry per run-out, a second wall within the hour parks —
+    counts only these: a resume by request is in the same ledger, and
+    counting it parked a called colleague on its first wall (plan 17,
+    review pass 1) and would park a lane walled within an hour of the
+    owner's answer."""
+    return not rescue.reason.startswith((MOVED_BY_REQUEST, RESUMED_WITH_ANSWER))
+
 
 DAEMON_UNIT_PREFIX = "claude-daemon-"
 SESSION_UNIT_PREFIX = "needle-"
@@ -620,11 +637,7 @@ def move(
             attempts=attempts,
             reason=verified.reason,
         )
-    reason = (
-        wall.reason
-        if wall
-        else ("resumed with the owner's answer" if prompt else "moved by request")
-    )
+    reason = wall.reason if wall else (RESUMED_WITH_ANSWER if prompt else MOVED_BY_REQUEST)
     if fresh:
         assert size is not None and verified.session_id is not None
         reason += (
@@ -636,3 +649,97 @@ def move(
     if wall is not None:
         handoffs.remove(wall)
     return launch
+
+
+def call(store: Store, session: Session, *, brief: str, name: str) -> Launch:
+    """Resume a colleague's session with a caller's brief (plan 17, item 1):
+    the Answer door's shape, bound to no card. A session in a terminal of
+    its own is refused, not resumed beside itself; one mid-turn is refused
+    too, since the stop that precedes a resume would end the turn it is on,
+    and a lane hears the note as its word instead. A call whose brief is
+    empty is refused before anything runs: the by-hand form of 2026-09-05
+    started a session whose prompt never arrived, and that is the refusal
+    the CLI printed ("Provide a prompt"), made ours."""
+    if not brief.strip():
+        return dead(name, [], "an empty brief calls nobody; provide a note or an objective", None)
+    if session.kind == SessionKind.INTERACTIVE:
+        return dead(
+            name,
+            [],
+            f"{session.short_id} runs in a terminal of its own; it is not resumed beside "
+            "itself — write the note and it hears it as its word if it is a lane",
+            None,
+        )
+    if session.pid is not None and session.state == SessionState.WORKING:
+        return dead(
+            name,
+            [],
+            f"{session.short_id} is working on its turn; a resume would end it — "
+            "call again when its turn is done, or a lane hears the note as its word",
+            None,
+        )
+    return move(store, session, to=None, card=name, prompt=brief, spent=False)
+
+
+def resume_transcript(store: Store, session_id: str, cwd: str, *, brief: str, name: str) -> Launch:
+    """Resume a session no registry holds any more, from its transcript by
+    id: the argv `move` builds, on the rung the rule names, verified the
+    same way (plan 17, item 1). A colleague whose process has ended has no
+    row, and a call to it is this."""
+    if not brief.strip():
+        return dead(name, [], "an empty brief calls nobody; provide a note or an objective", None)
+    where = rule.where(None, [], cached=False)
+    if where.placement is None:
+        return dead(name, [], where.reason, None)
+    placement = where.placement
+    size = machine.transcript_size(cwd, session_id)
+    if size is not None and size > RESUME_SIZE_LIMIT:
+        return dead(
+            name,
+            [],
+            f"the transcript of {session_id.split('-')[0]} is {size / 1048576:.1f} MB, above the "
+            f"{RESUME_SIZE_LIMIT // 1048576} MB the runtime resumes; start a fresh session with "
+            "the note instead",
+            placement,
+        )
+    argv = argv_for(
+        placement, effort=None, name=name, prompt=brief, resume=session_id, worktree=None
+    )
+    short, words, since = _launch(placement, argv, Path(cwd))
+    attempts: list[Attempt] = []
+    if short is None:
+        attempts.append(
+            Attempt(
+                rung=_rung(placement),
+                verdict=LaunchVerdict.DEAD,
+                short_id=None,
+                reason=words,
+                seconds=round(time.time() - since, 2),
+            )
+        )
+        return dead(name, attempts, words, placement)
+    verified = verify(Path(placement.config_dir), short, since)
+    attempts.append(
+        Attempt(
+            rung=_rung(placement),
+            verdict=verified.verdict,
+            short_id=short,
+            reason=verified.reason,
+            seconds=round(verified.seconds, 2),
+        )
+    )
+    if verified.verdict != LaunchVerdict.ALIVE:
+        if verified.verdict == LaunchVerdict.DEAD:
+            _stop_probe(placement, short, verified.pid)
+        return Launch(
+            card=name,
+            verdict=verified.verdict,
+            session=_row(placement, short)
+            if verified.verdict == LaunchVerdict.UNCONFIRMED
+            else None,
+            placement=placement,
+            scope=None,
+            attempts=attempts,
+            reason=verified.reason,
+        )
+    return _settle(store, placement, short, verified, name, attempts)

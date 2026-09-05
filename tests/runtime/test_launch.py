@@ -321,6 +321,8 @@ def test_a_stale_copy_is_not_moved(machine_floor: Floor, store):
         intent="",
         created_at=None,
         updated_at=None,
+        resumed_from=None,
+        doing=None,
     )
 
     result = launch.move(store, stale, to=None, card="a lane")

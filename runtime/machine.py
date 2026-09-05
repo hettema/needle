@@ -60,6 +60,15 @@ def handoff_dir() -> Path:
     return _path("NEEDLE_HANDOFF_DIR", base / "omarchy" / "claude-acct" / "handoff" / "bg")
 
 
+def discussion_dir() -> Path:
+    """The machine's watercooler: where sessions of any make on this laptop
+    talk through files (`~/.cache/omarchy/claude-acct/discussion/`, the
+    machine's CLAUDE.md). Read by the board, never written."""
+    cache = os.environ.get("XDG_CACHE_HOME")
+    base = Path(cache) if cache else Path.home() / ".cache"
+    return _path("NEEDLE_DISCUSSION_DIR", base / "omarchy" / "claude-acct" / "discussion")
+
+
 def transcripts_root() -> Path:
     """Where transcripts live. Every slot's `projects/` is a symlink to the
     default directory's (verified on all four slots), so one root serves all."""

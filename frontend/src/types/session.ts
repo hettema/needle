@@ -8,6 +8,11 @@ export type SessionKind = (typeof SESSION_KIND_VALUES)[number];
 export const SESSION_STATE_VALUES = ["working", "blocked", "idle", "done", "ended"] as const;
 export type SessionState = (typeof SESSION_STATE_VALUES)[number];
 
+export interface Doing {
+  step: string;
+  at: string;
+}
+
 export interface Session {
   slot: string;
   config_dir: string;
@@ -29,6 +34,8 @@ export interface Session {
   intent: string;
   created_at: string | null;
   updated_at: string | null;
+  resumed_from: string | null;
+  doing: Doing | null;
 }
 
 export interface SessionSlot {

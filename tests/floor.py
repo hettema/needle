@@ -27,6 +27,7 @@ class Floor:
     claude_home: Path
     handoff_dir: Path
     transcripts: Path
+    discussion: Path
     meminfo: Path
     state_file: Path
     pids: list[int] = field(default_factory=list)
@@ -81,12 +82,14 @@ class Floor:
         effort: str = "xhigh",
         worktree: str | None = None,
         intent: str = "the brief",
+        resumed_from: str | None = None,
     ) -> str:
         session_id = session_id or f"{short}-0000-4000-8000-000000000000"
         blob = {
             "state": state,
             "detail": detail,
             "sessionId": session_id,
+            "resumeSessionId": resumed_from or session_id,
             "cwd": cwd,
             "name": name or short,
             "respawnFlags": ["--effort", effort, "--model", model],
@@ -240,6 +243,8 @@ def lay(root: Path) -> Floor:
     handoffs.mkdir(parents=True)
     transcripts = root / "projects"
     transcripts.mkdir()
+    discussion = root / "discussion"
+    discussion.mkdir()
     # A machine with room: the dial's memory floor is 5 GB (board/dial.py).
     meminfo = root / "meminfo"
     write_meminfo(meminfo, available_gb=16.0, swap_free_gb=8.0, swap_total_gb=8.0)
@@ -269,6 +274,7 @@ def lay(root: Path) -> Floor:
         claude_home=home,
         handoff_dir=handoffs,
         transcripts=transcripts,
+        discussion=discussion,
         meminfo=meminfo,
         state_file=state,
     )
@@ -298,8 +304,9 @@ ENVIRONMENT = {
     "NEEDLE_CLAUDE_HOME": "claude_home",
     "NEEDLE_HANDOFF_DIR": "handoff_dir",
     "NEEDLE_TRANSCRIPTS": "transcripts",
+    "NEEDLE_DISCUSSION_DIR": "discussion",
     "NEEDLE_MEMINFO": "meminfo",
     "NEEDLE_FAKE_STATE": "state_file",
 }
-"""Variable → the floor attribute it points at. `runtime.machine` reads the
-first five; the fakes read the last."""
+"""Variable → the floor attribute it points at. `runtime.machine` reads all
+but the last; the fakes read the last."""

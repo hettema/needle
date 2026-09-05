@@ -276,14 +276,17 @@ def create_app(store: Store | None = None, *, dist: Path | None = FRONTEND_DIST)
         return doors.brief_for_lane(live.detail(slug, number), slug)
 
     @app.get("/api/word", response_model=Word)
-    async def word(cwd: str, request: Request) -> Word:
+    async def word(cwd: str, request: Request, wrote: str | None = None) -> Word:
         """What the board has not yet told the lane at `cwd` (plan 10): the
         hook reads it on every tool use with half a second to spare, so
         this route reads the loop's last read and the store and nothing
         else — no reconcile, no git, no project sync. 404 when the
-        directory is no lane, which is most tool calls on the machine."""
+        directory is no lane, which is most tool calls on the machine.
+        `wrote` names the file the tool call wrote, when it wrote one, so
+        a note the lane put on the machine's watercooler is never read
+        back to it (plan 17, item 2)."""
         loops: Loops = request.app.state.loops
-        word = await loops.word(cwd)
+        word = await loops.word(cwd, wrote)
         if word is None:
             raise HTTPException(status_code=404, detail=f"{cwd} is no lane on the board.")
         return word

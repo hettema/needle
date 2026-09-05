@@ -3,11 +3,11 @@ the loop's lane, the watercooler and the heard-mark."""
 
 from datetime import UTC, datetime, timedelta
 
-from board.word import CLEARED, SAY_SO, compose
+from board.word import CLEARED, SAY_SO, compose, notes_word
 from domain.card import Actor
 from domain.hook import HeardMark
 from domain.lane import Collision, CollisionVerdict, Lane, LaneState
-from domain.watercooler import WatercoolerLine
+from domain.watercooler import Note, WatercoolerLine
 
 NOW = datetime(2026, 9, 4, 12, 0, tzinfo=UTC)
 READ_AT = NOW - timedelta(seconds=20)
@@ -226,3 +226,34 @@ def test_how_much_of_the_watercooler_the_caller_must_read_is_the_marks_to_decide
     )
     assert word.sentences == ["#241 said on the watercooler: after the mark"]
     assert moved is not None and moved.watercooler_id == 3
+
+
+# ── the machine's watercooler in the same word (plan 17, item 2) ───────
+
+
+def note(path: str, first: str, at: datetime) -> Note:
+    return Note(path=path, first_line=first, at=at)
+
+
+def test_a_note_the_lane_is_party_to_is_said_once_its_own_never_and_a_change_again():
+    codex = "/srv/d/from-codex-topic.md"
+    other = "/srv/d/from-codex-other.md"
+    notes = [note(codex, "# From Codex — the ask", NOW), note(other, "# elsewhere", NOW)]
+    said, moved = notes_word(notes, {}, party_to={codex})
+    assert said == [f"A note landed on the machine's watercooler: {codex} — # From Codex — the ask"]
+    assert moved == {codex: NOW}, "the note the lane is not party to is neither said nor stamped"
+
+    again, moved_again = notes_word(notes, moved, party_to={codex})
+    assert again == [] and moved_again == {}, "said once"
+
+    changed = [note(codex, "# From Codex — the ask", NOW + timedelta(minutes=2))]
+    said_changed, _ = notes_word(changed, moved, party_to={codex})
+    assert said_changed == [
+        f"A note changed on the machine's watercooler: {codex} — # From Codex — the ask"
+    ]
+
+    own = {codex: NOW + timedelta(minutes=2)}
+    assert notes_word(changed, own, party_to={codex}) == ([], {}), (
+        "a note the lane itself wrote was stamped at the write, so it never hears its own"
+    )
+    assert notes_word([], {}, party_to=set()) == ([], {})

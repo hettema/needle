@@ -16,7 +16,7 @@ from pathlib import Path
 from domain.gate import Gate
 from domain.session import Session, SessionKind, SessionState
 from domain.slot import Handoff, Model, Slot
-from runtime import machine
+from runtime import machine, transcripts
 
 _BACKGROUND_STATES = {
     "working": SessionState.WORKING,
@@ -113,11 +113,14 @@ def _background_row(
     verdict = _BACKGROUND_STATES.get(recorded, SessionState.IDLE) if pid else SessionState.ENDED
     cwd = str(state.get("cwd") or "")
     worktree = state.get("worktreePath")
+    session_id = str(state.get("sessionId") or short_id)
+    resumed = state.get("resumeSessionId")
+    home = str(worktree) if isinstance(worktree, str) and worktree else cwd
     return Session(
         slot=slot.name,
         config_dir=slot.config_dir,
         short_id=short_id,
-        session_id=str(state.get("sessionId") or short_id),
+        session_id=session_id,
         kind=SessionKind.BACKGROUND,
         name=str(state.get("name") or short_id),
         cwd=cwd,
@@ -134,6 +137,12 @@ def _background_row(
         intent=str(state.get("intent") or ""),
         created_at=_when(state.get("createdAt")),
         updated_at=_when(state.get("updatedAt")),
+        resumed_from=(
+            str(resumed) if isinstance(resumed, str) and resumed and resumed != session_id else None
+        ),
+        # The transcript's tail is read only for a row with a process: an
+        # ended session is not doing anything, and most rows have ended.
+        doing=transcripts.last_step(home, session_id) if pid else None,
     )
 
 
@@ -162,6 +171,8 @@ def _interactive_row(slot: Slot, session_id: str, process: dict[str, object]) ->
         intent="",
         created_at=_when(process.get("startedAt")),
         updated_at=_when(process.get("updatedAt")),
+        resumed_from=None,
+        doing=transcripts.last_step(str(process.get("cwd") or ""), session_id),
     )
 
 

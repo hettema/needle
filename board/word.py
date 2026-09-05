@@ -9,14 +9,15 @@ the watercooler — one sentence per fact, said once. "Once" is a mark in the
 store, never memory in the hook (plan ruling 3), and the drift is the loop's
 last read, never git (ruling 4). Pure: the caller reads the snapshot and
 the store and hands them in, and writes the mark back when the word says
-something.
+something. A note landing on the machine's watercooler is one more
+sentence in the same word (plan 17, item 2), never a second delivery.
 """
 
 from datetime import datetime
 
 from domain.hook import HeardMark, Word
 from domain.lane import HANDS_ON, Lane
-from domain.watercooler import WatercoolerLine
+from domain.watercooler import Note, WatercoolerLine
 
 SAY_SO = "Say in the watercooler what you are doing there."
 CLEARED = "The collision has cleared: no other live lane is editing a file this lane is editing."
@@ -107,3 +108,31 @@ def compose(
         }
     )
     return word, moved
+
+
+def notes_word(
+    notes: list[Note],
+    stamps: dict[str, datetime],
+    *,
+    party_to: set[str],
+) -> tuple[list[str], dict[str, datetime]]:
+    """The sentences for the notes on the machine's watercooler that a lane
+    is party to and has not heard (plan 17, item 2), and the stamps to
+    write so each is said once. `party_to` names the notes the lane's card
+    or its calls name; a note the lane wrote itself was stamped at the
+    write (the hook says so) and is never heard back, while a later change
+    to it by another party moves the file past the stamp and is heard.
+    Pure, like `compose`."""
+    sentences: list[str] = []
+    moved: dict[str, datetime] = {}
+    for note in notes:
+        if note.path not in party_to:
+            continue
+        heard = stamps.get(note.path)
+        if heard is not None and note.at <= heard:
+            continue
+        what = "changed" if heard is not None else "landed"
+        head = f" — {note.first_line}" if note.first_line else ""
+        sentences.append(f"A note {what} on the machine's watercooler: {note.path}{head}")
+        moved[note.path] = note.at
+    return sentences, moved

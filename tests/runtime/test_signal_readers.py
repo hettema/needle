@@ -72,6 +72,8 @@ def session(recorded: str, detail: str = "") -> Session:
         intent="",
         created_at=NOW,
         updated_at=NOW,
+        resumed_from=None,
+        doing=None,
     )
 
 

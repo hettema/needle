@@ -26,6 +26,7 @@ from board.reconcile import PROMOTED_FROM, Effects
 from board.signals import read_or_decline
 from domain.audit import AuditEntry, AuditKind
 from domain.board import TrunkState
+from domain.call import Call
 from domain.card import Actor, Card, CardOrigin, DocumentLink, Place
 from domain.column import COLUMN_DEFINITIONS, DEFECTS_RAIL, DEFECTS_RAIL_POSITION, Column
 from domain.dial import Dial, DialChange, Filer, FixLane, FixStage, RailCount
@@ -44,6 +45,7 @@ from domain.watercooler import WatercoolerLine
 from domain.window import Window, WindowKind
 from infrastructure.schema import (
     AuditRow,
+    CallRow,
     CardRow,
     CardRowRow,
     DialChangeRow,
@@ -51,6 +53,7 @@ from infrastructure.schema import (
     DiscussionRow,
     FixLaneRow,
     GroupRow,
+    HeardNoteRow,
     HeardRow,
     HookEventRow,
     LaneRow,
@@ -889,6 +892,11 @@ class Store:
             heard = session.get(HeardRow, (slug, number))
             if heard is not None:
                 session.delete(heard)
+            session.execute(
+                delete(HeardNoteRow)
+                .where(HeardNoteRow.project_slug == slug)
+                .where(HeardNoteRow.card_number == number)
+            )
 
     # ── what a running lane has heard ──────────────────────────────────
 
@@ -967,6 +975,93 @@ class Store:
             for row in rows:
                 out[row.card_number] = _reading(row)
             return out
+
+    def heard_notes(self, slug: str, number: int) -> dict[str, datetime]:
+        """Per note on the machine's watercooler, the change the lane last
+        heard or made (plan 17, item 2)."""
+        with self._session() as session:
+            rows = session.scalars(
+                select(HeardNoteRow)
+                .where(HeardNoteRow.project_slug == slug)
+                .where(HeardNoteRow.card_number == number)
+            )
+            return {r.path: r.at for r in rows}
+
+    def stamp_notes(self, slug: str, number: int, stamps: dict[str, datetime]) -> None:
+        with self._session() as session, session.begin():
+            for path, at in stamps.items():
+                row = session.get(HeardNoteRow, (slug, number, path))
+                if row is None:
+                    session.add(
+                        HeardNoteRow(project_slug=slug, card_number=number, path=path, at=at)
+                    )
+                else:
+                    row.at = at
+
+    # ── calls to a colleague (plan 17) ─────────────────────────────────
+
+    def record_call(
+        self,
+        *,
+        session_id: str,
+        slot: str,
+        name: str,
+        note: str,
+        answer: str,
+        brief: str,
+        caller: str,
+        at: datetime,
+    ) -> Call:
+        with self._session() as session, session.begin():
+            row = CallRow(
+                session_id=session_id,
+                slot=slot,
+                name=name,
+                note=note,
+                answer=answer,
+                brief=brief,
+                caller=caller,
+                called_at=at,
+                moved=None,
+                ended_at=None,
+                words=None,
+            )
+            session.add(row)
+            session.flush()
+            return _call(row)
+
+    def call(self, call_id: int) -> Call | None:
+        with self._session() as session:
+            row = session.get(CallRow, call_id)
+            return None if row is None else _call(row)
+
+    def calls(self, *, open_only: bool = False, since: datetime | None = None) -> list[Call]:
+        """Every call, oldest first; with `open_only`, those not yet ended;
+        with `since`, those made at or after it."""
+        with self._session() as session:
+            query = select(CallRow)
+            if open_only:
+                query = query.where(CallRow.ended_at.is_(None))
+            if since is not None:
+                query = query.where(CallRow.called_at >= since)
+            return [_call(r) for r in session.scalars(query.order_by(CallRow.id))]
+
+    def move_call(self, call_id: int, session_id: str, slot: str, words: str) -> None:
+        """The colleague now runs as another session: the call follows the
+        forked id and remembers the move in the runtime's words."""
+        with self._session() as session, session.begin():
+            row = session.get(CallRow, call_id)
+            if row is not None:
+                row.session_id = session_id
+                row.slot = slot
+                row.moved = words
+
+    def end_call(self, call_id: int, at: datetime, words: str) -> None:
+        with self._session() as session, session.begin():
+            row = session.get(CallRow, call_id)
+            if row is not None and row.ended_at is None:
+                row.ended_at = at
+                row.words = words
 
     # ── the windowless sessions the board starts (plans 09 and 11) ─────
 
@@ -1397,6 +1492,23 @@ def _reading(row: ReadingRow) -> Reading:
     )
 
 
+def _call(row: CallRow) -> Call:
+    return Call(
+        id=row.id,
+        session_id=row.session_id,
+        slot=row.slot,
+        name=row.name,
+        note=row.note,
+        answer=row.answer,
+        brief=row.brief,
+        caller=row.caller,
+        called_at=row.called_at,
+        moved=row.moved,
+        ended_at=row.ended_at,
+        words=row.words,
+    )
+
+
 def _windowless_session(row: WindowlessSessionRow) -> WindowlessSession:
     return WindowlessSession(
         id=row.id,
@@ -1411,9 +1523,7 @@ def _windowless_session(row: WindowlessSessionRow) -> WindowlessSession:
 
 
 def _dial(row: DialRow) -> Dial:
-    return Dial(
-        on=row.on, lanes=row.lanes, changed_at=row.changed_at, first_on_at=row.first_on_at
-    )
+    return Dial(on=row.on, lanes=row.lanes, changed_at=row.changed_at, first_on_at=row.first_on_at)
 
 
 def _fix_lane(row: FixLaneRow) -> FixLane:

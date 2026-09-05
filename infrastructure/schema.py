@@ -392,3 +392,42 @@ class AuditRow(Base):
     to_position: Mapped[int | None] = mapped_column(Integer, nullable=True)
     detail: Mapped[str] = mapped_column(Text)
     evidence: Mapped[str | None] = mapped_column(String(30), nullable=True)
+
+
+class CallRow(Base):
+    """A call to a colleague (plan 17): which session was called warm, with
+    which note and where the answer lands, and how it went. Follows the
+    forked id when the runtime moves the colleague; ended with the
+    runtime's words when the colleague is blocked, moved or ends without
+    its note, so a waiter reads the truth instead of a ceiling."""
+
+    __tablename__ = "calls"
+    __table_args__ = (Index("ix_calls_session", "session_id"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    session_id: Mapped[str] = mapped_column(String(36))
+    slot: Mapped[str] = mapped_column(String(40))
+    name: Mapped[str] = mapped_column(String(200))
+    note: Mapped[str] = mapped_column(Text)
+    answer: Mapped[str] = mapped_column(Text)
+    brief: Mapped[str] = mapped_column(Text)
+    caller: Mapped[str] = mapped_column(Text)
+    called_at: Mapped[datetime] = mapped_column(UtcDateTime)
+    moved: Mapped[str | None] = mapped_column(Text, nullable=True)
+    ended_at: Mapped[datetime | None] = mapped_column(UtcDateTime, nullable=True)
+    words: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+
+class HeardNoteRow(Base):
+    """Where a lane's hearing of the machine's watercooler stands (plan 17,
+    item 2): per note, the change the lane last heard or made. A note the
+    lane wrote is stamped at the write, so it never hears its own; a later
+    change by another party moves the file past the stamp and is heard.
+    Cleared with the lane record, as the heard mark is."""
+
+    __tablename__ = "heard_notes"
+
+    project_slug: Mapped[str] = mapped_column(String(80), primary_key=True)
+    card_number: Mapped[int] = mapped_column(Integer, primary_key=True)
+    path: Mapped[str] = mapped_column(Text, primary_key=True)
+    at: Mapped[datetime] = mapped_column(UtcDateTime)

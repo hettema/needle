@@ -5,18 +5,23 @@ do so by name."""
 
 import contextlib
 import uuid
+from datetime import UTC, datetime
 from pathlib import Path
 
+from domain.call import Call, CallVerdict
 from domain.dial import Meminfo
 from domain.gate import Gate
 from domain.handout import Dispatch
 from domain.launch import Launch, Rescue, Start, Stopped, WindowlessStart
-from domain.session import Session
+from domain.session import Session, SessionKind
 from domain.signal import Signal
 from domain.slot import Placement, Rung, Slot, Where
+from domain.watercooler import Note
 from domain.window import Focused, Opened, Window, WindowKind
 from infrastructure.store import Store
 from runtime import (
+    calls,
+    discussion,
     git,
     handoffs,
     launch,
@@ -34,6 +39,9 @@ from runtime import (
 COMMANDS = ("claude", "claude-acct", "hyprctl", "omarchy-launch-tui", "busctl", "git", "curl")
 """What the runtime needs on PATH. `journalctl` is asked for a death's reason
 and its absence is only a reason unknown."""
+
+
+_EPOCH = datetime.min.replace(tzinfo=UTC)
 
 
 class NoSuchSession(Exception):
@@ -69,6 +77,28 @@ class Runtime:
         if not matches:
             raise NoSuchSession(f"no session {ref!r} is in any registry on this machine")
         return next((m for m in matches if not m.stale), matches[0])
+
+    def colleague(self, ref: str) -> Session | tuple[str, str] | None:
+        """Who a call names (plan 17, item 1): a session by short id or id,
+        the most recent background session of a slot named, or — for a
+        colleague no registry holds any more — its id and the directory
+        its transcript says it ran in; None when nothing on this machine
+        answers to the ref."""
+        rows = self.sessions()
+        matches = [s for s in rows if ref in (s.short_id, s.session_id)]
+        if matches:
+            return next((m for m in matches if not m.stale), matches[0])
+        on_slot = [
+            s for s in rows if s.slot == ref and s.kind == SessionKind.BACKGROUND and not s.stale
+        ]
+        if on_slot:
+            return max(on_slot, key=lambda s: s.updated_at or s.created_at or _EPOCH)
+        found = transcripts.find(ref)
+        return (ref, found[0]) if found else None
+
+    def notes(self) -> list[Note]:
+        """The machine's watercooler as it stands, oldest change first."""
+        return discussion.notes()
 
     def where(self, from_slot: str | None, tried: list[Rung], *, cached: bool = True) -> Where:
         return rule.where(from_slot, tried, cached=cached)
@@ -134,6 +164,31 @@ class Runtime:
             prompt=prompt,
             spent=False,
         )
+
+    def call(self, session: Session | tuple[str, str], *, brief: str, name: str) -> Launch:
+        """Call a colleague warm (plan 17, item 1): resume its session with
+        the brief through the one launch path, or from its transcript when
+        no registry holds it. The verb owns nothing of the session's life
+        after this (ruling 5)."""
+        if isinstance(session, tuple):
+            session_id, cwd = session
+            return launch.resume_transcript(self.store, session_id, cwd, brief=brief, name=name)
+        return launch.call(self.store, session, brief=brief, name=name)
+
+    def judge_call(self, call: Call, sessions: list[Session] | None = None) -> CallVerdict | None:
+        """One reading of a call against the one list and its answer file:
+        what `needle wait` and the loop both make (plan 17, item 2)."""
+        rows = self.sessions() if sessions is None else sessions
+        session = next((s for s in rows if s.session_id == call.session_id and not s.stale), None)
+        why = self.why_ended(session) if session is not None and session.pid is None else None
+        fork = next(
+            (s for s in rows if s.resumed_from == call.session_id and s.pid is not None), None
+        )
+        moved = None
+        if fork is not None:
+            history = self.store.rescues(fork.session_id)
+            moved = history[-1].reason if history else None
+        return calls.judge(call, rows, why_ended=why, moved_words=moved)
 
     def discuss(
         self,

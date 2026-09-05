@@ -8,6 +8,8 @@ needle stop SHORT [--json]
 needle window SHORT [--as KIND] [--json]
 needle focus SHORT [--json]
 needle rescues SHORT [--clear] [--json]
+needle call WHO NOTE [--objective TEXT] [--answer PATH] [--json]
+needle wait CALL [--ceiling SECONDS] [--json]
 
 Each verb is a thin call into `runtime.service.Runtime`, answers in prose or
 as the domain value's JSON, and exits 1 when the thing asked for did not
@@ -17,21 +19,41 @@ answer.
 
 import argparse
 import json
+import os
+import re
 import sys
+import time
 from collections.abc import Callable, Sequence
+from datetime import datetime
 from pathlib import Path
 
 from pydantic import BaseModel
 
+from domain.call import CallOutcome, CallVerdict
 from domain.gate import Gate
 from domain.launch import Launch, LaunchVerdict, Start
 from domain.session import Session
 from domain.slot import Model, Rung
 from domain.window import WindowKind
+from infrastructure import clock
 from infrastructure.paths import db_path
 from infrastructure.store import Store
+from runtime import calls
 from runtime.service import NoSuchSession, Runtime
 from runtime.windows import WindowRefused
+
+WAIT_CEILING_SECONDS = 600.0
+"""How long `needle wait` waits by default: the slowest reply of the
+baseline morning took twelve minutes, so ten is a ceiling a caller states
+rather than the norm."""
+WAIT_FILE_SECONDS = 0.25
+"""How often the answer file is looked at: a note lands and the waiter
+returns within a second (plan 17, item 2)."""
+WAIT_LIST_SECONDS = 2.0
+"""How often the one list is read while waiting: a colleague that is
+blocked, moved or ended is reported within this, and reading every
+registry more often buys nothing."""
+_FROM = re.compile(r"^from-[A-Za-z0-9]+-")
 
 Verb = Callable[[Runtime, argparse.Namespace], int]
 
@@ -74,7 +96,30 @@ def parse_rung(text: str) -> Rung:
 # ── prose ──────────────────────────────────────────────────────────────
 
 
-def describe_session(session: Session) -> str:
+def ago(at: datetime, now: datetime) -> str:
+    seconds = max(0, int((now - at).total_seconds()))
+    if seconds < 60:
+        return f"{seconds} s ago"
+    if seconds < 3600:
+        return f"{seconds // 60} m ago"
+    return f"{seconds // 3600} h ago"
+
+
+def doing_sentence(session: Session, now: datetime) -> str | None:
+    """What the session is doing, in one line: its last step and its age,
+    and its own summary of the work when the registry holds one (plan 17,
+    item 3). None for a row with no process."""
+    if session.pid is None:
+        return None
+    parts: list[str] = []
+    if session.doing is not None:
+        parts.append(f"{session.doing.step}, {ago(session.doing.at, now)}")
+    if session.detail:
+        parts.append(f'"{session.detail}"')
+    return "; ".join(parts) or None
+
+
+def describe_session(session: Session, now: datetime | None = None) -> str:
     marks = []
     if session.stale:
         marks.append("stale copy")
@@ -83,6 +128,8 @@ def describe_session(session: Session) -> str:
     if session.scope:
         marks.append(session.scope)
     tail = f"  [{'; '.join(marks)}]" if marks else ""
+    doing = doing_sentence(session, now or clock.now())
+    tail += f"\n{'':<9} {'':<8}  {doing}" if doing else ""
     where = session.worktree or session.cwd
     return (
         f"{session.slot:<9} {session.short_id}  {session.state.value:<8} "
@@ -121,7 +168,8 @@ def describe_launch(launch: Launch) -> str:
 
 def sessions(runtime: Runtime, args: argparse.Namespace) -> int:
     rows = runtime.sessions()
-    text = "\n".join(describe_session(s) for s in rows) or "no session in any registry"
+    now = clock.now()
+    text = "\n".join(describe_session(s, now) for s in rows) or "no session in any registry"
     unreadable = runtime.handoffs().unreadable
     if unreadable and not args.json:
         text += "\n" + "\n".join(f"unreadable handoff file: {p}" for p in unreadable)
@@ -219,6 +267,138 @@ def rescues(runtime: Runtime, args: argparse.Namespace) -> int:
     return 0
 
 
+def call_brief(note: str, answer: str, objective: str | None) -> str:
+    """What a called colleague is told: the thread, the question, where the
+    answer goes. The note is the record; the brief only points at it."""
+    asked = f" {objective.strip()}" if objective and objective.strip() else ""
+    return (
+        f"A colleague calls you with a question. Read {note} first — it holds the thread "
+        f"and the question.{asked} Answer in the record: write your reply to {answer} "
+        "(create it, or append under a head of your own if it exists), and end your turn "
+        "once it is written. The caller waits on that file, not on your words here."
+    )
+
+
+def answer_path(note: str, short_id: str) -> str:
+    """Where a reply lands when the caller names nowhere: beside the note,
+    named as a reply from the colleague, so two replies never collide on
+    one filename (two did at 09:15 on 2026-09-05)."""
+    given = Path(note)
+    topic = _FROM.sub("", given.stem) or given.stem
+    return str(given.parent / f"from-{short_id}-re-{topic}.md")
+
+
+def call(runtime: Runtime, args: argparse.Namespace) -> int:
+    note = str(Path(args.note).expanduser().resolve())
+    if not Path(note).is_file():
+        print(f"{note} is not a file; a call names the note that holds the thread", file=sys.stderr)
+        return 1
+    who = runtime.colleague(args.who)
+    if who is None:
+        print(
+            f"no session {args.who!r} is in any registry on this machine, no slot is named so, "
+            "and no transcript by that id exists",
+            file=sys.stderr,
+        )
+        return 1
+    if isinstance(who, tuple):
+        session_id, name = who[0], f"call-{who[0].split('-')[0]}"
+        short = session_id.split("-")[0]
+    else:
+        session_id, name, short = who.session_id, who.name, who.short_id
+    answer = (
+        str(Path(args.answer).expanduser().resolve()) if args.answer else answer_path(note, short)
+    )
+    brief = call_brief(note, answer, args.objective)
+    launch = runtime.call(who, brief=brief, name=name)
+    if launch.verdict != LaunchVerdict.ALIVE or launch.session is None:
+        _emit(args, launch, describe_launch(launch))
+        return 1
+    record = runtime.store.record_call(
+        session_id=launch.session.session_id,
+        slot=launch.session.slot,
+        name=launch.session.name,
+        note=note,
+        answer=answer,
+        brief=brief,
+        caller=os.getcwd(),
+        at=clock.now(),
+    )
+    placement = launch.placement
+    where = f"{placement.model.value} on {placement.slot}" if placement else launch.session.slot
+    forked = f" (resumed from {short})" if launch.session.session_id != session_id else ""
+    text = (
+        f"call {record.id}: {launch.session.short_id}{forked} is working on {note}, {where}\n"
+        f"  the answer lands in {answer}\n"
+        f"  wait for it: needle wait {record.id}"
+    )
+    _emit(args, record, text)
+    return 0
+
+
+def _wait_text(verdict: CallVerdict) -> str:
+    return f"{verdict.outcome.value}: {verdict.words}"
+
+
+def wait(runtime: Runtime, args: argparse.Namespace) -> int:
+    """Wait on one call until its answer lands or changes, the colleague is
+    blocked, moved or ends without it, or the ceiling passes — and say
+    which, in the runtime's words (plan 17, item 2). Never polls a
+    terminal; looks at the file every quarter second and at the one list
+    every two."""
+    record = runtime.store.call(args.call)
+    if record is None:
+        print(f"no call {args.call} is recorded; needle call makes one", file=sys.stderr)
+        return 1
+    started = time.monotonic()
+    next_list = started
+    while True:
+        landed = calls.answer_landed(record)
+        if landed is not None:
+            verdict = calls.judge(record, [], why_ended=None, moved_words=None)
+            assert verdict is not None and verdict.outcome == CallOutcome.LANDED
+            _emit(args, verdict, _wait_text(verdict))
+            return 0
+        now = time.monotonic()
+        if now >= next_list:
+            next_list = now + WAIT_LIST_SECONDS
+            fresh = runtime.store.call(record.id)
+            record = fresh if fresh is not None else record
+            if record.ended_at is not None and record.words:
+                verdict = CallVerdict(
+                    outcome=CallOutcome.ENDED,
+                    words=record.words,
+                    session_id=record.session_id,
+                    slot=record.slot,
+                )
+                _emit(args, verdict, _wait_text(verdict))
+                return 1
+            verdict = runtime.judge_call(record)
+            if verdict is not None and verdict.outcome == CallOutcome.MOVED:
+                runtime.store.move_call(record.id, verdict.session_id, verdict.slot, verdict.words)
+            if verdict is not None:
+                text = _wait_text(verdict)
+                if verdict.outcome == CallOutcome.MOVED:
+                    text += f"; wait again: needle wait {record.id}"
+                _emit(args, verdict, text)
+                return 1
+        if now - started >= args.ceiling:
+            session = next(
+                (s for s in runtime.sessions() if s.session_id == record.session_id), None
+            )
+            doing = doing_sentence(session, clock.now()) if session is not None else None
+            verdict = CallVerdict(
+                outcome=CallOutcome.NOTHING,
+                words=f"nothing in {args.ceiling:.0f} s; {record.name} is still at work"
+                + (f" ({doing})" if doing else ""),
+                session_id=record.session_id,
+                slot=record.slot,
+            )
+            _emit(args, verdict, _wait_text(verdict))
+            return 1
+        time.sleep(WAIT_FILE_SECONDS)
+
+
 def register(sub: "argparse._SubParsersAction[argparse.ArgumentParser]") -> None:
     def parser(name: str, help_text: str, verb: Verb) -> argparse.ArgumentParser:
         p = sub.add_parser(name, help=help_text)
@@ -277,4 +457,28 @@ def register(sub: "argparse._SubParsersAction[argparse.ArgumentParser]") -> None
     p_rescues.add_argument("short")
     p_rescues.add_argument(
         "--clear", action="store_true", help="forget the history; the slot record stays"
+    )
+
+    p_call = parser(
+        "call",
+        "call a running colleague warm with a note: resume its session through its lifecycle "
+        "owner, the note as the brief, the answer in the record",
+        call,
+    )
+    p_call.add_argument(
+        "who", help="a session's short id or id, a slot's most recent, or a transcript's id"
+    )
+    p_call.add_argument("note", help="the file that holds the thread and the question")
+    p_call.add_argument("--objective", help="one sentence on what the answer is for")
+    p_call.add_argument("--answer", help="where the reply lands; beside the note if omitted")
+
+    p_wait = parser(
+        "wait",
+        "wait on a call until the answer lands, or the colleague is blocked, moved or ends "
+        "without it, or the ceiling passes; says which",
+        wait,
+    )
+    p_wait.add_argument("call", type=int, help="the call's number, as needle call printed it")
+    p_wait.add_argument(
+        "--ceiling", type=float, default=WAIT_CEILING_SECONDS, help="seconds to wait at most"
     )
