@@ -29,7 +29,7 @@ from domain.card import Actor, Place
 from domain.column import Column
 from domain.evidence import Evidence, EvidenceState
 from domain.gate import Gate
-from domain.lane import DoorResult, Lane, LaneRecord, LaneState
+from domain.lane import CollisionVerdict, DoorResult, Lane, LaneRecord, LaneState
 from domain.launch import LaunchVerdict, Start
 from domain.project import Project
 from domain.row import Row, RowKind
@@ -170,18 +170,21 @@ class Doors:
 
     # ── Start ──────────────────────────────────────────────────────────
 
-    def brief_for_lane(self, detail: CardDetail, slug: str, *, overrode: str | None) -> str:
+    def brief_for_lane(self, detail: CardDetail, slug: str) -> str:
         project = self.live.projects[slug].project
         card = detail.card
         gate = detail.summary.gate
         needle = needle_command()
         text = render(detail, project) + f"\n\nexecute #{card.number}"
-        if overrode:
+        collision = detail.doors.collision
+        if collision is not None and collision.verdict == CollisionVerdict.COLLIDES:
+            # The session is told what it shares so it rebases early and
+            # often; the fold, not a lock, settles it (INTENT.md lesson 4).
             text += (
-                f"\n\nLANE COLLISION OVERRIDDEN by the owner: {overrode} Another lane has hands "
-                "on those files; you were started anyway with that in front of him. Leave those "
-                "files to that lane unless your plan actually changes them, and expect to "
-                "re-verify them at the fold."
+                f"\n\nSHARED GROUND: {collision.sentence} Rebase onto origin/develop early and "
+                "often (`git pull --rebase origin develop`), not only at the fold: the second "
+                "to fold rebases, and the full suite on the levelled tree is the judge of what "
+                "you share. The files: " + ", ".join(collision.files) + "."
             )
         snapshot = self.live.projects[slug].snapshot
         lanes = snapshot.lanes if snapshot is not None else {}
@@ -244,31 +247,28 @@ class Doors:
         )
         return text
 
-    def start(
-        self, slug: str, number: int, *, anyway: bool, actor: Actor = Actor.OWNER
-    ) -> DoorResult:
+    def start(self, slug: str, number: int, *, actor: Actor = Actor.OWNER) -> DoorResult:
         """Start the card's lane where the rule says. `actor` is whose move
         it is: the owner's click through the page or his terminal, or the
         machine's under the dial — his standing ruling applied by the board
-        (plan 11, item 4), which the card's history then says."""
+        (plan 11, item 4), which the card's history then says. One door:
+        shared ground opens it with the ground in its label, and there is
+        nothing left to override (INTENT.md lesson 4)."""
         detail = self._detail(slug, number)
         doors = detail.doors
         project = self.live.projects[slug].project
         if not doors.start.offered:
-            if anyway and doors.start_anyway.offered:
-                pass
-            else:
-                raise DoorRefused(doors.start.why)
-        overrode = (
-            doors.collision.sentence
-            if anyway and doors.collision is not None and not doors.start.offered
+            raise DoorRefused(doors.start.why)
+        shares = (
+            doors.collision
+            if doors.collision is not None and doors.collision.verdict == CollisionVerdict.COLLIDES
             else None
         )
         gate = detail.summary.gate
         assert gate is not None
         card = detail.card
         name = lane_name(card.number, card.title)
-        brief = self.brief_for_lane(detail, slug, overrode=overrode)
+        brief = self.brief_for_lane(detail, slug)
         self.live.store.forget_lane(slug, number)
         launch = self.runtime.start(
             Start(repo=project.path, card=name, brief=brief, effort=gate, from_slot=None)
@@ -307,8 +307,8 @@ class Doors:
         said += f", in {launch.scope}" if launch.scope else f" ({launch.reason})"
         if actor == Actor.MACHINE:
             said += "; started by the dial"
-        if overrode:
-            said += f"; collision overridden: {overrode}"
+        if shares is not None:
+            said += f"; {shares.sentence[0].lower()}{shares.sentence[1:]}"
         self.live.note(slug, number, AuditKind.STARTED, actor, said)
         self.live.move(
             slug,

@@ -14,7 +14,7 @@ from domain.corpus import CorpusIndex
 from domain.document import DocumentKind, DocumentState
 from domain.evidence import Evidence, EvidenceState, Standing
 from domain.hook import HookKind
-from domain.lane import Collision, CollisionVerdict, LaneRecord, LaneState
+from domain.lane import Collision, CollisionVerdict, LaneRecord, LaneState, Wait
 from domain.session import SessionState
 from domain.signal import Reading, SessionWork, WindowlessSession
 from domain.slot import Handoff
@@ -60,16 +60,36 @@ def test_a_free_card_is_proven_and_its_one_door_is_start_filled():
     assert s.door.why.startswith("Start · fable on alpha — ")
 
 
-def test_a_collision_before_start_is_quiet_and_waits():
+def test_shared_ground_before_start_is_proven_and_its_door_is_start():
+    """Shared ground is shown, never waited on (INTENT.md lesson 4): the
+    face reads *shares ground with #23*, never *waits*, and the door is the
+    same filled Start a free card has, with the ground in its reason."""
     collision = Collision(
         verdict=CollisionVerdict.COLLIDES,
-        sentence="#23's lane is editing a.py.",
+        sentence="Shares ground: #23's lane is editing a.py right now. The second to fold rebases.",
         files=["a.py", "b.py"],
         cards=[23],
     )
     s = state(card(), doors={"collision": collision})
-    assert (s.word, s.meaning) == ("collides with #23 · waits", Meaning.QUIET)
-    assert s.door is None and s.hint == "2 files · open to see"
+    assert (s.word, s.meaning) == ("shares ground with #23", Meaning.PROVEN)
+    assert s.door is not None and s.door.name == FaceDoorName.START and s.door.primary
+    assert s.door.label == "Start" and s.hint is None
+    assert s.door.why == (
+        "Start · fable on alpha — shares 2 files with #23's lane; the second to fold rebases — "
+        + collision.sentence
+    )
+    assert s.detail == collision.sentence
+
+
+def test_a_plan_that_waits_on_a_named_card_is_quiet_and_says_which():
+    waits = [
+        Wait(label="#139", project="proj", number=139, column=Column.PLANNED, shipped=False),
+        Wait(label="Needle #20", project="needle", number=20, column=None, shipped=False),
+    ]
+    s = state(card(), doors={"waits": waits})
+    assert (s.word, s.meaning) == ("waits on #139, Needle #20", Meaning.QUIET)
+    assert s.door is None and s.hint == "open to see"
+    assert s.detail is not None and s.detail.startswith("Start waits on the plan's own word")
 
 
 def test_a_suggestion_has_no_plan_yet_and_its_door_creates_one_outlined():

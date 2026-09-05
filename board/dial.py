@@ -12,6 +12,7 @@ owner rank, so age is the one fact every card has.
 """
 
 import re
+from collections.abc import Callable
 from datetime import datetime
 
 from pydantic import BaseModel
@@ -20,7 +21,16 @@ from board.lane import has_row
 from domain.card import Card
 from domain.column import Column
 from domain.corpus import CorpusIndex
-from domain.dial import Dial, DialState, Filer, FixLane, FixStage, RailCount
+from domain.dial import (
+    Dial,
+    DialState,
+    Filer,
+    FixLane,
+    FixStage,
+    Headroom,
+    Meminfo,
+    RailCount,
+)
 from domain.document import Document, DocumentKind, FixMark, SuggestionKind
 from domain.lane import HANDS_ON, Lane, LaneState
 from domain.row import RowKind
@@ -140,8 +150,28 @@ def why_not_eligible(
     return None
 
 
-def running(fix_lanes: list[FixLane]) -> int:
-    return sum(1 for lane in fix_lanes if lane.stage in LIVE_STAGES)
+def held_lanes(
+    fix_lanes: list[FixLane], start_offered: Callable[[str, int], bool | None]
+) -> list[FixLane]:
+    """The fix lanes at the planned stage whose Start door is closed — parked,
+    waiting on a Sequencing card, nowhere to run, or not read yet. Such a
+    card is no process: on the dial's first night four of them held four
+    slots while fourteen eligible defects waited. `start_offered` answers
+    from the loop's last read; None (unread) is closed."""
+    return [
+        lane
+        for lane in fix_lanes
+        if lane.stage == FixStage.PLANNED
+        and start_offered(lane.project, lane.card_number) is not True
+    ]
+
+
+def running(fix_lanes: list[FixLane], held: list[FixLane] | None = None) -> int:
+    """What counts against the number: every fix lane at a live stage that
+    is not held. The planning stage always counts, which bounds how many
+    plans are written ahead."""
+    held_ids = {lane.id for lane in held or []}
+    return sum(1 for lane in fix_lanes if lane.stage in LIVE_STAGES and lane.id not in held_ids)
 
 
 def is_quiet(lanes_by_project: dict[str, dict[int, Lane]]) -> bool:
@@ -151,7 +181,62 @@ def is_quiet(lanes_by_project: dict[str, dict[int, Lane]]) -> bool:
     )
 
 
+MEMORY_FLOOR_BYTES = 3 * 1024**3
+"""Below this much available memory, or free swap on a machine that has
+swap, the beat takes nothing. 3 GB, because a fix lane peaked at 3.1 GB on
+the dial's first night (Hello Revenue #385, `systemctl show MemoryCurrent`,
+2026-09-05) and systemd-oomd acts at 90 percent of both memory and swap: one
+more lane at that peak is the kill. The plan's loop moves it — a lane or the
+board killed for memory raises it by the killed scope's peak."""
+
+
+def _gb(byte_count: int) -> str:
+    return f"{byte_count / 1024**3:.1f} GB"
+
+
+def headroom(meminfo: Meminfo | None, floor: int, now: datetime) -> Headroom:
+    """The machine against the floor. A reading the runtime could not make
+    is full: the beat waits until the machine can be read, and the head says
+    so, rather than opening a lane on a number nobody has."""
+    if meminfo is None:
+        return Headroom(
+            available=0,
+            swap_free=0,
+            floor=floor,
+            full=True,
+            sentence="the machine is full: its memory could not be read",
+            read_at=now,
+        )
+    short: list[str] = []
+    if meminfo.available < floor:
+        short.append(f"{_gb(meminfo.available)} available")
+    if meminfo.swap_total > 0 and meminfo.swap_free < floor:
+        short.append(f"{_gb(meminfo.swap_free)} swap free")
+    sentence = (
+        f"the machine is full: {', '.join(short)}, {floor // 1024**3} GB needed" if short else None
+    )
+    return Headroom(
+        available=meminfo.available,
+        swap_free=meminfo.swap_free,
+        floor=floor,
+        full=bool(short),
+        sentence=sentence,
+        read_at=now,
+    )
+
+
 def dial_state(
-    dial: Dial, fix_lanes: list[FixLane], lanes_by_project: dict[str, dict[int, Lane]]
+    dial: Dial,
+    fix_lanes: list[FixLane],
+    lanes_by_project: dict[str, dict[int, Lane]],
+    *,
+    held: list[FixLane],
+    room: Headroom | None,
 ) -> DialState:
-    return DialState(dial=dial, running=running(fix_lanes), quiet=is_quiet(lanes_by_project))
+    return DialState(
+        dial=dial,
+        running=running(fix_lanes, held),
+        held=len(held),
+        full=room.sentence if room is not None and room.full else None,
+        quiet=is_quiet(lanes_by_project),
+    )

@@ -40,6 +40,32 @@ class DialChange(BaseModel):
     lanes: int
 
 
+class Meminfo(BaseModel):
+    """The machine's memory as `/proc/meminfo` reports it, in bytes: what
+    the runtime reads before the dial opens anything."""
+
+    available: int
+    swap_total: int
+    swap_free: int
+
+
+class Headroom(BaseModel):
+    """The dial's reading of the machine's memory against the floor (the
+    plan "as many lanes as the machine can hold", item 3): the number is a
+    ceiling the machine lowers, never a count of records."""
+
+    available: int
+    swap_free: int
+    floor: int
+    full: bool
+    """Available memory, or free swap on a machine that has swap, is under
+    the floor: the beat takes nothing."""
+    sentence: str | None
+    """What the head says when the machine is full, with the two numbers;
+    None while there is headroom."""
+    read_at: datetime
+
+
 class DialState(BaseModel):
     """The dial as the head shows it: its setting, and the fix lanes live
     against the number right now."""
@@ -47,7 +73,15 @@ class DialState(BaseModel):
     dial: Dial
     running: int
     """Fix lanes the dial has started that have not folded or ended, plus
-    the planning sessions it has open: what counts against the number."""
+    the planning sessions it has open: what counts against the number. A
+    planned card whose Start is closed is no process and is not counted."""
+    held: int
+    """Fix lanes at the planned stage whose Start door is closed — parked,
+    waiting on a Sequencing card, nowhere to run: what the head shows
+    beside *live* so a night of held plans reads as held, not running."""
+    full: str | None
+    """The machine is full, in the head's words with the numbers, when the
+    memory floor stops the beat; None while there is headroom."""
     quiet: bool
     """No lane has hands on any project: when the board's own rail may run
     (plan 11, rulings — a fold on the board restarts the service under every

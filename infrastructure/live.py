@@ -20,7 +20,7 @@ from datetime import datetime
 from pathlib import Path
 
 from board.assemble import assemble_board, assemble_detail, folded_under
-from board.dial import dial_state
+from board.dial import dial_state, held_lanes
 from board.lane import nothing_read
 from board.reconcile import Effects, reconcile
 from domain.audit import AuditKind
@@ -28,7 +28,7 @@ from domain.board import BoardState, CardDetail, MachineState
 from domain.card import Actor, Card, CardOrigin, Place
 from domain.column import DEFECTS_RAIL, Column
 from domain.corpus import CorpusIndex
-from domain.dial import DialState
+from domain.dial import DialState, Headroom
 from domain.document import DocumentKind, SuggestionKind
 from domain.evidence import Evidence
 from domain.lane import Doors, Lane, LaneSnapshot
@@ -82,6 +82,9 @@ class Live:
         """Set once the server was told to stop; every open stream ends on it."""
         self.machine = MachineState(missing=[])
         """What the runtime cannot reach, as the loop last found; shown on the page."""
+        self.headroom: Headroom | None = None
+        """The machine's memory against the dial's floor, as the dial last
+        read it before a beat; None until the first beat."""
         self.on_change: Callable[[], Awaitable[None]] | None = None
         """What to run when another process wrote to the store, or the corpus
         changed a card: the loops set it, so a row written from the command
@@ -262,14 +265,38 @@ class Live:
         )
 
     def dial_state(self) -> DialState:
-        """The dial with the fix lanes live against its number, and whether
-        the machine is quiet, from every project's last read (plan 11)."""
+        """The dial with the fix lanes live against its number, the planned
+        cards it holds without counting, the memory floor's word, and
+        whether the machine is quiet, from every project's last read (plan
+        11; the plan "as many lanes as the machine can hold", item 3)."""
         lanes = {
             slug: live.snapshot.lanes
             for slug, live in self.projects.items()
             if live.snapshot is not None
         }
-        return dial_state(self.store.dial(), self.store.fix_lanes(), lanes)
+        fix_lanes = self.store.fix_lanes()
+        return dial_state(
+            self.store.dial(),
+            fix_lanes,
+            lanes,
+            held=held_lanes(fix_lanes, self.start_offered),
+            room=self.headroom,
+        )
+
+    def start_offered(self, slug: str, number: int) -> bool | None:
+        """Whether a card's Start door is open, from the loop's last read of
+        its project; None while that project is unread."""
+        live = self.projects.get(slug)
+        if live is None or live.snapshot is None:
+            return None
+        doors = live.snapshot.doors.get(number)
+        return doors.start.offered if doors is not None else None
+
+    def set_headroom(self, room: Headroom) -> None:
+        before = self.headroom
+        self.headroom = room
+        if before is None or (before.full, before.sentence) != (room.full, room.sentence):
+            self.bump()
 
     def card(self, slug: str, number: int) -> Card:
         self._live(slug)

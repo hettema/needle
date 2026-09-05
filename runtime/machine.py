@@ -14,6 +14,8 @@ import shutil
 import subprocess
 from pathlib import Path
 
+from domain.dial import Meminfo
+
 PROC = Path("/proc")
 SPAWN_REAP_SECONDS = 5.0
 """How long to wait for a fire-and-forget launcher to exit (it exits at once);
@@ -80,6 +82,31 @@ def transcript_size(cwd: str, session_id: str) -> int | None:
         return transcript_path(cwd, session_id).stat().st_size
     except OSError:
         return None
+
+
+def meminfo_path() -> Path:
+    """The kernel's memory summary; the floor lays one of its own."""
+    return _path("NEEDLE_MEMINFO", PROC / "meminfo")
+
+
+_MEMINFO_LINE = re.compile(r"^(\w+):\s+(\d+)(?:\s+kB)?", re.M)
+
+
+def meminfo() -> Meminfo:
+    """`MemAvailable`, `SwapTotal` and `SwapFree` in bytes, as the kernel
+    counts them (kB is kibibytes there). Raises OSError when the file cannot
+    be read and ValueError when a field is missing, so the caller can say
+    the machine could not be read rather than guess a number."""
+    text = meminfo_path().read_text(encoding="utf-8")
+    fields = {key: int(value) * 1024 for key, value in _MEMINFO_LINE.findall(text)}
+    try:
+        return Meminfo(
+            available=fields["MemAvailable"],
+            swap_total=fields["SwapTotal"],
+            swap_free=fields["SwapFree"],
+        )
+    except KeyError as missing:
+        raise ValueError(f"{meminfo_path()} has no {missing.args[0]} line") from missing
 
 
 # ── commands ───────────────────────────────────────────────────────────

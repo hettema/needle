@@ -25,6 +25,8 @@ export interface DialChange {
 export interface DialState {
   dial: Dial;
   running: number;
+  held: number;
+  full: string | null;
   quiet: boolean;
 }
 
@@ -59,6 +61,21 @@ export interface Fixes {
   rail_now: RailCount[];
   rail_at_first_on: RailCount[];
   waiting: Waiting[];
+}
+
+export interface Headroom {
+  available: number;
+  swap_free: number;
+  floor: number;
+  full: boolean;
+  sentence: string | null;
+  read_at: string;
+}
+
+export interface Meminfo {
+  available: number;
+  swap_total: number;
+  swap_free: number;
 }
 
 export interface RailCount {

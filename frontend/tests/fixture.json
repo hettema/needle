@@ -59,6 +59,8 @@
         "first_on_at": null
       },
       "running": 0,
+      "held": 0,
+      "full": null,
       "quiet": true
     },
     "columns": [
@@ -1586,6 +1588,7 @@
         "gate": null,
         "gate_why": null,
         "sequencing": null,
+        "sequenced": [],
         "found_by": "the cost review of 2026-09-01.",
         "card_ref": null,
         "suggestion_kind": "defect",
@@ -1682,20 +1685,17 @@
           "label": "Start",
           "why": "Start is offered in Up next and Planned; this card is in Backlog."
         },
-        "start_anyway": {
-          "offered": false,
-          "label": "Start anyway",
-          "why": "There is no collision to override."
-        },
         "readiness": {
           "state": "elsewhere",
           "why": "Start is offered in Up next and Planned; this card is in Backlog.",
           "cards": [],
-          "files": []
+          "files": [],
+          "waits": []
         },
         "placement": null,
         "placement_note": "the runtime has not read this board yet",
         "collision": null,
+        "waits": [],
         "watch": {
           "offered": false,
           "label": "Watch",
@@ -1837,6 +1837,7 @@
         "gate": null,
         "gate_why": null,
         "sequencing": null,
+        "sequenced": [],
         "found_by": "the review of card #241 (`docs/reviews/2026-09-03-the-deploy.md`, finding 2), carried out.",
         "card_ref": null,
         "suggestion_kind": "defect",
@@ -1915,20 +1916,17 @@
           "label": "Start",
           "why": "Start is offered in Up next and Planned; this card is in Backlog."
         },
-        "start_anyway": {
-          "offered": false,
-          "label": "Start anyway",
-          "why": "There is no collision to override."
-        },
         "readiness": {
           "state": "elsewhere",
           "why": "Start is offered in Up next and Planned; this card is in Backlog.",
           "cards": [],
-          "files": []
+          "files": [],
+          "waits": []
         },
         "placement": null,
         "placement_note": "the runtime has not read this board yet",
         "collision": null,
+        "waits": [],
         "watch": {
           "offered": false,
           "label": "Watch",
@@ -2088,6 +2086,7 @@
         "gate": null,
         "gate_why": null,
         "sequencing": null,
+        "sequenced": [],
         "found_by": "the close of card #249, carried out.",
         "card_ref": null,
         "suggestion_kind": "idea",
@@ -2165,20 +2164,17 @@
           "label": "Start",
           "why": "Start is offered in Up next and Planned; this card is in Backlog."
         },
-        "start_anyway": {
-          "offered": false,
-          "label": "Start anyway",
-          "why": "There is no collision to override."
-        },
         "readiness": {
           "state": "elsewhere",
           "why": "Start is offered in Up next and Planned; this card is in Backlog.",
           "cards": [],
-          "files": []
+          "files": [],
+          "waits": []
         },
         "placement": null,
         "placement_note": "the runtime has not read this board yet",
         "collision": null,
+        "waits": [],
         "watch": {
           "offered": false,
           "label": "Watch",
@@ -2338,6 +2334,7 @@
         "gate": null,
         "gate_why": null,
         "sequencing": null,
+        "sequenced": [],
         "found_by": "the owner, walking the pontoon on 2026-09-02.",
         "card_ref": null,
         "suggestion_kind": "idea",
@@ -2415,20 +2412,17 @@
           "label": "Start",
           "why": "Start is offered in Up next and Planned; this card is in Backlog."
         },
-        "start_anyway": {
-          "offered": false,
-          "label": "Start anyway",
-          "why": "There is no collision to override."
-        },
         "readiness": {
           "state": "elsewhere",
           "why": "Start is offered in Up next and Planned; this card is in Backlog.",
           "cards": [],
-          "files": []
+          "files": [],
+          "waits": []
         },
         "placement": null,
         "placement_note": "the runtime has not read this board yet",
         "collision": null,
+        "waits": [],
         "watch": {
           "offered": false,
           "label": "Watch",
@@ -2620,20 +2614,17 @@
           "label": "Start",
           "why": "Start is offered in Up next and Planned; this card is in Backlog."
         },
-        "start_anyway": {
-          "offered": false,
-          "label": "Start anyway",
-          "why": "There is no collision to override."
-        },
         "readiness": {
           "state": "elsewhere",
           "why": "Start is offered in Up next and Planned; this card is in Backlog.",
           "cards": [],
-          "files": []
+          "files": [],
+          "waits": []
         },
         "placement": null,
         "placement_note": "the runtime has not read this board yet",
         "collision": null,
+        "waits": [],
         "watch": {
           "offered": false,
           "label": "Watch",
@@ -2809,20 +2800,17 @@
           "label": "Start",
           "why": "Start is offered in Up next and Planned; this card is in Backlog."
         },
-        "start_anyway": {
-          "offered": false,
-          "label": "Start anyway",
-          "why": "There is no collision to override."
-        },
         "readiness": {
           "state": "elsewhere",
           "why": "Start is offered in Up next and Planned; this card is in Backlog.",
           "cards": [],
-          "files": []
+          "files": [],
+          "waits": []
         },
         "placement": null,
         "placement_note": "the runtime has not read this board yet",
         "collision": null,
+        "waits": [],
         "watch": {
           "offered": false,
           "label": "Watch",
@@ -2960,6 +2948,7 @@
         "gate": null,
         "gate_why": null,
         "sequencing": null,
+        "sequenced": [],
         "found_by": "the meter reconcile of 2026-08-29.",
         "card_ref": null,
         "suggestion_kind": "idea",
@@ -3026,20 +3015,17 @@
           "label": "Start",
           "why": "Start is offered in Up next and Planned; this card is in Backlog."
         },
-        "start_anyway": {
-          "offered": false,
-          "label": "Start anyway",
-          "why": "There is no collision to override."
-        },
         "readiness": {
           "state": "elsewhere",
           "why": "Start is offered in Up next and Planned; this card is in Backlog.",
           "cards": [],
-          "files": []
+          "files": [],
+          "waits": []
         },
         "placement": null,
         "placement_note": "the runtime has not read this board yet",
         "collision": null,
+        "waits": [],
         "watch": {
           "offered": false,
           "label": "Watch",
@@ -3177,6 +3163,7 @@
         "gate": null,
         "gate_why": null,
         "sequencing": null,
+        "sequenced": [],
         "found_by": "a skipper's reply, 2026-08-31.",
         "card_ref": null,
         "suggestion_kind": "idea",
@@ -3243,20 +3230,17 @@
           "label": "Start",
           "why": "Start is offered in Up next and Planned; this card is in Backlog."
         },
-        "start_anyway": {
-          "offered": false,
-          "label": "Start anyway",
-          "why": "There is no collision to override."
-        },
         "readiness": {
           "state": "elsewhere",
           "why": "Start is offered in Up next and Planned; this card is in Backlog.",
           "cards": [],
-          "files": []
+          "files": [],
+          "waits": []
         },
         "placement": null,
         "placement_note": "the runtime has not read this board yet",
         "collision": null,
+        "waits": [],
         "watch": {
           "offered": false,
           "label": "Watch",
@@ -3394,6 +3378,7 @@
         "gate": null,
         "gate_why": null,
         "sequencing": null,
+        "sequenced": [],
         "found_by": "the owner, 2026-09-01.",
         "card_ref": null,
         "suggestion_kind": "idea",
@@ -3460,20 +3445,17 @@
           "label": "Start",
           "why": "Start is offered in Up next and Planned; this card is in Backlog."
         },
-        "start_anyway": {
-          "offered": false,
-          "label": "Start anyway",
-          "why": "There is no collision to override."
-        },
         "readiness": {
           "state": "elsewhere",
           "why": "Start is offered in Up next and Planned; this card is in Backlog.",
           "cards": [],
-          "files": []
+          "files": [],
+          "waits": []
         },
         "placement": null,
         "placement_note": "the runtime has not read this board yet",
         "collision": null,
+        "waits": [],
         "watch": {
           "offered": false,
           "label": "Watch",
@@ -3611,6 +3593,7 @@
         "gate": null,
         "gate_why": null,
         "sequencing": null,
+        "sequenced": [],
         "found_by": "the harbourmaster, 2026-09-04.",
         "card_ref": null,
         "suggestion_kind": "idea",
@@ -3677,20 +3660,17 @@
           "label": "Start",
           "why": "Start is offered in Up next and Planned; this card is in Backlog."
         },
-        "start_anyway": {
-          "offered": false,
-          "label": "Start anyway",
-          "why": "There is no collision to override."
-        },
         "readiness": {
           "state": "elsewhere",
           "why": "Start is offered in Up next and Planned; this card is in Backlog.",
           "cards": [],
-          "files": []
+          "files": [],
+          "waits": []
         },
         "placement": null,
         "placement_note": "the runtime has not read this board yet",
         "collision": null,
+        "waits": [],
         "watch": {
           "offered": false,
           "label": "Watch",
@@ -3854,6 +3834,12 @@
         "gate": "high",
         "gate_why": "the matching rule is specified; the one judgment is what counts as a fit for a catamaran.",
         "sequencing": "after #139, the four berth-first rulings.",
+        "sequenced": [
+          {
+            "words": null,
+            "number": 139
+          }
+        ],
         "found_by": null,
         "card_ref": null,
         "suggestion_kind": null,
@@ -3943,20 +3929,17 @@
           "label": "Start",
           "why": "The rule found nowhere to run: the runtime has not read this board yet"
         },
-        "start_anyway": {
-          "offered": false,
-          "label": "Start anyway",
-          "why": "There is no collision to override."
-        },
         "readiness": {
           "state": "unread",
           "why": "The rule found nowhere to run: the runtime has not read this board yet",
           "cards": [],
-          "files": []
+          "files": [],
+          "waits": []
         },
         "placement": null,
         "placement_note": "the runtime has not read this board yet",
         "collision": null,
+        "waits": [],
         "watch": {
           "offered": false,
           "label": "Watch",
@@ -4112,6 +4095,7 @@
         "gate": "high",
         "gate_why": "the price rule has three inputs and the form shows none of them until the end.",
         "sequencing": "independent of every open card.",
+        "sequenced": [],
         "found_by": null,
         "card_ref": null,
         "suggestion_kind": null,
@@ -4201,20 +4185,17 @@
           "label": "Start",
           "why": "The rule found nowhere to run: the runtime has not read this board yet"
         },
-        "start_anyway": {
-          "offered": false,
-          "label": "Start anyway",
-          "why": "There is no collision to override."
-        },
         "readiness": {
           "state": "unread",
           "why": "The rule found nowhere to run: the runtime has not read this board yet",
           "cards": [],
-          "files": []
+          "files": [],
+          "waits": []
         },
         "placement": null,
         "placement_note": "the runtime has not read this board yet",
         "collision": null,
+        "waits": [],
         "watch": {
           "offered": false,
           "label": "Watch",
@@ -4378,6 +4359,7 @@
         "gate": "high",
         "gate_why": "four screens have had no visit since June; removing them is deletion, not design.",
         "sequencing": "independent of every open card.",
+        "sequenced": [],
         "found_by": null,
         "card_ref": null,
         "suggestion_kind": null,
@@ -4467,20 +4449,17 @@
           "label": "Start",
           "why": "The rule found nowhere to run: the runtime has not read this board yet"
         },
-        "start_anyway": {
-          "offered": false,
-          "label": "Start anyway",
-          "why": "There is no collision to override."
-        },
         "readiness": {
           "state": "unread",
           "why": "The rule found nowhere to run: the runtime has not read this board yet",
           "cards": [],
-          "files": []
+          "files": [],
+          "waits": []
         },
         "placement": null,
         "placement_note": "the runtime has not read this board yet",
         "collision": null,
+        "waits": [],
         "watch": {
           "offered": false,
           "label": "Watch",
@@ -4618,6 +4597,7 @@
         "gate": "medium",
         "gate_why": "one data source replaces another; the shape is the same.",
         "sequencing": "independent of every open card.",
+        "sequenced": [],
         "found_by": null,
         "card_ref": null,
         "suggestion_kind": null,
@@ -4696,20 +4676,17 @@
           "label": "Start",
           "why": "The rule found nowhere to run: the runtime has not read this board yet"
         },
-        "start_anyway": {
-          "offered": false,
-          "label": "Start anyway",
-          "why": "There is no collision to override."
-        },
         "readiness": {
           "state": "unread",
           "why": "The rule found nowhere to run: the runtime has not read this board yet",
           "cards": [],
-          "files": []
+          "files": [],
+          "waits": []
         },
         "placement": null,
         "placement_note": "the runtime has not read this board yet",
         "collision": null,
+        "waits": [],
         "watch": {
           "offered": false,
           "label": "Watch",
@@ -4847,6 +4824,7 @@
         "gate": "high",
         "gate_why": "one message to a list the office already holds; the judgment is what counts as a boat in the harbour tonight.",
         "sequencing": "independent of every open card.",
+        "sequenced": [],
         "found_by": null,
         "card_ref": null,
         "suggestion_kind": null,
@@ -4954,20 +4932,17 @@
           "label": "Start",
           "why": "The rule found nowhere to run: the runtime has not read this board yet"
         },
-        "start_anyway": {
-          "offered": false,
-          "label": "Start anyway",
-          "why": "There is no collision to override."
-        },
         "readiness": {
           "state": "unread",
           "why": "The rule found nowhere to run: the runtime has not read this board yet",
           "cards": [],
-          "files": []
+          "files": [],
+          "waits": []
         },
         "placement": null,
         "placement_note": "the runtime has not read this board yet",
         "collision": null,
+        "waits": [],
         "watch": {
           "offered": false,
           "label": "Watch",
@@ -5135,6 +5110,7 @@
         "gate": "medium",
         "gate_why": "the fix is one parser and two call sites, fully specified; the failure mode is caught by the tests this plan adds and held by a ratchet.",
         "sequencing": "independent of every open card.",
+        "sequenced": [],
         "found_by": null,
         "card_ref": 253,
         "suggestion_kind": null,
@@ -5228,20 +5204,17 @@
           "label": "Start",
           "why": "The rule found nowhere to run: the runtime has not read this board yet"
         },
-        "start_anyway": {
-          "offered": false,
-          "label": "Start anyway",
-          "why": "There is no collision to override."
-        },
         "readiness": {
           "state": "unread",
           "why": "The rule found nowhere to run: the runtime has not read this board yet",
           "cards": [],
-          "files": []
+          "files": [],
+          "waits": []
         },
         "placement": null,
         "placement_note": "the runtime has not read this board yet",
         "collision": null,
+        "waits": [],
         "watch": {
           "offered": false,
           "label": "Watch",
@@ -5417,6 +5390,7 @@
         "gate": "medium",
         "gate_why": "the code already exists at booking time; the plan moves when it is sent.",
         "sequencing": "independent of every open card.",
+        "sequenced": [],
         "found_by": null,
         "card_ref": 241,
         "suggestion_kind": null,
@@ -5510,20 +5484,17 @@
           "label": "Start",
           "why": "The rule found nowhere to run: the runtime has not read this board yet"
         },
-        "start_anyway": {
-          "offered": false,
-          "label": "Start anyway",
-          "why": "There is no collision to override."
-        },
         "readiness": {
           "state": "unread",
           "why": "The rule found nowhere to run: the runtime has not read this board yet",
           "cards": [],
-          "files": []
+          "files": [],
+          "waits": []
         },
         "placement": null,
         "placement_note": "the runtime has not read this board yet",
         "collision": null,
+        "waits": [],
         "watch": {
           "offered": false,
           "label": "Watch",
@@ -5720,20 +5691,17 @@
           "label": "Start",
           "why": "The rule found nowhere to run: the runtime has not read this board yet"
         },
-        "start_anyway": {
-          "offered": false,
-          "label": "Start anyway",
-          "why": "There is no collision to override."
-        },
         "readiness": {
           "state": "unread",
           "why": "The rule found nowhere to run: the runtime has not read this board yet",
           "cards": [],
-          "files": []
+          "files": [],
+          "waits": []
         },
         "placement": null,
         "placement_note": "the runtime has not read this board yet",
         "collision": null,
+        "waits": [],
         "watch": {
           "offered": false,
           "label": "Watch",
@@ -5901,6 +5869,7 @@
         "gate": "xhigh",
         "gate_why": "two bookings a minute apart both succeed today and the fix is a write path with a real invariant, not a check.",
         "sequencing": "independent of every open card.",
+        "sequenced": [],
         "found_by": null,
         "card_ref": null,
         "suggestion_kind": null,
@@ -6005,20 +5974,17 @@
           "label": "Start",
           "why": "The rule found nowhere to run: the runtime has not read this board yet"
         },
-        "start_anyway": {
-          "offered": false,
-          "label": "Start anyway",
-          "why": "There is no collision to override."
-        },
         "readiness": {
           "state": "unread",
           "why": "The rule found nowhere to run: the runtime has not read this board yet",
           "cards": [],
-          "files": []
+          "files": [],
+          "waits": []
         },
         "placement": null,
         "placement_note": "the runtime has not read this board yet",
         "collision": null,
+        "waits": [],
         "watch": {
           "offered": false,
           "label": "Watch",
@@ -6189,6 +6155,7 @@
         "gate": "xhigh",
         "gate_why": "a 4,100-line file is split along seams nobody has named yet.",
         "sequencing": "independent of every open card.",
+        "sequenced": [],
         "found_by": null,
         "card_ref": null,
         "suggestion_kind": null,
@@ -6306,20 +6273,17 @@
           "label": "Start",
           "why": "The rule found nowhere to run: the runtime has not read this board yet"
         },
-        "start_anyway": {
-          "offered": false,
-          "label": "Start anyway",
-          "why": "There is no collision to override."
-        },
         "readiness": {
           "state": "unread",
           "why": "The rule found nowhere to run: the runtime has not read this board yet",
           "cards": [],
-          "files": []
+          "files": [],
+          "waits": []
         },
         "placement": null,
         "placement_note": "the runtime has not read this board yet",
         "collision": null,
+        "waits": [],
         "watch": {
           "offered": false,
           "label": "Watch",
@@ -6509,6 +6473,7 @@
         "gate": "high",
         "gate_why": "a terminal and one new invoice line.",
         "sequencing": "independent of every open card.",
+        "sequenced": [],
         "found_by": null,
         "card_ref": null,
         "suggestion_kind": null,
@@ -6598,20 +6563,17 @@
           "label": "Start",
           "why": "Start is offered in Up next and Planned; this card is in Executing."
         },
-        "start_anyway": {
-          "offered": false,
-          "label": "Start anyway",
-          "why": "There is no collision to override."
-        },
         "readiness": {
           "state": "elsewhere",
           "why": "Start is offered in Up next and Planned; this card is in Executing.",
           "cards": [],
-          "files": []
+          "files": [],
+          "waits": []
         },
         "placement": null,
         "placement_note": "the runtime has not read this board yet",
         "collision": null,
+        "waits": [],
         "watch": {
           "offered": false,
           "label": "Watch",
@@ -6779,6 +6741,7 @@
         "gate": null,
         "gate_why": null,
         "sequencing": null,
+        "sequenced": [],
         "found_by": "the security read of 2026-08-20.",
         "card_ref": null,
         "suggestion_kind": "idea",
@@ -6856,20 +6819,17 @@
           "label": "Start",
           "why": "Start is offered in Up next and Planned; this card is in Executing."
         },
-        "start_anyway": {
-          "offered": false,
-          "label": "Start anyway",
-          "why": "There is no collision to override."
-        },
         "readiness": {
           "state": "elsewhere",
           "why": "Start is offered in Up next and Planned; this card is in Executing.",
           "cards": [],
-          "files": []
+          "files": [],
+          "waits": []
         },
         "placement": null,
         "placement_note": "the runtime has not read this board yet",
         "collision": null,
+        "waits": [],
         "watch": {
           "offered": false,
           "label": "Watch",
@@ -7065,6 +7025,7 @@
         "gate": "xhigh",
         "gate_why": "research, not code: two pricing rules replayed over the 2025 season.",
         "sequencing": "independent of every open card.",
+        "sequenced": [],
         "found_by": null,
         "card_ref": null,
         "suggestion_kind": null,
@@ -7154,20 +7115,17 @@
           "label": "Start",
           "why": "Start is offered in Up next and Planned; this card is in Decision moment."
         },
-        "start_anyway": {
-          "offered": false,
-          "label": "Start anyway",
-          "why": "There is no collision to override."
-        },
         "readiness": {
           "state": "elsewhere",
           "why": "Start is offered in Up next and Planned; this card is in Decision moment.",
           "cards": [],
-          "files": []
+          "files": [],
+          "waits": []
         },
         "placement": null,
         "placement_note": "the runtime has not read this board yet",
         "collision": null,
+        "waits": [],
         "watch": {
           "offered": false,
           "label": "Watch",
@@ -7373,20 +7331,17 @@
           "label": "Start",
           "why": "Start is offered in Up next and Planned; this card is in Decision moment."
         },
-        "start_anyway": {
-          "offered": false,
-          "label": "Start anyway",
-          "why": "There is no collision to override."
-        },
         "readiness": {
           "state": "elsewhere",
           "why": "Start is offered in Up next and Planned; this card is in Decision moment.",
           "cards": [],
-          "files": []
+          "files": [],
+          "waits": []
         },
         "placement": null,
         "placement_note": "the runtime has not read this board yet",
         "collision": null,
+        "waits": [],
         "watch": {
           "offered": false,
           "label": "Watch",
@@ -7565,6 +7520,7 @@
         "gate": "xhigh",
         "gate_why": "the page's shape is the product's shape; the four rulings decide it.",
         "sequencing": "independent of every open card.",
+        "sequenced": [],
         "found_by": null,
         "card_ref": null,
         "suggestion_kind": null,
@@ -7654,20 +7610,17 @@
           "label": "Start",
           "why": "Start is offered in Up next and Planned; this card is in Decision moment."
         },
-        "start_anyway": {
-          "offered": false,
-          "label": "Start anyway",
-          "why": "There is no collision to override."
-        },
         "readiness": {
           "state": "elsewhere",
           "why": "Start is offered in Up next and Planned; this card is in Decision moment.",
           "cards": [],
-          "files": []
+          "files": [],
+          "waits": []
         },
         "placement": null,
         "placement_note": "the runtime has not read this board yet",
         "collision": null,
+        "waits": [],
         "watch": {
           "offered": false,
           "label": "Watch",
@@ -7871,20 +7824,17 @@
           "label": "Start",
           "why": "Start is offered in Up next and Planned; this card is in Decision moment."
         },
-        "start_anyway": {
-          "offered": false,
-          "label": "Start anyway",
-          "why": "There is no collision to override."
-        },
         "readiness": {
           "state": "elsewhere",
           "why": "Start is offered in Up next and Planned; this card is in Decision moment.",
           "cards": [],
-          "files": []
+          "files": [],
+          "waits": []
         },
         "placement": null,
         "placement_note": "the runtime has not read this board yet",
         "collision": null,
+        "waits": [],
         "watch": {
           "offered": false,
           "label": "Watch",
@@ -8049,6 +7999,7 @@
         "gate": "high",
         "gate_why": "seven well-known items.",
         "sequencing": "independent of every open card.",
+        "sequenced": [],
         "found_by": null,
         "card_ref": null,
         "suggestion_kind": null,
@@ -8140,20 +8091,17 @@
           "label": "Start",
           "why": "Start is offered in Up next and Planned; this card is in Executed."
         },
-        "start_anyway": {
-          "offered": false,
-          "label": "Start anyway",
-          "why": "There is no collision to override."
-        },
         "readiness": {
           "state": "elsewhere",
           "why": "Start is offered in Up next and Planned; this card is in Executed.",
           "cards": [],
-          "files": []
+          "files": [],
+          "waits": []
         },
         "placement": null,
         "placement_note": "the runtime has not read this board yet",
         "collision": null,
+        "waits": [],
         "watch": {
           "offered": false,
           "label": "Watch",
@@ -8354,20 +8302,17 @@
           "label": "Start",
           "why": "Start is offered in Up next and Planned; this card is in Not now."
         },
-        "start_anyway": {
-          "offered": false,
-          "label": "Start anyway",
-          "why": "There is no collision to override."
-        },
         "readiness": {
           "state": "elsewhere",
           "why": "Start is offered in Up next and Planned; this card is in Not now.",
           "cards": [],
-          "files": []
+          "files": [],
+          "waits": []
         },
         "placement": null,
         "placement_note": "the runtime has not read this board yet",
         "collision": null,
+        "waits": [],
         "watch": {
           "offered": false,
           "label": "Watch",
@@ -8475,7 +8420,7 @@
       }
     },
     {
-      "case": "collides",
+      "case": "shares ground",
       "card": {
         "number": 900,
         "title": "A card in every state",
@@ -8488,12 +8433,17 @@
         "kind": null,
         "fix": null,
         "state": {
-          "word": "collides with #241 · waits",
-          "meaning": "quiet",
-          "detail": null,
+          "word": "shares ground with #241",
+          "meaning": "proven",
+          "detail": "Shares ground: #241's lane is editing engine/metering.py right now. The second to fold rebases.",
           "loop": null,
-          "door": null,
-          "hint": "1 file · open to see"
+          "door": {
+            "name": "start",
+            "label": "Start",
+            "why": "Start · fable on alpha — shares 1 file with #241's lane; the second to fold rebases — Shares ground: #241's lane is editing engine/metering.py right now. The second to fold rebases.",
+            "primary": true
+          },
+          "hint": null
         },
         "claims": [],
         "folded": [],
@@ -8501,6 +8451,49 @@
         "age_date": "2026-09-04",
         "place": {
           "column": "Up next",
+          "group": null,
+          "position": 0
+        },
+        "lane_state": "none",
+        "colliding": null,
+        "progress": null,
+        "standing": {
+          "actor": "corpus",
+          "evidence": null,
+          "state": "trusted",
+          "words": null
+        },
+        "reading": null,
+        "planning": null
+      }
+    },
+    {
+      "case": "waits",
+      "card": {
+        "number": 900,
+        "title": "A card in every state",
+        "essence": "Every berth is billed by the metre.",
+        "essence_source": "card",
+        "gate": "high",
+        "tags": [],
+        "document_state": "plan",
+        "document_path": "docs/plans/2026-09-04-a-card-in-every-state.md",
+        "kind": null,
+        "fix": null,
+        "state": {
+          "word": "waits on #139",
+          "meaning": "quiet",
+          "detail": "Start waits on the plan's own word: its Sequencing names #139 (Decision moment); it opens by itself once every named card is in Executed or Done.",
+          "loop": null,
+          "door": null,
+          "hint": "open to see"
+        },
+        "claims": [],
+        "folded": [],
+        "is_new": false,
+        "age_date": "2026-09-04",
+        "place": {
+          "column": "Planned",
           "group": null,
           "position": 0
         },

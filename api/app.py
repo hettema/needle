@@ -44,10 +44,6 @@ class Answer(BaseModel):
     text: str
 
 
-class StartBody(BaseModel):
-    anyway: bool = False
-
-
 class SignalAnswer(BaseModel):
     delivered: bool
 
@@ -191,10 +187,8 @@ def create_app(store: Store | None = None, *, dist: Path | None = FRONTEND_DIST)
             raise StoreFailure(f"The store refused: {type(error).__name__}: {error}") from error
 
     @app.post("/api/projects/{slug}/cards/{number}/start", response_model=DoorResult)
-    async def start(slug: str, number: int, body: StartBody, request: Request) -> DoorResult:
-        return await through_door(
-            request, slug, lambda doors: doors.start(slug, number, anyway=body.anyway)
-        )
+    async def start(slug: str, number: int, request: Request) -> DoorResult:
+        return await through_door(request, slug, lambda doors: doors.start(slug, number))
 
     @app.post("/api/projects/{slug}/cards/{number}/answer", response_model=DoorResult)
     async def answer(slug: str, number: int, body: Answer, request: Request) -> DoorResult:
@@ -279,7 +273,7 @@ def create_app(store: Store | None = None, *, dist: Path | None = FRONTEND_DIST)
     async def brief(slug: str, number: int, request: Request) -> str:
         live = await live_for(request, slug)
         doors: Doors = request.app.state.doors
-        return doors.brief_for_lane(live.detail(slug, number), slug, overrode=None)
+        return doors.brief_for_lane(live.detail(slug, number), slug)
 
     @app.get("/api/word", response_model=Word)
     async def word(cwd: str, request: Request) -> Word:

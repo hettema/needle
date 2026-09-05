@@ -8,7 +8,7 @@ needle row SLUG N KIND "text"            # one row on the card
 needle close SLUG N --delivered … --watch … [--review PATH] [--column COL]
 needle reading SLUG N delivered|not-delivered|cannot-tell "…" [--watch "…"]
 needle fold [--main] [--worktree PATH]   # fast-forward push to origin/develop, trunk synced
-needle start-card SLUG N [--anyway]      # Start, through the running board
+needle start-card SLUG N                # Start, through the running board
 needle hook install REPO                 # register the session hook in REPO/.claude/settings.json
 needle sync [SLUG]                       # level each main checkout with origin/develop now
 needle signals [SLUG]                    # read every due signal now
@@ -98,9 +98,7 @@ def card(args: argparse.Namespace, live: Live, runtime: Runtime, loops: Loops, d
         # The riders name the other live lanes, which only a read of the machine knows.
         loops.reconcile_now()
     detail = live.detail(args.slug, args.number)
-    print(
-        doors.brief_for_lane(detail, args.slug, overrode=None) if args.lane else _brief(live, args)
-    )
+    print(doors.brief_for_lane(detail, args.slug) if args.lane else _brief(live, args))
     return 0
 
 
@@ -273,7 +271,7 @@ def _folds_over(live: Live, slug: str, number: int, mine: set[str]) -> list[tupl
 def start_card(args: argparse.Namespace) -> int:
     """Start through the running board, so the launch is watched like the button's."""
     url = f"{args.url.rstrip('/')}/api/projects/{args.slug}/cards/{args.number}/start"
-    body = json.dumps({"anyway": bool(args.anyway)}).encode("utf-8")
+    body = json.dumps({}).encode("utf-8")
     request = urllib.request.Request(url, data=body, headers={"Content-Type": "application/json"})
     try:
         with urllib.request.urlopen(request, timeout=120) as response:
@@ -475,7 +473,7 @@ def dial(args: argparse.Namespace, live: Live, runtime: Runtime, loops: Loops, d
     control = Dial(live, runtime, loops, doors)
     loops.reconcile_now()
     if args.setting is None and args.lanes is None:
-        state = live.dial_state()
+        state = control.state()
     else:
         current = live.store.dial()
         on = current.on if args.setting is None else args.setting == "on"
@@ -484,8 +482,11 @@ def dial(args: argparse.Namespace, live: Live, runtime: Runtime, loops: Loops, d
     setting = state.dial
     print(
         f"auto-fix {'on' if setting.on else 'off'}, {setting.lanes} fix lane"
-        f"{'' if setting.lanes == 1 else 's'} at most; {state.running} live now; the machine is "
+        f"{'' if setting.lanes == 1 else 's'} at most; {state.running} live now"
+        + (f", {state.held} held" if state.held else "")
+        + "; the machine is "
         f"{'quiet' if state.quiet else 'not quiet (a lane has hands on a project)'}"
+        + (f"; {state.full}" if state.full else "")
         + (f"; changed {setting.changed_at.isoformat()}" if setting.changed_at else "")
         + (f"; first turned on {setting.first_on_at.isoformat()}" if setting.first_on_at else "")
     )
@@ -601,7 +602,6 @@ def register(sub: "argparse._SubParsersAction[argparse.ArgumentParser]") -> None
     p_start = sub.add_parser("start-card", help="Start a card through the running board")
     p_start.add_argument("slug")
     p_start.add_argument("number", type=int)
-    p_start.add_argument("--anyway", action="store_true", help="override a named lane collision")
     p_start.add_argument("--url", default=DEFAULT_URL)
     p_start.set_defaults(run=start_card)
 

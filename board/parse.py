@@ -19,6 +19,7 @@ from domain.document import (
     Item,
     Review,
     ReviewPass,
+    SequencedCard,
     Stance,
     SuggestionKind,
 )
@@ -309,6 +310,43 @@ def _paragraph_ends(line: str) -> bool:
         or _LIST_MARKER.match(stripped) is not None
         or _HEAD_FIELD.match(stripped) is not None
     )
+
+
+_SEQUENCING_FILLER = re.compile(
+    r"^(?:\s*(?:(?:after|behind|once|waits?\s+on|depends?\s+on|follows?|cards?|then|and|also|"
+    r"both|the)\b|[,;&]))*\s*",
+    re.I,
+)
+"""What may stand between the card names on a Sequencing line without being
+prose: the words that say "after" and the separators between names."""
+_SEQUENCING_CARD = re.compile(
+    r"^((?:[A-Za-z][\w'’-]*\s+){0,2})#(\d+)\b\s*(?:\((?:[^()]|\([^()]*\))*\))?\s*"
+)
+"""One name: up to two words (a project's), the `#N`, and a parenthesis the
+plan may hang on it — "Needle #20 (Needle's plan 08, whose item 2 …)"."""
+
+
+def sequenced_cards_of(line: str | None) -> list[SequencedCard]:
+    """The cards a `Sequencing:` line names first, in order, each with the
+    words before its `#` as written (the plan "as many lanes as the machine
+    can hold", item 2). The names lead and the prose follows: the reading
+    stops at the first thing that is neither a name, a filler word nor a
+    separator, so "after #222 (shipped), and after #235 folds — it fixes …"
+    names two cards, and "the lane's migration … the live plan for #384 …"
+    names none. Whether the words before a `#` are a project's is the
+    board's to say (`board/sequencing.py`)."""
+    if not line:
+        return []
+    rest = line
+    found: list[SequencedCard] = []
+    while True:
+        rest = _SEQUENCING_FILLER.sub("", rest, count=1)
+        match = _SEQUENCING_CARD.match(rest)
+        if match is None:
+            return found
+        words = match.group(1).strip() or None
+        found.append(SequencedCard(words=words, number=int(match.group(2))))
+        rest = rest[match.end() :]
 
 
 def handouts_of(text: str) -> list[Handout]:
@@ -664,6 +702,7 @@ def parse_document(
     heading, intent = _intent(text)
     found_by = _field(fields, "Found by")
     fix, fix_note = fix_of(kind, fields)
+    sequencing = _field(fields, "Sequencing")
     return Document(
         kind=kind,
         stem=stem,
@@ -675,7 +714,8 @@ def parse_document(
         status_word=status_word,
         gate=gate,
         gate_why=gate_why,
-        sequencing=_field(fields, "Sequencing"),
+        sequencing=sequencing,
+        sequenced=sequenced_cards_of(sequencing) if kind == DocumentKind.PLAN else [],
         found_by=found_by,
         card_ref=int(card_match.group(1)) if card_match else None,
         suggestion_kind=suggestion_kind_of(kind, _field(fields, "Kind"), title, found_by),

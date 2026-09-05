@@ -84,9 +84,29 @@ rather than the half that showed things. The lessons, carried as principles:
 3. **Sessions push; the board never polls a session.** A hook at session
    start, stop and end writes to the board. A poll that "opens terminals and
    raises toasts" as a side effect of a read was 0.1's deepest trap.
-4. **Concurrency is visible before Start.** A plan declares what it touches; the
-   board shows which cards can run beside which, and refuses a collision
-   unless the owner overrides it with the reason in front of him.
+4. **Shared ground is a cost the board shows, never a door it closes.** This
+   lesson was first written as a lock: a plan declared what it touched, and
+   the board refused a Start whose files another lane was on unless the owner
+   overrode it. The night of 2026-09-05, the dial's first on Hello Revenue,
+   showed what the lock protected: four slots, six hours, five folds, three
+   slots waiting two and a half hours behind the owner's own lane on a test
+   file and a manifest. Nothing the fold does not already protect, at the cost
+   of most of the machine. The owner, that morning: "I'm the one scared of
+   collisions without actually understanding how a large team working on a
+   system actually uses git to not kill each other's work. The intent is to be
+   able to let as many sessions as we want work concurrently, safely, whilst
+   maintaining output quality and without crashing my system." The fold is the
+   guard: a lane rebases on the trunk, runs the full suite on the levelled
+   tree, and fast-forwards, or it does not land. That is how a team on git
+   works — nobody locks a file, the second to land pays the merge, the suite
+   is the judge, and the one conflict that matters (two lanes changing one
+   behaviour with no textual overlap) is caught by the suite and by nothing a
+   lock could see. So the board still declares and still shows: what a plan
+   shares with the lanes that run is on both cards and in the lane's brief, so
+   the session rebases early and often. The one reason a Start waits on
+   another card is the plan's own word, its `Sequencing:` line naming the
+   cards it must follow. The machine's memory is the other ceiling, and the
+   board lowers its number to it; it never raises the number the owner set.
 5. **A door either opens and proves it, or says why not.** Every door the
    board offers verifies its effect by positive evidence and fails loudly.
    Silence was how 0.1 ate the owner's typed idea while toasting success.

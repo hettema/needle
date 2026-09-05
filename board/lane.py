@@ -15,6 +15,7 @@ from pydantic import BaseModel
 
 from board.brief import lane_name, lane_path
 from board.collision import drift
+from board.sequencing import holding, where
 from domain.audit import AuditEntry, AuditKind
 from domain.card import Actor, Card
 from domain.column import Column
@@ -35,6 +36,7 @@ from domain.lane import (
     Progress,
     Readiness,
     StartState,
+    Wait,
 )
 from domain.launch import Rescue
 from domain.row import RowKind
@@ -641,6 +643,7 @@ def nothing_read(card: Card, project_path: str, now: datetime) -> tuple[Lane, "D
         suggestion_live=card.link is not None
         and card.link.kind == DocumentKind.SUGGESTION
         and not card.link.archived,
+        waits=[],
     )
     return lane, doors
 
@@ -665,14 +668,18 @@ def doors_for(
     signal_due_for_owner: bool,
     signal_evidence: str | None,
     suggestion_live: bool,
+    waits: list[Wait],
 ) -> Doors:
     """`suggestion_live`: the card's document is a suggestion still in its
     live folder, so Plan may write the plan that carries it. `signal_evidence`
     is a reading session's cannot-tell in its words, when that is why the
-    owner is asked (plan 09, item 4)."""
+    owner is asked (plan 09, item 4). `waits` is every card the plan's
+    Sequencing line names, placed: the one hold on a Start that is another
+    card's (`board/sequencing.py`)."""
     live = lane.session is not None and lane.session.pid is not None and lane.state in HANDS_ON
     background = live and lane.session is not None and lane.session.kind == SessionKind.BACKGROUND
-    collides = collision is not None and collision.verdict == CollisionVerdict.COLLIDES
+    shares = collision is not None and collision.verdict == CollisionVerdict.COLLIDES
+    held_by = holding(waits)
 
     # Start and the pill are one judgment: each branch names both.
     if not gate_named:
@@ -698,10 +705,30 @@ def doors_for(
     elif placement is None:
         start = _closed("Start", f"The rule found nowhere to run: {placement_note}")
         state = StartState.UNREAD if placement_note == UNREAD else StartState.NOWHERE
-    elif collides:
+    elif held_by:
+        # The plan's own word is the one hold (ruling 3): it says which
+        # cards it waits on, and the door opens by itself once they ship.
+        start = _closed(
+            "Start",
+            "Start waits on the plan's own word: its Sequencing names "
+            + ", ".join(where(w) for w in held_by)
+            + "; it opens by itself once every named card is in Executed or Done.",
+        )
+        state = StartState.WAITS
+    elif shares:
+        # Shared ground is a cost the door shows, never a reason to close
+        # (INTENT.md lesson 4): the label says what it shares, the reason
+        # names the lanes and the files, and the fold settles it.
         assert collision is not None
-        start = _closed("Start", f"Lane collision — {collision.sentence}")
-        state = StartState.COLLIDES
+        count = len(collision.files)
+        start = _open(
+            f"Start · {placement.model.value} on {placement.slot} — shares "
+            f"{count} file{'' if count == 1 else 's'} with "
+            + ", ".join(f"#{n}'s lane" for n in collision.cards)
+            + "; the second to fold rebases",
+            collision.sentence,
+        )
+        state = StartState.SHARES
     else:
         start = _open(
             f"Start · {placement.model.value} on {placement.slot}",
@@ -711,23 +738,9 @@ def doors_for(
     readiness = Readiness(
         state=state,
         why=start.why,
-        cards=collision.cards if collision is not None and collides else [],
-        files=collision.files if collision is not None and collides else [],
-    )
-    start_anyway = (
-        _open(
-            f"Start anyway · {placement.model.value} on {placement.slot}",
-            f"Overrides the collision with its reason in front of you: {collision.sentence}",
-        )
-        if not start.offered
-        and collision is not None
-        and collision.verdict == CollisionVerdict.COLLIDES
-        and placement is not None
-        and gate_named
-        and card.place.column in STARTABLE_COLUMNS
-        and not live
-        and lane.path is None
-        else _closed("Start anyway", "There is no collision to override.")
+        cards=collision.cards if collision is not None and state == StartState.SHARES else [],
+        files=collision.files if collision is not None and state == StartState.SHARES else [],
+        waits=held_by if state == StartState.WAITS else [],
     )
     if background:
         if lane.window_open:
@@ -814,11 +827,11 @@ def doors_for(
         signal_door = _closed("Delivered?", "No signal waits on your reading.")
     return Doors(
         start=start,
-        start_anyway=start_anyway,
         readiness=readiness,
         placement=placement,
         placement_note=placement_note,
         collision=collision,
+        waits=waits,
         watch=watch,
         answer=answer,
         discuss=discuss,

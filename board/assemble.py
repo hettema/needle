@@ -89,7 +89,11 @@ CLAIM_WORDS: dict[Claim, tuple[str, str]] = {
 """Each claim's words, singular and plural: the head's breakdown (plan 27, item 1)."""
 
 NO_DIAL = DialState(
-    dial=Dial(on=False, lanes=1, changed_at=None, first_on_at=None), running=0, quiet=True
+    dial=Dial(on=False, lanes=1, changed_at=None, first_on_at=None),
+    running=0,
+    held=0,
+    full=None,
+    quiet=True,
 )
 """The dial before the store has been asked: off, as a board never told otherwise is."""
 
@@ -574,12 +578,25 @@ def state_of(
                     primary=True,
                 ),
             )
-        if readiness.state == StartState.COLLIDES:
-            files = len(readiness.files)
+        if readiness.state == StartState.SHARES:
+            # Shared ground is shown, never waited on (INTENT.md lesson 4):
+            # the same door as a free card, and the ground in its reason.
             return _state(
-                f"collides with {_cards(readiness.cards)} · waits",
+                f"shares ground with {_cards(readiness.cards)}",
+                Meaning.PROVEN,
+                detail=readiness.why,
+                door=_door(
+                    FaceDoorName.START,
+                    "Start",
+                    f"{doors.start.label} — {doors.start.why}",
+                    primary=True,
+                ),
+            )
+        if readiness.state == StartState.WAITS:
+            return _state(
+                "waits on " + ", ".join(w.label for w in readiness.waits),
                 Meaning.QUIET,
-                hint=f"{files} file{'' if files == 1 else 's'} · {OPEN_TO_SEE}" if files else None,
+                detail=readiness.why,
             )
         if readiness.state == StartState.UNREAD:
             return _state("not read yet", Meaning.QUIET, detail=readiness.why)

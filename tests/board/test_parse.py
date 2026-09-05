@@ -32,6 +32,7 @@ def test_a_plan_head_is_read_whole():
     assert document.gate == Gate.MEDIUM
     assert document.gate_why == "the fix is one parser and two call sites."
     assert document.sequencing == "independent of every open card."
+    assert document.sequenced == []
     assert document.card_ref == 253
     assert [f.key for f in document.head_fields] == [
         "Status",

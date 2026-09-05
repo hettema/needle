@@ -1,5 +1,6 @@
-"""Concurrency is visible before Start (INTENT.md lesson 4): the plan's
-footprint against what is running."""
+"""Shared ground is a cost the card shows, never a door it closes (INTENT.md
+lesson 4): the plan's footprint against what is running, every lane on it
+named, and the fold settling it."""
 
 from board.collision import drift, footprint, verdict
 from domain.lane import CollisionVerdict
@@ -16,16 +17,23 @@ def test_the_footprint_is_the_named_files_that_exist():
     assert footprint(PLAN, exists.__contains__) == exists
 
 
-def test_an_edit_in_progress_is_reported_before_a_declared_overlap():
+def test_every_lane_on_the_ground_is_named_an_edit_in_progress_first():
     mine = {"api/app.py", "board/moves.py"}
     said = verdict(mine, editing={7: {"board/moves.py"}}, declared={9: {"api/app.py"}})
     assert said.verdict == CollisionVerdict.COLLIDES
-    assert said.sentence == "#7's lane is editing board/moves.py right now."
-    assert said.files == ["board/moves.py"] and said.cards == [7]
+    assert said.sentence == (
+        "Shares ground: #7's lane is editing board/moves.py right now; #9's lane's plan "
+        "names api/app.py too. The second to fold rebases."
+    )
+    assert said.files == ["api/app.py", "board/moves.py"] and said.cards == [7, 9]
     declared_only = verdict(mine, editing={7: set()}, declared={9: {"api/app.py"}})
     assert declared_only.verdict == CollisionVerdict.COLLIDES
-    assert "has not opened api/app.py yet" in declared_only.sentence
+    assert declared_only.sentence.startswith("Shares ground: #9's lane's plan names api/app.py")
     assert declared_only.cards == [9]
+    # A file a lane is editing is not named twice when its plan names it too.
+    both = verdict(mine, editing={7: {"api/app.py"}}, declared={7: {"api/app.py"}})
+    assert both.files == ["api/app.py"] and both.cards == [7]
+    assert both.sentence.count("api/app.py") == 1
 
 
 def test_clear_and_unknown_say_so():

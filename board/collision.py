@@ -1,13 +1,15 @@
-"""Whether a card can run beside what is running: the plan's footprint against
+"""What a card shares with what is running: the plan's footprint against
 every live lane's declared footprint and actual edits — and, once lanes run,
 whether two of them have drifted into each other's files.
 
-Concurrency is visible before Start (INTENT.md lesson 4). A plan declares
-what it touches by naming files in backticks; a lane's actual edits are what
-its checkout has changed. Both count, and the stronger reason — an edit in
-progress — is reported first. While lanes run the board re-reads every live
-worktree's actual diff and names two lanes editing the same file as
-colliding, on both cards, before the fold (plan 07, item 2). Pure: the
+Shared ground is a cost the card shows, never a door it closes (INTENT.md
+lesson 4, rewritten 2026-09-05): a plan declares what it touches by naming
+files in backticks; a lane's actual edits are what its checkout has changed.
+Both are named on the Start door so the session rebases early, and the fold
+— rebase, full suite, fast-forward — settles what they share. While lanes
+run the board re-reads every live worktree's actual diff and names two
+lanes editing the same file as colliding, on both cards, before the fold
+(plan 07, item 2): that is about two lanes editing now, and stays. Pure: the
 caller reads the files and the git state and hands them in.
 """
 
@@ -17,6 +19,7 @@ from collections.abc import Callable
 from domain.lane import Collision, CollisionVerdict
 
 _NAMED_PATH = re.compile(r"`([\w.-]+(?:/[\w.-]+)+\.\w+)(?:::[\w.:]+|#[\w.-]+|:\d+)?`")
+SECOND_TO_FOLD = "The second to fold rebases."
 
 
 def footprint(text: str, exists: Callable[[str], bool]) -> set[str]:
@@ -39,7 +42,9 @@ def verdict(
     declared: dict[int, set[str]],
 ) -> Collision:
     """`editing` and `declared` map a live lane's card to the files it is
-    changing now, and to the files its plan names."""
+    changing now, and to the files its plan names. Every lane on this
+    plan's ground is named, an edit in progress before a plan's word, so
+    the door says all of what the lane will rebase over."""
     if not mine:
         return Collision(
             verdict=CollisionVerdict.UNKNOWN,
@@ -47,27 +52,28 @@ def verdict(
             files=[],
             cards=[],
         )
-    for who, files in editing.items():
-        overlap = sorted(mine & files)
+    clauses: list[str] = []
+    files: set[str] = set()
+    cards: set[int] = set()
+    for who, theirs in editing.items():
+        overlap = sorted(mine & theirs)
         if overlap:
-            return Collision(
-                verdict=CollisionVerdict.COLLIDES,
-                sentence=f"{_lane(who)} is editing {_shown(overlap)} right now.",
-                files=overlap,
-                cards=[who],
-            )
-    for who, files in declared.items():
-        overlap = sorted(mine & files)
+            clauses.append(f"{_lane(who)} is editing {_shown(overlap)} right now")
+            files |= set(overlap)
+            cards.add(who)
+    for who, theirs in declared.items():
+        overlap = sorted((mine & theirs) - files)
         if overlap:
-            return Collision(
-                verdict=CollisionVerdict.COLLIDES,
-                sentence=(
-                    f"{_lane(who)} has not opened {_shown(overlap)} yet, but its plan names "
-                    "the same ground."
-                ),
-                files=overlap,
-                cards=[who],
-            )
+            clauses.append(f"{_lane(who)}'s plan names {_shown(overlap)} too")
+            files |= set(overlap)
+            cards.add(who)
+    if clauses:
+        return Collision(
+            verdict=CollisionVerdict.COLLIDES,
+            sentence="Shares ground: " + "; ".join(clauses) + f". {SECOND_TO_FOLD}",
+            files=sorted(files),
+            cards=sorted(cards),
+        )
     return Collision(
         verdict=CollisionVerdict.CLEAR,
         sentence="No running lane or trunk session touches this plan's files.",

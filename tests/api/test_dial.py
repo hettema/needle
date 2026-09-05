@@ -8,6 +8,8 @@ session's question leaves the card to the owner (item 4); a `Fix: when`
 trigger is read by the signal loop and delivered makes the defect eligible
 (item 5); `needle fixes` counts the loop (item 6)."""
 
+import json
+import os
 import shutil
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
@@ -63,14 +65,23 @@ def write_defect(repo: Path, stem: str, title: str, head: str, body: str = "x") 
     return f"docs/slice-suggestions/{stem}.md"
 
 
-def land_plan(repo: Path, suggestion_path: str, stem: str, title: str, *, terrain: str = "") -> str:
+def land_plan(
+    repo: Path,
+    suggestion_path: str,
+    stem: str,
+    title: str,
+    *,
+    terrain: str = "",
+    sequencing: str | None = None,
+) -> str:
     """What the planning session does: the plan carrying the suggestion,
     committed in the project's checkout, the suggestion moved to done/."""
     plan = repo / "docs" / "plans" / f"{stem}.md"
     plan.write_text(
         f"# {title}\n\n**Status:** PENDING\n**Written:** 2026-09-05, by the dial's planning "
         f"session\n**Effort gate:** medium — one edit and a check\n**Carries:** {suggestion_path}\n"
-        "**Class:** a boot check refuses a clock that disagrees with the office\n\n"
+        + (f"**Sequencing:** {sequencing}\n" if sequencing else "")
+        + "**Class:** a boot check refuses a clock that disagrees with the office\n\n"
         f"## Intent\n\nThe display reads the office's clock.{terrain}\n\n"
         "### 1. The clock\n\nDone means: the display never keeps its own.\n",
         encoding="utf-8",
@@ -97,6 +108,8 @@ def test_the_dial_is_off_until_turned_persists_and_is_audited_as_the_owners(
     assert state == {
         "dial": {"on": False, "lanes": 1, "changed_at": None, "first_on_at": None},
         "running": 0,
+        "held": 0,
+        "full": None,
         "quiet": True,
     }
     turned = turn(client, on=True, lanes=2)
@@ -251,6 +264,200 @@ def test_with_the_dial_on_the_oldest_now_defect_is_planned_then_started_by_the_d
     assert [w["why"] for w in report["waiting"] if w["card_number"] == gate_log] == [
         "the dial is planning it now"
     ]
+
+
+def test_a_held_plan_does_not_count_and_the_memory_floor_stops_the_beat(
+    client: TestClient, machine_floor: Floor, repo: Path, store: Store, capsys
+):
+    """The plan "as many lanes as the machine can hold", item 3: a planned
+    card whose Start is closed holds no slot, so the next eligible defect is
+    taken; under the floor the beat takes nothing and the head says so with
+    the numbers; and the number the owner set is never raised."""
+    tide = number_of(client, TIDE)
+    live = client.app.state.loops.live
+    write_defect(
+        repo,
+        "2026-09-05-the-gate-log-loses-its-last-line",
+        "The gate log loses its last line",
+        "**Fix:** now",
+    )
+    live.rescan("proj")
+    reconcile(client)
+    gate_log = number_of(client, "The gate log loses its last line")
+    turn(client, on=True, lanes=1)
+    tick(client)
+    assert len(machine_floor.state()["launch_log"]) == 1, "the tide clock is being planned"
+    # #241's lane is live and editing engine/metering.py, the file the tide
+    # plan will name: shared ground, which is never a reason to wait.
+    (repo / "engine").mkdir(exist_ok=True)
+    (repo / "engine" / "metering.py").write_text("x\n")
+    git(repo, "add", ".")
+    git(repo, "commit", "-q", "-m", "the meter")
+    other = repo / ".claude" / "worktrees" / "card-241-the-deploy"
+    git(repo, "worktree", "add", "-q", "-b", "card-241-the-deploy", str(other))
+    (other / "engine" / "metering.py").write_text("changed\n")
+    session_id = machine_floor.write_job(
+        "beta", "beef0241", cwd=str(other), worktree=str(other), name="card-241-the-deploy"
+    )
+    machine_floor.write_process("beta", session_id, os.getpid(), cwd=str(other))
+    # Its plan lands waiting on a card in Executing: the Start door is closed
+    # by the plan's own word, and the card holds no slot.
+    doors.move(client, 228, "Executing")
+    land_plan(
+        repo,
+        TIDE_PATH,
+        "2026-09-05-the-quay-clock-is-the-offices",
+        "The quay clock is the office's",
+        terrain=" Touches `engine/metering.py`.",
+        sequencing="after #228 (the note).",
+    )
+    live.rescan("proj")
+    tick(client)
+    assert column_of(client, tide) == "Planned"
+    history = detail(client, tide)["history"]
+    assert any(
+        h["detail"].startswith("Start waits: Start waits on the plan's own word") for h in history
+    )
+    # The same beat took the next defect: a held plan holds nothing, and the
+    # planning session it opened is what counts now.
+    assert len(machine_floor.state()["launch_log"]) == 2, "the next defect is taken"
+    assert machine_floor.state()["launch_log"][1]["argv"][-1].startswith(
+        "A plan to write for a defect the dial took"
+    )
+    assert [(f.card_number, f.stage.value) for f in store.fix_lanes("proj")] == [
+        (tide, "planned"),
+        (gate_log, "planning"),
+    ]
+    state = board(client)["dial"]
+    assert (state["running"], state["held"], state["full"]) == (1, 1, None)
+    assert main(["dial"]) == 0
+    assert "1 fix lane at most; 1 live now, 1 held; the machine is" in capsys.readouterr().out
+
+    # The machine runs short: the beat opens nothing, even with the number
+    # allowing it, and the head reads the two numbers.
+    doors.move(client, 228, "Done")
+    machine_floor.set_memory(available_gb=2.0, swap_free_gb=8.0)
+    turn(client, on=True, lanes=3)
+    tick(client)
+    assert len(machine_floor.state()["launch_log"]) == 2, "nothing opened under the floor"
+    assert column_of(client, tide) == "Planned", "the held plan's Start waited on the floor too"
+    full = "the machine is full: 2.0 GB available, 3 GB needed"
+    assert board(client)["dial"]["full"] == full
+    assert any(h["detail"] == f"Start waits: {full}" for h in detail(client, tide)["history"])
+    assert main(["fixes", "proj"]) == 0
+    out = capsys.readouterr().out
+    assert "The night audit re-reads the whole harbour log — unmarked" in out
+    # The terminal reads the machine itself, in its own process. The tide
+    # plan's door is open now (#228 shipped), so it counts: the number is
+    # what bounds plans written ahead of a full machine.
+    assert main(["dial"]) == 0
+    out = capsys.readouterr().out
+    assert "3 fix lanes at most; 2 live now; the machine is not quiet" in out
+    assert f"; {full}" in out
+    # Free swap short counts the same, on a machine that has swap.
+    machine_floor.set_memory(available_gb=16.0, swap_free_gb=1.0)
+    tick(client)
+    assert board(client)["dial"]["full"] == "the machine is full: 1.0 GB swap free, 3 GB needed"
+    assert len(machine_floor.state()["launch_log"]) == 2
+    # Room again: the beat opens the held plan's Start — into shared ground,
+    # which the door names and the fold settles (item 1).
+    assert detail(client, tide)["doors"]["readiness"]["state"] == "shares"
+    machine_floor.set_memory(available_gb=16.0, swap_free_gb=8.0)
+    tick(client)
+    assert board(client)["dial"]["full"] is None
+    assert column_of(client, tide) == "Executing"
+    assert len(machine_floor.state()["launch_log"]) == 3
+    started_row = next(h for h in detail(client, tide)["history"] if h["kind"] == "started")
+    assert "started by the dial; shares ground: #241's lane is editing engine/metering.py" in (
+        started_row["detail"]
+    )
+    assert "SHARED GROUND" in machine_floor.state()["launch_log"][2]["argv"][-1]
+    # The number the owner set is what he set, through all of it.
+    assert store.dial().lanes == 3
+    assert [(c.on, c.lanes) for c in store.dial_changes()] == [(True, 1), (True, 3)]
+
+
+def test_a_lane_that_folded_and_closed_gives_its_memory_back_and_no_other_ending_is_touched(
+    client: TestClient, machine_floor: Floor, repo: Path, store: Store, capsys
+):
+    """The plan "as many lanes as the machine can hold", item 4: once the
+    fold is recorded and the close taken, a background session whose turn
+    is over is stopped through the runtime and the card says so; before
+    either fact it is left alone, and after it has ended it is not stopped
+    again."""
+    doors.start(client)
+    started = machine_floor.state()["launch_log"][0]
+    short = started["short"]
+    worktree = (
+        repo / ".claude" / "worktrees" / started["argv"][started["argv"].index("--worktree") + 1]
+    )
+    state_file = machine_floor.config_dir("alpha") / "jobs" / short / "state.json"
+
+    def turn_over() -> None:
+        state = json.loads(state_file.read_text())
+        state["state"] = "done"
+        state_file.write_text(json.dumps(state))
+
+    # Its turn is over with nothing folded: left as it is.
+    turn_over()
+    reconcile(client)
+    assert machine_floor.state()["stops"] == []
+    assert detail(client)["summary"]["lane_state"] == "stopped"
+    # Folded, not closed: still its own.
+    (worktree / "engine").mkdir(exist_ok=True)
+    (worktree / "engine" / "meter.py").write_text("bill = True\n", encoding="utf-8")
+    git(worktree, "add", "-A")
+    git(worktree, "commit", "-q", "-m", "the meter")
+    assert main(["fold", "--worktree", str(worktree)]) == 0
+    capsys.readouterr()
+    reconcile(client)
+    assert machine_floor.state()["stops"] == []
+    # Closed: the session goes, the card says why, and the memory is back.
+    done = archive_plan(repo)
+    (repo / "docs" / "reviews").mkdir(exist_ok=True)
+    (repo / "docs" / "reviews" / "2026-09-05-the-meter.md").write_text("# Review\n")
+    watch = f"the plan is archived — file {done.relative_to(repo)} by 2026-12-31 every 1h"
+    assert (
+        main(
+            [
+                "close",
+                "proj",
+                str(CARD),
+                "--delivered",
+                "bills",
+                "--watch",
+                watch,
+                "--review",
+                "docs/reviews/2026-09-05-the-meter.md",
+            ]
+        )
+        == 0
+    )
+    capsys.readouterr()
+    client.app.state.loops.live.rescan("proj")
+    assert column_of(client, CARD) == "Executed"
+    turn_over()
+    reconcile(client)
+    assert [s["short"] for s in machine_floor.state()["stops"]] == [short]
+    opened = detail(client)
+    assert opened["summary"]["lane_state"] == "ended"
+    assert column_of(client, CARD) == "Executed", "the exit rule does not move a closed card"
+    stopped = next(h for h in opened["history"] if h["kind"] == "stopped")
+    assert stopped["actor"] == "machine"
+    assert stopped["detail"] == (
+        f"Stopped {short} on alpha: the lane folded and closed, so its session gives its "
+        "memory back."
+    )
+    # The one list keeps the record, as it keeps every ended session's; the
+    # process behind it is gone, and that is the memory.
+    assert main(["sessions"]) == 0
+    listed = next(ln for ln in capsys.readouterr().out.splitlines() if short in ln)
+    assert "ended" in listed
+    runtime = client.app.state.loops.runtime
+    assert all(s.pid is None for s in runtime.sessions() if s.short_id == short)
+    # Ended now: not stopped twice.
+    reconcile(client)
+    assert len(machine_floor.state()["stops"]) == 1
 
 
 def test_his_and_unmarked_defects_are_never_started_and_a_question_leaves_the_card_to_the_owner(

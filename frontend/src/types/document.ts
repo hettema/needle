@@ -29,6 +29,7 @@ export interface Document {
   gate: Gate | null;
   gate_why: string | null;
   sequencing: string | null;
+  sequenced?: SequencedCard[];
   found_by: string | null;
   card_ref: number | null;
   suggestion_kind: SuggestionKind | null;
@@ -87,4 +88,9 @@ export interface ReviewPass {
   lens: string;
   text: string;
   clean: boolean;
+}
+
+export interface SequencedCard {
+  words: string | null;
+  number: number;
 }

@@ -147,6 +147,8 @@ body { overflow: hidden; }
 .dial-lanes:focus-visible { outline: 2px solid var(--ink); outline-offset: 1px; }
 .dial-live { white-space: nowrap; color: var(--ink-3); }
 .dial-live[data-meaning] { color: var(--meaning); }
+.dial-held { white-space: nowrap; color: var(--ink-3); }
+.dial-full { white-space: nowrap; color: var(--meaning); }
 .dial .said { font-size: 11px; color: var(--ink-2); max-width: 260px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 /* ── the batched question ──────────────────────────────────────────── */

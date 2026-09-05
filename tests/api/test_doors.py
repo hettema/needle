@@ -145,8 +145,8 @@ def read_signals(client: TestClient) -> None:
     client.portal.call(client.app.state.loops.read_signals)
 
 
-def start(client: TestClient, number: int = CARD, *, anyway: bool = False) -> dict:
-    response = client.post(f"/api/projects/proj/cards/{number}/start", json={"anyway": anyway})
+def start(client: TestClient, number: int = CARD) -> dict:
+    response = client.post(f"/api/projects/proj/cards/{number}/start", json={})
     assert response.status_code == 200, response.text
     return response.json()
 
@@ -236,10 +236,14 @@ def test_a_dead_launch_is_502_with_the_machines_words_and_moves_nothing(
     assert detail(client)["history"][0]["detail"].startswith("Start failed")
 
 
-def test_a_collision_blocks_start_and_start_anyway_overrides_it_with_the_reason(
+def test_shared_ground_opens_start_shows_it_on_both_cards_and_briefs_the_lane(
     client: TestClient, machine_floor: Floor, repo: Path
 ):
-    """#253's plan names `engine/metering.py`; a live lane for #241 editing it collides."""
+    """#253's plan names `engine/metering.py`; a live lane for #241 is editing
+    it. Shared ground is a cost the card shows, never a door it closes
+    (INTENT.md lesson 4): Start opens with the ground in its label, the
+    face says *shares ground with #241* and never *waits*, the brief names
+    the files so the session rebases early, and there is no second door."""
     plan = next(repo.glob("docs/plans/*metered*"))
     (repo / "engine").mkdir(exist_ok=True)
     (repo / "engine" / "metering.py").write_text("x\n")
@@ -259,18 +263,102 @@ def test_a_collision_blocks_start_and_start_anyway_overrides_it_with_the_reason(
     reconcile(client)
 
     before = detail(client)
-    assert not before["doors"]["start"]["offered"]
+    sentence = (
+        "Shares ground: #241's lane is editing engine/metering.py right now. "
+        "The second to fold rebases."
+    )
+    assert before["doors"]["start"] == {
+        "offered": True,
+        "label": "Start · fable on alpha — shares 1 file with #241's lane; the second to fold "
+        "rebases",
+        "why": sentence,
+    }
     assert before["doors"]["collision"]["verdict"] == "collides"
-    assert "#241's lane is editing engine/metering.py right now." in before["doors"]["start"]["why"]
-    assert before["doors"]["start_anyway"]["offered"]
-    refused = client.post(f"/api/projects/proj/cards/{CARD}/start", json={"anyway": False})
-    assert refused.status_code == 409 and "Lane collision" in refused.json()["detail"]
+    assert before["doors"]["readiness"]["state"] == "shares"
+    assert before["doors"]["readiness"]["cards"] == [241]
+    assert before["doors"]["readiness"]["files"] == ["engine/metering.py"]
+    assert "start_anyway" not in before["doors"]
+    assert summary_of(client)["state"]["word"] == "shares ground with #241"
+    assert summary_of(client)["state"]["meaning"] == "proven"
+    assert "waits" not in summary_of(client)["state"]["word"]
+    # The neighbour's card names this one back: its lane is on the ground the plan names.
+    assert "#241 " in client.get(f"/api/projects/proj/cards/{CARD}/brief").text
 
-    said = start(client, anyway=True)
-    assert "collision overridden: #241's lane is editing engine/metering.py" in said["said"]
+    said = start(client)
+    assert said["said"].endswith(
+        "; shares ground: #241's lane is editing engine/metering.py right now. "
+        "The second to fold rebases."
+    )
     brief = machine_floor.state()["launch_log"][0]["argv"][-1]
-    assert "LANE COLLISION OVERRIDDEN by the owner" in brief
+    assert f"SHARED GROUND: {sentence}" in brief
+    assert "git pull --rebase origin develop" in brief and "The files: engine/metering.py." in brief
+    assert "OVERRIDDEN" not in brief
     assert column_of(client, CARD) == "Executing"
+
+
+def test_a_sequencing_line_naming_a_card_in_flight_holds_start_until_it_ships(
+    client: TestClient, machine_floor: Floor, repo: Path
+):
+    """The plan's own word is the one hold (the plan "as many lanes as the
+    machine can hold", item 2): #253's plan says *after #241*; while #241 is
+    in Executing, Start is closed with the card named and the pill says
+    *waits on #241*; the moment #241 is in Done the door opens by itself; a
+    line that names no card changes nothing."""
+    plan = next(repo.glob("docs/plans/*metered*"))
+    text = plan.read_text()
+    assert "**Sequencing:** independent of every open card." in text
+    assert detail(client)["doors"]["start"]["offered"], "a line naming no card holds nothing"
+    assert detail(client)["doors"]["waits"] == []
+
+    def sequencing(line: str) -> None:
+        plan.write_text(
+            plan.read_text().replace(
+                "**Sequencing:** independent of every open card.", f"**Sequencing:** {line}"
+            )
+        )
+        git(repo, "add", ".")
+        git(repo, "commit", "-q", "-m", "sequencing")
+        client.app.state.loops.live.rescan("proj")
+        reconcile(client)
+
+    move(client, 241, "Executing")
+    sequencing("after #241 (the deploy), and #999 too.")
+    held = detail(client)
+    assert not held["doors"]["start"]["offered"]
+    assert held["doors"]["start"]["why"] == (
+        "Start waits on the plan's own word: its Sequencing names #241 (Executing), "
+        "#999 (not on the board); it opens by itself once every named card is in Executed "
+        "or Done."
+    )
+    assert held["doors"]["readiness"]["state"] == "waits"
+    assert [w["label"] for w in held["doors"]["readiness"]["waits"]] == ["#241", "#999"]
+    assert summary_of(client)["state"]["word"] == "waits on #241, #999"
+    assert summary_of(client)["state"]["meaning"] == "quiet"
+    refused = client.post(f"/api/projects/proj/cards/{CARD}/start", json={})
+    assert refused.status_code == 409 and "waits on the plan's own word" in refused.json()["detail"]
+
+    # The named card ships: the next read opens the door by itself.
+    plan.write_text(plan.read_text().replace(", and #999 too.", "."))
+    git(repo, "add", ".")
+    git(repo, "commit", "-q", "-m", "one card")
+    client.app.state.loops.live.rescan("proj")
+    move(client, 241, "Done")
+    reconcile(client)
+    opened = detail(client)
+    assert opened["doors"]["start"]["offered"], opened["doors"]["start"]["why"]
+    assert opened["doors"]["waits"] == [
+        {"label": "#241", "project": "proj", "number": 241, "column": "Done", "shipped": True}
+    ]
+    assert summary_of(client)["state"]["word"] == "free to start"
+    assert machine_floor.state()["launch_log"] == []
+
+
+def move(client: TestClient, number: int, column: str) -> None:
+    response = client.post(
+        f"/api/projects/proj/cards/{number}/move",
+        json={"to": {"column": column, "group": None, "position": 0}},
+    )
+    assert response.status_code == 200, response.text
 
 
 # ── 2 and 3: the machine moves, the hook, Answer ───────────────────────

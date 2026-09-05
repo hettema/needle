@@ -33,7 +33,10 @@ from board.assemble import document_of
 from board.brief import lane_name, planning_brief, planning_name
 from board.dial import (
     LIVE_STAGES,
+    MEMORY_FLOOR_BYTES,
     Candidate,
+    headroom,
+    held_lanes,
     is_quiet,
     rail_count,
     rail_defects,
@@ -131,6 +134,12 @@ class Dial:
         if after.on and before.first_on_at is None:
             self.live.store.record_rail_at_on(self._rail_now())
         self.live.bump()
+        return self.state()
+
+    def state(self) -> DialState:
+        """The dial as the head shows it, with the machine read if this
+        board has not read it yet (the terminal's own process)."""
+        self._full()
         return self.live.dial_state()
 
     def _rail_now(self):
@@ -142,20 +151,37 @@ class Dial:
     # ── the beat ───────────────────────────────────────────────────────
 
     def tick_now(self) -> None:
-        """Follow every fix lane the dial has open — a plan that landed to
-        its Start, a lane that folded or ended to its end, a planning session
-        that died to the card — whether or not the dial is still on; then,
-        with it on and room under the number, take the next defect."""
+        """Read the machine's memory against the floor; follow every fix
+        lane the dial has open — a plan that landed to its Start, a lane
+        that folded or ended to its end, a planning session that died to the
+        card — whether or not the dial is still on; then, with it on, room
+        under the number and room on the machine, take the next defect."""
+        self.live.set_headroom(headroom(self.runtime.meminfo(), MEMORY_FLOOR_BYTES, clock.now()))
         self._follow()
         setting = self.live.store.dial()
         if not setting.on:
             return
         self._take_next(setting)
 
+    def _full(self) -> str | None:
+        """The head's sentence while the machine is under the floor; the
+        beat opens nothing — no planning session, no Start — until it is
+        not (the number is a ceiling the machine lowers, ruling 4). A board
+        that has not read the machine yet — `needle fixes` in its own
+        process — reads it now, so the terminal's reasons are the beat's."""
+        room = self.live.headroom
+        if room is None:
+            room = headroom(self.runtime.meminfo(), MEMORY_FLOOR_BYTES, clock.now())
+            self.live.set_headroom(room)
+        return room.sentence if room.full else None
+
     def _take_next(self, setting: DialSetting) -> None:
         store = self.live.store
         fix_lanes = store.fix_lanes()
-        if running(fix_lanes) >= setting.lanes:
+        if self._full() is not None:
+            return
+        held = held_lanes(fix_lanes, self.live.start_offered)
+        if running(fix_lanes, held) >= setting.lanes:
             return
         lanes_by_project = {
             slug: live.snapshot.lanes
@@ -368,8 +394,8 @@ class Dial:
         slug = live.project.slug
         store = self.live.store
         detail = self.live.detail(slug, card.number)
-        if not detail.doors.start.offered:
-            why = detail.doors.start.why
+        why = self._full() if detail.doors.start.offered else detail.doors.start.why
+        if why is not None:
             if fix.note != why:
                 store.stage_fix_lane(fix.id, FixStage.PLANNED, fix.planned_at or now, note=why)
                 self.live.note(
@@ -377,7 +403,7 @@ class Dial:
                 )
             return
         try:
-            result = self.doors.start(slug, card.number, anyway=False, actor=Actor.MACHINE)
+            result = self.doors.start(slug, card.number, actor=Actor.MACHINE)
         except DoorRefused as refusal:
             if fix.note != str(refusal):
                 store.stage_fix_lane(
@@ -444,6 +470,8 @@ class Dial:
                         why = "the machine has not been read for this project yet"
                     elif doors is None or doors.placement is None:
                         why = f"nowhere to run: {doors.placement_note if doors else 'unread'}"
+                    elif self._full() is not None:
+                        why = self._full()
                     elif self._own_board(live) and not quiet:
                         why = "the board's own rail waits until no lane is live anywhere"
                     else:

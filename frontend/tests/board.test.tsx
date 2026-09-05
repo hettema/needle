@@ -333,24 +333,40 @@ describe("the doors", () => {
     expect(await screen.findByText(/Started aaaa0001, fable on alpha/)).toBeInTheDocument();
   });
 
-  it("names a collision, closes Start and offers Start anyway with the reason", async () => {
+  it("opens Start over shared ground with the ground in its label and the sentence beside it, and no second door", async () => {
     const d = detail(253);
-    const sentence = "#241's lane is editing engine/metering.py right now.";
+    const sentence = "Shares ground: #241's lane is editing engine/metering.py right now. The second to fold rebases.";
+    const label = "Start · fable on alpha — shares 1 file with #241's lane; the second to fold rebases";
     d.doors = {
       ...d.doors,
-      start: { offered: false, label: "Start", why: `Lane collision — ${sentence}` },
-      start_anyway: { offered: true, label: "Start anyway · fable on alpha", why: `Overrides the collision with its reason in front of you: ${sentence}` },
+      start: { offered: true, label, why: sentence },
       collision: { verdict: "collides", sentence, files: ["engine/metering.py"], cards: [241] },
     };
     api.getCard.mockResolvedValue(d);
-    api.openDoor.mockResolvedValue({ door: "start", said: "Started; collision overridden" });
+    api.openDoor.mockResolvedValue({ door: "start", said: "Started aaaa0001, fable on alpha; shares ground" });
     await renderBoard();
     await userEvent.click(screen.getByText("Every metered kilowatt is billed"));
-    const anyway = await screen.findByRole("button", { name: "Start anyway · fable on alpha" });
-    expect(screen.getByText("Start")).toHaveAttribute("title", `Lane collision — ${sentence}`);
+    const start = await screen.findByRole("button", { name: label });
+    expect(start).toHaveAttribute("title", sentence);
     expect(screen.getByText(sentence)).toBeInTheDocument();
-    await userEvent.click(anyway);
-    await waitFor(() => expect(api.openDoor).toHaveBeenCalledWith(SLUG, 253, "start", { anyway: true }));
+    expect(screen.queryByRole("button", { name: /Start anyway/ })).not.toBeInTheDocument();
+    await userEvent.click(start);
+    await waitFor(() => expect(api.openDoor).toHaveBeenCalledWith(SLUG, 253, "start", {}));
+  });
+
+  it("says on the open card why a plan waits on the cards its Sequencing names", async () => {
+    const d = detail(253);
+    const why = "Start waits on the plan's own word: its Sequencing names #139 (Decision moment); it opens by itself once every named card is in Executed or Done.";
+    d.doors = {
+      ...d.doors,
+      start: { offered: false, label: "Start", why },
+      waits: [{ label: "#139", project: SLUG, number: 139, column: "Decision moment", shipped: false }],
+    };
+    api.getCard.mockResolvedValue(d);
+    await renderBoard();
+    await userEvent.click(screen.getByText("Every metered kilowatt is billed"));
+    expect(await screen.findByText(`Start is closed: ${why}`)).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /^Start/ })).not.toBeInTheDocument();
   });
 
   it("shows a working lane as one live word on the resting card, and Watch and Stop on the open one", async () => {
@@ -715,19 +731,19 @@ describe("the board at a glance (plan 06)", () => {
     const theirs = cardOf(b, 241);
     const note = cardOf(b, 228);
     mine.state = { word: "free to start", meaning: "proven", detail: null, loop: null, door: { name: "start", label: "Start", why: `Start · fable on alpha — ${why}`, primary: true }, hint: null };
-    theirs.state = { word: "collides with #253 · waits", meaning: "quiet", detail: null, loop: null, door: null, hint: "1 file · open to see" };
+    theirs.state = { word: "waits on #139", meaning: "quiet", detail: "Start waits on the plan's own word: its Sequencing names #139 (Decision moment); it opens by itself once every named card is in Executed or Done.", loop: null, door: null, hint: "open to see" };
     note.state = { word: "no gate", meaning: "quiet", detail: "This card names no effort gate; only a planned card is startable.", loop: null, door: null, hint: "open to see" };
     api.getBoard.mockResolvedValue(b);
     api.openDoor.mockResolvedValue({ door: "start", said: "Started aaaa0001, fable on alpha, at medium, in card-253-every-metered-kilowatt-is-billed" });
     await renderBoard();
     const resting = screen.getByText("#253").closest("article") as HTMLElement;
     expect(within(resting).getByText("free to start")).toBeInTheDocument();
-    // A collision before Start is quiet: nothing is broken, the card waits.
-    const colliding = screen.getByText("#241").closest("article") as HTMLElement;
-    expect(colliding.dataset["meaning"]).toBe("quiet");
-    expect(within(colliding).getByText("collides with #253 · waits")).toBeInTheDocument();
-    expect(within(colliding).getByText("1 file · open to see")).toBeInTheDocument();
-    expect(within(colliding).queryByRole("button", { name: /Start/ })).not.toBeInTheDocument();
+    // A plan waiting on its own Sequencing card is quiet: nothing is broken, the card waits.
+    const waiting = screen.getByText("#241").closest("article") as HTMLElement;
+    expect(waiting.dataset["meaning"]).toBe("quiet");
+    expect(within(waiting).getByText("waits on #139")).toBeInTheDocument();
+    expect(within(waiting).getByText("open to see")).toBeInTheDocument();
+    expect(within(waiting).queryByRole("button", { name: /Start/ })).not.toBeInTheDocument();
     const gateless = screen.getByText("#228").closest("article") as HTMLElement;
     expect(within(gateless).getByText("no gate")).toBeInTheDocument();
     // Start on the collapsed face, the same door as the open card's, and the card does not open on the click.
@@ -884,6 +900,18 @@ describe("the board at a glance (plan 06)", () => {
 });
 
 describe("defects fix themselves (plan 11)", () => {
+  it("reads a night of held plans as held, not running, and says when the machine is full", async () => {
+    const b = board();
+    b.dial = { dial: { on: true, lanes: 4, changed_at: "2026-09-05T08:00:00+00:00", first_on_at: "2026-09-05T08:00:00+00:00" }, running: 0, held: 4, full: "the machine is full: 2.0 GB available, 3 GB needed", quiet: true };
+    api.getBoard.mockResolvedValue(b);
+    await renderBoard();
+    const dial = screen.getByRole("group", { name: "Auto-fix" });
+    expect(within(dial).getByText("0 of 4 live").dataset["meaning"]).toBeUndefined();
+    expect(within(dial).getByText("4 held")).toBeInTheDocument();
+    const full = within(dial).getByText("the machine is full: 2.0 GB available, 3 GB needed");
+    expect(full.dataset["meaning"]).toBe("broken");
+  });
+
   it("shows the dial in the head, off, and a turn is persisted before the head shows it", async () => {
     await renderBoard();
     const dial = screen.getByRole("group", { name: "Auto-fix" });
@@ -893,7 +921,7 @@ describe("defects fix themselves (plan 11)", () => {
     // A dial that is off, or on with nothing running, claims nothing.
     expect(count.dataset["meaning"]).toBeUndefined();
     const turned = board();
-    turned.dial = { dial: { on: true, lanes: 1, changed_at: "2026-09-05T08:00:00+00:00", first_on_at: "2026-09-05T08:00:00+00:00" }, running: 1, quiet: false };
+    turned.dial = { dial: { on: true, lanes: 1, changed_at: "2026-09-05T08:00:00+00:00", first_on_at: "2026-09-05T08:00:00+00:00" }, running: 1, held: 0, full: null, quiet: false };
     api.turnDial.mockResolvedValue(turned.dial);
     api.getBoard.mockResolvedValue(turned);
     await userEvent.click(toggle);
@@ -903,6 +931,8 @@ describe("defects fix themselves (plan 11)", () => {
     // Something runs under the dial: the count is live, and only the count.
     expect(within(dial).getByText("1 of 1 live").dataset["meaning"]).toBe("live");
     expect(dial.dataset["meaning"]).toBeUndefined();
+    expect(within(dial).queryByText(/held/)).not.toBeInTheDocument();
+    expect(within(dial).queryByText(/the machine is full/)).not.toBeInTheDocument();
     // The number lands on blur, never on a keystroke.
     const lanes = within(dial).getByRole("spinbutton", { name: "Fix lanes at once" });
     await userEvent.clear(lanes);
@@ -1104,7 +1134,8 @@ describe("the colour language", () => {
   // where it would be — `null` where the state has said everything already.
   const table: { case: string; word: string; meaning: string; border: boolean; door: string | null }[] = [
     { case: "free to start", word: "free to start", meaning: "proven", border: false, door: "Start" },
-    { case: "collides", word: "collides with #241 · waits", meaning: "quiet", border: false, door: "1 file · open to see" },
+    { case: "shares ground", word: "shares ground with #241", meaning: "proven", border: false, door: "Start" },
+    { case: "waits", word: "waits on #139", meaning: "quiet", border: false, door: "open to see" },
     { case: "no gate", word: "no gate", meaning: "quiet", border: false, door: "open to see" },
     { case: "nowhere to run", word: "nowhere to run", meaning: "quiet", border: false, door: "open to see" },
     { case: "working", word: "working · 12 min · fable on alpha", meaning: "live", border: true, door: "Watch" },

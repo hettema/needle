@@ -184,7 +184,7 @@ export function IdeaDoor({ onOpen, disabled, said }: { onOpen: (text: string) =>
  * carry a meaning, and only while something runs.
  */
 export function DialControl({ state, onTurn, disabled, said }: { state: DialState; onTurn: (on: boolean, lanes: number) => void; disabled: boolean; said: string | null }) {
-  const { dial, running, quiet } = state;
+  const { dial, running, held, full, quiet } = state;
   const [lanes, setLanes] = useState(String(dial.lanes));
   useEffect(() => {
     setLanes(String(dial.lanes));
@@ -216,6 +216,16 @@ export function DialControl({ state, onTurn, disabled, said }: { state: DialStat
       <span className="dial-live" {...(running > 0 ? { "data-meaning": "live" as const } : {})} title={quiet ? "No lane has hands on any project: the board's own defects may run" : "A lane has hands on a project: the board's own defects wait"}>
         {running} of {dial.lanes} live
       </span>
+      {held > 0 ? (
+        <span className="dial-held" title="Planned cards the dial holds without counting them: their Start door is closed — parked, waiting on a Sequencing card, nowhere to run — so they are no process and take no slot">
+          {held} held
+        </span>
+      ) : null}
+      {full ? (
+        <span className="dial-full" data-meaning="broken" title="The memory floor: while available memory or free swap is under it the dial opens nothing. The floor is the board's; the number stays yours">
+          {full}
+        </span>
+      ) : null}
       {said ? <span className="said">{said}</span> : null}
     </form>
   );

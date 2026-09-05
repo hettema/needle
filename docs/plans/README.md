@@ -6,8 +6,14 @@ live work and `done/` is the archive. There is no separate status index.
 
 Every plan carries, near the top: `**Status:**`, `**Written:**`,
 `**Effort gate:** <low|medium|high|xhigh> — <why>`, and `**Sequencing:**` when
-it depends on another plan. Every item in a plan ends with what "done" means
-for it, as a behaviour someone can observe.
+it depends on another plan. A Sequencing line that names cards first, in the
+board's words — `after #403`, `after Needle #20 and omarchy #17`, each with a
+parenthesis if it wants one — is a hold the board reads: Start stays closed
+while any named card is not in Executed or Done, and opens by itself once
+they are. The prose after the names is prose, and a line that names no card
+that way changes nothing; shared files are never a reason to wait (the fold
+settles them, `docs/INTENT.md` lesson 4). Every item in a plan ends with what
+"done" means for it, as a behaviour someone can observe.
 
 **And when that holds, the session says so at the item.** The session ends
 the item with one line, `**Met:** <what shows it>`, in the commit that makes

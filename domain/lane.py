@@ -14,6 +14,7 @@ from enum import StrEnum
 
 from pydantic import BaseModel
 
+from domain.column import Column
 from domain.document import Item, Review
 from domain.session import Session
 from domain.slot import Placement
@@ -203,6 +204,21 @@ class Collision(BaseModel):
     """The other lanes' cards, when there are any: what the collapsed card names."""
 
 
+class Wait(BaseModel):
+    """One card a plan's `Sequencing:` line names, as the board found it
+    (plan "as many lanes as the machine can hold", item 2): the one reason a
+    Start waits on another card is the plan's own word."""
+
+    label: str
+    """How the plan named it, in the board's words: `#403`, `Needle #20`."""
+    project: str
+    number: int
+    column: Column | None
+    """Where the named card stands; None when no such card is on that board."""
+    shipped: bool
+    """In Executed or Done: this card no longer holds the Start."""
+
+
 class StartState(StrEnum):
     """Whether the card can start now, in one word: what the collapsed card's
     pill says (plan 06, item 3). Computed from the same facts as the Start
@@ -210,8 +226,11 @@ class StartState(StrEnum):
 
     FREE = "free"
     """Gated, no collision, somewhere to run: Start is open."""
-    COLLIDES = "collides"
-    """Another live lane is on this plan's files; Start anyway is on the open face."""
+    SHARES = "shares"
+    """Another live lane is on this plan's files; Start is open all the same,
+    and the fold settles what they share (INTENT.md lesson 4)."""
+    WAITS = "waits"
+    """The plan's own Sequencing line names a card not yet in Executed or Done."""
     NO_GATE = "no gate"
     """A suggestion, or a plan without an effort gate; Discuss it to write one."""
     NOWHERE = "nowhere to run"
@@ -231,20 +250,25 @@ class Readiness(BaseModel):
     why: str
     """The Start door's own reason, or where it would run."""
     cards: list[int]
-    """The colliding lanes' cards, when the state is `collides`."""
+    """The lanes' cards this plan shares ground with, when the state is `shares`."""
     files: list[str]
     """The files they are on, shown on hover."""
+    waits: list[Wait]
+    """The cards the plan's Sequencing names that have not shipped, when the
+    state is `waits`."""
 
 
 class Doors(BaseModel):
     start: Door
-    start_anyway: Door
     readiness: Readiness
     """What the collapsed card says about Start (plan 06, item 3)."""
     placement: Placement | None
     """Where Start would run, from the one rule; None when the rule found nowhere."""
     placement_note: str
     collision: Collision | None
+    waits: list[Wait]
+    """Every card the plan's Sequencing line names, shipped or not, so the
+    open face says which and where they stand."""
     watch: Door
     answer: Door
     discuss: Door

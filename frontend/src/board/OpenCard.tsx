@@ -169,7 +169,6 @@ export function OpenCard({ card, onMoveTo }: { card: CardSummary; onMoveTo: (num
   // allows, in the order a card is acted on.
   const primary = ([
     ["start", doors.start],
-    ["start_anyway", doors.start_anyway],
     ["answer", doors.answer],
     ["watch", doors.watch],
     ["resume", doors.resume],
@@ -209,13 +208,6 @@ export function OpenCard({ card, onMoveTo }: { card: CardSummary; onMoveTo: (num
           <Button onClick={() => void through("start")} disabled={opening !== null} title={doors.start.why}>
             {doors.start.label}
           </Button>
-        ) : doors.start_anyway.offered ? (
-          <>
-            <ClosedDoor why={doors.start.why}>Start</ClosedDoor>
-            <Button ghost={primary !== "start_anyway"} onClick={() => void through("start", { anyway: true })} disabled={opening !== null} title={doors.start_anyway.why}>
-              {doors.start_anyway.label}
-            </Button>
-          </>
         ) : startable && detail.card.folded_into === null ? (
           <ClosedDoor why={doors.start.why}>Start</ClosedDoor>
         ) : null}
@@ -229,7 +221,7 @@ export function OpenCard({ card, onMoveTo }: { card: CardSummary; onMoveTo: (num
             {doors.plan.label}
           </Button>
         ) : null}
-        {doors.collision && doors.collision.verdict !== "clear" && (doors.start.offered || doors.start_anyway.offered) ? <Quiet>{doors.collision.sentence}</Quiet> : null}
+        {doors.collision && doors.collision.verdict !== "clear" && doors.start.offered ? <Quiet>{doors.collision.sentence}</Quiet> : null}
         {docPath && document ? <Button ghost onClick={() => void openFile(docPath, document.kind === "plan" ? "the plan" : "the suggestion")}>{wholeFile?.path === docPath ? "Close the file" : document.kind === "plan" ? "Open the plan" : "Open the suggestion"}</Button> : null}
         {docPath ? (
           <Button ghost onClick={() => void copyPath()}>
@@ -245,7 +237,7 @@ export function OpenCard({ card, onMoveTo }: { card: CardSummary; onMoveTo: (num
         <MoveTo value={card.place.column} options={COLUMN_VALUES} onChange={(c) => void moveTo(c)} />
       </Acts>
       <ClosedDoors doors={expected} />
-      {startable && !doors.start.offered && !doors.start_anyway.offered && detail.card.folded_into === null ? <Quiet>Start is closed: {doors.start.why}</Quiet> : null}
+      {startable && !doors.start.offered && detail.card.folded_into === null ? <Quiet>Start is closed: {doors.start.why}</Quiet> : null}
       {detail.summary.standing.state === "doubted" && detail.summary.standing.words ? <Doubt>{detail.summary.standing.words}</Doubt> : null}
       {detail.card.folded_into !== null ? <Quiet>Folded into #{detail.card.folded_into}: that card's plan carries this suggestion; this card follows it and closes with it.</Quiet> : null}
       {detail.summary.folded.length ? (

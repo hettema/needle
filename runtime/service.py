@@ -7,6 +7,7 @@ import contextlib
 import uuid
 from pathlib import Path
 
+from domain.dial import Meminfo
 from domain.gate import Gate
 from domain.handout import Dispatch
 from domain.launch import Launch, Rescue, Start, Stopped, WindowlessStart
@@ -230,6 +231,13 @@ class Runtime:
         """What every session that ran in `cwd` handed out, from its
         transcripts; None when none exists."""
         return transcripts.dispatches(cwd)
+
+    def meminfo(self) -> Meminfo | None:
+        """The machine's memory right now; None when it cannot be read."""
+        try:
+            return machine.meminfo()
+        except (OSError, ValueError):
+            return None
 
     def machine_is_reachable(self) -> list[str]:
         """Which of the commands the runtime needs are missing, by name."""

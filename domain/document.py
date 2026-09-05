@@ -64,6 +64,16 @@ class Fix(BaseModel):
     parses it with the one signal parser where it reads it."""
 
 
+class SequencedCard(BaseModel):
+    """One card a plan's `Sequencing:` line names, as written: the words
+    before the `#` (a project's name, or none for this project) and the
+    number. The board resolves the words against the projects it holds;
+    the parser only reads what the plan wrote."""
+
+    words: str | None
+    number: int
+
+
 class Stance(StrEnum):
     """What a session wrote at an item once it landed (plan 13, item 1): the
     close-out's stance, written early. `**Met:** <what shows it>` when the
@@ -163,6 +173,10 @@ class Document(BaseModel):
     gate: Gate | None
     gate_why: str | None
     sequencing: str | None
+    sequenced: list[SequencedCard] = []
+    """The cards the Sequencing line names first, in order (the plan "as
+    many lanes as the machine can hold", item 2): what the board holds a
+    Start to. Empty for a line that names none, and for a suggestion."""
     found_by: str | None
     card_ref: int | None
     """A `**Card:** #N` line names the card this document belongs to."""

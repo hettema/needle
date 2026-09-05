@@ -27,11 +27,23 @@ class Floor:
     claude_home: Path
     handoff_dir: Path
     transcripts: Path
+    meminfo: Path
     state_file: Path
     pids: list[int] = field(default_factory=list)
 
     def config_dir(self, slot: str) -> Path:
         return self.slot_root / slot
+
+    def set_memory(
+        self, *, available_gb: float, swap_free_gb: float, swap_total_gb: float = 8.0
+    ) -> None:
+        """What the machine reports of its memory: the floor's `/proc/meminfo`."""
+        write_meminfo(
+            self.meminfo,
+            available_gb=available_gb,
+            swap_free_gb=swap_free_gb,
+            swap_total_gb=swap_total_gb,
+        )
 
     # ── the fakes' state ───────────────────────────────────────────────
 
@@ -228,6 +240,9 @@ def lay(root: Path) -> Floor:
     handoffs.mkdir(parents=True)
     transcripts = root / "projects"
     transcripts.mkdir()
+    # A machine with room: the dial's memory floor is 3 GB (board/dial.py).
+    meminfo = root / "meminfo"
+    write_meminfo(meminfo, available_gb=16.0, swap_free_gb=8.0, swap_total_gb=8.0)
     state = root / "fake-state.json"
     state.write_text(
         json.dumps(
@@ -254,7 +269,27 @@ def lay(root: Path) -> Floor:
         claude_home=home,
         handoff_dir=handoffs,
         transcripts=transcripts,
+        meminfo=meminfo,
         state_file=state,
+    )
+
+
+def write_meminfo(
+    path: Path, *, available_gb: float, swap_free_gb: float, swap_total_gb: float
+) -> None:
+    """In the kernel's shape: `Key:   <n> kB`, kB meaning kibibytes."""
+    kb = 1024
+
+    def line(key: str, gb: float) -> str:
+        return f"{key}:{int(gb * kb * kb):>16} kB\n"
+
+    path.write_text(
+        line("MemTotal", 32.0)
+        + line("MemFree", available_gb / 2)
+        + line("MemAvailable", available_gb)
+        + line("SwapTotal", swap_total_gb)
+        + line("SwapFree", swap_free_gb),
+        encoding="utf-8",
     )
 
 
@@ -263,7 +298,8 @@ ENVIRONMENT = {
     "NEEDLE_CLAUDE_HOME": "claude_home",
     "NEEDLE_HANDOFF_DIR": "handoff_dir",
     "NEEDLE_TRANSCRIPTS": "transcripts",
+    "NEEDLE_MEMINFO": "meminfo",
     "NEEDLE_FAKE_STATE": "state_file",
 }
 """Variable → the floor attribute it points at. `runtime.machine` reads the
-first four; the fakes read the last."""
+first five; the fakes read the last."""

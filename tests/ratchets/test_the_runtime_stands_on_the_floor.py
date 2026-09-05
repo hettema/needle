@@ -37,6 +37,7 @@ def test_every_path_the_runtime_reads_is_under_the_floor(machine_floor: Floor):
         machine.handoff_dir(),
         machine.transcripts_root(),
         machine.roles_path(),
+        machine.meminfo_path(),
     ):
         assert read.resolve().is_relative_to(root), f"{read} is not under the floor {root}"
     assert not machine.slot_root().resolve().is_relative_to(Path.home() / ".claude-accounts")

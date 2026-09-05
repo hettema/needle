@@ -44,7 +44,7 @@ from domain.document import Document, DocumentKind, Fix, FixMark, SuggestionKind
 from domain.evidence import Evidence  # noqa: E402
 from domain.gate import Gate  # noqa: E402
 from domain.hook import HookEvent, HookKind  # noqa: E402
-from domain.lane import Collision, CollisionVerdict, Progress  # noqa: E402
+from domain.lane import Collision, CollisionVerdict, Progress, Wait  # noqa: E402
 from domain.project import Project  # noqa: E402
 from domain.row import Row, RowKind  # noqa: E402
 from domain.session import Session, SessionKind, SessionState  # noqa: E402
@@ -186,6 +186,7 @@ def _summary(
     suggestion_live: bool = False,
     collision: Collision | None = None,
     placement: Placement | None = PLACEMENT,
+    waits: list[Wait] | None = None,
 ):
     """One card as the page receives it, through the real derivation."""
     the_lane = lane if lane is not None else lane_for(card, _facts(worktrees={}))
@@ -200,6 +201,7 @@ def _summary(
         signal_due_for_owner=False,
         signal_evidence=None,
         suggestion_live=suggestion_live,
+        waits=waits or [],
     )
     # A card the machine put in Executing on hands-on evidence, with no lane
     # on this read, is what the board doubts: the evidence is gone.
@@ -338,15 +340,31 @@ def language_cases() -> list[dict[str, object]]:
     cases: list[tuple[str, object]] = [
         ("free to start", _summary(_card(900, column=Column.UP_NEXT))),
         (
-            "collides",
+            "shares ground",
             _summary(
                 _card(900, column=Column.UP_NEXT),
                 collision=Collision(
                     verdict=CollisionVerdict.COLLIDES,
-                    sentence="#241's lane is editing engine/metering.py.",
+                    sentence="Shares ground: #241's lane is editing engine/metering.py right "
+                    "now. The second to fold rebases.",
                     files=["engine/metering.py"],
                     cards=[241],
                 ),
+            ),
+        ),
+        (
+            "waits",
+            _summary(
+                _card(900, column=Column.PLANNED),
+                waits=[
+                    Wait(
+                        label="#139",
+                        project="harbourmaster",
+                        number=139,
+                        column=Column.DECISION_MOMENT,
+                        shipped=False,
+                    )
+                ],
             ),
         ),
         ("no gate", _summary(_card(900, column=Column.UP_NEXT, gate=None))),

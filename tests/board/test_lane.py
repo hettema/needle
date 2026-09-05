@@ -21,7 +21,7 @@ from domain.column import Column
 from domain.document import DocumentKind
 from domain.gate import Gate
 from domain.hook import HookEvent, HookKind
-from domain.lane import CollisionVerdict, Discussion, LaneRecord, LaneState
+from domain.lane import CollisionVerdict, Discussion, LaneRecord, LaneState, StartState, Wait
 from domain.launch import Rescue
 from domain.row import Row, RowKind
 from domain.session import Session, SessionKind, SessionState
@@ -480,9 +480,20 @@ def doors(c: Card, lane, **changes):
         signal_due_for_owner=False,
         signal_evidence=None,
         suggestion_live=False,
+        waits=[],
     )
     base.update(changes)
     return doors_for(c, lane, **base)
+
+
+def wait(number: int, column: Column | None, *, label: str | None = None) -> Wait:
+    return Wait(
+        label=label or f"#{number}",
+        project="proj",
+        number=number,
+        column=column,
+        shipped=column in (Column.EXECUTED, Column.DONE),
+    )
 
 
 def test_start_says_the_slot_and_model_the_rule_named_and_refuses_by_name():
@@ -500,19 +511,69 @@ def test_start_says_the_slot_and_model_the_rule_named_and_refuses_by_name():
     assert not nowhere.discuss.offered
 
 
-def test_a_collision_closes_start_and_opens_start_anyway_with_the_reason():
+def test_shared_ground_opens_start_with_the_ground_in_its_label():
+    """Shared ground is a cost the door shows, never a reason to close
+    (INTENT.md lesson 4): the door opens with its placement and says in one
+    clause what it shares; nothing is left to override."""
     from domain.lane import Collision
 
     collision = Collision(
         verdict=CollisionVerdict.COLLIDES,
-        sentence="#9's lane is editing api/app.py right now.",
+        sentence="Shares ground: #9's lane is editing api/app.py right now. "
+        "The second to fold rebases.",
         files=["api/app.py"],
         cards=[9],
     )
     fresh = lane_for(card(), facts(worktrees={}))
     offered = doors(card(), fresh, collision=collision)
-    assert not offered.start.offered and offered.start.why.startswith("Lane collision")
-    assert offered.start_anyway.offered and "#9's lane" in offered.start_anyway.why
+    assert offered.start.offered
+    assert offered.start.label == (
+        "Start · fable on alpha — shares 1 file with #9's lane; the second to fold rebases"
+    )
+    assert offered.start.why == collision.sentence
+    assert offered.readiness.state == StartState.SHARES
+    assert offered.readiness.cards == [9] and offered.readiness.files == ["api/app.py"]
+    assert not hasattr(offered, "start_anyway")
+    # Every other reason to close still closes, whatever the ground.
+    taken = doors(card(), lane_for(card(), facts()), collision=collision)
+    assert not taken.start.offered and taken.readiness.state == StartState.TAKEN
+
+
+def test_the_plans_own_word_is_the_one_hold_on_start():
+    """A Sequencing line naming cards closes Start until they are in
+    Executed or Done, and says which and where; a named card that shipped
+    holds nothing (the plan "as many lanes as the machine can hold", item 2)."""
+    fresh = lane_for(card(), facts(worktrees={}))
+    held = doors(
+        card(),
+        fresh,
+        waits=[
+            wait(139, Column.DECISION_MOMENT),
+            wait(20, Column.UP_NEXT, label="Needle #20"),
+            wait(222, Column.DONE),
+            wait(999, None),
+        ],
+    )
+    assert not held.start.offered and held.readiness.state == StartState.WAITS
+    assert held.start.why == (
+        "Start waits on the plan's own word: its Sequencing names #139 (Decision moment), "
+        "Needle #20 (Up next), #999 (not on the board); it opens by itself once every named "
+        "card is in Executed or Done."
+    )
+    assert [w.number for w in held.readiness.waits] == [139, 20, 999]
+    assert [w.number for w in held.waits] == [139, 20, 222, 999], "the open face lists them all"
+    shipped = doors(card(), fresh, waits=[wait(222, Column.DONE), wait(235, Column.EXECUTED)])
+    assert shipped.start.offered and shipped.readiness.state == StartState.FREE
+    assert shipped.readiness.waits == [] and len(shipped.waits) == 2
+    # The hold is judged before the ground: a plan that waits is not started
+    # into shared ground, and the pill says waits, never shares.
+    from domain.lane import Collision
+
+    collision = Collision(
+        verdict=CollisionVerdict.COLLIDES, sentence="Shares ground.", files=["a.py"], cards=[9]
+    )
+    both = doors(card(), fresh, waits=[wait(139, Column.PLANNED)], collision=collision)
+    assert both.readiness.state == StartState.WAITS and both.readiness.cards == []
 
 
 def test_a_live_lane_offers_watch_and_stop_and_answer_only_when_stopped():
@@ -626,11 +687,19 @@ def test_an_archived_document_moves_a_card_nobody_has_hands_on():
     assert "its plan was archived (docs/plans/done/p.md)" in moved.reason
     assert "no session wrote it up on the board" in moved.reason
     signal = Signal(
-        what="x", kind=SignalKind.FILE, target="a", expect=None, due=date(2026, 9, 10), every_hours=24
+        what="x",
+        kind=SignalKind.FILE,
+        target="a",
+        expect=None,
+        due=date(2026, 9, 10),
+        every_hours=24,
     )
     written = card(
         archived=True,
-        rows=[Row(kind=RowKind.DELIVERED, text="x"), Row(kind=RowKind.WATCH, text="x — file a by 2026-09-10")],
+        rows=[
+            Row(kind=RowKind.DELIVERED, text="x"),
+            Row(kind=RowKind.WATCH, text="x — file a by 2026-09-10"),
+        ],
     )
     landed = after_archive(written, none, signal)
     assert landed is not None and landed.column == Column.EXECUTED
@@ -649,7 +718,9 @@ def test_an_archived_document_moves_a_card_nobody_has_hands_on():
     assert after_archive(folded, none, None) is None
     # An Executing card with a lane that ended and an archived plan: the exit rule
     # runs first in the loop; this rule still answers for it.
-    ended = lane_for(card(column=Column.EXECUTING, archived=True), facts(sessions=[session(pid=None)]))
+    ended = lane_for(
+        card(column=Column.EXECUTING, archived=True), facts(sessions=[session(pid=None)])
+    )
     assert ended.state == LaneState.ENDED
     late = after_archive(card(column=Column.EXECUTING, archived=True), ended, None)
     assert late is not None and late.column == Column.DECISION_MOMENT
@@ -670,20 +741,29 @@ def test_the_pill_is_the_start_doors_verdict_in_one_word():
     assert unread.readiness.state == StartState.UNREAD
     collision = Collision(
         verdict=CollisionVerdict.COLLIDES,
-        sentence="#9's lane is editing api/app.py right now.",
+        sentence="Shares ground: #9's lane is editing api/app.py right now.",
         files=["api/app.py"],
         cards=[9],
     )
-    collides = doors(card(), fresh, collision=collision).readiness
-    assert collides.state == StartState.COLLIDES and collides.cards == [9]
-    assert collides.files == ["api/app.py"] and collides.why.startswith("Lane collision")
+    shares = doors(card(), fresh, collision=collision).readiness
+    assert shares.state == StartState.SHARES and shares.cards == [9]
+    assert shares.files == ["api/app.py"] and shares.why.startswith("Shares ground")
+    waits = doors(card(), fresh, waits=[wait(139, Column.PLANNED)]).readiness
+    assert waits.state == StartState.WAITS and [w.number for w in waits.waits] == [139]
     on_disk = lane_for(card(), facts())
     assert doors(card(), on_disk).readiness.state == StartState.TAKEN
     working = lane_for(card(column=Column.EXECUTING), facts(sessions=[session()]))
     assert doors(card(column=Column.EXECUTING), working).readiness.state == StartState.TAKEN
     # One judgment: the pill's word and the door's state never disagree.
-    for offered in (doors(card(), fresh), nowhere, unread, doors(card(), fresh, collision=collision)):
-        assert offered.start.offered == (offered.readiness.state == StartState.FREE)
+    open_states = {StartState.FREE, StartState.SHARES}
+    for offered in (
+        doors(card(), fresh),
+        nowhere,
+        unread,
+        doors(card(), fresh, collision=collision),
+        doors(card(), fresh, waits=[wait(139, Column.PLANNED)]),
+    ):
+        assert offered.start.offered == (offered.readiness.state in open_states)
         assert offered.readiness.why == offered.start.why
 
 
@@ -701,10 +781,36 @@ def test_a_plan_conversation_for_several_cards_is_one_line_on_the_rail():
 
     sid = "aaaa0001-0000-4000-8000-000000000000"
     rows = [
-        Discussion(id=1, project="proj", card_number=8, kind=WindowKind.PLAN, session_id=sid, slot="alpha", started_at=NOW),
-        Discussion(id=2, project="proj", card_number=7, kind=WindowKind.PLAN, session_id=sid, slot="alpha", started_at=NOW),
+        Discussion(
+            id=1,
+            project="proj",
+            card_number=8,
+            kind=WindowKind.PLAN,
+            session_id=sid,
+            slot="alpha",
+            started_at=NOW,
+        ),
+        Discussion(
+            id=2,
+            project="proj",
+            card_number=7,
+            kind=WindowKind.PLAN,
+            session_id=sid,
+            slot="alpha",
+            started_at=NOW,
+        ),
     ]
     alive = conversations_alive([session()], rows)
     assert [(c.what, c.card_number) for c in alive] == [("Plan #7, #8", 8)]
-    idea = [Discussion(id=3, project="proj", card_number=None, kind=WindowKind.IDEA, session_id=sid, slot="alpha", started_at=NOW)]
+    idea = [
+        Discussion(
+            id=3,
+            project="proj",
+            card_number=None,
+            kind=WindowKind.IDEA,
+            session_id=sid,
+            slot="alpha",
+            started_at=NOW,
+        )
+    ]
     assert [c.what for c in conversations_alive([session()], idea)] == ["Idea"]

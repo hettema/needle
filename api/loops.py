@@ -46,6 +46,8 @@ from board.lane import (
     LaneFacts,
     after_archive,
     card_of_cwd,
+    close_is_current,
+    close_landed,
     conversations_alive,
     doors_for,
     entered_executing_at,
@@ -55,6 +57,7 @@ from board.lane import (
     with_footprints,
 )
 from board.progress import progress_of
+from board.sequencing import waits_for
 from board.signals import where_after
 from board.word import compose
 from domain.audit import AuditKind
@@ -65,9 +68,18 @@ from domain.document import DocumentKind
 from domain.evidence import Evidence
 from domain.gate import Gate
 from domain.hook import HookEvent, HookPosted, Word
-from domain.lane import Collision, Doors, Lane, LaneRecord, LaneSnapshot, LaneState, Progress
+from domain.lane import (
+    Collision,
+    Doors,
+    Lane,
+    LaneRecord,
+    LaneSnapshot,
+    LaneState,
+    Progress,
+    Wait,
+)
 from domain.launch import LaunchVerdict, WindowlessStart
-from domain.session import Session, SessionState
+from domain.session import Session, SessionKind, SessionState
 from domain.signal import SessionWork, Signal, SignalKind, WindowlessSession
 from domain.slot import Placement
 from domain.window import Window, WindowKind
@@ -142,6 +154,9 @@ class Loops:
         self._stop = asyncio.Event()
         self._deaths: dict[str, str] = {}
         self._parked: set[str] = set()
+        self._released: set[str] = set()
+        """Sessions stopped because their lane folded and closed: one stop
+        each, so a stop that did not end the process is said once."""
         """Session ids whose second wall was parked, so the card is told once."""
         self._word_lock = asyncio.Lock()
         """The word's own lock (plan 10): a read of a lane's word and the
@@ -343,6 +358,11 @@ class Loops:
             facts = self._facts(live, sessions, windows, records, worktrees, now)
             lanes = {c.number: lane_for(c, facts) for c in cards}
         cards = self._machine_moves(slug, cards, lanes, records)
+        if self._release_finished(slug, cards, lanes, records):
+            sessions = self.runtime.sessions()
+            windows = self.runtime.open_windows()
+            facts = self._facts(live, sessions, windows, records, worktrees, now)
+            lanes = {c.number: lane_for(c, facts) for c in cards}
         lanes = with_footprints(lanes, *self._footprints(live, cards, lanes))
         doors = self._doors(live, cards, lanes, placement, placement_note, now)
         conversations = conversations_alive(facts.sessions, facts.discussions)
@@ -571,6 +591,57 @@ class Loops:
                 )
         return self.live.store.cards(slug) if changed else cards
 
+    def _release_finished(
+        self,
+        slug: str,
+        cards: list[Card],
+        lanes: dict[int, Lane],
+        records: list[LaneRecord],
+    ) -> bool:
+        """A lane that folded and closed gives its memory back (the plan "as
+        many lanes as the machine can hold", item 4): its card is out of
+        Executing on a fold the board recorded and a close it took, its turn
+        is over, and its background session is still resident — on the
+        dial's first night five such lanes held about a gigabyte for hours
+        while the machine sat at its ceiling. Stopped through the runtime,
+        as a finished reading is, with the card saying so. Every other
+        ending — died, walled, asking, stopped by the owner — is left as it
+        is: its state is evidence (ruling 5). Returns whether anything was
+        stopped, so the caller re-reads the machine."""
+        by_record = {r.card_number: r for r in records}
+        stopped_any = False
+        for card in cards:
+            lane = lanes[card.number]
+            session = lane.session
+            record = by_record.get(card.number)
+            if (
+                lane.state != LaneState.STOPPED
+                or session is None
+                or session.pid is None
+                or session.kind != SessionKind.BACKGROUND
+                or session.session_id in self._released
+                or record is None
+                or record.folded_at is None
+                or card.place.column == Column.EXECUTING
+                or not close_landed(card)
+            ):
+                continue
+            history = self.live.store.history(slug, card.number)
+            if not close_is_current(card, history, record.first_seen):
+                continue
+            self._released.add(session.session_id)
+            stopped = self.runtime.stop(session.short_id)
+            for window in self.live.store.windows(session.session_id, open_only=True):
+                self.live.store.window_closed(window.id, clock.now())
+            words = (
+                f"Stopped {session.short_id} on {session.slot}: the lane folded and closed, "
+                "so its session gives its memory back"
+                + ("." if stopped.gone else f" (not gone: {stopped.words}).")
+            )
+            self.live.note(slug, card.number, AuditKind.STOPPED, Actor.MACHINE, words)
+            stopped_any = True
+        return stopped_any
+
     def _plan_footprint(self, live: LiveProject, card: Card) -> set[str]:
         """The files the card's live plan names in backticks and that exist."""
         root = Path(live.project.path)
@@ -660,6 +731,7 @@ class Loops:
         editing = {n: set(lanes[n].edits) for n in live_lanes}
         declared = {n: set(lanes[n].declared) for n in live_lanes}
         readings = self.live.store.last_readings(live.project.slug)
+        names = {slug: p.project.name for slug, p in self.live.projects.items()}
         doors: dict[int, Doors] = {}
         for card in cards:
             lane = lanes[card.number]
@@ -668,6 +740,7 @@ class Loops:
             )
             gate = document.gate if document is not None and document.gate else card.gate
             collision: Collision | None = None
+            waits: list[Wait] = []
             if (
                 gate is not None
                 and card.place.column in STARTABLE_COLUMNS
@@ -675,6 +748,13 @@ class Loops:
             ):
                 mine = self._plan_footprint(live, card)
                 collision = verdict(mine, editing=editing, declared=declared)
+                if document is not None and document.sequenced:
+                    waits = waits_for(
+                        document.sequenced,
+                        here=live.project.slug,
+                        projects=names,
+                        find=self.live.store.card,
+                    )
             signal, _ = watch_signal(card)
             last = readings.get(card.number)
             asks_owner = signal_asks_owner(card, signal, last, now)
@@ -696,6 +776,7 @@ class Loops:
                 suggestion_live=document is not None
                 and document.kind == DocumentKind.SUGGESTION
                 and not document.archived,
+                waits=waits,
             )
         return doors
 

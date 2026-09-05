@@ -5,8 +5,11 @@ from datetime import UTC, datetime, timedelta
 
 from board.dial import (
     LIVE_STAGES,
+    MEMORY_FLOOR_BYTES,
     dial_state,
     filer_of,
+    headroom,
+    held_lanes,
     is_quiet,
     rail_count,
     rail_defects,
@@ -18,7 +21,7 @@ from board.parse import parse_document
 from domain.card import Actor, Card, CardOrigin, DocumentLink, Place
 from domain.column import DEFECTS_RAIL, Column
 from domain.corpus import CorpusIndex
-from domain.dial import Dial, Filer, FixLane, FixStage
+from domain.dial import Dial, Filer, FixLane, FixStage, Meminfo
 from domain.document import DocumentKind
 from domain.lane import LaneState
 from domain.row import Row, RowKind
@@ -143,23 +146,74 @@ def test_eligibility_is_the_documents_mark_plus_the_cards_latest_reading():
     assert why_not_eligible(asked, now, **common) == "it carries a question for the owner"
 
 
-def test_the_number_counts_a_fix_lane_from_its_planning_session_to_its_end():
-    def fix(stage: FixStage) -> FixLane:
-        return FixLane(
-            id=1,
-            project="proj",
-            card_number=1,
-            stage=stage,
-            planning_started_at=NOW,
-            planned_at=None,
-            started_at=None,
-            ended_at=None,
-            note=None,
-        )
+def fix(stage: FixStage, number: int = 1) -> FixLane:
+    return FixLane(
+        id=number,
+        project="proj",
+        card_number=number,
+        stage=stage,
+        planning_started_at=NOW,
+        planned_at=None,
+        started_at=None,
+        ended_at=None,
+        note=None,
+    )
 
+
+def test_the_number_counts_a_fix_lane_from_its_planning_session_to_its_end():
     assert {FixStage.PLANNING, FixStage.PLANNED, FixStage.STARTED} == LIVE_STAGES
     assert running([fix(s) for s in FixStage]) == 3
     assert running([]) == 0
+
+
+def test_a_planned_card_whose_start_is_closed_is_held_and_does_not_count():
+    """The plan "as many lanes as the machine can hold", item 3: a planned
+    card with a closed door is no process. The planning stage still counts."""
+    lanes = [
+        fix(FixStage.PLANNING, 1),
+        fix(FixStage.PLANNED, 2),
+        fix(FixStage.PLANNED, 3),
+        fix(FixStage.PLANNED, 4),
+        fix(FixStage.STARTED, 5),
+        fix(FixStage.FOLDED, 6),
+    ]
+    doors = {2: False, 3: True}  # 4 is unread: None, which is closed
+
+    held = held_lanes(lanes, lambda project, number: doors.get(number))
+    assert [f.card_number for f in held] == [2, 4]
+    assert running(lanes, held) == 3, "planning, the planned card whose door is open, started"
+    assert running(lanes) == 5, "without the held list every live stage counts, as before"
+
+
+def test_the_memory_floor_is_read_against_available_memory_and_free_swap():
+    """The number is a ceiling the machine lowers, never raises (ruling 4)."""
+    floor = 3 * 1024**3
+    gb = 1024**3
+    room = headroom(Meminfo(available=6 * gb, swap_total=8 * gb, swap_free=5 * gb), floor, NOW)
+    assert not room.full and room.sentence is None
+    full = headroom(Meminfo(available=2 * gb, swap_total=8 * gb, swap_free=5 * gb), floor, NOW)
+    assert full.full
+    assert full.sentence == "the machine is full: 2.0 GB available, 3 GB needed"
+    swap = headroom(Meminfo(available=6 * gb, swap_total=8 * gb, swap_free=gb // 2), floor, NOW)
+    assert swap.sentence == "the machine is full: 0.5 GB swap free, 3 GB needed"
+    both = headroom(Meminfo(available=gb, swap_total=8 * gb, swap_free=gb), floor, NOW)
+    assert both.sentence == "the machine is full: 1.0 GB available, 1.0 GB swap free, 3 GB needed"
+    # A machine with no swap is judged on memory alone.
+    no_swap = headroom(Meminfo(available=6 * gb, swap_total=0, swap_free=0), floor, NOW)
+    assert not no_swap.full
+    # A reading the runtime could not make is full, and says so.
+    unread = headroom(None, floor, NOW)
+    assert unread.full and unread.sentence == "the machine is full: its memory could not be read"
+    assert floor == MEMORY_FLOOR_BYTES, "3 GB: a fix lane peaked at 3.1 GB on 2026-09-05"
+    state = dial_state(
+        Dial(on=True, lanes=4, changed_at=NOW, first_on_at=NOW),
+        [fix(FixStage.PLANNED, n) for n in range(1, 5)],
+        {},
+        held=[fix(FixStage.PLANNED, n) for n in range(1, 5)],
+        room=full,
+    )
+    assert (state.running, state.held, state.dial.lanes) == (0, 4, 4), "4 held, 0 running"
+    assert state.full == "the machine is full: 2.0 GB available, 3 GB needed"
 
 
 def test_quiet_is_no_lane_with_hands_on_any_project():
@@ -171,5 +225,8 @@ def test_quiet_is_no_lane_with_hands_on_any_project():
         Dial(on=True, lanes=2, changed_at=NOW, first_on_at=NOW - timedelta(days=1)),
         [],
         {"b": {1: working}},
+        held=[],
+        room=None,
     )
-    assert (state.running, state.quiet, state.dial.lanes) == (0, False, 2)
+    assert (state.running, state.held, state.full) == (0, 0, None)
+    assert (state.quiet, state.dial.lanes) == (False, 2)
