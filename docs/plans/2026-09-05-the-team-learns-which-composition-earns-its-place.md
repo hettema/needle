@@ -4,7 +4,7 @@
 **Status:** PENDING
 **Written:** 2026-09-05, by Codex after challenge and reconciliation with Claude Opus. Both agreed this is separate from making Codex callable, that quality is invariant, and that the evidence already exists. Claude corrected the proposed first measures: corrections before build and defects escaping after close carry more signal at small, confounded sample sizes than speed or token cost. Dennis then ruled that every card should automatically assemble its best currently supported team: routing is a two-way door, selective human scheduling would make him the weakest link, and running the loop is how the evidence arrives fastest.
 **Effort gate:** high — the reader is small, but choosing and automatically applying compositions without rewarding easy work or turning collaboration into a committee is a judgment problem.
-**Sequencing:** after #57, because automatic different-make composition needs reciprocal addressability. #54 is the first different-make observation. No hold for three observations: incomplete evidence selects exploration honestly rather than leaving Dennis to schedule it.
+**Sequencing:** after #59 (the boundary this card measures compositions inside; its `TRIAGED` rows are the comparable work shape), and after #57, because automatic different-make composition needs reciprocal addressability. #54 is the first different-make observation. No hold for three observations: incomplete evidence selects exploration honestly rather than leaving Dennis to schedule it.
 
 ## Intent
 

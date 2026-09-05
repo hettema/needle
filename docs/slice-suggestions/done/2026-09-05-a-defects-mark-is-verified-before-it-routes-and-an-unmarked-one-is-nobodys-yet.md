@@ -1,5 +1,6 @@
 # A defect's mark is verified before it routes, and an unmarked one is nobody's yet
 
+**Carried by:** docs/plans/2026-09-05-a-defects-mark-is-verified-before-it-routes.md
 **Kind:** defect
 **Fix:** now — the owner ruled the boundary on 2026-09-05 (recorded below, in his words and the colleagues'), so what remains is execution: replace the silent default, type the third state, hold the three marks with a ratchet, and give a genuine `his` card a door. The rule this installs is the same rule that makes it a `now`.
 **Found by:** Dennis, 2026-09-05, reading twelve hours of auto-fix on Hello Revenue and asking "how many of these decision points could you guys take instead of me? The difficult thing is where to draw the line." Settled the same evening by Claude (Opus, session f4d2a309) and Sol (Codex gpt-5.6, rollout 01a071ee) in the first Claude-to-Codex call this machine has made; Sol held the primary judgment on the line, Claude held the measurements. Dennis read the result and ruled it true.
