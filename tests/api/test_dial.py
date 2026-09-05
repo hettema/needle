@@ -14,6 +14,7 @@ import shutil
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
+import pytest
 from fastapi.testclient import TestClient
 
 from api.cli import main
@@ -377,14 +378,17 @@ def test_a_held_plan_does_not_count_and_the_memory_floor_stops_the_beat(
     assert [(c.on, c.lanes) for c in store.dial_changes()] == [(True, 1), (True, 3)]
 
 
+@pytest.mark.parametrize("worktree_gone", [False, True])
 def test_a_lane_that_folded_and_closed_gives_its_memory_back_and_no_other_ending_is_touched(
-    client: TestClient, machine_floor: Floor, repo: Path, store: Store, capsys
+    client: TestClient, machine_floor: Floor, repo: Path, store: Store, capsys, worktree_gone: bool
 ):
     """The plan "as many lanes as the machine can hold", item 4: once the
     fold is recorded and the close taken, a background session whose turn
     is over is stopped through the runtime and the card says so; before
     either fact it is left alone, and after it has ended it is not stopped
-    again."""
+    again. With the worktree removed at the fold (Hello Revenue's way) the
+    lane reads ended with the process still resident, and is released the
+    same."""
     doors.start(client)
     started = machine_floor.state()["launch_log"][0]
     short = started["short"]
@@ -436,6 +440,10 @@ def test_a_lane_that_folded_and_closed_gives_its_memory_back_and_no_other_ending
     capsys.readouterr()
     client.app.state.loops.live.rescan("proj")
     assert column_of(client, CARD) == "Executed"
+    if worktree_gone:
+        # Hello Revenue's fold removes the worktree: the lane reads ended
+        # with the process resident, and its turn over is the registry's word.
+        git(repo, "worktree", "remove", "--force", str(worktree))
     turn_over()
     reconcile(client)
     assert [s["short"] for s in machine_floor.state()["stops"]] == [short]

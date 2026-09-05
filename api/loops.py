@@ -623,8 +623,7 @@ class Loops:
             session = lane.session
             record = by_record.get(card.number)
             if (
-                lane.state != LaneState.STOPPED
-                or session is None
+                session is None
                 or session.pid is None
                 or session.kind != SessionKind.BACKGROUND
                 or session.session_id in self._released
@@ -633,6 +632,19 @@ class Loops:
                 or card.place.column == Column.EXECUTING
                 or not close_landed(card)
             ):
+                continue
+            # Its turn is over: the lane reads stopped while the worktree
+            # stands, and ended with the process still resident once the
+            # fold has removed the worktree (Hello Revenue's fold does; the
+            # nine finished lanes on 2026-09-05 all read "its worktree is
+            # gone from disk" with a live process behind each). A session
+            # blocked on a prompt, or asking, is left: its state is evidence.
+            turn_over = lane.state == LaneState.STOPPED or (
+                lane.state == LaneState.ENDED
+                and lane.path is None
+                and session.state == SessionState.DONE
+            )
+            if not turn_over:
                 continue
             history = self.live.store.history(slug, card.number)
             if not close_is_current(card, history, record.first_seen):
