@@ -1,7 +1,7 @@
 # 08 — Identity and the record
 
 **Carries:** docs/slice-suggestions/2026-09-04-a-card-keeps-its-birth-title-after-its-document-changes.md, docs/slice-suggestions/2026-09-05-a-finished-card-names-its-plan-once-where-the-plan-actually-is.md — the same identity rule from two more sides, folded from the board's Idea door on 2026-09-05 (conversation 6b683c8b): a card's title follows the document it cites, and a card's citation follows the file wherever the close moves it.
-**Status:** PENDING
+**Status:** SHIPPED — 2026-09-07, closed on card #20; the review is `docs/reviews/2026-09-07-identity-and-the-record.md`.
 **Written:** 2026-09-04, folding the last two open Backlog items on Needle's own board: `docs/slice-suggestions/2026-09-04-a-rename-that-changes-stem-and-title-keeps-the-card.md` (a defect) and items 2 and 3 of `docs/slice-suggestions/2026-09-04-what-the-first-board-held-that-needle-does-not-yet.md` (the close-out check is project-local; the morning note lost its DELIVERED sentences). Item 4 of that list, the bar widget, is Hello Revenue's and the machine's, not Needle's; the API it needs already exists, and the gap list says so.
 **Effort gate:** high — the rename item is a defect with a clear test; the close-out grammar item asks where a project-independent check belongs, which the Rulings decide; the record item is a read-only API a project's own tooling can call.
 **Sequencing:** after 07. Independent of the page; touches the corpus reconcile, the parsers and the API.
