@@ -75,7 +75,12 @@ sequence number ("08 — ", "14 — ") leaves the title and the stem in the same
 rename (item 5 is why); the card's number is the one the owner sees. Plan 08's
 reconcile keeps the card through a rename that changes stem and title; the
 lane proves it on the fixture before touching a real board. One commit per
-project into its trunk, by script, each body naming this plan.
+project into its trunk, by script, each body naming this plan. A document
+whose card has hands on it — a lane running, on any board — is not renamed
+by the sweep: its lane owns its plan until the fold (card 50's lesson: a
+plan moved on the trunk under a running lane costs the lane a rebase over
+a rename), and the sweep lists what it skipped on this card so the reader
+of the loop knows which titles are still old and why.
 Done means: after the board's next read, no live card on any of the four
 boards carries a vocabulary word in its title, and every card number that
 was live before the sweep is live after it with its history intact (the
