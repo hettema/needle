@@ -21,6 +21,19 @@ nobody ever looks at it again. So they accumulate, silently, one per split
 and one per ruling and one per retry, in `git worktree list` and on the
 disk, until somebody notices the directory.
 
+**Also seen, 2026-09-07, a card's lane.** The close does not remove a card
+lane's worktree either, in practice: at the close the runtime stops the
+lane's session ("the lane folded and closed, so its session gives its memory
+back", card #73's history 12:32 and card #35's on the machine's board),
+so the session never runs its own removal, and Claude Code's lock on the
+worktree it created stays. Read at 14:40 that day: `card-73-…` under Needle's
+`.claude/worktrees/` (card Executed, branch merged, tree clean, locked) and
+`card-35-…` under the machine's (card Done, branch merged, tree clean), and
+the machine's session-start line names #35 as "in flight" from that
+worktree — the board's word wrong at every session start. So the fix is the
+one above for both kinds: the board removes a merged lane's worktree when its
+card's close lands, and refuses an unmerged one.
+
 ## What would hold it
 
 One way for the board to remove a lane's worktree when its work is in the
