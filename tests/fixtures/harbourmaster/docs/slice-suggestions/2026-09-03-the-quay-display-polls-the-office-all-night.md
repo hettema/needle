@@ -4,7 +4,7 @@
 
 ## Observation
 
-The office costs nothing while nothing happens — but only because the quay display is not installed. It asks the office for the berth list every eight seconds via `/api/quay`, all night, and installing it as it stands quietly breaks that.
+`quay/display.py::refresh` asks `/api/quay` every eight seconds. The office costs nothing while nothing happens — but only because the quay display is not installed. It asks the office for the berth list every eight seconds via `/api/quay`, all night, and installing it as it stands quietly breaks that.
 
 ## Done means
 

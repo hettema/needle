@@ -4,9 +4,13 @@
 **Fix:** now — the tide table plan says the harbour's own clock is the reference, and the quay display keeps its own
 **Found by:** the review of card #241 (`docs/reviews/2026-09-03-the-deploy.md`, finding 2), carried out.
 
+## The intent it breaks
+
+The board on the pontoon says the same high water as the office. A skipper who reads a wrong tide time plans a wrong departure.
+
 ## Observation
 
-The quay display shows high water from a clock it winds itself at boot. It gains about a minute a day, and after a fortnight the board on the pontoon disagrees with the office by a quarter of an hour.
+`quay/clock.py::wind` runs at boot and nothing reads the office again. The quay display shows high water from a clock it winds itself at boot. It gains about a minute a day, and after a fortnight the board on the pontoon disagrees with the office by a quarter of an hour.
 
 ## What would hold it
 

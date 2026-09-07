@@ -34,6 +34,17 @@ _GATE = re.compile(r"^\W*(low|medium|high|xhigh)\b\W*(.*)$", re.I | re.S)
 _CARD_REF = re.compile(r"#(\d+)")
 _DATE = re.compile(r"^(\d{4}-\d{2}-\d{2})-")
 _INTENT_HEADING = re.compile(r"^(?:\d+\.\s*)?(?:the\s+)?intent\b", re.I)
+_BREAKS_HEADING = re.compile(r"^(?:\d+\.\s*)?(?:the\s+)?intent\s+it\s+breaks\b", re.I)
+"""A suggestion's section that names the intent the defect breaks (card
+#74, item 4): the essence comes from here when the section exists, so the
+line under a defect's title says what it is for and never where the code
+is. `docs/plans/README.md` and the filing brief name the section."""
+_CODE_MARK = "\x00"
+_CODE_SHAPED = re.compile(r"\w+::\w+|\b\w+\(\)|(?<![\w/])[\w.-]+/[\w./-]+|\b\w+\.(?:py|ts|tsx|md|json|toml|yaml|yml|sh)\b")
+"""What must not reach the face of a closed card: a backtick, a
+`module::function`, a `call()`, a path with a slash, a file name. A
+sentence carrying one is the evidence's, not the intent's, and the next
+sentence is tried."""
 _FENCE = re.compile(r"^(```|~~~)")
 _INLINE_CODE = re.compile(r"`([^`]*)`")
 _BOLD = re.compile(r"\*\*(.+?)\*\*")
@@ -184,7 +195,10 @@ def _intent(text: str) -> tuple[str | None, str]:
         if first_h1:
             body = text[first_h1.end() :]
         return None, _strip_head(body).strip()
-    chosen = next((h for h in headings if _INTENT_HEADING.match(h.group(1))), headings[0])
+    chosen = next(
+        (h for h in headings if _BREAKS_HEADING.match(h.group(1))),
+        next((h for h in headings if _INTENT_HEADING.match(h.group(1))), headings[0]),
+    )
     start = chosen.end()
     following = [h for h in headings if h.start() > chosen.start()]
     end = following[0].start() if following else len(text)
@@ -212,7 +226,10 @@ def _plain(markdown: str) -> str:
     return " ".join(text.split())
 
 
-def _first_paragraph(body: str) -> str | None:
+def _paragraphs(body: str) -> list[str]:
+    """The body's prose paragraphs in order: fences, headings, head fields
+    and tables are not prose, and a list item is a paragraph of its own."""
+    paragraphs: list[str] = []
     paragraph: list[str] = []
     in_fence = False
     for line in body.split("\n") + [""]:
@@ -224,14 +241,21 @@ def _first_paragraph(body: str) -> str | None:
         stripped = line.strip()
         if not stripped:
             if paragraph:
-                return " ".join(paragraph)
+                paragraphs.append(" ".join(paragraph))
+                paragraph = []
             continue
         if stripped.startswith("#") or _HEAD_FIELD.match(stripped) or stripped.startswith("|"):
             if paragraph:
-                return " ".join(paragraph)
+                paragraphs.append(" ".join(paragraph))
+                paragraph = []
             continue
         paragraph.append(_LIST_MARKER.sub("", stripped).strip() or stripped)
-    return None
+    return paragraphs
+
+
+def _first_paragraph(body: str) -> str | None:
+    paragraphs = _paragraphs(body)
+    return paragraphs[0] if paragraphs else None
 
 
 def suggestion_kind_of(
@@ -680,14 +704,28 @@ def cites_of(fields: list[HeadField]) -> list[str]:
 
 
 def essence_of(intent: str) -> str | None:
-    """The first sentence of a document's intent, as plain text."""
-    paragraph = _first_paragraph(intent)
-    if not paragraph:
-        return None
-    sentence = _SENTENCE_END.split(_plain(paragraph), maxsplit=1)[0].strip()
-    if len(sentence) > ESSENCE_MAX:
-        sentence = sentence[: ESSENCE_MAX - 1].rstrip() + "…"
-    return sentence or None
+    """The first sentence of a document's intent that says what it is for,
+    as plain text: the first sentence with no path, function name or
+    backticked term in it (card #74, item 4). The line under a defect's
+    title was the first sentence of its evidence — a path and a function
+    name — because that is where a defect's body starts; a sentence about
+    where the code is is skipped and the next one tried, through every
+    paragraph, and a body with no such sentence has no essence rather than
+    a wrong one."""
+    for paragraph in _paragraphs(intent):
+        # Backticks are kept as a marker through the plain rendering, so a
+        # backticked word that is not path-shaped (`now`) still counts as code.
+        marked = _INLINE_CODE.sub(lambda m: f"{_CODE_MARK}{m.group(1)}{_CODE_MARK}", paragraph)
+        for raw in _SENTENCE_END.split(_plain(marked)):
+            if _CODE_MARK in raw or _CODE_SHAPED.search(raw):
+                continue
+            sentence = raw.strip()
+            if not sentence:
+                continue
+            if len(sentence) > ESSENCE_MAX:
+                sentence = sentence[: ESSENCE_MAX - 1].rstrip() + "…"
+            return sentence
+    return None
 
 
 def parse_document(

@@ -132,7 +132,7 @@
               {
                 "number": 267,
                 "title": "The tide clock drifts a minute a day",
-                "essence": "The quay display shows high water from a clock it winds itself at boot.",
+                "essence": "The board on the pontoon says the same high water as the office.",
                 "essence_source": "document",
                 "gate": null,
                 "tags": [],
@@ -1884,7 +1884,7 @@
       "summary": {
         "number": 267,
         "title": "The tide clock drifts a minute a day",
-        "essence": "The quay display shows high water from a clock it winds itself at boot.",
+        "essence": "The board on the pontoon says the same high water as the office.",
         "essence_source": "document",
         "gate": null,
         "tags": [],
@@ -1972,10 +1972,10 @@
             "value": "the review of card #241 (`docs/reviews/2026-09-03-the-deploy.md`, finding 2), carried out."
           }
         ],
-        "fingerprint": "1e75aa91898eea4c",
-        "intent_heading": "Observation",
-        "intent": "The quay display shows high water from a clock it winds itself at boot. It gains about a minute a day, and after a fortnight the board on the pontoon disagrees with the office by a quarter of an hour.",
-        "essence": "The quay display shows high water from a clock it winds itself at boot.",
+        "fingerprint": "ccafe6e5b77c5d3c",
+        "intent_heading": "The intent it breaks",
+        "intent": "The board on the pontoon says the same high water as the office. A skipper who reads a wrong tide time plans a wrong departure.",
+        "essence": "The board on the pontoon says the same high water as the office.",
         "read_at": "2026-09-04T08:30:00Z"
       },
       "other_citations": [],
@@ -2216,9 +2216,9 @@
             "value": "the close of card #249, carried out."
           }
         ],
-        "fingerprint": "6510824a8ae91dd8",
+        "fingerprint": "a3d99b3dc2e4be95",
         "intent_heading": "Observation",
-        "intent": "The office costs nothing while nothing happens — but only because the quay display is not installed. It asks the office for the berth list every eight seconds via `/api/quay`, all night, and installing it as it stands quietly breaks that.",
+        "intent": "`quay/display.py::refresh` asks `/api/quay` every eight seconds. The office costs nothing while nothing happens — but only because the quay display is not installed. It asks the office for the berth list every eight seconds via `/api/quay`, all night, and installing it as it stands quietly breaks that.",
         "essence": "The office costs nothing while nothing happens — but only because the quay display is not installed.",
         "read_at": "2026-09-04T08:30:00Z"
       },

@@ -108,11 +108,44 @@ def test_the_essence_skips_code_and_list_markers_and_strips_marks():
         "- **A client without Calendly cannot be offered a page.** HR built one.\n"
     )
     assert essence_of(intent) == "A client without Calendly cannot be offered a page."
-    assert (
-        essence_of("`_handle` reads [the metadata](x) as *a dict*. Then more.")
-        == "_handle reads the metadata as a dict."
-    )
+    # A sentence about where the code is never reaches the face (card #74,
+    # item 4): the next sentence is the essence.
+    assert essence_of("`_handle` reads [the metadata](x) as *a dict*. Then more.") == "Then more."
     assert essence_of("") is None
+
+
+def test_the_essence_of_a_defect_is_the_intent_it_breaks_and_never_a_path():
+    """Card #74, item 4: the line under a defect's title was the first
+    sentence of its evidence — a path and a function name — because that
+    is where a defect's body starts. With the section, its first sentence;
+    without it, the first sentence of the body that names no path, function
+    or backticked term; and no essence at all rather than a wrong one."""
+    with_section = parse(
+        "# T\n\n**Kind:** defect\n**Fix:** now — x\n\n## Observation\n\n"
+        "`runtime/signals.py::read` hands returncode to judge. Three reads.\n\n"
+        "## The intent it breaks\n\nThe owner can trust a machine move. Because.\n",
+        path="docs/slice-suggestions/t.md",
+        kind=DocumentKind.SUGGESTION,
+    )
+    assert with_section.intent_heading == "The intent it breaks"
+    assert with_section.essence == "The owner can trust a machine move."
+    without = parse(
+        "# T\n\n**Kind:** defect\n**Fix:** now — x\n\n## Observation\n\n"
+        "`runtime/signals.py::read` hands returncode to judge. The reader in api/doors.py "
+        "accepted it. A check the board could never perform came back as the check "
+        "saying no. Three reads.\n",
+        path="docs/slice-suggestions/t.md",
+        kind=DocumentKind.SUGGESTION,
+    )
+    assert without.essence == "A check the board could never perform came back as the check saying no."
+    only_code = parse(
+        "# T\n\n**Kind:** defect\n**Fix:** now — x\n\n## Observation\n\n"
+        "`read()` hands it over. The fix is in board/parse.py. See essence_of().\n",
+        path="docs/slice-suggestions/t.md",
+        kind=DocumentKind.SUGGESTION,
+    )
+    assert only_code.essence is None
+    assert essence_of("The mark says `now` and stops. The owner is not asked.") == "The owner is not asked."
 
 
 def test_a_long_first_sentence_is_capped():

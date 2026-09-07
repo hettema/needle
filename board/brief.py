@@ -193,8 +193,12 @@ def filing_rule(found_by: str) -> str:
         "with three lines under the title: `**Kind:** defect`, `**Fix:** "
         f"<mark>` and `**Found by:** {found_by}`. The mark says who fixes it: {FIX_BAR}. "
         "One mark, one document: a finding that carries a different mark is its own "
-        "suggestion, cross-linked by path. Commit it on develop with a body saying what "
-        "prompted it, and push"
+        "suggestion, cross-linked by path. Open the body with a section headed `## The "
+        "intent it breaks` — one paragraph in the owner's words saying which written "
+        "intent the defect breaks and what he loses while it does; its first sentence is "
+        "the line the card shows under its title, so no path or function name in it — and "
+        "put the evidence under its own heading after it. Commit it on develop with a body "
+        "saying what prompted it, and push"
     )
 
 

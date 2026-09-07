@@ -56,6 +56,14 @@ marks a title that fails on the card's face, and keeps Start closed until a
 title passes (card #74). Short enough to place at a glance: the archive's
 twelve-word titles read at a glance and its twenty-five-word ones do not.
 
+The line the card shows under its title is the first sentence of a plan's
+intent, and of a suggestion's section headed `## The intent it breaks` —
+one paragraph, in his words, saying which written intent the defect breaks
+and what he loses while it does. A suggestion without the section shows the
+first sentence of its body that names no path, function or backticked
+term, because the line under a defect's title was the first sentence of its
+evidence — where the code is, which tells him nothing (card #74, item 4).
+
 **A plan carries no number of its own.** The stem is the date and the
 title's slug (`2026-09-07-defects-fix-themselves.md`), never `08 — ` in the
 title or `-08-` after the date. The board numbers cards at birth, per
