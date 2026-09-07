@@ -1,7 +1,7 @@
 # You name what matters now, a colleague finds what holds it back, and the board sorts every card by whether it moves that
 
 **Status:** NEW — planned, not started; waits for the owner's rank.
-**Written:** 2026-09-07, from the owner's idea in the interactive Needle session d03a7b55, discussed in three rounds with a colleague of the other make (Codex 0.153.4, read-only, reasoning effort high); the whole exchange, every Codex line verbatim, is `docs/design/2026-09-07-the-focus-of-a-project-discussed-between-two-makes.md`. His words: "One of the challenging thing for humans is to understand what the most impactful next step is in all the work that's on the board. I am a huge believer in the theory of constraints and Alex Hormozi has a great framework he uses which is 'why can't we do More?' … what if we have a 'sort on intent' or something function on the board. … My intent is for the work we do to be the most impactful work." Then: "my intent is for this to work for any project that uses needle to organise." Then, on the design: "How about moving the constraint into the needle board itself as an input? … nailing the key priority is something that will require some back briefing I guess? Maybe it breaks off into a session to then land on whatever is jointly decided? … There are two languages here: constraints and priorities and they feed into each other. Choosing the wrong priority never fixes the constraint but fixing a constraint in something that doesn't move the prioritised thing is also a failure." And: "what happens when cards are missing that should be there? … it would be awesome if you guys find I'm just not seeing the highest leverage thing because I didn't think of it … I believe hormozi goes through each M, finds a solution in one, then asks something like 'what else can we do that costs x and takes y time that has a higher likelihood of impact'." He ruled to plan it on 2026-09-07: "I think we should turn it into a plan."
+**Written:** 2026-09-07, from the owner's idea in the interactive Needle session d03a7b55, discussed in three rounds with a colleague of the other make (Codex 0.153.4, read-only, reasoning effort high); the whole exchange, every Codex line verbatim, is `docs/design/2026-09-07-the-focus-of-a-project-discussed-between-two-makes.md`. His words: "One of the challenging thing for humans is to understand what the most impactful next step is in all the work that's on the board. I am a huge believer in the theory of constraints and Alex Hormozi has a great framework he uses which is 'why can't we do More?' … what if we have a 'sort on intent' or something function on the board. … My intent is for the work we do to be the most impactful work." Then: "my intent is for this to work for any project that uses needle to organise." Then, on the design: "How about moving the constraint into the needle board itself as an input? … nailing the key priority is something that will require some back briefing I guess? Maybe it breaks off into a session to then land on whatever is jointly decided? … There are two languages here: constraints and priorities and they feed into each other. Choosing the wrong priority never fixes the constraint but fixing a constraint in something that doesn't move the prioritised thing is also a failure." And: "what happens when cards are missing that should be there? … it would be awesome if you guys find I'm just not seeing the highest leverage thing because I didn't think of it … I believe hormozi goes through each M, finds a solution in one, then asks something like 'what else can we do that costs x and takes y time that has a higher likelihood of impact'." He ruled to plan it on 2026-09-07: "I think we should turn it into a plan." After a hand simulation the same evening he ruled the sort crosses columns: "Did you move anything from planned into up next? I mean, in my mind the sort reorganises the board. Moves things out of up next, pulls plans or suggestions/bugs forward etc." and "yeah I think it should go across all lanes and reorder based on intent … Can I then still go back to the old state if I want to? Kinda like the age and gate buttons?"
 **Effort gate:** high — the code is one document reader, one door with a typed purpose, two typed readings in the shape plan 59 already has, one lens and one strip; the judgment is the seam both makes named as the hard part: a diagnosis, a verification, a ruling, a per-card judgment and an outcome reading all bind to versions of things that change under them, and a page that shows yesterday's judgment in today's voice is the one lie this board exists to refuse. A wrong sort costs him a glance; a stale sort shown as current costs him the decision it was built to inform.
 **Sequencing:** none holds this. Beside `docs/plans/2026-09-05-16-every-loop-a-plan-names-is-watched-until-it-closes.md` (this plan's `Loop:` lines are read as prose until that one folds, and become WATCH rows at the close after it) and `docs/plans/2026-09-07-every-sentence-on-a-card-says-whether-it-is-your-move-in-plain-words.md` (the leverage words on a card face take whatever shape that plan settles for a reading's words; if it lands first, this plan uses its shape, if not, this plan's words are one more sentence for it to fold).
 **Class:** a ratchet refuses any import of the leverage result under `api/dial.py` or `board/dial.py`, and a test refuses a chosen focus whose document fingerprint differs from the ruling's; a wrong order is a lens away from his rank and never a lane.
@@ -163,37 +163,74 @@ parse and any other word is refused at the verb that lands them; a reading
 session's actor cannot move a card or write a rank (the door refuses it);
 the ratchet holds.
 
-### 5. The Leverage lens sorts every column by it, and the strip says what the board is sorted on
+### 5. The Leverage lens shows the board as the focus would arrange it, one click makes it so, and one click puts it back
 A fifth lens, `Leverage`, in `frontend/src/board/dnd.ts::throughLens` and
-`Board.tsx`'s `LENSES`: within each column and group, helps-remove first
-ordered by likelihood then by effort gate ascending (the gate is the cost
-and time a plan already declares), then protects, then does-not-address,
-then needs-evidence and unread, his rank preserved inside every class; a
-drop under the lens is not a rank (plan 01). The card face under the lens
-shows the class in those words and its sentence, in the shape the
-plain-words plan settles or one sentence if it has not. A strip under the
-project head, above the columns, visible under every lens, in these words
-and states: "No focus chosen" with the door; "What matters now: … · What
-holds it back is not settled"; "Working out what holds this back" with the
-open conversation; "A focus is ready for your decision" with both
-sentences, the other make's reading, "Use this focus" and "Keep
-discussing"; "Focus chosen · N of M cards assessed", with unread, needs-
-evidence and stale counts, and the coverage line "K queued cards help
-remove this limit" or "Nothing queued is evidenced to remove this limit"
-with "Propose moves" opening the conversation of item 2; "Time to check
-this focus again", "The evidence for this diagnosis expired on <date>.
-Leverage order is paused while it is checked", and "The results challenge
-this diagnosis". With no chosen and current focus the lens shows "Leverage
-order unavailable: <why>" and the columns stay in his rank. The strip
-expands in place to the document's evidence, measures and history. The
-colours are the board's four meanings (`domain/board.py`); a chosen focus
-is never painted proven. Done means: a comp under `docs/design/` shows every
-state with Harbourmaster data and is signed before the build
-(`docs/design/README.md`); `vitest` covers the ordering with ties, the
-unavailable state and the drop-is-not-a-rank rule; the Start click's audit
-row carries the lens in use and the started card's class, so the loop
-below reads a trace and not his memory; `tsc` passes with the mirrored
-types.
+`Board.tsx`'s `LENSES`, that is a view like Age and Gate and stores
+nothing: it shows the whole board as the focus would arrange it, across
+every column and not only within one. The arrangement is one pure function
+over the cards, their classes and the columns' grammar (`domain/column.py`),
+so the page, the verb and the tests read one answer: a planned card that
+helps remove the limit is shown in Up next, ordered by likelihood then by
+effort gate ascending (the gate is the cost and time a plan already
+declares); a card in Up next that does not address the limit is shown in
+Not now with a wake trigger in the WATCH grammar written from the focus's
+recheck; a Backlog defect that helps remove the limit is shown with the
+plan door open, never in Up next, because the corpus is the status and a
+suggestion cannot enter execution without a plan; protects-progress cards
+keep their column and order after the helps-remove ones; needs-evidence,
+unread and stale cards keep their place and are marked as such; a card
+with a Sequencing hold shows the hold beside its class; a card that would
+move is marked as moving, with where from. Executed, Done and Decision
+moment are never rearranged — the first two are machine facts, the third is
+his by name. Flipping back to Rank shows his real board untouched; a drop
+under the lens is not a rank (plan 01). Under the lens the head offers one
+act, "Accept this order", with a count of the moves and each unticked at
+will: the board applies every accepted move through the one move door
+(`api/doors.py`, the same write a drag makes), with the owner as the mover
+and the focus's fingerprint and the card's class as the reason on the
+card's history, and writes the whole batch as one audit entry
+(`domain/audit.py`) carrying every card's place before the move. Until he
+ranks or moves a card by hand again, the head offers "Put it back", which
+restores every card in that batch to its recorded place through the same
+door, with his name and the batch as the reason; a hand move after the
+acceptance retires the put-back, since there is no old state any more.
+A move he unticked is not proposed again until the focus, the card's
+document or its class changes. Accepting never starts a lane, never turns
+the dial and never changes a gate: Up next remains his gate and Start his
+click. The strip under the project head, above the columns, visible under
+every lens, in these words and states: "No focus chosen" with the door;
+"What matters now: … · What holds it back is not settled"; "Working out
+what holds this back" with the open conversation; "A focus is ready for
+your decision" with both sentences, the other make's reading, "Use this
+focus" and "Keep discussing"; "Focus chosen · N of M cards assessed · K
+moves proposed", with unread, needs-evidence and stale counts, and the
+coverage line "K queued cards help remove this limit" or "Nothing queued is
+evidenced to remove this limit" with "Propose moves" opening the
+conversation of item 2; "Order accepted <when> · Put it back"; "Time to
+check this focus again", "The evidence for this diagnosis expired on
+<date>. Leverage order is paused while it is checked", and "The results
+challenge this diagnosis". With no chosen and current focus the lens shows
+"Leverage order unavailable: <why>" and the columns stay in his rank. The
+card face under the lens shows the class in the four plain phrases and its
+sentence, in the shape the plain-words plan settles or one sentence if it
+has not. The strip expands in place to the document's evidence, measures
+and history. The colours are the board's four meanings (`domain/board.py`);
+a chosen focus is never painted proven.
+Done means: a comp under `docs/design/` shows every state, the proposed
+board with its marked moves, the accept count and the put-back, with
+Harbourmaster data, and is signed before the build (`docs/design/README.md`);
+the arrangement function has a test per rule above (a helps-remove plan
+into Up next, a does-not-address card out of it with a readable wake
+trigger, a Backlog defect never into Up next, Executed and Decision moment
+untouched, ties keep his rank); `vitest` covers the view storing nothing,
+the unavailable state and the drop-is-not-a-rank rule; on the door fixture,
+an acceptance moves exactly the ticked cards through the move door with the
+owner as mover and one batch entry, a put-back restores every one of them,
+a hand move after the acceptance retires the put-back, an unticked move is
+not re-proposed until its ground changes, and no acceptance starts a lane or
+turns the dial; the Start click's audit row carries the lens in use and the
+started card's class, so the loop below reads a trace and not his memory;
+`tsc` passes with the mirrored types.
 
 ### 6. The two measures are watched, and the board says which link broke
 At the ruling, the board writes two WATCH rows on the project's focus from
@@ -229,13 +266,17 @@ failing test it reports before acting on it.
 - Needle's own board carries a chosen focus by the close, reached through
   the door, the conversation, the other make's reading and his click, with
   the record of each on the strip's history.
-- Under the Leverage lens every column of that board is ordered by class,
-  likelihood and gate, his rank intact underneath and untouched in the
-  store; Rank shows the same board as before.
+- Under the Leverage lens that board is shown as the focus would arrange
+  it across every column, the moves marked, with nothing stored; Rank shows
+  his board untouched.
+- One acceptance on Needle's board moved the ticked cards with his name and
+  one batch on the history, and a put-back restored them, both read from
+  the card histories.
 - The strip says what the board is sorted on in the words of item 5, and
   says "unavailable" with a reason on every project without a chosen focus.
-- No lane started, no rank moved and no card moved by anything this plan
-  adds; the two ratchets and the door refusals hold.
+- No lane started, no gate changed and no card moved by anything this plan
+  adds except through his acceptance; the two ratchets and the door
+  refusals hold.
 - The two WATCH rows exist on Needle's focus and the first recheck date is
   on the strip.
 
@@ -261,6 +302,15 @@ failing test it reports before acting on it.
   word. His request of 2026-09-07 ("find I'm just not seeing the highest
   leverage thing") is served by the proposal, and the shiny-object guard by
   the word.
+- **The lens proposes across every column; one click of his makes it the
+  board; one click puts it back.** His ruling of 2026-09-07 after the
+  simulation: the sort reorganises the board, not one column. It stays his
+  move because the proposal is a view that stores nothing, the acceptance
+  writes his name on every move, and the put-back is a second act rather
+  than a toggle, since a board that flips between two orders is true in
+  neither (INTENT: position is priority and both are true). Rejected: a
+  standing ruling that lets the focus keep Up next in order unasked — the
+  loop below decides whether to offer it, on evidence, later.
 - **Leverage orders within the top class by likelihood then cost, never by
   a score.** The effort gate is the cost a plan already declares; likelihood
   is one word with a reason. Numeric impact scores were rejected in round
@@ -277,9 +327,8 @@ We think a chosen focus and a leverage order beside his rank will change
 which cards he starts, because the focus is what his rank was approximating
 from memory. If most starts fall outside the first two classes and the
 focus was not renamed, the readings are wrong or the focus is, and five
-evidence sentences read by hand say which. Adoption alone proves no impact;
-the second loop does.
-Loop: the cards started on Needle in the fortnight after its first focus was chosen, by the lens in use and the class shown at each Start click, and whether the focus was renamed in that time — session read the Start audit rows and the focus history by 2026-10-05
+evidence sentences read by hand say which. If he accepts nearly every proposed move and puts none back for two weeks, the board may offer a standing ruling to keep the order unasked — his to give, never a default. Adoption alone proves no impact; the second loop does.
+Loop: the cards started on Needle in the fortnight after its first focus was chosen, by the lens in use and the class shown at each Start click, the share of proposed moves he accepted and put back, and whether the focus was renamed in that time — session read the Start audit rows, the acceptance batches and the focus history by 2026-10-05
 
 We think the cards the lens put first will move the bottleneck's measure and
 that moving it will move the outcome's, because the diagnosis predicts both.
@@ -289,5 +338,4 @@ move, the card readings are re-read; either way the sentence is on the
 strip before anyone sorts by it again.
 Loop: Needle's first focus's two measures, read together against the diagnosis's prediction and the cards shipped in its first class — session codex by 2026-10-19
 
-Loop: a focus shown as chosen with no ruling bound to its fingerprint —
-command uv --project /home/dennis/Work/needle run needle focus --unbound --count expect 0 by 2026-10-05 every 1d
+Loop: a focus shown as chosen with no ruling bound to its fingerprint — command uv --project /home/dennis/Work/needle run needle focus --unbound --count expect 0 by 2026-10-05 every 1d
