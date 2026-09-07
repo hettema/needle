@@ -34,7 +34,7 @@ The byline, now dated twice: written 2026-09-04, rebuilt on Hello Revenue's file
 2026-09-05.
 
 #### 3 · tightened
-The opening. "We cherish intent … no other human in the loop" stands. "Worked out
+The opening. "We cherish intent … no other human in the loop" stands, with the owner's edit of 2026-09-07: "alignment on intent". "Worked out
 over five months on a real product and then on Needle" is dropped — `docs/INTENT.md`
 holds the history. "It is written as intents with the methods that currently serve
 them … the intents are fixed, the methods are our best thinking so far" **moved**
@@ -74,8 +74,7 @@ A rule line.
 §1's first paragraph. "What a change costs and what already exists" and "a
 colleague that surfaces a cost or an answer that already exists is doing half the
 job" are gone from here: the search for what already exists is §8's second
-paragraph, and "a backbrief that only flows one way is obedience, not alignment"
-stands as "a backbrief that flows one way is obedience".
+paragraph, and "a backbrief that only flows one way is obedience, not alignment" stands, and the word is now defined where it first appears — the cold walk of 2026-09-07 found the text used it twenty times and never said what it was.
 
 #### 12 · tightened
 "A decision is intent-bearing until proven otherwise. When unsure … it is the
@@ -208,10 +207,7 @@ the reading's three qualifiers ("with no share of the finder's context", "bound 
 the exact text it read", the sentence on a reading that says `now` on a document
 the corpus does not) — one sentence stands: verified against the source it cites,
 stricter never looser; "so every project on every machine reads the change at its
-next session start and no project file is touched"; "terrain a cold session can
-navigate" → "terrain"; "what an item hands out is decided when the work is
-planned, not remembered when it is done" → "decided at planning"; "there is no
-separate status list; a hand-kept one drifts".
+next session start and no project file is touched"; "what an item hands out is decided when the work is planned, not remembered when it is done" → "decided at planning"; "there is no separate status list; a hand-kept one drifts". The folders and "terrain a cold session can navigate" left in the first draft and came back after the cold walk of 2026-09-07: a cold session has to know where a suggestion and a plan live.
 
 #### 46 · dropped
 "Every card on the board is a view onto a document … a suggestion a plan carries
