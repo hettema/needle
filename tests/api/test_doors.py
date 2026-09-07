@@ -1423,3 +1423,40 @@ def test_a_plan_that_lands_citing_suggestions_takes_the_first_card_and_folds_the
     assert alone.status_code == 409 and f"folded into #{first}" in alone.json()["detail"]
     # The next read changes nothing more.
     assert live.rescan("proj").empty()
+
+
+def test_the_close_refuses_executed_while_the_archived_plan_carries_an_unstanced_promise(
+    client: TestClient, repo: Path, capsys
+):
+    """Every promise gets a stance at the close (plan 08, item 2): the
+    grammar is plan 13's `**Met:**`/`**Deviated:**` at the item, read from
+    the archived plan for any project on the board, and the refusal names
+    the item so the session knows which sentence to write."""
+    plan = next(repo.glob("docs/plans/*metered*"))
+    plan.write_text(
+        plan.read_text(encoding="utf-8")
+        + "\n### 1. The parser reads both shapes\nDone means: a string reading lands.\n"
+        "**Met:** `test_meters.py` reads both.\n\n"
+        "### 2. The two months are re-read\nDone means: the invoices carry July and August.\n",
+        encoding="utf-8",
+    )
+    done = archive_plan(repo)
+    watch = f"the plan is archived — file {done.relative_to(repo)} by 2026-12-31 every 1h"
+    close = ["close", "proj", str(CARD), "--delivered", "d", "--watch", watch]
+    close += ["--review", "docs/reviews/r.md"]
+    assert main(close) == 1
+    refused = capsys.readouterr().err
+    assert "unstanced promise: item 2, The two months are re-read" in refused
+    assert "**Met:**" in refused and str(done.relative_to(repo)) in refused
+    assert column_of(client, CARD) != "Executed"
+    assert not any(r["kind"] == "DELIVERED" for r in detail(client)["record"]), (
+        "a refused close writes nothing"
+    )
+    done.write_text(
+        done.read_text(encoding="utf-8") + "**Deviated:** docs/slice-suggestions/later.md\n",
+        encoding="utf-8",
+    )
+    git(repo, "add", "-A")
+    git(repo, "commit", "-q", "-m", "stanced")
+    assert main(close) == 0
+    assert capsys.readouterr().out.startswith("#253 closed into Executed")

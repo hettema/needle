@@ -28,7 +28,7 @@ from board.signals import GRAMMAR, read_or_decline, where_after, where_after_fin
 from board.triage import routing_now, triaged_row
 from domain.audit import AuditKind
 from domain.board import CardDetail
-from domain.card import Actor, Place
+from domain.card import Actor, Card, Place
 from domain.column import Column
 from domain.document import DocumentKind, SuggestionKind
 from domain.evidence import Evidence, EvidenceState
@@ -807,7 +807,6 @@ class Doors:
             + ".",
         )
 
-
     # ── a triage reading's result (plan 59, item 3) ────────────────────
 
     def triage(
@@ -1019,6 +1018,8 @@ class Doors:
                 f"#{number} cannot enter Executed while its plan is live; archive it to "
                 "docs/plans/done/ first, or name another column."
             )
+        if target == Column.EXECUTED:
+            self._refuse_an_unstanced_promise(slug, number, card)
         lane = live.snapshot.lanes.get(number) if live.snapshot else None
         self._refuse_a_code_lane_without_its_review(slug, number, lane, review)
         # Read before any row is written, so nothing that goes wrong reading
@@ -1047,6 +1048,29 @@ class Doors:
             + (", REVIEW" if review else "")
             + (", HANDED OUT" if handed is not None else "")
             + f" written; the signal is read {signal.kind.value} {signal.target} by {signal.due}.",
+        )
+
+    def _refuse_an_unstanced_promise(self, slug: str, number: int, card: Card) -> None:
+        """Every promise the plan made gets a stance at the close (the
+        doctrine's close ritual; plan 08, item 2): an item of the archived
+        plan that ends in neither `**Met:**` nor `**Deviated:**` is a promise
+        nobody answered, and the card does not enter Executed over it. The
+        grammar is the one the board already counts on the running lane
+        (`board/parse.py::items_of`, plan 13), read here for every project;
+        a plan written as one promise has no items and owes nothing here."""
+        assert card.link is not None
+        document = self.live.projects[slug].index.find(card.link.kind, card.link.stem)
+        if document is None:
+            return
+        unstanced = [item for item in document.items if item.stance is None]
+        if not unstanced:
+            return
+        named = "; ".join(f"item {item.number}, {item.title}" for item in unstanced[:3])
+        more = f" and {len(unstanced) - 3} more" if len(unstanced) > 3 else ""
+        raise DoorRefused(
+            f"#{number} cannot enter Executed while its plan carries an unstanced promise: "
+            f"{named}{more}. End each item with **Met:** <what shows it> or **Deviated:** "
+            f"<pointer> in {document.path} (docs/plans/README.md)."
         )
 
     def _refuse_a_code_lane_without_its_review(
