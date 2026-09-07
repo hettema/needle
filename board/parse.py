@@ -40,7 +40,10 @@ _BREAKS_HEADING = re.compile(r"^(?:\d+\.\s*)?(?:the\s+)?intent\s+it\s+breaks\b",
 line under a defect's title says what it is for and never where the code
 is. `docs/plans/README.md` and the filing brief name the section."""
 _CODE_MARK = "\x00"
-_CODE_SHAPED = re.compile(r"\w+::\w+|\b\w+\(\)|(?<![\w/])[\w.-]+/[\w./-]+|\b\w+\.(?:py|ts|tsx|md|json|toml|yaml|yml|sh)\b")
+_CODE_SHAPED = re.compile(
+    r"\w+::\w+|\b\w+\(\)|(?<![\w/])[\w.-]+/[\w./-]+"
+    r"|\b\w+\.(?:py|ts|tsx|md|json|toml|yaml|yml|sh)\b"
+)
 """What must not reach the face of a closed card: a backtick, a
 `module::function`, a `call()`, a path with a slash, a file name. A
 sentence carrying one is the evidence's, not the intent's, and the next

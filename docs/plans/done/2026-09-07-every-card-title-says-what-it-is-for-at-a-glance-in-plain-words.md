@@ -1,7 +1,7 @@
 # Every card title says what it is for at a glance, in plain words
 
 **Carries:** docs/slice-suggestions/done/2026-09-07-a-cards-title-tells-the-owner-what-it-is-for-at-a-glance-in-his-words.md, docs/slice-suggestions/done/2026-09-05-plans-carry-no-sequence-number-the-card-is-the-one-identifier.md
-**Status:** NEW — planned, not started; the owner placed it at the top of Up next on 2026-09-07.
+**Status:** SHIPPED — 2026-09-07, closed on card #74; every item stanced below.
 **Written:** 2026-09-07, from Dennis reading his own board: "the card titles are very difficult for me to understand which makes the board difficult to read. What can we do to communicate the card's intent better?" and, asked what the title is for: "the intent of the card titles is for me to instantly understand the intent of the card. I am not technical so e.g. tech jargon in there doesn't help me." Then: "Let's make it a plan and put it at the top of up next in the needle board and do we also do a sweep of all the existing cards in all boards to rewrite the card titles?" — yes: the rule is doctrine (HOW-WE-WORK §10, `docs/plans/README.md` lines 43–51, his ruling of 2026-09-04), so the sweep and the reader cover every project on the board, not Needle alone. And, the same day, on #46 — which had waited on him since 2026-09-05: "plan numbering and card numbering seem to be out of sync … if we refer to a plan in the card it feels like it should be the same number" — the ruling: the card number is the one identifier, and a plan carries no number of its own. And the intent in one line, the same day: "My intent is to understand the board at a glance and understand the cards when I open them. This needs to be true for the HR, Omarchy and needle needles … the idea is to run a needle for any project reliably."
 **Effort gate:** high — the code is small (one reading widened, one parser rule, one ratchet, one brief line), but the sweep rewrites some 230 live titles across four projects and every one of them is a judgment about what the owner would say, made in his absence and read by him afterwards; a title that mis-states the intent is a wrong card, silently.
 **Sequencing:** after #20 (plan 08's item 1 makes a card's face follow its document's current title; read live on 2026-09-07, cards #74, #63 and #53 all show the title of the suggestion they were born from while their document is a plan, so without #20 the sweep renames documents and no carried card's face changes). Items 1, 3 and 4 do not wait on it; item 2 does.
@@ -141,6 +141,20 @@ fixture and on a second fixture project, so the hold is proven to be the
 board's and not one project's; the mark's evidence names the reading's
 session and the words; `board/triage.py::routing_of` is untouched — the
 title reading changes no routing, only what the face says.
+**Met:** `tests/api/test_title.py` holds every clause on the floor: an idea
+born with "lane" in its title shows "title fails" after one reading and "no
+plan yet" after the reading of its rewrite; a plan carded with "lane" shows
+the same mark, its Start door is closed with the mark as its reason (409 on
+Start), the hold survives the rewrite and says the title changed, and the
+door opens on the reading that passes — on Harbourmaster and on a bare copy
+of it registered as a second project with no test suite and no vocabulary
+of its own; the mark's history row and the record name the reading's
+session and the failed words; a defect's reading lands mark and title in one
+command and its routing is "triaged his" whatever the title said;
+`board/triage.py::routing_of` has no diff. The reading is the dial's seat,
+opened by its beat as every reading is (`api/dial.py::_take_next`,
+`board/dial.py::unread_titles`): with the dial off, no board's titles are
+read, which is where the mark's reading already stood.
 
 ### 4. The line under a defect's title names the intent it breaks, never where the code is
 `board/parse.py::essence_of` takes the first sentence of a plan's intent
@@ -155,6 +169,14 @@ Done means: on the fixture, a defect with the section shows that sentence
 on its face and a defect without it shows its first path-free sentence; a
 live check of the served page reads a defect card's face with no backtick
 in it; the parser tests cover both.
+**Met:** `board/parse.py::essence_of` prefers a section headed "The intent
+it breaks" and takes the first sentence with no path, function name or
+backtick, through every paragraph, or none; `tests/board/test_parse.py`
+covers the section, the path-free fallback and the no-essence case, and
+`tests/api/test_title.py` reads the two Harbourmaster defects' faces and
+every face on the served fixture for a backtick, `::` or `()`; the filing
+brief and the README name the section. The live check of the served page
+after the fold is the review record's last pass.
 
 ### 5. The card number is the one identifier, and a plan carries no number of its own
 Needle's and the machine's plans carry a sequence number in the stem and the

@@ -6,11 +6,11 @@ from a terminal read the same brief (plan 03, item 3).
 import re
 from pathlib import Path
 
+from board.title import VOCABULARY, Word
 from domain.board import CardDetail
+from domain.document import SuggestionKind
 from domain.lane import HANDS_ON, Lane
 from domain.project import Project
-from board.title import VOCABULARY, Word
-from domain.document import SuggestionKind
 from domain.row import RowKind
 from domain.signal import Signal
 from domain.triage import CorpusLaneKind, Direction, Source, Triage
@@ -396,6 +396,11 @@ TITLE_TEST = (
 (owner ruling 2026-09-04); carried into the reading's brief in the same
 words, because a paraphrase of a test is a different test."""
 
+DOCUMENT_EXCERPT = 8000
+"""How much of a plan or an idea a title reading's brief carries. The
+reader judges the face and checks it against the head and the intent; a
+plan that has grown to a season's status log is not what he sees."""
+
 
 def title_half(detail: CardDetail, vocabulary: list[Word], *, alone: bool) -> str:
     """The title half of a reading's brief (card #74, item 3): the title
@@ -549,6 +554,15 @@ def title_brief(
     card = detail.card
     needle = needle_command()
     slug = card.project
+    if len(document_text) > DOCUMENT_EXCERPT:
+        # A plan can run to tens of thousands of characters; the reader needs
+        # the head and the intent to check that the title says what the
+        # document is for, and the brief says where the rest is.
+        document_text = (
+            document_text[:DOCUMENT_EXCERPT]
+            + f"\n… (the first {DOCUMENT_EXCERPT} characters; the whole document is at "
+            f"{detail.summary.document_path})"
+        )
     return (
         f"A cold reading of #{card.number}'s title on {project.name} ({project.path}), {today}. "
         "The session that wrote this document chose its title from inside its own context, "

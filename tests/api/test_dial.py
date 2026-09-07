@@ -18,8 +18,8 @@ import pytest
 from fastapi.testclient import TestClient
 
 from api.cli import main
-from infrastructure import clock
 from domain.signal import SessionWork
+from infrastructure import clock
 from infrastructure.store import Store
 from tests.api import test_doors as doors
 from tests.api.attention import claim_count

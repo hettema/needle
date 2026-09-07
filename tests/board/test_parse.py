@@ -137,7 +137,9 @@ def test_the_essence_of_a_defect_is_the_intent_it_breaks_and_never_a_path():
         path="docs/slice-suggestions/t.md",
         kind=DocumentKind.SUGGESTION,
     )
-    assert without.essence == "A check the board could never perform came back as the check saying no."
+    assert without.essence == (
+        "A check the board could never perform came back as the check saying no."
+    )
     only_code = parse(
         "# T\n\n**Kind:** defect\n**Fix:** now — x\n\n## Observation\n\n"
         "`read()` hands it over. The fix is in board/parse.py. See essence_of().\n",
@@ -145,7 +147,8 @@ def test_the_essence_of_a_defect_is_the_intent_it_breaks_and_never_a_path():
         kind=DocumentKind.SUGGESTION,
     )
     assert only_code.essence is None
-    assert essence_of("The mark says `now` and stops. The owner is not asked.") == "The owner is not asked."
+    marked = essence_of("The mark says `now` and stops. The owner is not asked.")
+    assert marked == "The owner is not asked."
 
 
 def test_a_long_first_sentence_is_capped():

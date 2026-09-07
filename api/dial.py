@@ -47,8 +47,8 @@ from board.dial import (
     is_quiet,
     rail_count,
     rail_defects,
-    unread_titles,
     running,
+    unread_titles,
     why_not_eligible,
 )
 from board.lane import has_row, is_question

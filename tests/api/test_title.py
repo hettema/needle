@@ -106,7 +106,7 @@ def read_cold(
 # ── item 3: the cold read at birth ─────────────────────────────────────
 
 
-def test_a_plan_with_a_vocabulary_word_is_marked_on_its_face_and_cannot_start_until_a_reading_passes(
+def test_a_plan_with_a_vocabulary_word_is_marked_on_its_face_and_held_until_a_reading_passes(
     client: TestClient, machine_floor: Floor, repo: Path, store: Store, capsys
 ):
     turn(client, on=True, lanes=1)
@@ -181,7 +181,7 @@ def test_a_plan_with_a_vocabulary_word_is_marked_on_its_face_and_cannot_start_un
     assert len(machine_floor.state()["launch_log"]) in (tick_log, tick_log + 1)
 
 
-def test_an_idea_born_with_lane_in_its_title_shows_the_mark_after_one_reading_and_none_after_the_next(
+def test_an_idea_born_with_lane_in_its_title_shows_the_mark_and_loses_it_on_the_next_reading(
     client: TestClient, machine_floor: Floor, repo: Path, capsys
 ):
     turn(client, on=True, lanes=1)
@@ -190,7 +190,9 @@ def test_an_idea_born_with_lane_in_its_title_shows_the_mark_after_one_reading_an
     path = write_suggestion(repo, stem, title=title, intent="Two sessions edit one file.")
     # An idea by its own word; the template's Found-by line would read as a defect.
     path.write_text(
-        path.read_text(encoding="utf-8").replace("\n\n**Found by:**", "\n\n**Kind:** idea\n**Found by:**", 1),
+        path.read_text(encoding="utf-8").replace(
+            "\n\n**Found by:**", "\n\n**Kind:** idea\n**Found by:**", 1
+        ),
         encoding="utf-8",
     )
     landed(repo, stem)
@@ -200,7 +202,14 @@ def test_an_idea_born_with_lane_in_its_title_shows_the_mark_after_one_reading_an
     assert face_of(client, number)["kind"] == "idea"
 
     read_cold(
-        client, machine_floor, "proj", number, "--title", "a lane is the board's word", "--failed", "lane"
+        client,
+        machine_floor,
+        "proj",
+        number,
+        "--title",
+        "a lane is the board's word",
+        "--failed",
+        "lane",
     )
     face = face_of(client, number)
     assert face["state"]["word"] == "title fails"
