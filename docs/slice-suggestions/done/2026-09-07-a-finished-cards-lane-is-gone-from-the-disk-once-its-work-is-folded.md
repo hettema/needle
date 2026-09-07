@@ -1,5 +1,7 @@
 # A finished card's lane is gone from the disk once its work is folded
 
+**Carried by:** docs/plans/2026-09-07-a-finished-card-leaves-nothing-behind-on-the-disk.md — planned on 2026-09-07 at the owner's word ("let's keep a nice and tidy house")
+
 **Kind:** defect
 **Fix:** now — the intent is written (HOW-WE-WORK §14, the close ritual: "the lane is removed, with the tools that refuse to delete anything unmerged"), the fix is inside the close and the beat, and it removes the class — twelve folded lanes on Needle's own disk and every future one — rather than deleting twelve directories by hand
 **Found by:** the owner's session in Needle on 2026-09-07, counting worktrees while reading the boards for half-done work: thirteen under Needle's `.claude/worktrees/`, twelve of them for cards in Done or Executed whose branch is level with the trunk and whose tree is clean (#26, #27, #34, #36, #38, #50, #51, #54, #57, #59, #60, #73); the thirteenth is #20, running. Omarchy's disk holds the same pattern for #7, #12, #14, #16, #35 and Hello Revenue's for its Done cards.

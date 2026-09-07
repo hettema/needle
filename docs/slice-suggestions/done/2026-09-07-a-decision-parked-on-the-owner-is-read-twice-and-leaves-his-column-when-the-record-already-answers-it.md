@@ -1,0 +1,25 @@
+# A decision parked on the owner is read twice, and leaves his column when the record already answers it
+
+**Carried by:** docs/plans/2026-09-07-a-decision-parked-on-the-owner-is-read-twice-and-leaves-his-column-when-the-record-already-answers-it.md — planned on 2026-09-07 at the owner's word ("if you can close the loop mechanically, let's close it"), with a cold read of another make folded in
+
+**Kind:** defect
+**Fix:** now — the intent is written (HOW-WE-WORK §1: "a decision nobody has read twice belongs to nobody yet", and the test in the owner's words; §11: a board the owner has to move by hand lies while he is away), the reading that applies the test already exists for a defect's mark (`board/triage.py`, plan 59) and only its ground widens, and the fix removes a class — every card parked on him on every board, now and later — rather than sweeping one column once as plan 05 did on 2026-09-04
+**Found by:** the owner's session in Needle on 2026-09-07, counting the boards for bottlenecks: 34 cards in Hello Revenue's Decision moment and 12 in Needle's Executed waiting on him to read a signal; the owner: "we need to close decisions that don't need me. If you can close the loop mechanically, let's close it." Read cold by a colleague of another make (Codex 0.153.4, `codex exec -s read-only`, 2026-09-07) for the objection a same-make judge would miss; its rule and its loop are below.
+
+## Observation
+
+- Nothing on the board reads a card in Decision moment a second time. The reading of plan 59 applies the §1 test to a defect's `Fix:` mark on the rail (`api/dial.py` lines 312–330 select only `NEEDS_TRIAGE` and `STALE` defects) and never to a card in the column. The only machine exit from Decision moment is `board/lane.py::unpark`, for a card the machine itself parked on an archived document; every other exit is the owner's move.
+- The column was cleaned once, by hand: plan 05 (2026-09-04) read thirteen Hello Revenue cards there and moved them; and the re-read of eight parked defects on 2026-09-05 found five were execution. Both were sessions, not a mechanism, and the column is at 34 again.
+- Seven ways lead in and one leads out. `board/lane.py` parks a card whose close named no readable signal, whose fold nobody wrote up, whose lane ended with a stale DELIVERED; `board/signals.py` parks a signal past due; `board/verdicts.py` parks doubted evidence and a plan gone stale with no lane; `api/doors.py` parks a signal the owner read as not delivered. Each is right on its own; together they make the column a backlog wearing amber.
+- The titles show the classes. Watch cards from the first board ("Maria's next image edit", "First real walk-in payment", "Monday 05:45–06:30 UTC — four firsts fire") wait for evidence, not for him; rulings bundles ("Booking-first pages — 4 rulings") are his; "Close the doubling-clock program?" is a commitment nobody may close for him.
+
+## The intent it breaks
+
+§1: the person alone settles what he wants, and a decision parked as his is a decision nobody makes; the test says which is which, and a colleague applying the test decides and records the source. §11: one move is his, and the machine never leaves him a column he has to sort by hand while it knows the answer.
+
+## What would fix it
+
+1. The reading of plan 59 widens its ground to every card in Decision moment on every board: one cold reading per card, none of the finder's context, one typed result bound to the text it read — `execution, selected by <source>`, `his: <the one-line decision>`, `waiting for evidence: <the signal>`, or `stale: <what ended it>`.
+2. The board acts on the result and records why: `execution` moves the card to Planned, never Up next — who owns a decision says nothing about its priority, which stays his (§11); `waiting for evidence` writes the WATCH row the card should have had and moves it out of his column to where the signal lands; `his` stays, with the one line as the card's question; `stale` closes it.
+3. The rule from the cold read of another make, which the reader holds and a test refuses: a card leaves the owner's attention only when every commitment on it is accounted for — fulfilled with evidence, withdrawn by a ruling he made, or transferred to a named row that still watches it. Age, shipped code and an absent signal never qualify. "Close the doubling-clock program?" cannot become `stale` by any reading.
+4. The loop, written before the first run: within fourteen days a reader of another make checks every card that left the column against the promises on it, and every `execution` result against the alternatives its cited source actually settles. One commitment abandoned, one outcome the source did not select, or one card closed without its signal falsifies the safety claim: the cards are restored and that exit is suspended until the rule is fixed. Separately, the board counts questions that come back to the owner because a result was wrong; a smaller column with returns is displaced work, not relief.
