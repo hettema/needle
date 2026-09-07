@@ -60,6 +60,10 @@ def test_a_retired_cards_rows_and_history_read_on_the_survivor_and_its_number_sa
         "proj", old_number, new_number, "its document was renamed into this card's on 2026-09-04."
     )
     assert store.card("proj", old_number) is None
+    assert survivor.citations == [
+        "docs/slice-suggestions/2026-09-04-the-collapsed-card.md",
+        "docs/slice-suggestions/2026-09-04-the-closed-card.md",
+    ], "the survivor stands for the retired card's document too"
     assert [(r.kind, r.text) for r in survivor.rows] == [
         (RowKind.DELIVERED, "new delivered"),
         (RowKind.RULING, "the old ruling"),

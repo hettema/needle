@@ -1059,6 +1059,13 @@ class Store:
             assert group is not None
             was = Place(column=Column(group.column), group=group.name, position=card.position)
             born = card.born_at
+            # The survivor stands for the retired card's document too: its
+            # citations join the survivor's, so the record shows the old path
+            # was this card's (tools/renames_kept.py reads exactly that).
+            survivor.citations = [
+                *survivor.citations,
+                *[c for c in card.citations if c not in survivor.citations],
+            ]
             # The retired card's lines stay under its own number and are
             # quoted here, never re-homed: `placements` reads the last MOVED
             # line per number by id, and omarchy's #13 was moved to Not now
