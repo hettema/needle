@@ -529,7 +529,10 @@ class Loops:
         records = self._keep_lane_records(slug, project.path, worktrees, now)
         facts = self._facts(live, sessions, windows, records, worktrees, now)
         lanes = {c.number: lane_for(c, facts) for c in cards}
-        if self._rescue(lanes, slug) | self._keep_in_scope(lanes, slug):
+        # A rescue moved a session, so the lanes read here are stale until
+        # the re-read below; the scope check waits for the next pass rather
+        # than adopt a pid that is gone (a move scopes its new session).
+        if self._rescue(lanes, slug) or self._keep_in_scope(lanes, slug):
             sessions = self.runtime.sessions()
             windows = self.runtime.open_windows()
             facts = self._facts(live, sessions, windows, records, worktrees, now)

@@ -191,8 +191,12 @@ def test_start_says_where_it_will_run_launches_there_and_the_card_enters_executi
     assert after["summary"]["state"]["word"].startswith("working · ")
     assert after["summary"]["state"]["word"].endswith("fable on alpha")
     assert after["lane"]["session"]["short_id"] == launched["short"]
-    assert [h["kind"] for h in after["history"][:2]] == ["moved", "started"]
-    assert after["history"][0]["actor"] == "machine" and "hands on" in after["history"][0]["detail"]
+    # The floor's busctl moves nothing, so the loop's first read finds the
+    # session outside its scope and says so (plan 53); live, a verified
+    # Start has already put it there and no such row appears.
+    rows = [h for h in after["history"] if h["kind"] != "scoped"]
+    assert [h["kind"] for h in rows[:2]] == ["moved", "started"]
+    assert rows[0]["actor"] == "machine" and "hands on" in rows[0]["detail"]
     assert after["doors"]["watch"]["offered"] and after["doors"]["stop"]["offered"]
     assert not after["doors"]["start"]["offered"] and "hands on" in after["doors"]["start"]["why"]
     board = client.get("/api/projects/proj/board").json()
@@ -726,7 +730,7 @@ def test_a_lane_that_dies_mid_close_is_doubted_on_the_next_read_until_the_loop_m
     archived) when the session is killed."""
     start(client)
     launched = machine_floor.state()["launch_log"][0]
-    placed = detail(client)["history"][0]
+    placed = next(h for h in detail(client)["history"] if h["kind"] != "scoped")
     assert placed["actor"] == "machine" and placed["evidence"] == "hands-on"
     held = summary_of(client)["standing"]
     assert held == {"actor": "machine", "evidence": "hands-on", "state": "held", "words": None}
