@@ -83,8 +83,10 @@ class Answer(BaseModel):
     every call, whatever the make: a Codex worker is held to it by
     `--output-schema` with this model's JSON schema, and a Claude colleague
     is asked for it in words, so `runtime.calls` has one reader for both.
-    Extra keys are forbidden so the schema says `additionalProperties:
-    false`, which Codex's structured output requires of an object."""
+    Extra keys are forbidden, so the schema closes the object
+    (`additionalProperties: false`) and a reply with a key outside the
+    shape is not the shape; a Codex worker held to this schema answered in
+    it first time (2026-09-07)."""
 
     model_config = ConfigDict(extra="forbid")
 
