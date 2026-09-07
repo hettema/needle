@@ -112,9 +112,7 @@ def title_fingerprint(title: str, essence: str | None) -> str:
     return fingerprint(f"{title}\n{essence or ''}")
 
 
-def wants_title_reading(
-    document: Document | None, latest: TitleReading | None
-) -> bool:
+def wants_title_reading(document: Document | None, latest: TitleReading | None) -> bool:
     """Whether a card's title has not been read as it stands: no reading
     yet, or the title or essence changed under the last one. A reading
     that failed and a title that has not changed is not read again — the

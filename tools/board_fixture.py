@@ -70,7 +70,7 @@ directory and would differ on every run."""
 
 LANE_PATH = f"{SHOWN_PATH}/.claude/worktrees/card-900-a-card-in-every-state"
 PLACEMENT = Placement(
-    slot="alpha", model=Model.FABLE, config_dir="/x/alpha", why="Fable headroom on alpha"
+    slot="alpha", model=Model.FABLE, config_dir="/x/alpha", why="Fable has room on alpha"
 )
 
 
@@ -264,7 +264,9 @@ def language_cases() -> list[dict[str, object]]:
     backend that changes a word fails the page's test, not only its own."""
     working = lane_for(
         _card(900, column=Column.EXECUTING),
-        _facts(sessions=[_session(detail="Skimming the test suites for the pill's pattern.")]),
+        _facts(
+            sessions=[_session(detail="Skimming the test suites for the state word's pattern.")]
+        ),
     )
     asking = lane_for(
         _card(900, column=Column.EXECUTING),
@@ -309,7 +311,7 @@ def language_cases() -> list[dict[str, object]]:
         update={
             "colliding": Collision(
                 verdict=CollisionVerdict.COLLIDES,
-                sentence="#241's lane is also editing engine/metering.py.",
+                sentence="#241's session is also editing engine/metering.py.",
                 files=["engine/metering.py"],
                 cards=[241],
             )
@@ -318,7 +320,7 @@ def language_cases() -> list[dict[str, object]]:
     owner_watch = (
         "the owner reads the board without it being explained — owner dennis by 2026-09-11"
     )
-    session_watch = "no session re-grows the old doors — session harbourmaster by 2026-09-11"
+    session_watch = "no session re-grows the old buttons — session harbourmaster by 2026-09-11"
     due_watch = "the office check email names a real event — owner dennis by 2026-09-04"
     late_watch = "the nightly check email names a real event — session harbourmaster by 2026-09-01"
     read_at = NOW - timedelta(hours=1)
@@ -394,8 +396,7 @@ def language_cases() -> list[dict[str, object]]:
                 _card(900, column=Column.UP_NEXT),
                 collision=Collision(
                     verdict=CollisionVerdict.COLLIDES,
-                    sentence="Shares ground: #241's lane is editing engine/metering.py right "
-                    "now. The second to fold rebases.",
+                    sentence="#241's session is editing engine/metering.py right now.",
                     files=["engine/metering.py"],
                     cards=[241],
                 ),

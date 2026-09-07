@@ -12,10 +12,11 @@ says why not).
 from datetime import datetime
 from enum import StrEnum
 
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
 
 from domain.column import Column
 from domain.document import Item, Review
+from domain.meaning import opened
 from domain.session import Session
 from domain.slot import Placement
 from domain.window import WindowKind
@@ -130,7 +131,9 @@ class Lane(BaseModel):
     """The worktree, when it exists on disk."""
     state: LaneState
     sentence: str
-    """What the card says about its lane, in one sentence."""
+    """What the card says about its lane, in one sentence in the one shape
+    (card #75): his part first, then the reason, then what happens without
+    him. Empty while no lane exists."""
     session: Session | None
     """The session that holds the lane: the live one, else the last known."""
     question: str | None
@@ -161,6 +164,11 @@ class Lane(BaseModel):
     """How far the lane has come, from its own copy of the plan (plan 13);
     None while no session has hands on it, or its plan has no items."""
 
+    @field_validator("sentence")
+    @classmethod
+    def _sentence_opens(cls, sentence: str) -> str:
+        return sentence if not sentence else opened(sentence, "Lane.sentence")
+
 
 class DoorResult(BaseModel):
     """What a door answers when it opened: which door, and the evidence in a sentence."""
@@ -186,6 +194,12 @@ class Door(BaseModel):
     offered: bool
     label: str
     why: str
+    """Why the door is there, or not, as a sentence in the one shape (card #75)."""
+
+    @field_validator("why")
+    @classmethod
+    def _why_opens(cls, why: str) -> str:
+        return opened(why, "Door.why")
 
 
 class CollisionVerdict(StrEnum):
@@ -198,6 +212,8 @@ class CollisionVerdict(StrEnum):
 class Collision(BaseModel):
     verdict: CollisionVerdict
     sentence: str
+    """The plain reason, which every face wraps in the one sentence shape
+    (card #75); no opening of its own."""
     files: list[str]
     """The overlapping files, when there are any."""
     cards: list[int]

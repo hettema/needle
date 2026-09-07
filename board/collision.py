@@ -11,6 +11,12 @@ run the board re-reads every live worktree's actual diff and names two
 lanes editing the same file as colliding, on both cards, before the fold
 (plan 07, item 2): that is about two lanes editing now, and stays. Pure: the
 caller reads the files and the git state and hands them in.
+
+A collision's sentence is the plain reason, in the owner's words and with
+no opening of its own: every face that shows it wraps it in the one
+sentence shape (`domain.meaning.say`, card #75) as the why, and the open
+card's strip shows it bare beside a state word that already carries the
+meaning.
 """
 
 import re
@@ -19,7 +25,6 @@ from collections.abc import Callable
 from domain.lane import Collision, CollisionVerdict
 
 _NAMED_PATH = re.compile(r"`([\w.-]+(?:/[\w.-]+)+\.\w+)(?:::[\w.:]+|#[\w.-]+|:\d+)?`")
-SECOND_TO_FOLD = "The second to fold rebases."
 
 
 def footprint(text: str, exists: Callable[[str], bool]) -> set[str]:
@@ -32,7 +37,7 @@ def _shown(files: list[str]) -> str:
 
 
 def _lane(number: int) -> str:
-    return f"#{number}'s lane"
+    return f"#{number}'s session"
 
 
 def verdict(
@@ -70,13 +75,13 @@ def verdict(
     if clauses:
         return Collision(
             verdict=CollisionVerdict.COLLIDES,
-            sentence="Shares ground: " + "; ".join(clauses) + f". {SECOND_TO_FOLD}",
+            sentence="; ".join(clauses) + ".",
             files=sorted(files),
             cards=sorted(cards),
         )
     return Collision(
         verdict=CollisionVerdict.CLEAR,
-        sentence="No running lane or trunk session touches this plan's files.",
+        sentence="No running session touches this plan's files.",
         files=[],
         cards=[],
     )

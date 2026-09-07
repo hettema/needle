@@ -167,7 +167,7 @@ FIX_BAR = (
     "when the fix waits for a trigger the board can read; `his` when the fix implies a "
     "decision the owner has to make first. A `now` or a `his` says why on the same line, in "
     "words a reader who was not there can act on: name the written thing that selects the "
-    "outcome and what in it selects it. A category — \"a product call\", \"UX\", \"a bound\" — "
+    'outcome and what in it selects it. A category — "a product call", "UX", "a bound" — '
     "names the shape of the decision and not the decision, and a backticked path on its own "
     "is a source, not a reason; a ratchet refuses both"
 )
@@ -424,8 +424,8 @@ def title_half(detail: CardDetail, vocabulary: list[Word], *, alone: bool) -> st
         "done? A listed word fails it; so does a mechanism, an area label, a term from the "
         "code, or a sentence too long to take in at a glance. You mark and never rewrite: "
         "the writer holds the evidence and rewrites, and the board reads again. The verdict "
-        "is `--title passes`, or `--title \"<what you could not place, in words the writer "
-        "can act on>\" --failed <the words that failed, comma-separated>`."
+        'is `--title passes`, or `--title "<what you could not place, in words the writer '
+        'can act on>" --failed <the words that failed, comma-separated>`.'
     )
 
 

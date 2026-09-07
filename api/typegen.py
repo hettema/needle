@@ -9,6 +9,7 @@ alternative and they drift: the shape would fail at runtime, not at `tsc`.
 
 import importlib
 import inspect
+import json
 from enum import StrEnum
 from pathlib import Path
 from types import ModuleType
@@ -25,6 +26,7 @@ MODULES: list[str] = [
     "audit",
     "entrance",
     "project",
+    "meaning",
     "board",
     "slot",
     "session",
@@ -163,6 +165,19 @@ def _constants(module: ModuleType, uses: set[str]) -> list[str]:
             blocks.append(
                 f"export const {name}: Record<{key_type}, {val_type}> = {{\n{entries},\n}};"
             )
+        elif (
+            isinstance(value, dict)
+            and value
+            and all(isinstance(k, StrEnum) and isinstance(v, str) for k, v in value.items())
+            and type(next(iter(value))).__module__ == module.__name__
+        ):
+            # An enum→words map travels too, so the page writes a sentence
+            # of its own from the same openings the board builds with
+            # (card #75) and never carries a copy.
+            key_type = type(next(iter(value))).__name__
+            uses.add(key_type)
+            entries = ",\n".join(f'  "{k.value}": {json.dumps(v)}' for k, v in value.items())
+            blocks.append(f"export const {name}: Record<{key_type}, string> = {{\n{entries},\n}};")
     return blocks
 
 

@@ -119,6 +119,8 @@ def source_ref_of(why: str | None) -> str | None:
             return candidate
     card = _LOOSE_CARD.search(why)
     return f"#{card.group(1)}" if card else None
+
+
 _TRAILER = re.compile(r"(::|#L|:\d+$).*$")
 
 

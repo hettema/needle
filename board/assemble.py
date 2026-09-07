@@ -13,8 +13,6 @@ from board.handouts import handouts_for
 from board.lane import (
     STARTABLE_COLUMNS,
     ago,
-    first_line,
-    last_line,
     nothing_read,
     placement_from,
     where_of,
@@ -44,7 +42,6 @@ from domain.board import (
     Loop,
     LoopState,
     MachineState,
-    Meaning,
     OwnerAsk,
     TrunkState,
 )
@@ -64,6 +61,7 @@ from domain.evidence import EvidenceState, Standing
 from domain.gate import Gate
 from domain.hook import HeardMark
 from domain.lane import HANDS_ON, Doors, Lane, LaneSnapshot, LaneState, StartState
+from domain.meaning import Meaning, say
 from domain.project import Project
 from domain.row import ROW_HALF, Row, RowHalf, RowKind
 from domain.signal import Reading, Signal, SignalKind, WindowlessSession
@@ -361,7 +359,13 @@ def _due(signal: Signal) -> str:
 
 
 def _signal_line(signal: Signal) -> str:
-    return f"Signal: {signal.what} — by {_due(signal)}"
+    return f"The signal: {signal.what}, by {_due(signal)}"
+
+
+def _who_word(signal: Signal, owner_only: bool) -> str:
+    if owner_only:
+        return "you read it"
+    return "a session reads it" if signal.kind == SignalKind.SESSION else "the board reads it"
 
 
 def _lane_is_spent(card: Card, lane: Lane) -> bool:
@@ -436,13 +440,28 @@ def _loop_state(
             loop=Loop(state=LoopState.CLOSED, owner_only=owner_only),
         )
     if signal is None:
-        return _state("no signal named", Meaning.QUIET, detail=signal_note)
+        return _state(
+            "no signal named",
+            Meaning.QUIET,
+            detail=say(
+                Meaning.QUIET,
+                "the board cannot tell from this card what would prove it delivered",
+                why=signal_note,
+                then="a session writes a signal the board can read, and the board reads it "
+                "from then on",
+            ),
+        )
     open_loop = Loop(state=LoopState.OPEN, owner_only=owner_only)
     if reading is not None:
         return _state(
             f"loop open · a session reads it now · {reading.slot}",
             Meaning.LIVE,
-            detail=_signal_line(signal),
+            detail=say(
+                Meaning.LIVE,
+                "a session is reading the signal",
+                why=_signal_line(signal),
+                then="its reading moves the card by itself",
+            ),
             loop=open_loop,
         )
     if signal_asks_owner(card, signal, last, now):
@@ -450,23 +469,32 @@ def _loop_state(
         return _state(
             "signal for you to read",
             Meaning.YOURS,
-            detail=f"A session read it and could not tell: {evidence}"
-            if evidence
-            else _signal_line(signal),
+            detail=say(
+                Meaning.YOURS,
+                "say whether this delivered",
+                why=f"a session read it and could not tell: {evidence}"
+                if evidence
+                else f"only you can read the signal. {_signal_line(signal)}",
+                then="the card stays open until you do",
+            ),
             loop=Loop(state=LoopState.OPEN, owner_only=True),
             door=_door(
                 FaceDoorName.OPEN,
                 "Read",
-                "Only you can read this signal; the open card takes your reading.",
+                say(
+                    Meaning.YOURS,
+                    "open the card and give your reading",
+                    why="only you can read this signal",
+                ),
                 primary=True,
             ),
         )
     who = (
-        "you read it"
+        f"the signal asks you {_due(signal)}, not before"
         if owner_only
-        else "a session reads it"
+        else f"a session reads the signal {_due(signal)}"
         if signal.kind == SignalKind.SESSION
-        else "the board reads it"
+        else f"the board reads the signal {_due(signal)}"
     )
     # A signal past its due date with nothing read is the loop failing to
     # close: the card says who reads it and that reader has not. Two things
@@ -475,13 +503,23 @@ def _loop_state(
         return _state(
             f"loop open · {_due(signal)} passed, unread",
             Meaning.BROKEN,
-            detail=_signal_line(signal),
+            detail=say(
+                Meaning.BROKEN,
+                f"the signal was due {_due(signal)} and nobody has read it",
+                why=_signal_line(signal),
+                then="the board reads it again on its next pass; open the card to read it yourself",
+            ),
             loop=open_loop,
         )
     return _state(
-        f"loop open · {who} {_due(signal)}",
+        f"loop open · {_who_word(signal, owner_only)} {_due(signal)}",
         Meaning.QUIET,
-        detail=_signal_line(signal),
+        detail=say(
+            Meaning.QUIET,
+            who,
+            why=_signal_line(signal),
+            then="the card moves to Done by itself once the signal delivers",
+        ),
         loop=open_loop,
     )
 
@@ -520,22 +558,44 @@ def state_of(
         return _state(
             "document nowhere",
             Meaning.BROKEN,
-            detail=f"cites {document_path}, and no such file exists in the project",
+            detail=say(
+                Meaning.BROKEN,
+                "the document this card cites is nowhere",
+                why=f"it cites {document_path}, and no such file exists in the project",
+                then="put the file back, or point the card at the right one, and the board "
+                "reads it again by itself",
+            ),
         )
     if standing.state == EvidenceState.DOUBTED:
-        return _state("doubted", Meaning.BROKEN, detail=standing.words, hint="open to decide")
+        return _state(
+            "doubted",
+            Meaning.BROKEN,
+            detail=say(
+                Meaning.BROKEN,
+                "the board doubts that this card belongs where it sits",
+                why=standing.words,
+                then="open it to decide where it belongs",
+            ),
+            hint="open to decide",
+        )
     if lane is not None and lane.state == LaneState.ENDED and _lane_died(card, lane):
         return _state(
-            "lane ended",
+            "session died",
             Meaning.BROKEN,
-            detail=lane.died or first_line(lane.sentence),
+            detail=lane.sentence,
             hint="open to resume",
         )
     if hands_on and lane is not None and lane.colliding is not None and lane.colliding.cards:
         return _state(
             f"colliding with {_cards(lane.colliding.cards)}",
             Meaning.BROKEN,
-            detail=lane.colliding.sentence,
+            detail=say(
+                Meaning.BROKEN,
+                "two sessions are editing the same files",
+                why=lane.colliding.sentence,
+                then="the second to finish catches up with the first; nothing needs you "
+                "unless they stay stuck",
+            ),
         )
     if lane is not None and lane.state in WAITING_ON_YOU and not _lane_is_spent(card, lane):
         answer = (
@@ -543,44 +603,32 @@ def state_of(
             if doors.answer.offered
             else None
         )
+        # The lane's own sentence is the sentence: built in one shape from
+        # the same facts, so the face and the open card's band say one thing.
         if lane.state == LaneState.ASKING:
-            question = last_line(lane.question)
-            return _state(
-                "asking you",
-                Meaning.YOURS,
-                detail=f"“{question}”" if question else None,
-                door=answer,
-            )
+            return _state("asking you", Meaning.YOURS, detail=lane.sentence, door=answer)
         if lane.state == LaneState.STOPPED:
             return _state(
-                f"stopped · {_where(lane)}",
-                Meaning.YOURS,
-                detail=first_line(lane.said),
-                door=answer,
+                f"stopped · {_where(lane)}", Meaning.YOURS, detail=lane.sentence, door=answer
             )
-        return _state(
-            f"blocked · {_where(lane)}",
-            Meaning.YOURS,
-            detail=first_line(lane.session.detail) if lane.session is not None else None,
-            door=answer,
-        )
+        return _state(f"blocked · {_where(lane)}", Meaning.YOURS, detail=lane.sentence, door=answer)
     if lane is not None and lane.state == LaneState.MOVING:
         return _state(
             f"moving · {_where(lane)}",
             Meaning.LIVE,
-            detail=first_line(lane.sentence),
+            detail=lane.sentence,
             door=_door(FaceDoorName.WATCH, doors.watch.label, doors.watch.why, primary=False)
             if doors.watch.offered
             else None,
         )
     if lane is not None and lane.state == LaneState.WORKING:
-        # A lane the runtime moved to another subscription says so before it
-        # says what it is doing: the move is the fact the owner has not seen.
-        doing = first_line(lane.session.detail) if lane.session is not None else None
+        # A session the runtime moved to another subscription says so before
+        # it says what it is doing: the move is the fact the owner has not
+        # seen, and the lane's sentence carries it first.
         return _state(
             f"working · {ago(lane.hands_on_since, now)} · {_where(lane)}",
             Meaning.LIVE,
-            detail=lane.moved or doing,
+            detail=lane.sentence,
             door=_door(FaceDoorName.WATCH, doors.watch.label, doors.watch.why, primary=False)
             if doors.watch.offered
             else None,
@@ -590,34 +638,69 @@ def state_of(
     if hold is not None:
         # Broken before quiet: the title and the bar disagree, and nothing
         # below this line — a Start, a plan door — is offered while they do.
-        return _state("title fails", Meaning.BROKEN, detail=hold, hint="open to see")
+        return _state(
+            "title fails",
+            Meaning.BROKEN,
+            detail=say(
+                Meaning.BROKEN,
+                "a cold reading could not place this card from its title",
+                why=hold,
+                then="the writer rewrites the title and the next reading clears this by itself",
+            ),
+            hint="open to see",
+        )
     if card.place.column == Column.DECISION_MOMENT:
         return _state(
             "your move",
             Meaning.YOURS,
+            detail=say(
+                Meaning.YOURS,
+                "rule on this card",
+                why=standing.words
+                or "it sits in Decision moment, and nothing there moves without a word from you",
+                then="open it for the record and every choice; it stays here until you move it",
+            ),
             door=_door(
                 FaceDoorName.OPEN,
                 "Decide",
-                "This column is yours: the open card has every door and the record to rule on.",
+                say(
+                    Meaning.YOURS,
+                    "open the card and rule",
+                    why="this column is yours, and the open card has the record and every choice",
+                ),
                 primary=True,
             ),
         )
     if card.place.column == Column.NOT_NOW:
-        return _state("not now", Meaning.QUIET, hint="open ▸")
+        return _state(
+            "not now",
+            Meaning.QUIET,
+            detail=say(Meaning.QUIET, "you parked this", then="it stays here until you move it"),
+            hint="open ▸",
+        )
     if document_state == DocumentState.SUGGESTION and trigger_asks_owner(card, trigger, last, now):
         evidence = asked_evidence(trigger, last)
         return _state(
             "trigger for you to read",
             Meaning.YOURS,
-            detail=f"A session read it and could not tell: {evidence}"
-            if evidence
-            else f"Trigger: {trigger.what} — by {_due(trigger)}"
-            if trigger is not None
-            else None,
+            detail=say(
+                Meaning.YOURS,
+                "say whether the trigger this fix waits on has fired",
+                why=f"a session read it and could not tell: {evidence}"
+                if evidence
+                else f"only you can read it. The trigger: {trigger.what}, by {_due(trigger)}"
+                if trigger is not None
+                else None,
+                then="the fix starts by itself once you say it fired",
+            ),
             door=_door(
                 FaceDoorName.OPEN,
                 "Read",
-                "Only you can read this trigger; the open card takes your reading.",
+                say(
+                    Meaning.YOURS,
+                    "open the card and give your reading",
+                    why="only you can read this trigger",
+                ),
                 primary=True,
             ),
         )
@@ -625,7 +708,12 @@ def state_of(
         return _state(
             f"being planned · {planning.slot}",
             Meaning.LIVE,
-            detail="The dial took it: a session is writing its plan in the project's checkout.",
+            detail=say(
+                Meaning.LIVE,
+                "a session is writing this defect's plan",
+                why="defects fix themselves: the auto-fix setting took it",
+                then="the plan lands on the board by itself and the card moves with it",
+            ),
         )
     # Yours before live, as every branch above it is: a defect waiting on his
     # sentence outranks one a session is reading, and the two cannot both be
@@ -634,32 +722,49 @@ def state_of(
         return _state(
             "your ruling",
             Meaning.YOURS,
-            detail=routed.why,
+            detail=say(
+                Meaning.YOURS,
+                "rule on who fixes this",
+                why=routed.why,
+                then="your sentence is the ruling, and a short session writes it into the document",
+            ),
             door=_door(FaceDoorName.OPEN, "Rule", doors.answer.why, primary=True),
         )
     if triaging is not None and defect:
         return _state(
             f"mark being read · {triaging.slot}",
             Meaning.LIVE,
-            detail=(
-                "A reading with no share of the finding session's context is verifying who "
-                "fixes this, against the source the mark cites — and whether you could place "
-                "the card from its title."
+            detail=say(
+                Meaning.LIVE,
+                "a second reading is checking who fixes this, and whether you could place "
+                "the card from its title",
+                why="it shares nothing with the session that found the defect and reads the "
+                "source the mark cites",
+                then="its verdict lands on the card by itself",
             ),
         )
     if triaging is not None:
         return _state(
             f"title being read · {triaging.slot}",
             Meaning.LIVE,
-            detail=(
-                "A reading with no share of the writer's context is judging whether you could "
-                "place this card from its title and the line beneath it."
+            detail=say(
+                Meaning.LIVE,
+                "a cold reading is judging whether you could place this card from its title "
+                "and the line beneath it",
+                then="its verdict lands on the card by itself",
             ),
         )
     if document_state == DocumentState.SUGGESTION:
         return _state(
             "no plan yet",
             Meaning.QUIET,
+            detail=say(
+                Meaning.QUIET,
+                "no plan carries this yet",
+                then="Create plan writes one when you want it planned"
+                if doors.plan.offered
+                else None,
+            ),
             door=_door(FaceDoorName.PLAN, doors.plan.label, doors.plan.why, primary=False)
             if doors.plan.offered
             else None,
@@ -673,12 +778,7 @@ def state_of(
             return _state(
                 "free to start",
                 Meaning.PROVEN,
-                door=_door(
-                    FaceDoorName.START,
-                    "Start",
-                    f"{doors.start.label} — {doors.start.why}",
-                    primary=True,
-                ),
+                door=_door(FaceDoorName.START, "Start", doors.start.why, primary=True),
             )
         if readiness.state == StartState.SHARES:
             # Shared ground is shown, never waited on (INTENT.md lesson 4):
@@ -686,14 +786,17 @@ def state_of(
             return _state(
                 f"shares ground with {_cards(readiness.cards)}",
                 Meaning.PROVEN,
-                detail=readiness.why,
-                door=_door(
-                    FaceDoorName.START,
-                    "Start",
-                    f"{doors.start.label} — {doors.start.why}",
-                    primary=True,
+                detail=say(
+                    Meaning.PROVEN,
+                    f"this can start now and shares files with {_cards(readiness.cards)}",
+                    why=doors.collision.sentence if doors.collision is not None else None,
+                    then="the second to finish catches up with the first",
                 ),
+                door=_door(FaceDoorName.START, "Start", doors.start.why, primary=True),
             )
+        # The closed Start door's reason is the state's sentence: the two are
+        # one judgment (`doors_for`), and it already opens with "Nothing for
+        # you" — the held card the owner could not read on 2026-09-07.
         if readiness.state == StartState.WAITS:
             return _state(
                 "waits on " + ", ".join(w.label for w in readiness.waits),
@@ -705,10 +808,18 @@ def state_of(
         if readiness.state == StartState.NOWHERE:
             return _state("nowhere to run", Meaning.QUIET, detail=readiness.why)
         if readiness.state == StartState.TAKEN:
-            return _state("lane exists", Meaning.QUIET, detail=readiness.why)
-        return _state("no gate", Meaning.QUIET, detail=readiness.why)
+            return _state("already begun", Meaning.QUIET, detail=readiness.why)
+        return _state("no effort level", Meaning.QUIET, detail=readiness.why)
     if card.place.column == Column.EXECUTING:
-        return _state("no hands on it", Meaning.QUIET)
+        return _state(
+            "no hands on it",
+            Meaning.QUIET,
+            detail=say(
+                Meaning.QUIET,
+                "it sits in Executing with no session on it",
+                then="the board moves it where the work says on its next pass",
+            ),
+        )
     if document_state == DocumentState.NOTE:
         return _state("no document", Meaning.QUIET)
     if document_state == DocumentState.ARCHIVED:

@@ -96,9 +96,7 @@ def rail_defects(cards: list[Card], index: CorpusIndex) -> list[tuple[Card, Docu
     return found
 
 
-TITLE_READ_COLUMNS: frozenset[Column] = frozenset(
-    {Column.BACKLOG, Column.PLANNED, Column.UP_NEXT}
-)
+TITLE_READ_COLUMNS: frozenset[Column] = frozenset({Column.BACKLOG, Column.PLANNED, Column.UP_NEXT})
 """Where a title is read cold (card #74, item 3): the columns a card is
 ranked in before anyone has hands on it. A card in flight, shipped, parked
 or on the owner's desk is not read — its Start is closed by other facts

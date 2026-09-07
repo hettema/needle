@@ -9,6 +9,7 @@ says (the runtime already holds that; this module only reads its verdict).
 """
 
 import re
+from collections.abc import Iterable
 from datetime import UTC, datetime, timedelta
 
 from pydantic import BaseModel
@@ -39,6 +40,7 @@ from domain.lane import (
     Wait,
 )
 from domain.launch import Rescue
+from domain.meaning import Meaning, say
 from domain.row import RowKind
 from domain.session import Session, SessionKind, SessionState
 from domain.signal import Signal
@@ -173,8 +175,28 @@ def _moved_sentence(
     last = moves[-1]
     model = last.to_rung.model.value if last.to_rung.model else "fable"
     opened = any(w.session_id in chain and w.opened_at >= last.at for w in windows)
-    said = f"Moved to {model} on {last.to_rung.slot}"
-    return said + (", new window opened." if opened else ".")
+    said = f"It moved to {model} on {last.to_rung.slot}"
+    return said + (", and a new window opened." if opened else ".")
+
+
+def _asking(question: str, moved: str | None) -> str:
+    return say(
+        Meaning.YOURS,
+        "answer its question",
+        why=(f"{moved} " if moved else "") + f"the session on it stopped to ask: {question}",
+        then="nothing moves until you do",
+    )
+
+
+def _stopped(when: str, where: str, said: str | None, moved: str | None) -> str:
+    return say(
+        Meaning.YOURS,
+        "read what it said and answer",
+        why=(f"{moved} " if moved else "")
+        + f"the session on it stopped {when} ago, {where}"
+        + (f": {said}" if said else ", saying nothing"),
+        then="it waits for your word",
+    )
 
 
 def lane_for(card: Card, facts: LaneFacts) -> Lane:
@@ -259,50 +281,75 @@ def lane_for(card: Card, facts: LaneFacts) -> Lane:
         where = where_of(winner)
         if winner.wall is not None:
             state = LaneState.MOVING
-            sentence = (
-                f"Hit a limit on {winner.slot} ({first_line(winner.wall.reason)}); "
-                f"moving to {winner.wall.account}."
+            sentence = say(
+                Meaning.LIVE,
+                f"the session on it ran out of allowance on {winner.slot} and is moving to "
+                f"{winner.wall.account}",
+                why=first_line(winner.wall.reason),
+                then="it carries on by itself once it lands",
             )
         elif winner.state == SessionState.WORKING:
             state = LaneState.WORKING
-            sentence = f"Working, {where}, hands on for {ago(since, facts.now)}."
-            if winner.detail:
-                sentence += f" {first_line(winner.detail)}"
+            sentence = say(
+                Meaning.LIVE,
+                f"a session is working on it, {where}, for {ago(since, facts.now)}",
+                why=moved,
+                then=first_line(winner.detail) if winner.detail else None,
+            )
         elif hook_stopped and is_question(said):
             state = LaneState.ASKING
             question = said
-            sentence = f"Asking you: {last_line(said)}"
+            sentence = _asking(last_line(said), moved)
         elif hook_stopped:
             state = LaneState.STOPPED
-            sentence = f"Stopped {ago(said_at, facts.now)} ago, {where}: {first_line(said)}"
+            sentence = _stopped(ago(said_at, facts.now), where, first_line(said), moved)
         elif winner.state == SessionState.BLOCKED:
             if is_question(winner.detail) or is_question(said):
                 state = LaneState.ASKING
                 question = said if is_question(said) else winner.detail
-                sentence = f"Asking you: {last_line(question)}"
+                sentence = _asking(last_line(question), moved)
             else:
                 state = LaneState.BLOCKED
-                sentence = f"Blocked, {where}: {first_line(winner.detail) or 'no detail recorded'}"
+                sentence = say(
+                    Meaning.YOURS,
+                    "unblock it",
+                    why=(f"{moved} " if moved else "")
+                    + f"the session on it is stuck, {where}: "
+                    + (first_line(winner.detail) or "it recorded no detail"),
+                    then="nothing moves until you do",
+                )
         elif winner.kind == SessionKind.INTERACTIVE:
-            state = LaneState.WORKING if winner.state == SessionState.WORKING else LaneState.STOPPED
-            sentence = f"Your own terminal has hands on it ({winner.short_id} on {winner.slot})."
+            if winner.state == SessionState.WORKING:
+                state = LaneState.WORKING
+                sentence = say(
+                    Meaning.LIVE,
+                    f"your own terminal is working on it ({winner.short_id} on {winner.slot})",
+                    why=moved,
+                )
+            else:
+                state = LaneState.STOPPED
+                sentence = say(
+                    Meaning.YOURS,
+                    "carry on in your own terminal",
+                    why=f"it has hands on this card ({winner.short_id} on {winner.slot}) and "
+                    "has stopped",
+                    then="nothing moves until you type there",
+                )
         elif is_question(said):
             state = LaneState.ASKING
             question = said
-            sentence = f"Asking you: {last_line(said)}"
+            sentence = _asking(last_line(said), moved)
         else:
             state = LaneState.STOPPED
-            sentence = f"Stopped {ago(said_at or winner.updated_at, facts.now)} ago, {where}" + (
-                f": {first_line(said)}" if said else ", saying nothing."
+            sentence = _stopped(
+                ago(said_at or winner.updated_at, facts.now), where, first_line(said), moved
             )
-        if moved:
-            sentence = f"{moved} {sentence}"
     elif winner is not None or record is not None or events or on_disk:
         state = LaneState.ENDED
         session_id = winner.session_id if winner is not None else None
         died = facts.deaths.get(session_id) if session_id else None
         if died is None and gone:
-            died = "its worktree is gone from disk"
+            died = "its own copy of the code is gone from disk"
         if died is None:
             end = next(
                 (
@@ -317,23 +364,27 @@ def lane_for(card: Card, facts: LaneFacts) -> Lane:
         last_seen = (winner.updated_at if winner is not None else None) or (
             record.last_seen if record is not None else None
         )
-        parts = [f"Lane ended {ago(last_seen, facts.now)} ago"]
-        if died:
-            parts[0] += f": {died}"
-        facts_said = [
+        landed = [
             word
             for word, held in (
-                ("folded", folded),
-                ("trunk synced", trunk_synced),
-                ("main synced", main_synced),
+                ("its work landed on the shared branch", folded),
+                ("the main checkout is level with it", trunk_synced),
+                ("the stable branch is level with it", main_synced),
             )
             if held
         ]
-        if facts_said:
-            parts.append(", ".join(facts_said))
+        when = f"the session on it ended {ago(last_seen, facts.now)} ago"
+        if landed:
+            sentence = say(Meaning.QUIET, when, why="; ".join(landed))
         elif on_disk:
-            parts.append("nothing folded")
-        sentence = ". ".join(parts) + "."
+            sentence = say(
+                Meaning.BROKEN,
+                f"{when} with nothing landed",
+                why=died,
+                then="open the card to resume it or start again",
+            )
+        else:
+            sentence = say(Meaning.BROKEN, when, why=died, then="open the card to start again")
     else:
         state = LaneState.NONE
         sentence = ""
@@ -701,12 +752,28 @@ def nothing_read(card: Card, project_path: str, now: datetime) -> tuple[Lane, "D
     return lane, doors
 
 
-def _closed(label: str, why: str) -> Door:
-    return Door(offered=False, label=label, why=why)
+NOWHERE = "nothing can start right now because no account has room to run it"
+NOWHERE_THEN = "it starts by itself when one does"
 
 
-def _open(label: str, why: str) -> Door:
-    return Door(offered=True, label=label, why=why)
+def _names(labels: Iterable[str]) -> str:
+    names = list(labels)
+    return names[0] if len(names) == 1 else ", ".join(names[:-1]) + f" and {names[-1]}"
+
+
+def _closed(
+    label: str, meaning: Meaning, what: str, *, why: str | None = None, then: str | None = None
+) -> Door:
+    """A door that does not open, with why in the shape of the meaning that
+    closes it: quiet when nothing is asked of him, live when a session is on
+    it, broken when two things disagree (card #75)."""
+    return Door(offered=False, label=label, why=say(meaning, what, why=why, then=then))
+
+
+def _open(label: str, what: str, *, why: str | None = None, then: str | None = None) -> Door:
+    """A door that opens is his move by definition — only he presses it — so
+    its reason opens with his part, whatever colour the face wears."""
+    return Door(offered=True, label=label, why=say(Meaning.YOURS, what, why=why, then=then))
 
 
 def doors_for(
@@ -743,64 +810,86 @@ def doors_for(
     shares = collision is not None and collision.verdict == CollisionVerdict.COLLIDES
     held_by = holding(waits)
 
-    # Start and the pill are one judgment: each branch names both.
+    # Start and the state word are one judgment: each branch names both.
     if not gate_named:
         start = _closed(
-            "Start", "This card names no effort gate; only a planned card is startable."
+            "Start",
+            Meaning.QUIET,
+            "this cannot start because its plan names no effort level",
+            then="Discuss it and a plan with one carries it",
         )
         state = StartState.NO_GATE
     elif live:
-        start = _closed("Start", f"A session already has hands on it: {lane.sentence}")
+        start = _closed(
+            "Start",
+            Meaning.LIVE,
+            "a session already has hands on it, so Start is closed",
+            why=lane.sentence,
+        )
         state = StartState.TAKEN
     elif lane.path is not None:
         start = _closed(
             "Start",
-            f"The lane {lane.name} already exists at {lane.path}; Resume or Look at it instead.",
+            Meaning.QUIET,
+            "work on it began before and its own copy of the code is still on disk",
+            why=f"at {lane.path}",
+            then="open the card to resume that work or look at it; Start is closed while it stays",
         )
         state = StartState.TAKEN
     elif card.place.column not in STARTABLE_COLUMNS:
         start = _closed(
             "Start",
-            f"Start is offered in Up next and Planned; this card is in {card.place.column}.",
+            Meaning.QUIET,
+            f"a card starts from Up next or Planned, and this one is in {card.place.column}",
+            then="move it there to start it",
         )
         state = StartState.ELSEWHERE
     elif title_hold is not None:
         # The owner ranks from the title alone; a card he cannot place is
         # not started until the writer has rewritten it and a reading with
         # no share of the writer's context has passed it (card #74, item 3).
-        start = _closed("Start", title_hold)
+        start = _closed(
+            "Start",
+            Meaning.BROKEN,
+            "a cold reading could not place this card from its title, so it cannot start",
+            why=title_hold,
+            then="the writer rewrites the title and the next reading opens Start by itself",
+        )
         state = StartState.TITLE_FAILS
     elif placement is None:
-        start = _closed("Start", f"The rule found nowhere to run: {placement_note}")
+        start = _closed("Start", Meaning.QUIET, NOWHERE, why=placement_note, then=NOWHERE_THEN)
         state = StartState.UNREAD if placement_note == UNREAD else StartState.NOWHERE
     elif held_by:
         # The plan's own word is the one hold (ruling 3): it says which
         # cards it waits on, and the door opens by itself once they ship.
         start = _closed(
             "Start",
-            "Start waits on the plan's own word: its Sequencing names "
-            + ", ".join(where(w) for w in held_by)
-            + "; it opens by itself once every named card is in Executed or Done.",
+            Meaning.QUIET,
+            f"this starts by itself once {_names(where(w) for w in held_by)} "
+            f"{'ships' if len(held_by) == 1 else 'ship'}",
+            then=f"move {_names(w.label for w in held_by)} up to have it sooner",
         )
         state = StartState.WAITS
     elif shares:
         # Shared ground is a cost the door shows, never a reason to close
         # (INTENT.md lesson 4): the label says what it shares, the reason
-        # names the lanes and the files, and the fold settles it.
+        # names the sessions and the files, and the fold settles it.
         assert collision is not None
         count = len(collision.files)
         start = _open(
             f"Start · {placement.model.value} on {placement.slot} — shares "
             f"{count} file{'' if count == 1 else 's'} with "
-            + ", ".join(f"#{n}'s lane" for n in collision.cards)
-            + "; the second to fold rebases",
-            collision.sentence,
+            + ", ".join(f"#{n}'s session" for n in collision.cards)
+            + "; the second to finish catches up",
+            f"press it and a session takes this card, {placement.model.value} on {placement.slot}",
+            why=collision.sentence,
         )
         state = StartState.SHARES
     else:
         start = _open(
             f"Start · {placement.model.value} on {placement.slot}",
-            placement.why,
+            f"press it and a session takes this card, {placement.model.value} on {placement.slot}",
+            why=placement.why,
         )
         state = StartState.FREE
     readiness = Readiness(
@@ -817,93 +906,129 @@ def doors_for(
             # a tooltip nobody hovers.
             watch = _open(
                 "Focus its window",
-                "Brings the open window into this session forward, through the compositor.",
+                "press it and the open window into this session comes forward",
             )
         else:
-            watch = _open("Watch", "Opens a window into the live session; closing it ends nothing.")
+            watch = _open(
+                "Watch",
+                "press it and a window opens into the live session",
+                then="closing that window ends nothing",
+            )
     elif live:
         watch = _closed(
-            "Watch", "The session runs in your own terminal; that terminal is its window."
+            "Watch",
+            Meaning.QUIET,
+            "the session runs in your own terminal, and that terminal is its window",
         )
     else:
-        watch = _closed("Watch", "No live session to watch.")
+        watch = _closed("Watch", Meaning.QUIET, "there is no live session to watch")
     if background and lane.state in {LaneState.ASKING, LaneState.STOPPED, LaneState.BLOCKED}:
-        answer = _open("Answer", "Your sentence resumes the lane with it; one live copy stays.")
+        answer = _open(
+            "Answer",
+            "your sentence resumes the session with it",
+            then="one live copy stays on the card",
+        )
     elif background:
-        answer = _closed("Answer", "The session is working; answer it when it stops.")
+        answer = _closed(
+            "Answer", Meaning.LIVE, "the session is working", then="answer it when it stops"
+        )
     elif live:
-        answer = _closed("Answer", "The session runs in your own terminal; answer it there.")
+        answer = _closed(
+            "Answer",
+            Meaning.QUIET,
+            "the session runs in your own terminal",
+            then="answer it there",
+        )
     elif ruled is not None:
-        answer = _closed("Answer", ruled)
+        answer = _closed("Answer", Meaning.QUIET, "you have ruled on this already", why=ruled)
     elif routed is not None and routed.state == Routing.TRIAGED_HIS:
         # The one card with no session that has a door (plan 59, item 5): a
         # defect an independent reading put on his pile. Before this it had
         # none, and the pile drained at zero for the board's whole life.
         answer = _open(
             "Answer",
-            "A reading says this decision is yours. Your sentence is the ruling; a short lane "
-            "writes it into the document, citing your answer.",
+            "rule on who fixes this",
+            why="a second reading says the decision is yours",
+            then="your sentence is the ruling, and a short session writes it into the "
+            "document, citing your answer",
         )
     else:
-        answer = _closed("Answer", "No live session to answer.")
+        answer = _closed("Answer", Meaning.QUIET, "there is no live session to answer")
     discuss = (
-        _open("Discuss", "A fresh conversation about this card, never hands on its tree.")
+        _open(
+            "Discuss",
+            "press it and a fresh conversation about this card opens",
+            then="it never touches the card's own code",
+        )
         if placement is not None
-        else _closed("Discuss", f"The rule found nowhere to run: {placement_note}")
+        else _closed("Discuss", Meaning.QUIET, NOWHERE, why=placement_note, then=NOWHERE_THEN)
     )
     # The door says what it does, and says it the same on both faces of the
     # card: "Create plan" collapsed and open (plan 27, item 2).
     if not suggestion_live:
         plan = _closed(
             "Create plan",
-            "Plan writes the plan for a suggestion; this card is not behind a live suggestion.",
+            Meaning.QUIET,
+            "Create plan writes the plan for a suggestion, and this card is not behind a live one",
         )
     elif placement is None:
-        plan = _closed("Create plan", f"The rule found nowhere to run: {placement_note}")
+        plan = _closed("Create plan", Meaning.QUIET, NOWHERE, why=placement_note, then=NOWHERE_THEN)
     else:
         plan = _open(
             "Create plan",
-            "Opens a plan-writing conversation for this suggestion; the plan it writes "
-            "carries the card.",
+            "press it and a plan-writing conversation opens for this suggestion",
+            then="the plan it writes carries the card",
         )
     if lane.state == LaneState.ENDED and lane.session is not None and lane.path is None:
-        gone = "The lane's worktree is gone; Start opens a fresh one."
-        look, resume = _closed("Look", gone), _closed("Resume", gone)
+        gone = "the session's own copy of the code is gone"
+        look = _closed("Look", Meaning.QUIET, gone, then="Start opens a fresh one")
+        resume = _closed("Resume", Meaning.QUIET, gone, then="Start opens a fresh one")
     elif lane.state == LaneState.ENDED and lane.session is not None:
         look = (
             _open(
                 "Look",
-                "A fresh session in the worktree from the transcript; its first line says so.",
+                "press it and a fresh session opens on the same copy of the code, reading "
+                "the old one's transcript",
+                then="its first line says so",
             )
             if placement is not None
-            else _closed("Look", f"The rule found nowhere to run: {placement_note}")
+            else _closed("Look", Meaning.QUIET, NOWHERE, why=placement_note, then=NOWHERE_THEN)
         )
         resume = (
-            _open("Resume", "Resumes the lane's session where the rule says.")
+            _open("Resume", "press it and the session picks up where it stopped")
             if placement is not None and lane.session.kind == SessionKind.BACKGROUND
-            else _closed("Resume", "Only a background session can be resumed.")
+            else _closed("Resume", Meaning.QUIET, "only a session nobody watches can be resumed")
         )
     else:
-        why = "The session is live; watch it instead." if live else "No session to look at."
-        look = _closed("Look", why)
-        resume = _closed("Resume", why)
+        if live:
+            look = _closed("Look", Meaning.LIVE, "the session is live", then="watch it instead")
+            resume = _closed("Resume", Meaning.LIVE, "the session is live", then="watch it instead")
+        else:
+            look = _closed("Look", Meaning.QUIET, "there is no session to look at")
+            resume = _closed("Resume", Meaning.QUIET, "there is no session to look at")
     stop = (
-        _open("Stop", "Ends the session through its own slot and says where the card is then.")
+        _open(
+            "Stop",
+            "press it and the session ends through its own account",
+            then="the card says where it is then",
+        )
         if background
-        else _closed("Stop", "No background session to stop.")
+        else _closed("Stop", Meaning.QUIET, "there is no session in the background to stop")
     )
     if signal is not None and signal_due_for_owner and signal_evidence is not None:
         signal_door = _open(
             "Delivered?",
-            f"A session read this signal and could not tell — {signal_evidence}",
+            "say whether this signal delivered",
+            why=f"a session read it and could not tell: {signal_evidence}",
         )
     elif signal is not None and signal_due_for_owner:
         signal_door = _open(
             "Delivered?",
-            f"Only you can read this signal: {signal.what} — due {signal.due.isoformat()}.",
+            "say whether this signal delivered",
+            why=f"only you can read it: {signal.what}, due {signal.due.isoformat()}",
         )
     else:
-        signal_door = _closed("Delivered?", "No signal waits on your reading.")
+        signal_door = _closed("Delivered?", Meaning.QUIET, "no signal waits on your reading")
     return Doors(
         start=start,
         readiness=readiness,

@@ -3,7 +3,7 @@
 from datetime import date, datetime
 from enum import StrEnum
 
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator, model_validator
 
 from domain.audit import AuditEntry
 from domain.card import Card, Place
@@ -16,6 +16,7 @@ from domain.gate import Gate
 from domain.handout import Handouts
 from domain.hook import HeardMark
 from domain.lane import Collision, Conversation, Doors, Lane, LaneState, Progress
+from domain.meaning import OPENING, Meaning, opened, opening_of
 from domain.project import Project
 from domain.row import Row
 from domain.signal import Reading, Signal, SignalKind, WindowlessSession
@@ -37,23 +38,6 @@ class FoldedCard(BaseModel):
     number: int
     title: str
     document_path: str | None
-
-
-class Meaning(StrEnum):
-    """The colour language's five words (plan 27). Every colour on the board
-    says one of these and nothing else; the page paints a meaning, never a
-    count, a category, a button or a column."""
-
-    YOURS = "yours"
-    """Amber: only you can act."""
-    BROKEN = "broken"
-    """Red: evidence is gone or two things disagree."""
-    LIVE = "live"
-    """Teal: happening right now."""
-    PROVEN = "proven"
-    """Green: the loop closed."""
-    QUIET = "quiet"
-    """Grey: information with no claim on you."""
 
 
 class Claim(StrEnum):
@@ -151,7 +135,13 @@ class FaceDoor(BaseModel):
     name: FaceDoorName
     label: str
     why: str
+    """Why the door is there, as a sentence in the one shape (card #75)."""
     primary: bool
+
+    @field_validator("why")
+    @classmethod
+    def _why_opens(cls, why: str) -> str:
+        return opened(why, "FaceDoor.why")
 
 
 class CardState(BaseModel):
@@ -169,6 +159,23 @@ class CardState(BaseModel):
     door: FaceDoor | None
     hint: str | None
     """Grey text where the door would be, when no door opens: "open to see"."""
+
+    @model_validator(mode="after")
+    def _the_sentence_agrees_with_the_colour(self) -> "CardState":
+        """The opening is bound to the meaning here, not by convention (card
+        #75): a detail that opens with another meaning's words cannot be
+        built, and a face that claims him — amber or red — always carries a
+        sentence saying what, since the word alone is what he could not read."""
+        if self.detail is not None and opening_of(self.detail) != self.meaning:
+            raise ValueError(
+                f"a {self.meaning.value} state's detail must open with "
+                f"{OPENING[self.meaning]!r}; got {self.detail!r}"
+            )
+        if self.detail is None and self.meaning in {Meaning.YOURS, Meaning.BROKEN}:
+            raise ValueError(
+                f"a {self.meaning.value} state says what in a sentence; {self.word!r} has none"
+            )
+        return self
 
 
 class CardSummary(BaseModel):

@@ -10,6 +10,7 @@ import type { Gate } from "./gate";
 import type { Handouts } from "./handout";
 import type { HeardMark } from "./hook";
 import type { Collision, Conversation, Doors, Lane, LaneState, Progress } from "./lane";
+import type { Meaning } from "./meaning";
 import type { Project } from "./project";
 import type { Row } from "./row";
 import type { Reading, Signal, SignalKind, WindowlessSession } from "./signal";
@@ -28,9 +29,6 @@ export type FaceDoorName = (typeof FACE_DOOR_NAME_VALUES)[number];
 
 export const LOOP_STATE_VALUES = ["open", "closed"] as const;
 export type LoopState = (typeof LOOP_STATE_VALUES)[number];
-
-export const MEANING_VALUES = ["yours", "broken", "live", "proven", "quiet"] as const;
-export type Meaning = (typeof MEANING_VALUES)[number];
 
 export interface Attention {
   yours: ClaimCount[];

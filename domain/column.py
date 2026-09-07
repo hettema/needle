@@ -10,6 +10,8 @@ from enum import StrEnum
 
 from pydantic import BaseModel
 
+from domain.meaning import Meaning, say
+
 
 class Column(StrEnum):
     BACKLOG = "Backlog"
@@ -98,13 +100,17 @@ COLUMN_DEFINITIONS: list[ColumnDefinition] = [
     ),
     ColumnDefinition(
         column=Column.DECISION_MOMENT,
-        note="Your move. Top group unblocks build lanes; bottom group is actions and sign-offs "
-        "elsewhere.",
+        note=say(
+            Meaning.YOURS,
+            "nothing here proceeds without a word from you",
+            why="the top group is work waiting on your answer; the bottom group is actions "
+            "and sign-offs elsewhere",
+        ),
         definition=[
             "Your move. Nothing here proceeds without a word from you.",
-            "Two groups: what unblocks a build lane, and what is an action or a sign-off "
-            "somewhere else. Work whose completion still needs your verification sits here, "
-            "never in a shipped column.",
+            "Two groups: what is waiting on your answer before work can go on, and what is "
+            "an action or a sign-off somewhere else. Work whose completion still needs your "
+            "verification sits here, never in a shipped column.",
         ],
         moved_by="you, or by the machine when work finished with nothing said",
         ranked=False,

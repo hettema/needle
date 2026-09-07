@@ -237,7 +237,7 @@ export function OpenCard({ card, onMoveTo }: { card: CardSummary; onMoveTo: (num
         <MoveTo value={card.place.column} options={COLUMN_VALUES} onChange={(c) => void moveTo(c)} />
       </Acts>
       <ClosedDoors doors={expected} />
-      {startable && !doors.start.offered && detail.card.folded_into === null ? <Quiet>Start is closed: {doors.start.why}</Quiet> : null}
+      {startable && !doors.start.offered && detail.card.folded_into === null ? <Quiet>{doors.start.why}</Quiet> : null}
       {detail.summary.standing.state === "doubted" && detail.summary.standing.words ? <Doubt>{detail.summary.standing.words}</Doubt> : null}
       {detail.card.folded_into !== null ? <Quiet>Folded into #{detail.card.folded_into}: that card's plan carries this suggestion; this card follows it and closes with it.</Quiet> : null}
       {detail.summary.folded.length ? (

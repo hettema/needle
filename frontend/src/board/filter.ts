@@ -5,7 +5,8 @@
  * what is seen and never what is stored.
  */
 
-import type { Attention, CardSummary, Claim, ClaimCount, Meaning } from "../types/board";
+import type { Attention, CardSummary, Claim, ClaimCount } from "../types/board";
+import type { Meaning } from "../types/meaning";
 
 export type WordKey = "yours" | "broken" | "live";
 

@@ -95,3 +95,8 @@ export interface SequencedCard {
   words: string | null;
   number: number;
 }
+
+export const DOCUMENT_FOLDER: Record<DocumentKind, string> = {
+  "plan": "docs/plans",
+  "suggestion": "docs/slice-suggestions",
+};

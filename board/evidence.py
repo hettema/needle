@@ -48,11 +48,11 @@ def missing_fact(
     """The fact the predicate needs and this read does not have, or None when it holds."""
     if evidence == Evidence.HANDS_ON:
         if lane is None or lane.state == LaneState.NONE:
-            return "no lane exists for it — no worktree on disk and no session"
+            return "no work on it exists — no copy of the code on disk and no session"
         if lane.state in HANDS_ON:
             return None
         why = f" ({lane.died})" if lane.died else ""
-        return f"no live session has hands on its worktree{why}"
+        return f"no live session has hands on its copy of the code{why}"
     if evidence == Evidence.CLOSE_LANDED:
         gone: list[str] = []
         if card.link is None:

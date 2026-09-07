@@ -4,7 +4,8 @@ import { useEffect, useState, type FocusEventHandler, type KeyboardEvent, type M
 import type { DraggableAttributes } from "@dnd-kit/core";
 import { marked } from "marked";
 import DOMPurify from "dompurify";
-import type { CardState, ClaimCount, FoldedCard, Meaning } from "../../types/board";
+import type { CardState, ClaimCount, FoldedCard } from "../../types/board";
+import { OPENING, type Meaning } from "../../types/meaning";
 import type { Column } from "../../types/column";
 import type { DialState } from "../../types/dial";
 import type { DocumentState, Fix, Item, Review, SuggestionKind } from "../../types/document";
@@ -218,7 +219,7 @@ export function DialControl({ state, onTurn, disabled, said }: { state: DialStat
         {running} of {dial.lanes} live
       </span>
       {held > 0 ? (
-        <span className="dial-held" title="Planned cards the dial holds without counting them: their Start door is closed — parked, waiting on a Sequencing card, nowhere to run — so they are no process and take no slot">
+        <span className="dial-held" title={`${OPENING.quiet}: these planned cards cannot start yet, so they run nothing and take no account. Each waits on another card, on room to run, or is parked; each starts by itself when its wait ends.`}>
           {held} held
         </span>
       ) : null}
