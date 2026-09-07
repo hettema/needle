@@ -1,5 +1,7 @@
 # A card's title tells the owner what it is for at a glance, in his words
 
+**Carried by:** docs/plans/2026-09-07-every-card-title-says-what-it-is-for-at-a-glance-in-plain-words.md — planned on 2026-09-07 at the owner's word, the same day it was filed
+
 **Kind:** defect
 **Fix:** now — the intent is written: `docs/plans/README.md` lines 43–51 hold the owner's ruling of 2026-09-04 ("I need to be able to derive from the card title what the intent of the card is"), and 19 of the 28 live titles on Needle's own board break it with a term from the board or the code; nothing holds the rule but a README paragraph and one line of the planning brief, so the fix is a sweep of the live titles plus a cold read at every title's birth, which ends the class for every project on the board rather than renaming one card
 **Found by:** the owner, reading his own board on 2026-09-07 ("the card titles are very difficult for me to understand, which makes the board difficult to read"; "I am not technical, so tech jargon in there doesn't help me"), and the session that read the 28 live titles with him
