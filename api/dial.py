@@ -223,7 +223,9 @@ class Dial:
         beat opens nothing — no planning session, no Start — until it is
         not (the number is a ceiling the machine lowers, ruling 4). A board
         that has not read the machine yet — `needle fixes` in its own
-        process — reads it now, so the terminal's reasons are the beat's."""
+        process — reads memory and swap now; the lanes' scopes it cannot
+        name without the served board's read of the lanes, so the
+        terminal's sentence can be quieter than the head's (plan 53)."""
         room = self.live.headroom
         if room is None:
             room = self.loops.headroom_now()
