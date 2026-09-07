@@ -1,5 +1,7 @@
 # Plans carry no sequence number; the card is the one identifier
 
+**Carried by:** docs/plans/2026-09-07-every-card-title-says-what-it-is-for-at-a-glance-in-plain-words.md — the owner ruled on 2026-09-07 ("if we refer to a plan in the card it feels like it should be the same number"): the card number is the one identifier, and the title sweep drops the plan numbers in the same rename
+
 **Found by:** the owner, from Hello Revenue's Idea door on 2026-09-05 (conversation bbd1dd9c), after "plan 15" turned out to be omarchy #17 and "plan 08" Needle #20: "why do we have plan numbers and card numbers that aren't the same? Feels like a confusion root cause we should fix?"
 **Kind:** idea
 **Fix:** his

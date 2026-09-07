@@ -1,8 +1,8 @@
 # Every card title says what it is for at a glance, in plain words
 
-**Carries:** docs/slice-suggestions/done/2026-09-07-a-cards-title-tells-the-owner-what-it-is-for-at-a-glance-in-his-words.md
+**Carries:** docs/slice-suggestions/done/2026-09-07-a-cards-title-tells-the-owner-what-it-is-for-at-a-glance-in-his-words.md, docs/slice-suggestions/done/2026-09-05-plans-carry-no-sequence-number-the-card-is-the-one-identifier.md
 **Status:** NEW — planned, not started; the owner placed it at the top of Up next on 2026-09-07.
-**Written:** 2026-09-07, from Dennis reading his own board: "the card titles are very difficult for me to understand which makes the board difficult to read. What can we do to communicate the card's intent better?" and, asked what the title is for: "the intent of the card titles is for me to instantly understand the intent of the card. I am not technical so e.g. tech jargon in there doesn't help me." Then: "Let's make it a plan and put it at the top of up next in the needle board and do we also do a sweep of all the existing cards in all boards to rewrite the card titles?" — yes: the rule is doctrine (HOW-WE-WORK §10, `docs/plans/README.md` lines 43–51, his ruling of 2026-09-04), so the sweep and the reader cover every project on the board, not Needle alone.
+**Written:** 2026-09-07, from Dennis reading his own board: "the card titles are very difficult for me to understand which makes the board difficult to read. What can we do to communicate the card's intent better?" and, asked what the title is for: "the intent of the card titles is for me to instantly understand the intent of the card. I am not technical so e.g. tech jargon in there doesn't help me." Then: "Let's make it a plan and put it at the top of up next in the needle board and do we also do a sweep of all the existing cards in all boards to rewrite the card titles?" — yes: the rule is doctrine (HOW-WE-WORK §10, `docs/plans/README.md` lines 43–51, his ruling of 2026-09-04), so the sweep and the reader cover every project on the board, not Needle alone. And, the same day, on #46 — which had waited on him since 2026-09-05: "plan numbering and card numbering seem to be out of sync … if we refer to a plan in the card it feels like it should be the same number" — the ruling: the card number is the one identifier, and a plan carries no number of its own.
 **Effort gate:** high — the code is small (one reading widened, one parser rule, one ratchet, one brief line), but the sweep rewrites some 230 live titles across four projects and every one of them is a judgment about what the owner would say, made in his absence and read by him afterwards; a title that mis-states the intent is a wrong card, silently.
 **Sequencing:** after #20 (plan 08's item 1 makes a card's face follow its document's current title; read live on 2026-09-07, cards #74, #63 and #53 all show the title of the suggestion they were born from while their document is a plan, so without #20 the sweep renames documents and no carried card's face changes). Items 1, 3 and 4 do not wait on it; item 2 does.
 **Class:** a ratchet on Needle's own corpus refuses a live title that uses a word the board defines, and the cold read at birth marks a title on any project's board that fails the owner's test; the failure that was silent nineteen times over is loud on the face.
@@ -70,7 +70,9 @@ place at a glance (the archive's twelve-word titles read at a glance; the
 twenty-five-word ones do not). The file stem follows the title. Where the old
 sentence carried something the new title does not — the mechanism, the seam,
 the second half of a compound outcome — that sentence moves into the
-document's intent or observation, so the record loses nothing. Plan 08's
+document's intent or observation, so the record loses nothing. A plan's
+sequence number ("08 — ", "14 — ") leaves the title and the stem in the same
+rename (item 5 is why); the card's number is the one the owner sees. Plan 08's
 reconcile keeps the card through a rename that changes stem and title; the
 lane proves it on the fixture before touching a real board. One commit per
 project into its trunk, by script, each body naming this plan.
@@ -117,7 +119,30 @@ on its face and a defect without it shows its first path-free sentence; a
 live check of the served page reads a defect card's face with no backtick
 in it; the parser tests cover both.
 
+### 5. The card number is the one identifier, and a plan carries no number of its own
+Needle's and the machine's plans carry a sequence number in the stem and the
+title, and cite each other by it in prose; the board numbers cards at birth,
+per project, so the two sequences drift for good the first time a suggestion
+is carded (plan 08 is #20, plan 12 is #36, plan 16 is #42; the machine's
+plan 15 is omarchy #17). Two identifiers for one thing, born in two places,
+is the registry drift the doctrine refuses, and the owner clicks cards, not
+filenames. So: a plan takes a dated stem with no sequence number, both
+`docs/plans/README.md` files (Needle's and the machine's) say so and why, and
+prose written from here on cites a card (`#20`) or a stem, never "plan 08".
+Existing citations in the archive and in code comments stay: a rename of a
+`done/` plan costs every citation, and the archive is not ranked. The
+ratchet of item 1 also refuses a live plan on Needle's own board whose title
+or stem begins with a sequence number.
+Done means: no live plan on Needle's or the machine's board carries a number
+in its stem or title; both READMEs state the rule with its reason; the
+ratchet fails on a fixture plan stem `2026-09-07-17-…` and passes on the live
+corpus; the planning brief in `board/brief.py` names the card number as the
+way to cite a plan.
+
 ## Acceptance criteria
+
+- No live plan carries a sequence number, and a reader citing one cites the
+  card.
 
 - The owner opens each of the four boards and places every live card from
   its title, without opening any; a card he has to open is the loop's
@@ -153,7 +178,9 @@ in it; the parser tests cover both.
 
 ## Deliberately not
 
-- Archived plans and suggestions under `done/` keep their titles.
+- Archived plans and suggestions under `done/` keep their titles, their
+  stems and their numbers; "plan 08" in an archived document or a code
+  comment is not rewritten.
 - The doctrine text is not edited; the rule already exists there.
 - Card numbers are never reassigned; a card that would be reborn is a defect
   in plan 08's reconcile, filed, not worked around.
