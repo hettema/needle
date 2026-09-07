@@ -277,7 +277,11 @@ own instructions, and why.
 Work that becomes commits runs in an isolated worktree on a short-lived branch,
 started from the card at the effort gate the plan names, which the person's
 click confirms. Lanes that run together know each other's footprints, and a
-watercooler carries what one touched that another depends on. A lane folds by a
+watercooler carries what one touched that another depends on. A session that
+needs a colleague's judgment, or is asked for one, calls a colleague of either
+make warm through Needle's `call` and waits on the answer with `wait`; it never
+launches a colleague of its own, because a call is a row the loop reads and a
+launch is not. A lane folds by a
 fast-forward push to the trunk when its suite is green; the trunk is promoted
 to the stable branch at a slice's close; nothing merges by hand and nothing
 lands red. Every commit has a body saying what prompted it.

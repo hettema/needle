@@ -1,5 +1,7 @@
 # Every session of either make, on every project, knows how to ask a colleague
 
+**Carried by:** card #76's own close — the owner ruled on 2026-09-07 ("lets try it, lets make the edit … my intent is for you guys to be colleagues whenever I ask for it in the most efficient way") and the sentence landed in HOW-WE-WORK §12 with its holder in HOW-WE-HOLD-IT, from the machine session that filed this, on the trunk, the same hour
+
 **Kind:** defect
 **Fix:** his — the fix is one sentence in the one text (HOW-WE-WORK §12, where the watercooler is already named), and the one text changes only through a card the owner rules on; no project file may restate it
 **Found by:** the owner, 2026-09-07, after a session on the machine asked Codex by a bare `codex exec` one-shot: "I believe we built something for this exact use case, why don't you know about it?" and then "you made the changes so that every session, claude or codex, now knows how to ask a colleague if I say it in a session as well?" — the answer to the second was no.

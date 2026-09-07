@@ -56,7 +56,7 @@ that ceremony, and the ratchet keeps it honest.*
 *Traced by:* the card's history, which names the actor and the reason of every move, presented to the person on the card; the page shows only held state, `tests/ratchets/test_the_page_shows_only_held_state.py`.
 
 ## 12. Execution takes a lane
-*Traced by:* the board's read of the machine — a lane's isolation and its overlap with another shown on both cards, a project of another kind's method in its own instructions; the one clause held is integration: the trunk moves only by a fast-forward push from a lane's own worktree, `api/board_cli.py::fold`.
+*Traced by:* the board's read of the machine — a lane's isolation and its overlap with another shown on both cards, a project of another kind's method in its own instructions, and every call to a colleague as a row of plan 17's table in `docs/reviews/2026-09-05-asking-a-colleague-takes-a-minute-not-ten.md`, which its WATCH row reads (a bare `codex exec` or `claude -p` from a session leaves no row, and nothing yet refuses it: card #76); the one clause held is integration: the trunk moves only by a fast-forward push from a lane's own worktree, `api/board_cli.py::fold`.
 
 ## 13. Nothing is done without a review, and a review is a loop
 *Traced by:* the review record itself, pass by pass with what each found, read by the person at the close; two clauses are held — that one exists, by `api/doors.py::close`, and that every finding in it says its class, by `tests/ratchets/test_every_finding_says_its_class.py`.
