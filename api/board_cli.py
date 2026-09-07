@@ -34,7 +34,7 @@ from collections.abc import Callable
 from pathlib import Path
 
 from api.dial import Dial
-from api.doors import REPO_ROOT, DoorFailed, DoorRefused, Doors
+from api.doors import REPO_ROOT, SKILLS, DoorFailed, DoorRefused, Doors
 from api.loops import Loops, project_of_cwd
 from board.brief import watercooler_text
 from board.dial import Filer
@@ -392,7 +392,49 @@ def hook_install(args: argparse.Namespace) -> int:
         print(f"registered Needle's hook in {settings} for {', '.join(added)}")
     else:
         print(f"Needle's hook is already registered in {settings}")
+    laid = lay_skills_link(repo)
+    if laid:
+        print(laid)
     return _arm_git_hooks(repo)
+
+
+CODEX_SKILLS = Path(".agents") / "skills"
+"""Where Codex looks for a project's skills (the open agent-skills standard;
+read live on 2026-09-07, Codex 0.153.4: it scans this folder from the start
+directory up to the repository root and follows symlinks). Claude Code does
+not read it, so the link points from here at `.claude/skills`, never the
+reverse, and the skills stay in one folder."""
+
+
+def lay_skills_link(repo: Path) -> str:
+    """Lay `<repo>/.agents/skills` as a relative link at `../.claude/skills`
+    so a Codex session on the project sees what a Claude session sees
+    (card #73, item 1), and say what was done in one line. Relative, so a
+    clone at another path keeps it. A project without `.claude/skills` gets
+    nothing and hears nothing about it (an empty line). A real directory already there is
+    the project's own, on the standard already, and is left alone; a link
+    pointing elsewhere is named and never replaced — replacing it silently
+    would be the one thing this installer does that a project did not ask
+    for. The link is a change in the project's tree that git sees, so the
+    line says it is to be committed: an uncommitted link is the silent
+    failure the plan names, gone at the next clean checkout."""
+    skills = repo / SKILLS
+    if not skills.is_dir():
+        return ""
+    link = repo / CODEX_SKILLS
+    target = Path("..") / SKILLS
+    if link.is_symlink():
+        if link.resolve() == skills.resolve():
+            return f"Codex already sees {repo.name}'s skills through {CODEX_SKILLS}"
+        return (
+            f"{CODEX_SKILLS} in {repo.name} links to {link.readlink()}, not {target}; "
+            "left as it is — point it at the skills folder yourself if that is wrong"
+        )
+    if link.exists():
+        return f"{repo.name} keeps its own {CODEX_SKILLS}; left as it is"
+    link.parent.mkdir(parents=True, exist_ok=True)
+    link.symlink_to(target)
+    return f"laid {CODEX_SKILLS} -> {target} in {repo.name} so Codex sees its skills; commit it"
 
 
 def _arm_git_hooks(repo: Path) -> int:

@@ -99,11 +99,17 @@ def idea_brief(project: Project, session_id: str, first_line: str | None, today:
     )
 
 
+SKILLS = Path(".claude") / "skills"
+"""The one folder a project's skills live in: Claude Code reads it, the
+Start door names the plan-writing skill from it, and the installer links
+Codex's own folder at it (`api.board_cli.lay_skills_link`)."""
+
+
 def plan_skill(project_path: Path) -> str | None:
     """The project's own plan-writing skill, when its `.claude/skills/` has
     one (Hello Revenue's is `hr-plan-write`); None means the shape in
     docs/plans/README.md is the plan shape."""
-    skills = project_path / ".claude" / "skills"
+    skills = project_path / SKILLS
     if not skills.is_dir():
         return None
     for found in sorted(skills.iterdir()):

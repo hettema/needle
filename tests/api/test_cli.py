@@ -184,3 +184,49 @@ def test_hook_install_registers_every_event_once_and_names_the_word_hooks_ceilin
     assert main(["hook", "install", str(tmp_path)]) == 0
     assert "already registered" in capsys.readouterr().out
     assert json.loads(settings.read_text()) == blob, "idempotent"
+
+
+def test_hook_install_lays_the_codex_skills_link_once_and_leaves_a_projects_own_alone(
+    tmp_path: Path, capsys
+):
+    """Card #73, item 1: `needle hook install` lays `.agents/skills` as a
+    relative link at `../.claude/skills` when that folder exists, so a Codex
+    session sees the project's skills; says so and asks for the commit; a
+    second run changes nothing; a project without a skills folder gets
+    nothing and hears nothing about it; a real directory or a link pointing
+    elsewhere is the project's own, named and never replaced."""
+    import os
+
+    repo = tmp_path / "with-skills"
+    (repo / ".claude" / "skills" / "hr-plan-write").mkdir(parents=True)
+    assert main(["hook", "install", str(repo)]) == 0
+    out = capsys.readouterr().out
+    assert "laid .agents/skills -> ../.claude/skills in with-skills" in out and "commit it" in out
+    link = repo / ".agents" / "skills"
+    assert link.is_symlink() and os.readlink(link) == "../.claude/skills", "relative, so a clone keeps it"
+    assert (link / "hr-plan-write").is_dir()
+
+    assert main(["hook", "install", str(repo)]) == 0
+    assert "already sees with-skills's skills" in capsys.readouterr().out
+    assert os.readlink(link) == "../.claude/skills", "a second run is a no-op"
+
+    bare = tmp_path / "bare"
+    bare.mkdir()
+    assert main(["hook", "install", str(bare)]) == 0
+    out = capsys.readouterr().out
+    assert "skills" not in out and not (bare / ".agents").exists(), "nothing laid, nothing said"
+
+    own = tmp_path / "own"
+    (own / ".claude" / "skills").mkdir(parents=True)
+    (own / ".agents" / "skills" / "theirs").mkdir(parents=True)
+    assert main(["hook", "install", str(own)]) == 0
+    assert "keeps its own .agents/skills" in capsys.readouterr().out
+    assert (own / ".agents" / "skills" / "theirs").is_dir() and not (own / ".agents" / "skills").is_symlink()
+
+    elsewhere = tmp_path / "elsewhere"
+    (elsewhere / ".claude" / "skills").mkdir(parents=True)
+    (elsewhere / ".agents").mkdir()
+    (elsewhere / ".agents" / "skills").symlink_to("/nowhere/skills")
+    assert main(["hook", "install", str(elsewhere)]) == 0
+    assert "links to /nowhere/skills, not ../.claude/skills; left as it is" in capsys.readouterr().out
+    assert os.readlink(elsewhere / ".agents" / "skills") == "/nowhere/skills"
