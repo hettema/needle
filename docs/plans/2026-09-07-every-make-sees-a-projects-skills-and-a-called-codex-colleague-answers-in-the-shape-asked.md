@@ -73,6 +73,8 @@ commit names this card.
 
 Hands out: execution — running the installer on each registered project and the Codex skill-list probe on Hello Revenue, by script, reported verbatim; verifies by reading each link's target and the probe's answer file before the item claims delivery.
 
+**Met:** `tests/api/test_cli.py::test_hook_install_lays_the_codex_skills_link_once_and_leaves_a_projects_own_alone` holds the four cases (laid and said, silent without skills, a second run a no-op, a project's own directory or link left alone and named). Hello Revenue's link is `.agents/skills -> ../.claude/skills`, committed on its trunk as 17967ef6d ("Needle #73") and pushed; the read-only `codex exec` from its root on 2026-09-07 listed all seven skills by name (grill-me, hr-feature-review, hr-frontend, hr-plan-execute, hr-plan-write, hr-prompt-change, sure) and quoted hr-plan-write's description, checked against line 3 of its SKILL.md. The other three registered projects have no `.claude/skills`, so the installer laid nothing there. Deviation from the letter: the installer was not run on Hello Revenue in full, only the link through the same function, because card #60's review recorded that registering Needle's UserPromptSubmit hook there fires two anchors on one word until that project's card retires its own; and running the installer from this lane wrote the lane's own hook path into three projects' settings before the line was read — restored by hand and diffed, and the installer now refuses a lane (6b61f84).
+
 ### 2. A called Codex colleague answers in the shape asked, and one reader reads every answer
 
 `runtime/codex.py::resume_argv` passes `--output-schema` with a schema the
@@ -91,6 +93,8 @@ before; a worker that answers off-shape is reported as landed with its first
 line and the reason, never lost; `tests/runtime/` covers the three.
 
 Hands out: execution — a throwaway call to a Codex worker on a private store (`NEEDLE_DB`), by script, reported verbatim; verifies by reading the answer JSON and the verdict row before the item claims delivery.
+
+**Met:** `domain/call.py::Answer` is the shape; `runtime/launch.py::call_codex` writes its schema beside the answer and `runtime/codex.py::resume_argv` passes `--output-schema`; `runtime/calls.py::read_answer` is the one reader and `api/runtime_cli.py::call_brief` asks both makes for the shape. `tests/runtime/test_calls.py::test_the_one_reader_takes_the_answer_field_and_falls_back_to_the_first_line_saying_why` covers the shape, prose and off-shape JSON; the Codex call tests hold the schema beside the answer and the verdict's words as the `answer` field; the Claude call test holds that prose lands read by its first line, said so. Live on 2026-09-07 against a private store: `needle call codex` resumed worker 01a07bae in Hello Revenue's root, the answer landed as `{"answer": "The project carries hr-plan-write at .agents/skills/hr-plan-write/SKILL.md. Its first heading is # Before Complex Implementation; I checked by reading the file.", "how_known": "checked", "sources": ["/home/dennis/Work/hellorevenue/.agents/skills/hr-plan-write/SKILL.md"]}`, `needle wait` reported it landed with exactly the `answer` field as its words, and the heading is line 6 of that file — the worker read the skill through the link item 1 laid.
 
 ### 3. A colleague of another make reads this slice's close
 
