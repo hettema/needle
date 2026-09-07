@@ -6,8 +6,9 @@ from fastapi.testclient import TestClient
 
 from api.app import board_events, create_app
 from board.import_01 import read_01
-from domain.card import CardOrigin, Place
+from domain.card import Actor, CardOrigin, Place
 from domain.column import Column
+from domain.row import Row, RowKind
 from infrastructure.corpus import scan
 from infrastructure.live import Live, sweep
 from infrastructure.store import Store
@@ -191,3 +192,34 @@ def test_a_project_deep_link_is_served_the_page(
         assert deep.status_code == 200
         assert "Needle" in deep.text
         assert client.get("/api/projects/nothing/board").status_code != 200
+
+
+def test_the_record_is_read_back_as_rows_with_time_and_writer(client: TestClient):
+    """Plan 08, item 3: a project's own tooling reads every row on every card
+    with the card, the time and the writer; `since` narrows it."""
+    client.app.state.live.add_row(
+        "proj", 253, Row(kind=RowKind.DELIVERED, text="the meter bills"), Actor.SESSION
+    )
+    rows = client.get("/api/projects/proj/rows").json()
+    assert rows and all(
+        {"card", "title", "column", "kind", "text", "at", "by"} <= r.keys() for r in rows
+    )
+    delivered = [r for r in rows if r["kind"] == "DELIVERED" and r["by"] != "import"]
+    assert delivered == [
+        {
+            "card": 253,
+            "title": "Every metered kilowatt is billed",
+            "column": "Up next",
+            "kind": "DELIVERED",
+            "text": "the meter bills",
+            "at": delivered[0]["at"],
+            "by": "session",
+        }
+    ]
+    assert delivered[0]["at"] > "2026-09-03T21:40"
+    imported = [r for r in rows if r["by"] == "import"]
+    assert imported and rows[0]["by"] == "import", "oldest first: 0.1's rows before today's"
+    later = client.get("/api/projects/proj/rows", params={"since": "2026-09-04"}).json()
+    assert [r["kind"] for r in later] == ["DELIVERED"]
+    assert client.get("/api/projects/proj/rows", params={"since": "yesterday"}).status_code == 422
+    assert client.get("/api/projects/nope/rows").status_code == 409

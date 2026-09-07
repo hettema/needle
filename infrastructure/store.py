@@ -27,7 +27,7 @@ from board.signals import read_or_decline
 from domain.audit import AuditEntry, AuditKind
 from domain.board import TrunkState
 from domain.call import Call
-from domain.card import Actor, Card, CardOrigin, DocumentLink, Place
+from domain.card import Actor, Card, CardOrigin, DocumentLink, Place, RowRecord
 from domain.column import COLUMN_DEFINITIONS, DEFECTS_RAIL, DEFECTS_RAIL_POSITION, Column
 from domain.dial import Dial, DialChange, Filer, FixLane, FixStage, RailCount
 from domain.document import DOCUMENT_FOLDER, DocumentKind, DocumentRef, SuggestionKind
@@ -400,6 +400,8 @@ class Store:
                     position=max([r.position for r in existing], default=-1) + 1,
                     kind=RowKind.RULED.value,
                     text=ruled,
+                    written_at=at,
+                    writer=Actor.OWNER.value,
                 )
             )
             _audit(
@@ -684,6 +686,8 @@ class Store:
                             position=position,
                             kind=row.kind.value,
                             text=row.text,
+                            written_at=at,
+                            writer=Actor.IMPORT.value,
                         )
                     )
                 _audit(
@@ -746,6 +750,8 @@ class Store:
             if replaced is not None:
                 was = replaced.text
                 replaced.text = row.text
+                replaced.written_at = at
+                replaced.writer = actor.value
                 verb = "rewritten"
             else:
                 position = max([r.position for r in existing], default=-1) + 1
@@ -756,6 +762,8 @@ class Store:
                         position=position,
                         kind=row.kind.value,
                         text=row.text,
+                        written_at=at,
+                        writer=actor.value,
                     )
                 )
                 verb = "written"
@@ -781,6 +789,38 @@ class Store:
             )
             session.flush()
             return _card_now(session, slug, number)
+
+    def rows_written(self, slug: str, *, since: datetime | None = None) -> list[RowRecord]:
+        """Every row standing on every card of the project, with when it was
+        written and by whom (plan 08, item 3), oldest first; `since` keeps
+        only rows written at or after that moment. Read-only: the record a
+        project's own tooling reads, never the board's page."""
+        with self._session() as session:
+            query = (
+                select(CardRowRow, CardRow, GroupRow)
+                .join(
+                    CardRow,
+                    (CardRow.project_slug == CardRowRow.project_slug)
+                    & (CardRow.number == CardRowRow.card_number),
+                )
+                .join(GroupRow, GroupRow.id == CardRow.group_id)
+                .where(CardRowRow.project_slug == slug)
+                .order_by(CardRowRow.written_at, CardRowRow.card_number, CardRowRow.position)
+            )
+            if since is not None:
+                query = query.where(CardRowRow.written_at >= since)
+            return [
+                RowRecord(
+                    card=row.card_number,
+                    title=card.title,
+                    column=Column(group.column),
+                    kind=RowKind(row.kind),
+                    text=row.text,
+                    at=row.written_at,
+                    by=Actor(row.writer) if row.writer else None,
+                )
+                for row, card, group in session.execute(query).all()
+            ]
 
     def note(
         self, slug: str, number: int, kind: AuditKind, actor: Actor, at: datetime, detail: str

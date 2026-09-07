@@ -10,6 +10,7 @@ import asyncio
 import json
 from collections.abc import AsyncIterator, Awaitable, Callable
 from contextlib import asynccontextmanager
+from datetime import UTC, datetime
 from pathlib import Path
 
 from fastapi import FastAPI, HTTPException, Request
@@ -21,7 +22,7 @@ from api.dial import Dial
 from api.doors import DoorFailed, DoorRefused, Doors
 from api.loops import Loops
 from domain.board import BoardState, CardDetail, ProjectFile
-from domain.card import Move
+from domain.card import Move, RowRecord
 from domain.dial import DialState, Fixes
 from domain.hook import HookEvent, HookPosted, Word
 from domain.lane import DoorResult
@@ -176,6 +177,19 @@ def create_app(store: Store | None = None, *, dist: Path | None = FRONTEND_DIST)
     @app.get("/api/projects/{slug}/cards/{number}", response_model=CardDetail)
     async def card(slug: str, number: int, request: Request) -> CardDetail:
         return (await live_for(request, slug)).detail(slug, number)
+
+    @app.get("/api/projects/{slug}/rows", response_model=list[RowRecord])
+    async def rows(slug: str, request: Request, since: datetime | None = None) -> list[RowRecord]:
+        """The record, read-only, for the project's own tooling (plan 08,
+        item 3): every row standing on every card with its time and writer,
+        oldest first; `since` is an ISO date or moment, and a bare date
+        reads as its midnight UTC."""
+        live = await live_for(request, slug)
+        if slug not in live.projects:
+            raise StoreRefusal(f'No project "{slug}" is on the board.')
+        if since is not None and since.tzinfo is None:
+            since = since.replace(tzinfo=UTC)
+        return await asyncio.to_thread(live.store.rows_written, slug, since=since)
 
     @app.post("/api/projects/{slug}/cards/{number}/move", response_model=BoardState)
     async def move(slug: str, number: int, body: Move, request: Request) -> BoardState:

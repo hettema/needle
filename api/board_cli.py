@@ -31,6 +31,7 @@ import sys
 import urllib.error
 import urllib.request
 from collections.abc import Callable
+from datetime import UTC, datetime
 from pathlib import Path
 
 from api.dial import Dial
@@ -713,6 +714,35 @@ def fixes(
     return 0
 
 
+def rows(args: argparse.Namespace, live: Live, runtime: Runtime, loops: Loops, doors: Doors) -> int:
+    """The record as JSON, for a project's own tooling (plan 08, item 3):
+    every row standing on every card, with the card, the time and the
+    writer. `--since` keeps rows written on or after a day; `--kind` keeps
+    one kind. A rewritten row's earlier text is on the card's history, not
+    here: the record is what the cards say now, dated."""
+    if args.slug not in live.projects:
+        print(f'no project "{args.slug}" is on the board', file=sys.stderr)
+        return 1
+    since = None
+    if args.since:
+        try:
+            since = datetime.fromisoformat(args.since)
+        except ValueError:
+            print(
+                f"--since takes a day or a moment in ISO form, not {args.since!r}",
+                file=sys.stderr,
+            )
+            return 1
+        if since.tzinfo is None:
+            since = since.replace(tzinfo=UTC)
+    records = live.store.rows_written(args.slug, since=since)
+    if args.kind:
+        wanted = RowKind(args.kind.upper())
+        records = [r for r in records if r.kind == wanted]
+    print(json.dumps([r.model_dump(mode="json") for r in records], indent=2, ensure_ascii=False))
+    return 0
+
+
 def register(sub: "argparse._SubParsersAction[argparse.ArgumentParser]") -> None:
     p_card = sub.add_parser("card", help="the card as text: the brief a lane opens with")
     p_card.add_argument("slug")
@@ -822,6 +852,14 @@ def register(sub: "argparse._SubParsersAction[argparse.ArgumentParser]") -> None
     )
     p_kinds.add_argument("slug")
     p_kinds.set_defaults(run=_with_board(kinds))
+
+    p_rows = sub.add_parser(
+        "rows", help="the record as JSON: every row on every card, with its time and writer"
+    )
+    p_rows.add_argument("slug")
+    p_rows.add_argument("--since", help="a day or a moment, ISO; rows written from then on")
+    p_rows.add_argument("--kind", help="one row kind, e.g. DELIVERED")
+    p_rows.set_defaults(run=_with_board(rows))
 
     p_water = sub.add_parser(
         "watercooler", help="the project's watercooler: read it, or say one line as a card's lane"

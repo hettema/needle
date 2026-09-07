@@ -1,5 +1,6 @@
 """The command line's verbs, run in-process against a store on a temporary path."""
 
+import json
 from pathlib import Path
 
 import pytest
@@ -200,7 +201,12 @@ def test_hook_install_registers_every_event_once_and_names_the_word_hooks_ceilin
         hooks = [h for entry in blob["hooks"][event] for h in entry["hooks"]]
         assert [h["command"] for h in hooks].count(hook_command()) == 1, event
     for event in READ_EVENTS:
-        read = [h for entry in blob["hooks"][event] for h in entry["hooks"] if h["command"] == hook_command()]
+        read = [
+            h
+            for entry in blob["hooks"][event]
+            for h in entry["hooks"]
+            if h["command"] == hook_command()
+        ]
         assert read[0]["timeout"] == 5, f"the {event} entry names its own ceiling"
     assert "timeout" not in blob["hooks"]["Stop"][0]["hooks"][0]
     prompt_hooks = [h for entry in blob["hooks"]["UserPromptSubmit"] for h in entry["hooks"]]
@@ -260,3 +266,21 @@ def test_hook_install_lays_the_codex_skills_link_once_and_leaves_a_projects_own_
     said = capsys.readouterr().out
     assert "links to /nowhere/skills, not ../.claude/skills; left as it is" in said
     assert os.readlink(elsewhere / ".agents" / "skills") == "/nowhere/skills"
+
+
+def test_rows_prints_the_record_as_json_with_time_and_writer(corpus: Path, database: Path, capsys):
+    """Plan 08, item 3: the verb a project's tooling calls for what sessions
+    wrote on its cards — Hello Revenue's morning note reads DELIVERED."""
+    main(["add", str(corpus)])
+    assert main(["row", "harbourmaster", "253", "DELIVERED", "the meter bills"]) == 0
+    capsys.readouterr()
+    assert main(["rows", "harbourmaster", "--kind", "delivered"]) == 0
+    rows = json.loads(capsys.readouterr().out)
+    assert rows[-1]["card"] == 253 and rows[-1]["text"] == "the meter bills"
+    assert rows[-1]["by"] == "session" and rows[-1]["at"] > "2026-09-03"
+    assert all(r["kind"] == "DELIVERED" for r in rows) and len(rows) > 1
+    assert main(["rows", "harbourmaster", "--since", "2100-01-01"]) == 0
+    assert json.loads(capsys.readouterr().out) == []
+    assert main(["rows", "harbourmaster", "--since", "yesterday"]) == 1
+    assert "ISO" in capsys.readouterr().err
+    assert main(["rows", "nope"]) == 1

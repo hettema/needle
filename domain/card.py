@@ -13,7 +13,7 @@ from pydantic import BaseModel, Field
 from domain.column import Column
 from domain.document import DOCUMENT_FOLDER, DocumentKind
 from domain.gate import Gate
-from domain.row import Row
+from domain.row import Row, RowKind
 
 
 class Actor(StrEnum):
@@ -86,3 +86,22 @@ class Move(BaseModel):
     """The one write the page makes: put this card there."""
 
     to: Place
+
+
+class RowRecord(BaseModel):
+    """One row as the record reads it back to the project it serves (plan
+    08, item 3): the card, the row, when it was written and by whom. The
+    standing text of every row on every card, so a project's own tooling —
+    a morning note that reads the repository — can carry what a session
+    wrote for the owner without reading the board's store."""
+
+    card: int
+    title: str
+    """The card's face, so a reader can name the card without a second call."""
+    column: Column
+    kind: RowKind
+    text: str
+    at: datetime | None
+    """None only for a row older than the record's own migration (0013) that
+    no history line dates."""
+    by: Actor | None

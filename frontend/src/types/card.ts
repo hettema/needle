@@ -2,7 +2,7 @@
 import type { Column } from "./column";
 import type { DocumentKind } from "./document";
 import type { Gate } from "./gate";
-import type { Row } from "./row";
+import type { Row, RowKind } from "./row";
 
 export const ACTOR_VALUES = ["owner", "session", "import", "corpus", "machine"] as const;
 export type Actor = (typeof ACTOR_VALUES)[number];
@@ -41,4 +41,14 @@ export interface Place {
   column: Column;
   group: string | null;
   position: number;
+}
+
+export interface RowRecord {
+  card: number;
+  title: string;
+  column: Column;
+  kind: RowKind;
+  text: string;
+  at: string | null;
+  by: Actor | null;
 }

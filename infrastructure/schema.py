@@ -103,6 +103,11 @@ class CardRowRow(Base):
     position: Mapped[int] = mapped_column(Integer)
     kind: Mapped[str] = mapped_column(String(20))
     text: Mapped[str] = mapped_column(Text)
+    written_at: Mapped[datetime | None] = mapped_column(UtcDateTime, nullable=True)
+    """When the standing text was written (plan 08, item 3); None only for a
+    row older than migration 0013 that no audit line accounts for."""
+    writer: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    """Who wrote it, an `Actor` value."""
 
 
 class SessionSlotRow(Base):
