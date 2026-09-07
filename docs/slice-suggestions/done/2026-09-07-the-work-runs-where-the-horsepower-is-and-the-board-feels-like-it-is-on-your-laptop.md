@@ -1,5 +1,7 @@
 # The work runs where the horsepower is, and the board feels like it is on your laptop
 
+**Carried by:** docs/plans/2026-09-07-the-work-runs-where-the-horsepower-is-and-the-board-feels-like-it-is-on-your-laptop.md — the owner set the bound (up to 100 EUR a month), read the live pricing and the cold read, and said "the flow looks good" on 2026-09-07; the pick is the 32 GB Netcup root server
+
 **Kind:** idea
 **Fix:** his — it spends money every month (a rented machine, a bound he has not set) and adds a second machine to the organisation, which is external exposure beyond anything authorised so far; the shape is execution once the bound is set, and this suggestion says what the shape is so the decision is one number
 **Found by:** the owner on 2026-09-07, after the laptop was pushed past its memory twice in three days: "if my machine is the limit… can we rent a server in the cloud for cheap and control it naturally from here? I guess lag might drive me mad and I don't know how we'd log in all accounts etc. My intent is to not be limited by horse power from my machine but still interface as if I'm on my machine."
