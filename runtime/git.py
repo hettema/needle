@@ -123,21 +123,20 @@ def reverted(repo: str | Path, tip: str) -> bool:
 
 
 CORPUS_FOLDERS = ("docs/plans", "docs/slice-suggestions")
-RENAME_LOG_DEPTH = 400
-"""How many commits back the corpus's renames are read: a card whose
-document vanished lost it recently, and a rename older than this is one the
-board followed long ago or never will."""
 _RENAME_LINE = re.compile(r"^R\d*\t(.+?)\t(.+)$")
 _STAGED_RENAME = re.compile(r"^R.\s+(.+?) -> (.+)$")
 
 
 def corpus_renames(checkout: str | Path) -> dict[str, str]:
     """Every rename of a corpus document git knows, old path → new path
-    (plan 08, item 1): the commits on the checkout's history with git's own
-    rename detection, newest first so a path renamed twice maps to its
-    latest name, plus a rename staged and not yet committed. A file deleted
-    and another created without git seeing a rename is not here — that is
-    the body match's case, in `board/reconcile.py::same_body`."""
+    (plan 08, item 1): the whole history with git's own rename detection,
+    newest first so a path renamed twice maps to its latest name, plus a
+    rename staged and not yet committed. The whole history and not a depth:
+    `-n` bounds the commits shown, not the commits walked, so a depth bought
+    nothing (measured 2026-09-07 on Hello Revenue's 4268 commits: 0.2 s at
+    any depth, 615 renames). A file deleted and another created without git
+    seeing a rename is not here — that is the body match's case, in
+    `board/reconcile.py::same_body`."""
     moves: dict[str, str] = {}
     log = _try(
         checkout,
@@ -146,7 +145,6 @@ def corpus_renames(checkout: str | Path) -> dict[str, str]:
         "--diff-filter=R",
         "--name-status",
         "--format=",
-        f"-n{RENAME_LOG_DEPTH}",
         "--",
         *CORPUS_FOLDERS,
     )
