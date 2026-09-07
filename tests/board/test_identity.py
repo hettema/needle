@@ -139,3 +139,26 @@ def test_a_finished_card_names_its_plan_once_where_the_plan_is():
     lane, doors = nothing_read(c, "/srv/p", AT)
     detail = assemble_detail(c, corpus, [], AT, lane=lane, doors=doors, readings=[])
     assert detail.other_citations == ["docs/slice-suggestions/done/s.md", "docs/audits/a.md"]
+
+
+def test_a_rename_straight_into_done_is_followed_and_git_is_not_asked_while_nothing_appeared():
+    """A close that renames the plan as it archives it: the destination is an
+    archived document that appeared since the previous read. And a card
+    whose document is gone for good does not ask git on every read — only
+    when something appeared that could be the answer."""
+    link = _link(DocumentKind.PLAN, "old", "Old")
+    done = doc(DocumentKind.PLAN, "new", "New", archived=True)
+    long_archived = doc(DocumentKind.PLAN, "ancient", "Ancient", archived=True)
+    before = index(long_archived)
+    after = index(done, long_archived)
+    moves = {"docs/plans/old.md": "docs/plans/done/new.md"}
+    effects = reconcile(after, [card(1, link)], previous=before, moves=lambda: moves)
+    assert [(r.document.path, r.how) for r in effects.renamed] == [
+        ("docs/plans/done/new.md", "git records the rename")
+    ]
+
+    def never() -> dict[str, str]:
+        raise AssertionError("git was asked with nothing new in the corpus")
+
+    quiet = reconcile(before, [card(1, link)], previous=before, moves=never)
+    assert quiet.renamed == [] and quiet.born == []

@@ -450,9 +450,10 @@ class Store:
                 assert card is not None
                 card.link_stem = renamed.document.stem
                 card.link_title = renamed.document.title
-                card.link_archived = renamed.document.path.startswith(
+                into_done = renamed.document.path.startswith(
                     DOCUMENT_FOLDER[renamed.document.kind] + "/done/"
                 )
+                card.link_archived = into_done
                 if renamed.document.path not in card.citations:
                     card.citations = [*card.citations, renamed.document.path]
                 _audit(
@@ -465,7 +466,8 @@ class Store:
                     from_place=None,
                     to_place=None,
                     detail=f"Its document was renamed from {renamed.old_stem} to "
-                    f"{renamed.document.stem}; {renamed.how}."
+                    f"{renamed.document.path}; {renamed.how}."
+                    + (" It sits in done/ now." if into_done else "")
                     + _retitle(card, renamed.document.title),
                 )
             for relinked in effects.relinked:

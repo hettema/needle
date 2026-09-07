@@ -234,13 +234,29 @@ def reconcile(
     claimed: set[tuple[DocumentKind, str]] = set()
     git_moves: dict[str, str] | None = None
 
+    # What a vanished document can have become: a live document no card
+    # links, or an archived one that appeared since the previous read — a
+    # rename can land straight in done/ at a close. An archived document
+    # the board has already read is never a rename's destination, so on a
+    # board with one card whose document is gone for good (Hello Revenue's
+    # #120, 2026-09-07) git is not asked on every read: only when something
+    # appeared that could be the answer (0.27 s per ask on that history).
+    appeared = unlinked_docs + [
+        d
+        for d in index.archived()
+        if (d.kind, d.stem) not in linked
+        and (previous is None or previous.find(d.kind, d.stem) is None)
+    ]
+
     def unclaimed(test: Callable[[Document], bool]) -> Document | None:
-        return next((d for d in unlinked_docs if (d.kind, d.stem) not in claimed and test(d)), None)
+        return next((d for d in appeared if (d.kind, d.stem) not in claimed and test(d)), None)
 
     def rename_of(link: DocumentLink) -> tuple[Document, str] | None:
         """The document a card's vanished one became: by title first, then
         by git's word, then by the body against the previous read."""
         nonlocal git_moves
+        if not appeared:
+            return None
         match = unclaimed(lambda d: follows_title(d, link))
         if match is not None:
             return match, "matched by title"

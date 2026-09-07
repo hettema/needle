@@ -41,8 +41,9 @@ def test_a_rename_that_changes_stem_and_title_keeps_the_card_and_its_history(
     assert card.title == "The collapsed card", "the face follows the document"
     history = store.history("proj", number)
     assert [h.kind for h in history][-2:] == [AuditKind.RENAMED, AuditKind.BORN]
-    assert "renamed from 2026-09-04-the-closed-card to 2026-09-04-the-collapsed-card" in (
-        history[0].detail
+    assert (
+        "renamed from 2026-09-04-the-closed-card to docs/slice-suggestions/2026-09-04-the-collapsed-card.md"
+        in (history[0].detail)
     )
     assert 'it read "The closed card"' in history[0].detail
     assert not any(
