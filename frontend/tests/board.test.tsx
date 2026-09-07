@@ -128,7 +128,7 @@ function withLane(state: Lane["state"], sentence: string, question: string | nul
   };
   d.summary.lane_state = state;
   d.summary.state = {
-    word: state === "asking" ? "asking you" : state === "ended" ? "lane ended" : `${state} · fable on alpha`,
+    word: state === "asking" ? "asking you" : state === "ended" ? "session died" : `${state} · fable on alpha`,
     meaning: state === "asking" ? "yours" : state === "ended" ? "broken" : "live",
     detail: question ? `“${question.split("\n").filter(Boolean).slice(-1)[0]}”` : sentence,
     loop: null,
@@ -279,7 +279,7 @@ describe("the open card", () => {
     // Before the runtime's first read no door opens, and Start says why rather than vanishing.
     const start = within(card).getByText("Start");
     expect(start).toHaveAttribute("aria-disabled", "true");
-    expect(start).toHaveAttribute("title", expect.stringContaining("the runtime has not read this board yet"));
+    expect(start).toHaveAttribute("title", expect.stringContaining("Nothing for you: the board has not read this project yet, so nothing can start."));
     expect(within(card).queryByRole("button", { name: /Watch|Answer|Stop|Look|Resume|Discuss/ })).not.toBeInTheDocument();
     expect(card.closest("section")?.className).toContain("wide");
     expect(window.location.hash).toBe("#card-253");
@@ -337,7 +337,7 @@ describe("the doors", () => {
 
   it("opens Start over shared ground with the ground in its label and the sentence beside it, and no second door", async () => {
     const d = detail(253);
-    const sentence = "Shares ground: #241's lane is editing engine/metering.py right now. The second to fold rebases.";
+    const sentence = "#241's session is editing engine/metering.py right now.";
     const label = "Start · fable on alpha — shares 1 file with #241's lane; the second to fold rebases";
     d.doors = {
       ...d.doors,
@@ -358,16 +358,23 @@ describe("the doors", () => {
 
   it("says on the open card why a plan waits on the cards its Sequencing names", async () => {
     const d = detail(253);
-    const why = "Start waits on the plan's own word: its Sequencing names #139 (Decision moment); it opens by itself once every named card is in Executed or Done.";
+    const why = "Nothing for you: this starts by itself once #139 (Decision moment) ships. Move #139 up to have it sooner.";
     d.doors = {
       ...d.doors,
       start: { offered: false, label: "Start", why },
       waits: [{ label: "#139", project: SLUG, number: 139, column: "Decision moment", shipped: false }],
     };
+    // The closed Start door's reason is the state's sentence (card #75, item 3):
+    // the first line he reads inside the card and the door's note say one thing.
+    const b = board();
+    cardOf(b, 253).state = { word: "waits on #139", meaning: "quiet", detail: why, loop: null, door: null, hint: "open to see" };
+    api.getBoard.mockResolvedValue(b);
     api.getCard.mockResolvedValue(d);
     await renderBoard();
     await userEvent.click(screen.getByText("Every metered kilowatt is billed"));
-    expect(await screen.findByText(`Start is closed: ${why}`)).toBeInTheDocument();
+    expect(await screen.findByText(why)).toBeInTheDocument();
+    const sentence = document.querySelector(".state-sentence") as HTMLElement;
+    expect(sentence.textContent).toBe(`waits on #139— ${why}`);
     expect(screen.queryByRole("button", { name: /^Start/ })).not.toBeInTheDocument();
   });
 
@@ -734,7 +741,7 @@ describe("the board at a glance (plan 06)", () => {
     const note = cardOf(b, 228);
     mine.state = { word: "free to start", meaning: "proven", detail: null, loop: null, door: { name: "start", label: "Start", why: `Start · fable on alpha — ${why}`, primary: true }, hint: null };
     theirs.state = { word: "waits on #139", meaning: "quiet", detail: "Start waits on the plan's own word: its Sequencing names #139 (Decision moment); it opens by itself once every named card is in Executed or Done.", loop: null, door: null, hint: "open to see" };
-    note.state = { word: "no gate", meaning: "quiet", detail: "This card names no effort gate; only a planned card is startable.", loop: null, door: null, hint: "open to see" };
+    note.state = { word: "no effort level", meaning: "quiet", detail: "Nothing for you: this cannot start because its plan names no effort level. Discuss it and a plan with one carries it.", loop: null, door: null, hint: "open to see" };
     api.getBoard.mockResolvedValue(b);
     api.openDoor.mockResolvedValue({ door: "start", said: "Started aaaa0001, fable on alpha, at medium, in card-253-every-metered-kilowatt-is-billed" });
     await renderBoard();
@@ -747,7 +754,7 @@ describe("the board at a glance (plan 06)", () => {
     expect(within(waiting).getByText("open to see")).toBeInTheDocument();
     expect(within(waiting).queryByRole("button", { name: /Start/ })).not.toBeInTheDocument();
     const gateless = screen.getByText("#228").closest("article") as HTMLElement;
-    expect(within(gateless).getByText("no gate")).toBeInTheDocument();
+    expect(within(gateless).getByText("no effort level")).toBeInTheDocument();
     // Start on the collapsed face, the same door as the open card's, and the card does not open on the click.
     await userEvent.click(within(resting).getByRole("button", { name: "Start" }));
     await waitFor(() => expect(api.openDoor).toHaveBeenCalledWith(SLUG, 253, "start"));
@@ -757,7 +764,7 @@ describe("the board at a glance (plan 06)", () => {
 
   it("shows a gateless queued card's Start closed with its reason on the open face", async () => {
     const d = detail(228);
-    d.doors = { ...d.doors, start: { offered: false, label: "Start", why: "This card names no effort gate; only a planned card is startable." } };
+    d.doors = { ...d.doors, start: { offered: false, label: "Start", why: "Nothing for you: this cannot start because its plan names no effort level. Discuss it and a plan with one carries it." } };
     api.getCard.mockResolvedValue(d);
     await renderBoard();
     await userEvent.click(screen.getByText("The skipper is told what the office decided"));
@@ -768,7 +775,7 @@ describe("the board at a glance (plan 06)", () => {
     });
     const start = await within(card).findByText("Start");
     expect(start).toHaveAttribute("aria-disabled", "true");
-    expect(within(card).getByText(/Start is closed: This card names no effort gate/)).toBeInTheDocument();
+    expect(within(card).getByText(/Nothing for you: this cannot start because its plan names no effort level/)).toBeInTheDocument();
   });
 
   it("offers Plan on a suggestion card, collapsed and open, and plans several together from a selection", async () => {
@@ -1148,12 +1155,12 @@ describe("the colour language", () => {
     { case: "free to start", word: "free to start", meaning: "proven", border: false, door: "Start" },
     { case: "shares ground", word: "shares ground with #241", meaning: "proven", border: false, door: "Start" },
     { case: "waits", word: "waits on #139", meaning: "quiet", border: false, door: "open to see" },
-    { case: "no gate", word: "no gate", meaning: "quiet", border: false, door: "open to see" },
+    { case: "no effort level", word: "no effort level", meaning: "quiet", border: false, door: "open to see" },
     { case: "nowhere to run", word: "nowhere to run", meaning: "quiet", border: false, door: "open to see" },
     { case: "working", word: "working · 12 min · fable on alpha", meaning: "live", border: true, door: "Watch" },
     { case: "asking you", word: "asking you", meaning: "yours", border: true, door: "Answer" },
     { case: "colliding", word: "colliding with #241", meaning: "broken", border: true, door: "open to see" },
-    { case: "lane ended", word: "lane ended", meaning: "broken", border: true, door: "open to resume" },
+    { case: "session died", word: "session died", meaning: "broken", border: true, door: "open to resume" },
     { case: "doubted", word: "doubted", meaning: "broken", border: true, door: "open to decide" },
     { case: "document nowhere", word: "document nowhere", meaning: "broken", border: true, door: "open to see" },
     { case: "your move", word: "your move", meaning: "yours", border: true, door: "Decide" },

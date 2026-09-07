@@ -752,8 +752,23 @@ def nothing_read(card: Card, project_path: str, now: datetime) -> tuple[Lane, "D
     return lane, doors
 
 
-NOWHERE = "nothing can start right now because no account has room to run it"
-NOWHERE_THEN = "it starts by itself when one does"
+def _nowhere(label: str, placement_note: str) -> Door:
+    """A door closed because the rule found nowhere to run: before the
+    board's first read that is only the wait, after it the accounts."""
+    if placement_note == UNREAD:
+        return _closed(
+            label,
+            Meaning.QUIET,
+            "the board has not read this project yet, so nothing can start",
+            then="it reads within a minute and the door opens by itself",
+        )
+    return _closed(
+        label,
+        Meaning.QUIET,
+        "nothing can start right now because no account has room to run it",
+        why=placement_note,
+        then="it starts by itself when one does",
+    )
 
 
 def _names(labels: Iterable[str]) -> str:
@@ -857,7 +872,7 @@ def doors_for(
         )
         state = StartState.TITLE_FAILS
     elif placement is None:
-        start = _closed("Start", Meaning.QUIET, NOWHERE, why=placement_note, then=NOWHERE_THEN)
+        start = _nowhere("Start", placement_note)
         state = StartState.UNREAD if placement_note == UNREAD else StartState.NOWHERE
     elif held_by:
         # The plan's own word is the one hold (ruling 3): it says which
@@ -961,7 +976,7 @@ def doors_for(
             then="it never touches the card's own code",
         )
         if placement is not None
-        else _closed("Discuss", Meaning.QUIET, NOWHERE, why=placement_note, then=NOWHERE_THEN)
+        else _nowhere("Discuss", placement_note)
     )
     # The door says what it does, and says it the same on both faces of the
     # card: "Create plan" collapsed and open (plan 27, item 2).
@@ -972,7 +987,7 @@ def doors_for(
             "Create plan writes the plan for a suggestion, and this card is not behind a live one",
         )
     elif placement is None:
-        plan = _closed("Create plan", Meaning.QUIET, NOWHERE, why=placement_note, then=NOWHERE_THEN)
+        plan = _nowhere("Create plan", placement_note)
     else:
         plan = _open(
             "Create plan",
@@ -992,7 +1007,7 @@ def doors_for(
                 then="its first line says so",
             )
             if placement is not None
-            else _closed("Look", Meaning.QUIET, NOWHERE, why=placement_note, then=NOWHERE_THEN)
+            else _nowhere("Look", placement_note)
         )
         resume = (
             _open("Resume", "press it and the session picks up where it stopped")
