@@ -62,6 +62,7 @@ from board.lane import (
 from board.progress import progress_of
 from board.sequencing import waits_for
 from board.signals import where_after
+from board.title import title_hold
 from board.triage import already_ruled
 from board.word import compose, notes_word
 from domain.audit import AuditKind
@@ -981,6 +982,7 @@ class Loops:
         readings = self.live.store.last_readings(live.project.slug)
         names = {slug: p.project.name for slug, p in self.live.projects.items()}
         triages = self.live.store.latest_triages(live.project.slug)
+        titles = self.live.store.latest_title_readings(live.project.slug)
         sources = self.live.sources(live.project.slug)
         answers = self.live.store.answers(live.project.slug)
         doors: dict[int, Doors] = {}
@@ -1030,6 +1032,7 @@ class Loops:
                 waits=waits,
                 routed=routing_for(card, document, triages.get(card.number), sources),
                 ruled=already_ruled(triages.get(card.number), answers.get(card.number)),
+                title_hold=title_hold(titles.get(card.number), document),
             )
         return doors
 

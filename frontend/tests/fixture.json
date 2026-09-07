@@ -127,7 +127,8 @@
                 "reading": null,
                 "planning": null,
                 "triaging": null,
-                "triage": null
+                "triage": null,
+                "title_reading": null
               },
               {
                 "number": 267,
@@ -177,7 +178,8 @@
                 "reading": null,
                 "planning": null,
                 "triaging": null,
-                "triage": null
+                "triage": null,
+                "title_reading": null
               }
             ],
             "rail": true
@@ -226,7 +228,8 @@
                 "reading": null,
                 "planning": null,
                 "triaging": null,
-                "triage": null
+                "triage": null,
+                "title_reading": null
               },
               {
                 "number": 242,
@@ -269,7 +272,8 @@
                 "reading": null,
                 "planning": null,
                 "triaging": null,
-                "triage": null
+                "triage": null,
+                "title_reading": null
               },
               {
                 "number": 120,
@@ -314,7 +318,8 @@
                 "reading": null,
                 "planning": null,
                 "triaging": null,
-                "triage": null
+                "triage": null,
+                "title_reading": null
               }
             ],
             "rail": false
@@ -370,7 +375,8 @@
                 "reading": null,
                 "planning": null,
                 "triaging": null,
-                "triage": null
+                "triage": null,
+                "title_reading": null
               }
             ],
             "rail": false
@@ -419,7 +425,8 @@
                 "reading": null,
                 "planning": null,
                 "triaging": null,
-                "triage": null
+                "triage": null,
+                "title_reading": null
               },
               {
                 "number": 264,
@@ -462,7 +469,8 @@
                 "reading": null,
                 "planning": null,
                 "triaging": null,
-                "triage": null
+                "triage": null,
+                "title_reading": null
               },
               {
                 "number": 265,
@@ -505,7 +513,8 @@
                 "reading": null,
                 "planning": null,
                 "triaging": null,
-                "triage": null
+                "triage": null,
+                "title_reading": null
               },
               {
                 "number": 266,
@@ -548,7 +557,8 @@
                 "reading": null,
                 "planning": null,
                 "triaging": null,
-                "triage": null
+                "triage": null,
+                "title_reading": null
               }
             ],
             "rail": false
@@ -616,7 +626,8 @@
                 "reading": null,
                 "planning": null,
                 "triaging": null,
-                "triage": null
+                "triage": null,
+                "title_reading": null
               }
             ],
             "rail": false
@@ -667,7 +678,8 @@
                 "reading": null,
                 "planning": null,
                 "triaging": null,
-                "triage": null
+                "triage": null,
+                "title_reading": null
               }
             ],
             "rail": false
@@ -718,7 +730,8 @@
                 "reading": null,
                 "planning": null,
                 "triaging": null,
-                "triage": null
+                "triage": null,
+                "title_reading": null
               }
             ],
             "rail": false
@@ -767,7 +780,8 @@
                 "reading": null,
                 "planning": null,
                 "triaging": null,
-                "triage": null
+                "triage": null,
+                "title_reading": null
               },
               {
                 "number": 268,
@@ -810,7 +824,8 @@
                 "reading": null,
                 "planning": null,
                 "triaging": null,
-                "triage": null
+                "triage": null,
+                "title_reading": null
               }
             ],
             "rail": false
@@ -876,7 +891,8 @@
                 "reading": null,
                 "planning": null,
                 "triaging": null,
-                "triage": null
+                "triage": null,
+                "title_reading": null
               },
               {
                 "number": 241,
@@ -919,7 +935,8 @@
                 "reading": null,
                 "planning": null,
                 "triaging": null,
-                "triage": null
+                "triage": null,
+                "title_reading": null
               },
               {
                 "number": 228,
@@ -962,7 +979,8 @@
                 "reading": null,
                 "planning": null,
                 "triaging": null,
-                "triage": null
+                "triage": null,
+                "title_reading": null
               },
               {
                 "number": 237,
@@ -1005,7 +1023,8 @@
                 "reading": null,
                 "planning": null,
                 "triaging": null,
-                "triage": null
+                "triage": null,
+                "title_reading": null
               },
               {
                 "number": 174,
@@ -1050,7 +1069,8 @@
                 "reading": null,
                 "planning": null,
                 "triaging": null,
-                "triage": null
+                "triage": null,
+                "title_reading": null
               }
             ],
             "rail": false
@@ -1116,7 +1136,8 @@
                 "reading": null,
                 "planning": null,
                 "triaging": null,
-                "triage": null
+                "triage": null,
+                "title_reading": null
               },
               {
                 "number": 223,
@@ -1159,7 +1180,8 @@
                 "reading": null,
                 "planning": null,
                 "triaging": null,
-                "triage": null
+                "triage": null,
+                "title_reading": null
               }
             ],
             "rail": false
@@ -1234,7 +1256,8 @@
                 "reading": null,
                 "planning": null,
                 "triaging": null,
-                "triage": null
+                "triage": null,
+                "title_reading": null
               },
               {
                 "number": 147,
@@ -1287,7 +1310,8 @@
                 "reading": null,
                 "planning": null,
                 "triaging": null,
-                "triage": null
+                "triage": null,
+                "title_reading": null
               }
             ],
             "rail": false
@@ -1345,7 +1369,8 @@
                 "reading": null,
                 "planning": null,
                 "triaging": null,
-                "triage": null
+                "triage": null,
+                "title_reading": null
               }
             ],
             "rail": false
@@ -1403,7 +1428,8 @@
                 "reading": null,
                 "planning": null,
                 "triaging": null,
-                "triage": null
+                "triage": null,
+                "title_reading": null
               }
             ],
             "rail": false
@@ -1471,7 +1497,8 @@
                 "reading": null,
                 "planning": null,
                 "triaging": null,
-                "triage": null
+                "triage": null,
+                "title_reading": null
               }
             ],
             "rail": false
@@ -1561,7 +1588,8 @@
                 "reading": null,
                 "planning": null,
                 "triaging": null,
-                "triage": null
+                "triage": null,
+                "title_reading": null
               }
             ],
             "rail": false
@@ -1661,7 +1689,8 @@
         "reading": null,
         "planning": null,
         "triaging": null,
-        "triage": null
+        "triage": null,
+        "title_reading": null
       },
       "brief": [
         {
@@ -1929,7 +1958,8 @@
         "reading": null,
         "planning": null,
         "triaging": null,
-        "triage": null
+        "triage": null,
+        "title_reading": null
       },
       "brief": [],
       "record": [],
@@ -2176,7 +2206,8 @@
         "reading": null,
         "planning": null,
         "triaging": null,
-        "triage": null
+        "triage": null,
+        "title_reading": null
       },
       "brief": [
         {
@@ -2431,7 +2462,8 @@
         "reading": null,
         "planning": null,
         "triaging": null,
-        "triage": null
+        "triage": null,
+        "title_reading": null
       },
       "brief": [
         {
@@ -2680,7 +2712,8 @@
         "reading": null,
         "planning": null,
         "triaging": null,
-        "triage": null
+        "triage": null,
+        "title_reading": null
       },
       "brief": [],
       "record": [],
@@ -2883,7 +2916,8 @@
         "reading": null,
         "planning": null,
         "triaging": null,
-        "triage": null
+        "triage": null,
+        "title_reading": null
       },
       "brief": [],
       "record": [],
@@ -3073,7 +3107,8 @@
         "reading": null,
         "planning": null,
         "triaging": null,
-        "triage": null
+        "triage": null,
+        "title_reading": null
       },
       "brief": [],
       "record": [],
@@ -3295,7 +3330,8 @@
         "reading": null,
         "planning": null,
         "triaging": null,
-        "triage": null
+        "triage": null,
+        "title_reading": null
       },
       "brief": [],
       "record": [],
@@ -3517,7 +3553,8 @@
         "reading": null,
         "planning": null,
         "triaging": null,
-        "triage": null
+        "triage": null,
+        "title_reading": null
       },
       "brief": [],
       "record": [],
@@ -3739,7 +3776,8 @@
         "reading": null,
         "planning": null,
         "triaging": null,
-        "triage": null
+        "triage": null,
+        "title_reading": null
       },
       "brief": [],
       "record": [],
@@ -3978,7 +4016,8 @@
         "reading": null,
         "planning": null,
         "triaging": null,
-        "triage": null
+        "triage": null,
+        "title_reading": null
       },
       "brief": [
         {
@@ -4250,7 +4289,8 @@
         "reading": null,
         "planning": null,
         "triaging": null,
-        "triage": null
+        "triage": null,
+        "title_reading": null
       },
       "brief": [
         {
@@ -4517,7 +4557,8 @@
         "reading": null,
         "planning": null,
         "triaging": null,
-        "triage": null
+        "triage": null,
+        "title_reading": null
       },
       "brief": [
         {
@@ -4771,7 +4812,8 @@
         "reading": null,
         "planning": null,
         "triaging": null,
-        "triage": null
+        "triage": null,
+        "title_reading": null
       },
       "brief": [],
       "record": [],
@@ -5005,7 +5047,8 @@
         "reading": null,
         "planning": null,
         "triaging": null,
-        "triage": null
+        "triage": null,
+        "title_reading": null
       },
       "brief": [],
       "record": [],
@@ -5285,7 +5328,8 @@
         "reading": null,
         "planning": null,
         "triaging": null,
-        "triage": null
+        "triage": null,
+        "title_reading": null
       },
       "brief": [
         {
@@ -5568,7 +5612,8 @@
         "reading": null,
         "planning": null,
         "triaging": null,
-        "triage": null
+        "triage": null,
+        "title_reading": null
       },
       "brief": [
         {
@@ -5844,7 +5889,8 @@
         "reading": null,
         "planning": null,
         "triaging": null,
-        "triage": null
+        "triage": null,
+        "title_reading": null
       },
       "brief": [
         {
@@ -6064,7 +6110,8 @@
         "reading": null,
         "planning": null,
         "triaging": null,
-        "triage": null
+        "triage": null,
+        "title_reading": null
       },
       "brief": [
         {
@@ -6361,7 +6408,8 @@
         "reading": null,
         "planning": null,
         "triaging": null,
-        "triage": null
+        "triage": null,
+        "title_reading": null
       },
       "brief": [
         {
@@ -6677,7 +6725,8 @@
         "reading": null,
         "planning": null,
         "triaging": null,
-        "triage": null
+        "triage": null,
+        "title_reading": null
       },
       "brief": [
         {
@@ -6957,7 +7006,8 @@
         "reading": null,
         "planning": null,
         "triaging": null,
-        "triage": null
+        "triage": null,
+        "title_reading": null
       },
       "brief": [
         {
@@ -7239,7 +7289,8 @@
         "reading": null,
         "planning": null,
         "triaging": null,
-        "triage": null
+        "triage": null,
+        "title_reading": null
       },
       "brief": [
         {
@@ -7525,7 +7576,8 @@
         "reading": null,
         "planning": null,
         "triaging": null,
-        "triage": null
+        "triage": null,
+        "title_reading": null
       },
       "brief": [
         {
@@ -7756,7 +7808,8 @@
         "reading": null,
         "planning": null,
         "triaging": null,
-        "triage": null
+        "triage": null,
+        "title_reading": null
       },
       "brief": [
         {
@@ -8031,7 +8084,8 @@
         "reading": null,
         "planning": null,
         "triaging": null,
-        "triage": null
+        "triage": null,
+        "title_reading": null
       },
       "brief": [
         {
@@ -8252,7 +8306,8 @@
         "reading": null,
         "planning": null,
         "triaging": null,
-        "triage": null
+        "triage": null,
+        "title_reading": null
       },
       "brief": [],
       "record": [
@@ -8519,7 +8574,8 @@
         "reading": null,
         "planning": null,
         "triaging": null,
-        "triage": null
+        "triage": null,
+        "title_reading": null
       },
       "brief": [],
       "record": [
@@ -8707,7 +8763,8 @@
         "reading": null,
         "planning": null,
         "triaging": null,
-        "triage": null
+        "triage": null,
+        "title_reading": null
       }
     },
     {
@@ -8758,7 +8815,8 @@
         "reading": null,
         "planning": null,
         "triaging": null,
-        "triage": null
+        "triage": null,
+        "title_reading": null
       }
     },
     {
@@ -8804,7 +8862,8 @@
         "reading": null,
         "planning": null,
         "triaging": null,
-        "triage": null
+        "triage": null,
+        "title_reading": null
       }
     },
     {
@@ -8850,7 +8909,8 @@
         "reading": null,
         "planning": null,
         "triaging": null,
-        "triage": null
+        "triage": null,
+        "title_reading": null
       }
     },
     {
@@ -8896,7 +8956,8 @@
         "reading": null,
         "planning": null,
         "triaging": null,
-        "triage": null
+        "triage": null,
+        "title_reading": null
       }
     },
     {
@@ -8949,7 +9010,8 @@
         "reading": null,
         "planning": null,
         "triaging": null,
-        "triage": null
+        "triage": null,
+        "title_reading": null
       }
     },
     {
@@ -9002,7 +9064,8 @@
         "reading": null,
         "planning": null,
         "triaging": null,
-        "triage": null
+        "triage": null,
+        "title_reading": null
       }
     },
     {
@@ -9060,7 +9123,8 @@
         "reading": null,
         "planning": null,
         "triaging": null,
-        "triage": null
+        "triage": null,
+        "title_reading": null
       }
     },
     {
@@ -9109,7 +9173,8 @@
         "reading": null,
         "planning": null,
         "triaging": null,
-        "triage": null
+        "triage": null,
+        "title_reading": null
       }
     },
     {
@@ -9157,7 +9222,8 @@
         "reading": null,
         "planning": null,
         "triaging": null,
-        "triage": null
+        "triage": null,
+        "title_reading": null
       }
     },
     {
@@ -9205,7 +9271,8 @@
         "reading": null,
         "planning": null,
         "triaging": null,
-        "triage": null
+        "triage": null,
+        "title_reading": null
       }
     },
     {
@@ -9258,7 +9325,8 @@
         "reading": null,
         "planning": null,
         "triaging": null,
-        "triage": null
+        "triage": null,
+        "title_reading": null
       }
     },
     {
@@ -9307,7 +9375,8 @@
         "reading": null,
         "planning": null,
         "triaging": null,
-        "triage": null
+        "triage": null,
+        "title_reading": null
       }
     },
     {
@@ -9356,7 +9425,8 @@
         "reading": null,
         "planning": null,
         "triaging": null,
-        "triage": null
+        "triage": null,
+        "title_reading": null
       }
     },
     {
@@ -9412,7 +9482,8 @@
         "reading": null,
         "planning": null,
         "triaging": null,
-        "triage": null
+        "triage": null,
+        "title_reading": null
       }
     },
     {
@@ -9472,7 +9543,8 @@
         },
         "planning": null,
         "triaging": null,
-        "triage": null
+        "triage": null,
+        "title_reading": null
       }
     },
     {
@@ -9523,7 +9595,8 @@
         "reading": null,
         "planning": null,
         "triaging": null,
-        "triage": null
+        "triage": null,
+        "title_reading": null
       }
     },
     {
@@ -9572,7 +9645,8 @@
         "reading": null,
         "planning": null,
         "triaging": null,
-        "triage": null
+        "triage": null,
+        "title_reading": null
       }
     },
     {
@@ -9618,7 +9692,8 @@
         "reading": null,
         "planning": null,
         "triaging": null,
-        "triage": null
+        "triage": null,
+        "title_reading": null
       }
     },
     {
@@ -9682,7 +9757,8 @@
           "ended_at": null
         },
         "triaging": null,
-        "triage": null
+        "triage": null,
+        "title_reading": null
       }
     },
     {
@@ -9709,7 +9785,7 @@
         "state": {
           "word": "mark being read · beta",
           "meaning": "live",
-          "detail": "A reading with no share of the finding session's context is verifying who fixes this, against the source the mark cites.",
+          "detail": "A reading with no share of the finding session's context is verifying who fixes this, against the source the mark cites — and whether you could place the card from its title.",
           "loop": null,
           "door": null,
           "hint": "open to see"
@@ -9746,7 +9822,8 @@
           "started_at": "2026-09-04T08:26:00Z",
           "ended_at": null
         },
-        "triage": null
+        "triage": null,
+        "title_reading": null
       }
     },
     {
@@ -9822,7 +9899,8 @@
           "source_fingerprint": null,
           "document_fingerprint": "f1x7ur3f1n6erpr",
           "session_id": "dddd0001-0000-4000-8000-000000000000"
-        }
+        },
+        "title_reading": null
       }
     }
   ],

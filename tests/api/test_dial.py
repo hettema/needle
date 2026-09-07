@@ -19,6 +19,7 @@ from fastapi.testclient import TestClient
 
 from api.cli import main
 from infrastructure import clock
+from domain.signal import SessionWork
 from infrastructure.store import Store
 from tests.api import test_doors as doors
 from tests.api.attention import claim_count
@@ -70,10 +71,10 @@ def reading_for(machine_floor: Floor) -> int | None:
     return int(named.split("-")[2]) if named.startswith("triage-card-") else None
 
 
-def open_readings(client: TestClient) -> dict[int, dict]:
+def open_readings(client: TestClient, slug: str = "proj") -> dict[int, dict]:
     """The reading in flight on each card, from the board itself."""
     found: dict[int, dict] = {}
-    for column in board(client)["columns"]:
+    for column in client.get(f"/api/projects/{slug}/board").json()["columns"]:
         for group in column["groups"]:
             for card in group["cards"]:
                 if card["triaging"] is not None:
@@ -81,17 +82,46 @@ def open_readings(client: TestClient) -> dict[int, dict]:
     return found
 
 
-def read_the_rail_until(client: TestClient, machine_floor: Floor, number: int) -> dict:
+def is_defect(client: TestClient, number: int, slug: str = "proj") -> bool:
+    card = client.get(f"/api/projects/{slug}/cards/{number}").json()
+    return card["summary"]["kind"] == "defect"
+
+
+def land_on_the_way(client: TestClient, number: int, slug: str = "proj") -> None:
+    """Land the result a reading on the way needs: `his` with a passing
+    title on a defect, a passing title alone on a plan or an idea (card
+    #74, item 3: every live title is read cold by the same seat)."""
+    argv = ["triage", slug, str(number)]
+    if is_defect(client, number, slug):
+        argv += ["his", "the record does not select between the two shapes this could take"]
+    assert main(argv + ["--title", "passes"]) == 0
+
+
+READINGS_ON_THE_WAY = 60
+"""Every live plan and idea on the fixture is read cold too, so the way
+to one card is longer than the rail (card #74, item 3)."""
+
+
+def read_the_rail_until(
+    client: TestClient, machine_floor: Floor, number: int, slug: str = "proj"
+) -> dict:
     """The launch of the reading of this card, ticking until the beat opens
-    it and landing `his` on every other defect it reads on the way.
+    it and landing `his` on every other defect it reads on the way — and a
+    passing title on every plan and idea (card #74).
 
     Every defect on the rail is now read, not only the marked ones — an
     unmarked defect is nobody's until something has looked at it (plan 59,
     item 1) — the rail is read oldest first, and a reading counts against the
     dial's number while it runs. So a test about one card has to clear the
     older ones, exactly as a night on the real board would."""
-    for _ in range(20):
-        reading = open_readings(client)
+    for _ in range(READINGS_ON_THE_WAY):
+        # Readings open on every project's board, one at a time; a reading
+        # on another board is landed too, so the beat reaches this card.
+        for other in client.get("/api/projects").json():
+            elsewhere = open_readings(client, other["slug"])
+            if other["slug"] != slug and elsewhere:
+                land_on_the_way(client, next(iter(elsewhere)), other["slug"])
+        reading = open_readings(client, slug)
         if number in reading:
             return next(
                 launch
@@ -99,27 +129,28 @@ def read_the_rail_until(client: TestClient, machine_floor: Floor, number: int) -
                 if launch["session_id"] == reading[number]["session_id"]
             )
         if reading:
-            on = next(iter(reading))
-            assert (
-                main(
-                    [
-                        "triage",
-                        "proj",
-                        str(on),
-                        "his",
-                        "the record does not select between the two shapes this could take",
-                    ]
-                )
-                == 0
-            )
+            land_on_the_way(client, next(iter(reading)), slug)
             continue
         before = len(machine_floor.state()["launch_log"])
         tick(client)
         if len(machine_floor.state()["launch_log"]) == before:
-            waiting = client.get("/api/fixes").json()["waiting"]
+            # The dial's own timer beats every DIAL_SECONDS under the test
+            # client too, and a long walk crosses it: a reading it opened
+            # between two steps here is landed on the next step, not a
+            # reason to stop.
+            if any(
+                client.app.state.loops.live.store.windowless_sessions(
+                    s, work=SessionWork.TRIAGE, open_only=True
+                )
+                for s in client.app.state.loops.live.projects
+            ):
+                continue
+            fixes = client.get("/api/fixes").json()
+            head = client.get(f"/api/projects/{slug}/board").json()["dial"]
             raise AssertionError(
                 f"the beat opened nothing before reaching #{number}: "
-                + str([(w["card_number"], w["why"]) for w in waiting])
+                + str([(w["card_number"], w["why"]) for w in fixes["waiting"]])
+                + f"; the head says {head}; lanes {fixes['lanes']}"
             )
     raise AssertionError(f"the rail never reached #{number}")
 
@@ -139,7 +170,7 @@ def verify(
     the dial: the beat opens the seat, the reading lands, and only then is
     the defect the machine's."""
     opened = read_the_rail_until(client, machine_floor, number)
-    argv = ["triage", "proj", str(number), result, words]
+    argv = ["triage", "proj", str(number), result, words, "--title", "passes"]
     if source:
         argv += ["--source", source]
     if direction:
@@ -284,6 +315,8 @@ def test_with_the_dial_on_the_oldest_now_defect_is_planned_then_started_by_the_d
                 SOURCE,
                 "--direction",
                 "no direction",
+                "--title",
+                "passes",
             ]
         )
         == 0

@@ -19,7 +19,7 @@ from domain.lane import Collision, Conversation, Doors, Lane, LaneState, Progres
 from domain.project import Project
 from domain.row import Row
 from domain.signal import Reading, Signal, SignalKind, WindowlessSession
-from domain.triage import Routed, Source, Triage
+from domain.triage import Routed, Source, TitleReading, Triage
 from domain.verdict import Verdict, VerdictLine
 from domain.watercooler import WatercoolerLine
 
@@ -81,6 +81,11 @@ class Claim(StrEnum):
     MARK_BEING_READ = "mark being read"
     """A defect whose mark an independent reading is verifying right now
     (plan 59, item 3)."""
+    TITLE_FAILS = "title fails"
+    """A card a cold reading could not place from its title; the writer
+    rewrites it and the next reading clears the mark (card #74, item 3)."""
+    TITLE_BEING_READ = "title being read"
+    """A plan or an idea whose title a cold reading is judging right now."""
     RULING_YOURS = "ruling yours"
     """A defect a reading put on the owner's pile and he has not ruled on.
     The pile drained at zero for the board's whole life partly because
@@ -106,6 +111,8 @@ CLAIM_MEANING: dict[Claim, Meaning] = {
     Claim.PLANNING: Meaning.LIVE,
     Claim.MARK_BEING_READ: Meaning.LIVE,
     Claim.RULING_YOURS: Meaning.YOURS,
+    Claim.TITLE_FAILS: Meaning.BROKEN,
+    Claim.TITLE_BEING_READ: Meaning.LIVE,
 }
 """Which of the three head words each claim counts under; the two other
 meanings never claim anyone."""
@@ -216,6 +223,10 @@ class CardSummary(BaseModel):
     (plan 59, item 3)."""
     triage: Triage | None
     """The latest reading of this defect's mark, when one has landed."""
+    title_reading: TitleReading | None
+    """The latest cold reading of the card's title and essence (card #74,
+    item 3); None while none has landed. A failing one is on the face and
+    holds Start closed until a reading passes."""
 
 
 class GroupView(BaseModel):

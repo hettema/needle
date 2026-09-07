@@ -241,6 +241,9 @@ class StartState(StrEnum):
     """Not in a column Start is offered in."""
     UNREAD = "unread"
     """The runtime has not read this board yet."""
+    TITLE_FAILS = "title fails"
+    """A cold reading could not place the card from its title; Start stays
+    closed until a reading of a rewritten title passes (card #74, item 3)."""
 
 
 class Readiness(BaseModel):

@@ -25,6 +25,7 @@ from board.brief import (
 from board.handouts import handouts_row
 from board.lane import HANDS_ON
 from board.signals import GRAMMAR, read_or_decline, where_after, where_after_finding
+from board.title import title_fingerprint
 from board.triage import routing_now, triaged_row
 from domain.audit import AuditKind
 from domain.board import CardDetail
@@ -38,7 +39,14 @@ from domain.launch import LaunchVerdict, Start
 from domain.project import Project
 from domain.row import Row, RowKind
 from domain.signal import Finding, SessionWork
-from domain.triage import CorpusLane, CorpusLaneKind, Direction, Routing, TriageResult
+from domain.triage import (
+    CorpusLane,
+    CorpusLaneKind,
+    Direction,
+    Routing,
+    TitleVerdict,
+    TriageResult,
+)
 from domain.verdict import EvidenceClass, VerdictsRuled
 from domain.window import WindowKind
 from infrastructure import clock
@@ -814,10 +822,12 @@ class Doors:
         slug: str,
         number: int,
         *,
-        result: TriageResult,
-        words: str,
+        result: TriageResult | None,
+        words: str | None,
         source: str | None,
         direction: Direction | None,
+        title: str,
+        failed: list[str],
     ) -> DoorResult:
         """A triage reading's result, in one act: the typed result validated
         against what it must name, the two fingerprints taken from the text
@@ -828,25 +838,51 @@ class Doors:
         makes the seat look busy forever, and one that writes a row without
         a fingerprint routes tomorrow's document on yesterday's reading.
 
+        Since card #74 the same reading judges the title (item 3): `title`
+        is `passes` or the reader's words for what the owner could not
+        place, `failed` the words that failed. On a defect the mark's result
+        and the title's verdict land together and the door refuses one
+        without the other; on a plan or an idea the title's verdict is the
+        whole result and a mark's result is refused, because there is no
+        mark to verify.
+
         Nothing here decides what the routing becomes: that is
         `board/triage.py::routing_of`, from this record and the document
         together. This door only refuses a result that does not carry what
         its own kind has to carry."""
-        words = words.strip()
-        if not words:
-            raise DoorRefused(
-                "A result without its reasoning records nothing; say what the source said."
-            )
         detail = self._detail(slug, number)
         document = detail.document
-        if (
-            document is None
-            or document.archived
-            or document.kind != DocumentKind.SUGGESTION
-            or document.suggestion_kind != SuggestionKind.DEFECT
-        ):
+        if document is None or document.archived:
             raise DoorRefused(
-                f"#{number} is not a live defect suggestion; a triage reads a defect's mark."
+                f"#{number} has no live document; a reading judges a live plan or suggestion."
+            )
+        defect = (
+            document.kind == DocumentKind.SUGGESTION
+            and document.suggestion_kind == SuggestionKind.DEFECT
+        )
+        if defect and result is None:
+            raise DoorRefused(
+                f"#{number} is a defect: its reading lands the mark's result and the title's "
+                "verdict in one command (now|his|when|split|cannot-tell, then --title)."
+            )
+        if not defect and result is not None:
+            raise DoorRefused(
+                f"#{number} is not a defect; it has no mark to verify. A reading of a plan or "
+                "an idea lands the title's verdict alone: --title passes, or --title "
+                '"<what you could not place>" --failed <words>.'
+            )
+        title = title.strip()
+        if not title:
+            raise DoorRefused(
+                'A title verdict is "passes" or the words for what you could not place.'
+            )
+        passes = title.lower() == "passes"
+        if passes and failed:
+            raise DoorRefused("A passing title names no failed words.")
+        words = (words or "").strip()
+        if defect and not words:
+            raise DoorRefused(
+                "A result without its reasoning records nothing; say what the source said."
             )
         open_now = next(
             (
@@ -887,6 +923,40 @@ class Doors:
             if trigger is None:
                 raise DoorRefused(f"A `when` names a trigger the board can read: {why}")
         now = clock.now()
+        verdict = TitleVerdict.PLACEABLE if passes else TitleVerdict.UNPLACEABLE
+        read = self.live.store.record_title_reading(
+            slug,
+            number,
+            at=now,
+            verdict=verdict,
+            words="the owner can place it from the title alone" if passes else title,
+            failed=failed,
+            title_fingerprint=title_fingerprint(document.title, document.essence),
+            session_id=open_now.session_id,
+        )
+        self.live.note(
+            slug,
+            number,
+            AuditKind.TITLE,
+            Actor.SESSION,
+            f"A cold reading of the title ({open_now.session_id[:8]}): {read.verdict.value} — "
+            f"{read.words}"
+            + (f"; the words that failed: {', '.join(read.failed)}" if read.failed else ""),
+        )
+        if not defect:
+            self.live.store.end_windowless_session(open_now.id, now)
+            self.live.bump()
+            self.loops.reconcile_now()
+            return DoorResult(
+                door="triage",
+                said=f"#{number}'s title read as {read.verdict.value}: {read.words}"
+                + (
+                    "; Start stays closed until a reading of a rewritten title passes."
+                    if not passes
+                    else "."
+                ),
+            )
+        assert result is not None
         previous = self.live.store.latest_triages(slug).get(number)
         record = self.live.store.record_triage(
             slug,
@@ -918,7 +988,7 @@ class Doors:
             door="triage",
             said=(
                 f"#{number} read as {result.value}; it routes as {routed.state.value} "
-                f"(decision {record.decision})."
+                f"(decision {record.decision}); its title read as {read.verdict.value}."
             ),
         )
 

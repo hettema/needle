@@ -232,3 +232,37 @@ class CorpusLane(BaseModel):
     applied: bool
     """The corpus now says what the lane was opened to write: read from the
     documents, never from the lane's own claim."""
+
+
+class TitleVerdict(StrEnum):
+    """Whether the owner can place the card from its title and the line
+    beneath it, without opening it (card #74, item 3): the test
+    `docs/plans/README.md` sets, applied by a reading with no share of the
+    writer's context."""
+
+    PLACEABLE = "placeable"
+    UNPLACEABLE = "unplaceable"
+    """The reader could not place it; its words say what and which words failed."""
+
+
+class TitleReading(BaseModel):
+    """One cold reading of a card's title and essence, as the record keeps
+    it. The same session as the mark's reading on a defect, the only
+    reading on a plan or an idea. A failing verdict is a machine fact on
+    the card's face and holds Start closed until a reading passes; the
+    reader marks and never rewrites, because the title is the owner's
+    intent in the writer's words and a second guess over the first is two
+    guesses."""
+
+    id: int
+    project: str
+    card_number: int
+    at: datetime
+    verdict: TitleVerdict
+    words: str
+    """The reader's words: what he could not place, or why it passes."""
+    failed: list[str]
+    """The words that failed, from `docs/vocabulary.md` or the reader's own."""
+    title_fingerprint: str
+    """The title and essence this verdict judged; a changed title is read again."""
+    session_id: str | None

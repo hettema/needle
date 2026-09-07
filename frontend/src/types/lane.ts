@@ -11,7 +11,7 @@ export type CollisionVerdict = (typeof COLLISION_VERDICT_VALUES)[number];
 export const LANE_STATE_VALUES = ["none", "working", "asking", "stopped", "blocked", "moving", "ended"] as const;
 export type LaneState = (typeof LANE_STATE_VALUES)[number];
 
-export const START_STATE_VALUES = ["free", "shares", "waits", "no gate", "nowhere to run", "lane exists", "elsewhere", "unread"] as const;
+export const START_STATE_VALUES = ["free", "shares", "waits", "no gate", "nowhere to run", "lane exists", "elsewhere", "unread", "title fails"] as const;
 export type StartState = (typeof START_STATE_VALUES)[number];
 
 export interface Collision {

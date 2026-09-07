@@ -31,7 +31,9 @@ from domain.triage import TriageResult
 from infrastructure.store import Store
 from tests.api import test_doors as doors
 from tests.api.test_dial import (
+    READINGS_ON_THE_WAY,
     SOURCE,
+    land_on_the_way,
     number_of,
     read_the_rail_until,
     reading_for,
@@ -57,16 +59,14 @@ def park_the_rail(client: TestClient, machine_floor: Floor) -> None:
     so a test about one card is about one card. A beat that opens nothing
     means the rail is quiet. Run before the test's own defect is written, so
     it can never be one of these."""
-    for _ in range(20):
+    for _ in range(READINGS_ON_THE_WAY):
         before = len(machine_floor.state()["launch_log"])
         tick(client)
         if len(machine_floor.state()["launch_log"]) == before:
             return
         on = reading_for(machine_floor)
         assert on is not None, machine_floor.state()["launch_log"][-1]
-        assert (
-            main(["triage", "proj", str(on), "his", "the record selects neither of the two"]) == 0
-        )
+        land_on_the_way(client, on)
     raise AssertionError("the rail never went quiet")
 
 
@@ -146,6 +146,8 @@ def test_a_reading_that_agrees_lets_the_dial_take_it_and_binds_itself_to_what_it
                 SOURCE,
                 "--direction",
                 "automation increased",
+                "--title",
+                "passes",
             ]
         )
         == 0
@@ -328,7 +330,7 @@ def test_the_verb_refuses_a_now_with_no_resolvable_source_and_a_now_with_no_dire
         json={"result": "now", "words": "the plan says so", "source": "docs/no-such-plan.md"},
     )
     assert invented.status_code == 404, "no such door: the verb is the session's, not the page's"
-    assert main(["triage", "proj", str(defect), "now", "the plan says so"]) == 1
+    assert main(["triage", "proj", str(defect), "now", "the plan says so", "-t", "passes"]) == 1
     assert "needs a source the board can read" in capsys.readouterr().err
     assert (
         main(
@@ -340,13 +342,28 @@ def test_the_verb_refuses_a_now_with_no_resolvable_source_and_a_now_with_no_dire
                 "the plan says so",
                 "--source",
                 "docs/no-such-plan.md",
+                "--title",
+                "passes",
             ]
         )
         == 1
     )
     assert "resolved nowhere" in capsys.readouterr().err
     assert (
-        main(["triage", "proj", str(defect), "now", "the plan says so", "--source", SOURCE]) == 1
+        main(
+            [
+                "triage",
+                "proj",
+                str(defect),
+                "now",
+                "the plan says so",
+                "--source",
+                SOURCE,
+                "--title",
+                "passes",
+            ]
+        )
+        == 1
     )
     assert "which way it moves the product" in capsys.readouterr().err
 
@@ -354,7 +371,10 @@ def test_the_verb_refuses_a_now_with_no_resolvable_source_and_a_now_with_no_dire
 def test_the_verb_refuses_a_result_with_no_reading_open(
     client: TestClient, defect: int, capsys
 ):
-    assert main(["triage", "proj", str(defect), "his", "it is a product call for you"]) == 1
+    assert (
+        main(["triage", "proj", str(defect), "his", "it is a product call for you", "-t", "passes"])
+        == 1
+    )
     assert "No triage is open" in capsys.readouterr().err
 
 

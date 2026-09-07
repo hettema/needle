@@ -9,7 +9,8 @@ from pathlib import Path
 from domain.board import CardDetail
 from domain.lane import HANDS_ON, Lane
 from domain.project import Project
-from board.title import VOCABULARY
+from board.title import VOCABULARY, Word
+from domain.document import SuggestionKind
 from domain.row import RowKind
 from domain.signal import Signal
 from domain.triage import CorpusLaneKind, Direction, Source, Triage
@@ -386,6 +387,43 @@ planning brief already says it; written once so the three briefs cannot
 drift into three ways of pushing."""
 
 
+TITLE_TEST = (
+    "could he place it against every other card without opening it? The title says what "
+    "will be true when the card is done, in his words — the outcome, never the mechanism, "
+    "the area or a term from the code — and short enough to read at a glance"
+)
+"""The owner's test for a title, as `docs/plans/README.md` states it
+(owner ruling 2026-09-04); carried into the reading's brief in the same
+words, because a paraphrase of a test is a different test."""
+
+
+def title_half(detail: CardDetail, vocabulary: list[Word], *, alone: bool) -> str:
+    """The title half of a reading's brief (card #74, item 3): the title
+    and the line beneath it as the face shows them, the owner's test, the
+    words the board defines and he does not — read from the one file and
+    quoted whole, never copied into code — and what a verdict has to hold.
+    With `alone`, this is the whole reading: a plan or an idea has no mark."""
+    card = detail.card
+    essence = detail.summary.essence or "(nothing beneath the title yet)"
+    listed = "\n".join(f"- {w.word} — {w.meaning}" for w in vocabulary)
+    return (
+        ("The title, read cold. " if not alone else "")
+        + "The owner ranks cards from their titles alone and directs on intent, never "
+        "mechanism; he is not technical, and a title he cannot place is a wrong card, "
+        f"silently. The face shows:\n\n  #{card.number} — {card.title}\n  {essence}\n\n"
+        f"His test, from docs/plans/README.md: {TITLE_TEST}. The words a title never uses, "
+        f"from Needle's {VOCABULARY} — each is a fact about the machinery and not about what "
+        f"he gets:\n{listed}\n\n"
+        "Judge the title and the line beneath it together, as he would see them on the "
+        "board: could he place this card among the others and say what he gets when it is "
+        "done? A listed word fails it; so does a mechanism, an area label, a term from the "
+        "code, or a sentence too long to take in at a glance. You mark and never rewrite: "
+        "the writer holds the evidence and rewrites, and the board reads again. The verdict "
+        "is `--title passes`, or `--title \"<what you could not place, in words the writer "
+        "can act on>\" --failed <the words that failed, comma-separated>`."
+    )
+
+
 def triage_brief(
     detail: CardDetail,
     project: Project,
@@ -393,8 +431,11 @@ def triage_brief(
     *,
     document_text: str,
     source: Source | None,
+    vocabulary: list[Word],
 ) -> str:
-    """What the reading that verifies a mark opens with (plan 59, item 3).
+    """What the reading that verifies a mark opens with (plan 59, item 3),
+    and, since card #74, the cold reading of a title: the same session
+    judges both on a defect, and only the title on a plan or an idea.
 
     Everything it needs is in the brief and nothing else is: the rule in the
     owner's words, the document whole, and the source the mark cites as this
@@ -410,6 +451,10 @@ def triage_brief(
     needle = needle_command()
     slug = card.project
     document = detail.document
+    if document is None or document.suggestion_kind != SuggestionKind.DEFECT:
+        return title_brief(
+            detail, project, today, document_text=document_text, vocabulary=vocabulary
+        )
     mark = "unmarked"
     if document is not None and document.fix is not None:
         fix = document.fix
@@ -441,13 +486,17 @@ def triage_brief(
         "Your one question: **does the source select this outcome?** Not whether the fix is "
         "good, not what to build — those belong to the plan and the lane. Only whether the "
         "written record the mark leans on already settles who decides.\n\n"
-        "End your turn with exactly one result, through the needle command line, never by "
-        "editing a file:\n"
+        + title_half(detail, vocabulary, alone=False)
+        + "\n\nEnd your turn with exactly one result, through the needle command line, never "
+        "by editing a file — the mark's result and the title's verdict in the same command, "
+        "since the two are one reading and the door refuses one without the other:\n"
         f'  {needle} triage {slug} {card.number} now "<the resolved source and the proposition '
-        'in it that selects this outcome>" --source <path or #N> --direction <direction>\n'
+        'in it that selects this outcome>" --source <path or #N> --direction <direction> '
+        "--title passes\n"
         f'  {needle} triage {slug} {card.number} his "<the alternatives, which owner-held '
         "outcome differs between them, and why no written ruling selects one — or the exact "
-        'exposure and the missing authorised bound>"\n'
+        'exposure and the missing authorised bound>" --title "<what you could not place>" '
+        "--failed <words>\n"
         f'  {needle} triage {slug} {card.number} when "<trigger in the WATCH grammar: <what> — '
         'session|url|file|command <target> by YYYY-MM-DD [every <N>h|<N>d]>"\n'
         f'  {needle} triage {slug} {card.number} split "<the two halves, each with its source>" '
@@ -478,6 +527,49 @@ def triage_brief(
         "and it can never open it wider than the corpus: a `now` on a document the corpus does "
         "not mark `now` authorises nothing until a session rewrites the mark in a commit that "
         "cites your reading.\n\n"
+        "Your turn ends with the needle triage command and one plain sentence after it. Ask "
+        "the owner nothing: nobody is reading this window."
+    )
+
+
+def title_brief(
+    detail: CardDetail,
+    project: Project,
+    today: str,
+    *,
+    document_text: str,
+    vocabulary: list[Word],
+) -> str:
+    """What the cold reading of a plan's or an idea's title opens with
+    (card #74, item 3): the same seat as a mark's reading and the same
+    independence — no share of the writer's context — with one question
+    and one result. It never rewrites: the title is the owner's intent in
+    the writer's words, and a second session overwriting the first's guess
+    is two guesses."""
+    card = detail.card
+    needle = needle_command()
+    slug = card.project
+    return (
+        f"A cold reading of #{card.number}'s title on {project.name} ({project.path}), {today}. "
+        "The session that wrote this document chose its title from inside its own context, "
+        "and nothing has read it cold. You are that reading: you have no share of the "
+        "writer's context and you must not go looking for one. Decide from the face and the "
+        "document below.\n\n"
+        "This session is never a lane: no worktree (never EnterWorktree), no edit to any "
+        "file, no commit, no push, no window. It writes nothing but its one result.\n\n"
+        + render(detail, project)
+        + "\n\n"
+        + title_half(detail, vocabulary, alone=True)
+        + f"\n\n--- the document ({detail.summary.document_path}) ---\n{document_text}\n"
+        "--- ends ---"
+        "\n\nRead the document only to check that the title says what it is for; the "
+        "document is not what he sees. End your turn with exactly one result, through the "
+        "needle command line, never by editing a file:\n"
+        f"  {needle} triage {slug} {card.number} --title passes\n"
+        f'  {needle} triage {slug} {card.number} --title "<what you could not place, in words '
+        'the writer can act on>" --failed <the words that failed, comma-separated>\n\n'
+        "A failing verdict is a machine fact on the card's face with your words, and holds "
+        "Start closed until a reading of a rewritten title passes; a passing one clears it. "
         "Your turn ends with the needle triage command and one plain sentence after it. Ask "
         "the owner nothing: nobody is reading this window."
     )

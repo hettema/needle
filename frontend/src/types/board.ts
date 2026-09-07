@@ -13,11 +13,11 @@ import type { Collision, Conversation, Doors, Lane, LaneState, Progress } from "
 import type { Project } from "./project";
 import type { Row } from "./row";
 import type { Reading, Signal, SignalKind, WindowlessSession } from "./signal";
-import type { Routed, Source, Triage } from "./triage";
+import type { Routed, Source, TitleReading, Triage } from "./triage";
 import type { Verdict, VerdictLine } from "./verdict";
 import type { WatercoolerLine } from "./watercooler";
 
-export const CLAIM_VALUES = ["verdict", "lane asking", "signal asking", "decision", "lane ended", "doubted", "signal overdue", "document gone", "colliding", "document without card", "no review", "lane working", "conversation", "signal reading", "planning", "mark being read", "ruling yours"] as const;
+export const CLAIM_VALUES = ["verdict", "lane asking", "signal asking", "decision", "lane ended", "doubted", "signal overdue", "document gone", "colliding", "document without card", "no review", "lane working", "conversation", "signal reading", "planning", "mark being read", "title fails", "title being read", "ruling yours"] as const;
 export type Claim = (typeof CLAIM_VALUES)[number];
 
 export const ESSENCE_SOURCE_VALUES = ["card", "document"] as const;
@@ -118,6 +118,7 @@ export interface CardSummary {
   planning: WindowlessSession | null;
   triaging: WindowlessSession | null;
   triage: Triage | null;
+  title_reading: TitleReading | null;
 }
 
 export interface ClaimCount {
@@ -201,4 +202,6 @@ export const CLAIM_MEANING: Record<Claim, Meaning> = {
   "planning": "live",
   "mark being read": "live",
   "ruling yours": "yours",
+  "title fails": "broken",
+  "title being read": "live",
 };

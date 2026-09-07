@@ -474,6 +474,28 @@ class TriageRow(Base):
     session_id: Mapped[str | None] = mapped_column(String(36), nullable=True)
 
 
+class TitleReadingRow(Base):
+    """One cold reading of a card's title and essence (card #74, item 3):
+    the verdict, the reader's words, the words that failed, and the
+    fingerprint of the title it judged. A failing row is the machine fact
+    on the face and the hold on Start; it never routes and never carries a
+    decision identity, which is why it is not a `triages` row."""
+
+    __tablename__ = "title_readings"
+    __table_args__ = (Index("ix_title_readings_card", "project_slug", "card_number"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    project_slug: Mapped[str] = mapped_column(String(80))
+    card_number: Mapped[int] = mapped_column(Integer)
+    at: Mapped[datetime] = mapped_column(UtcDateTime)
+    verdict: Mapped[str] = mapped_column(String(20))
+    words: Mapped[str] = mapped_column(Text)
+    failed: Mapped[str] = mapped_column(Text)
+    """The failed words as JSON, a list of strings."""
+    title_fingerprint: Mapped[str] = mapped_column(String(64))
+    session_id: Mapped[str | None] = mapped_column(String(36), nullable=True)
+
+
 class CorpusLaneRow(Base):
     """One short lane the board opened to write the corpus (plan 59, items 4
     and 5): a split it was told to separate, or a ruling it was told to

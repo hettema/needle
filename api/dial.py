@@ -47,16 +47,18 @@ from board.dial import (
     is_quiet,
     rail_count,
     rail_defects,
+    unread_titles,
     running,
     why_not_eligible,
 )
 from board.lane import has_row, is_question
+from board.title import read_vocabulary
 from board.triage import already_ruled, source_ref_of, split_row
 from domain.audit import AuditKind
 from domain.card import Actor, Card
 from domain.dial import Dial as DialSetting
 from domain.dial import DialState, Fixes, FixLane, FixReport, FixStage, Waiting
-from domain.document import Document, DocumentKind
+from domain.document import Document, DocumentKind, SuggestionKind
 from domain.gate import Gate
 from domain.hook import HookKind
 from domain.lane import LaneState
@@ -289,6 +291,13 @@ class Dial:
                     # Start door — which is about a worktree — has nothing to
                     # say about whether it can run.
                     unread.append(Candidate(project=slug, card=card, document=document))
+            # Every plan and idea whose title has not been read as it stands
+            # (card #74, item 3): the same seat, the title half of the brief
+            # only, and the same cap on readings that die.
+            titles = store.latest_title_readings(slug)
+            for card, document in unread_titles(store.cards(slug), live.index, titles):
+                if self._wants_a_title_reading(slug, card, snapshot):
+                    unread.append(Candidate(project=slug, card=card, document=document))
         for candidate in sorted(candidates, key=lambda c: c.age_key):
             live = self.live.projects[candidate.project]
             if self._own_board(live) and not quiet:
@@ -328,6 +337,17 @@ class Dial:
             return False
         return self._readings_that_died(slug, card.number) < TRIAGE_ATTEMPTS
 
+    def _wants_a_title_reading(self, slug: str, card: Card, snapshot) -> bool:
+        """Whether the board should open the cold reading of this card's
+        title now: nobody has hands on it, no session is already reading it,
+        and the readings that died on it are under the cap."""
+        lane = snapshot.lanes.get(card.number)
+        if lane is not None and (lane.state != LaneState.NONE or lane.path is not None):
+            return False
+        if card.number in self.live.store.open_windowless_sessions(slug, SessionWork.TRIAGE):
+            return False
+        return self._readings_that_died(slug, card.number) < TRIAGE_ATTEMPTS
+
     def _readings_that_died(self, slug: str, number: int) -> int:
         """How many readings the board opened on this card that landed no
         result: the record of sessions, less the results."""
@@ -337,8 +357,17 @@ class Dial:
             for r in store.windowless_sessions(slug, work=SessionWork.TRIAGE)
             if r.card_number == number
         ]
-        landed = {t.session_id for t in store.triages(slug, number) if t.session_id}
+        landed = self._landed(slug, number)
         return sum(1 for r in opened if r.session_id not in landed and r.ended_at is not None)
+
+    def _landed(self, slug: str, number: int | None = None) -> set[str]:
+        """The reading sessions that landed a result: a mark's, or a
+        title's — a reading of a plan or an idea lands only the latter
+        (card #74, item 3), and is no less landed for it."""
+        store = self.live.store
+        marks = {t.session_id for t in store.triages(slug, number) if t.session_id}
+        titles = {t.session_id for t in store.title_readings(slug, number) if t.session_id}
+        return marks | titles
 
     def _triage(self, live: LiveProject, candidate: Candidate) -> None:
         """Open the one independent reading of this defect's mark, in the
@@ -357,6 +386,7 @@ class Dial:
             now.date().isoformat(),
             document_text=self._document_text(live, candidate.document),
             source=sources.resolve(ref),
+            vocabulary=read_vocabulary(),
         )
         launch = self.runtime.start_windowless(
             WindowlessStart(
@@ -366,8 +396,10 @@ class Dial:
                 effort=TRIAGE_EFFORT,
             )
         )
+        defect = candidate.document.suggestion_kind == SuggestionKind.DEFECT
+        of_what = "the mark" if defect else "the title"
         if launch.verdict != LaunchVerdict.ALIVE or launch.session is None:
-            words = f"The board could not start a reading of the mark: {launch.reason}"
+            words = f"The board could not start a reading of {of_what}: {launch.reason}"
             self.live.note(slug, card.number, AuditKind.DIAL, Actor.MACHINE, words)
             return
         session = launch.session
@@ -388,7 +420,7 @@ class Dial:
             card.number,
             AuditKind.DIAL,
             Actor.MACHINE,
-            f"A reading of its mark started: {session.short_id}, {where}, in {project.path}; "
+            f"A reading of {of_what} started: {session.short_id}, {where}, in {project.path}; "
             "never hands on the tree",
         )
 
@@ -505,7 +537,7 @@ class Dial:
         made the old default dangerous."""
         slug = live.project.slug
         store = self.live.store
-        landed = {t.session_id for t in store.triages(slug) if t.session_id}
+        landed = self._landed(slug)
         for record in store.windowless_sessions(slug, work=SessionWork.TRIAGE):
             session = by_id.get(record.session_id)
             tended, words = self.loops.tend_windowless(

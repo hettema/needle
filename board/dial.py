@@ -18,6 +18,7 @@ from datetime import datetime
 from pydantic import BaseModel
 
 from board.lane import has_row
+from board.title import wants_title_reading
 from domain.card import Card
 from domain.column import Column
 from domain.corpus import CorpusIndex
@@ -36,7 +37,7 @@ from domain.document import Document, DocumentKind, FixMark, SuggestionKind
 from domain.lane import HANDS_ON, Lane, LaneState
 from domain.row import RowKind
 from domain.signal import Reading
-from domain.triage import Routed, Routing
+from domain.triage import Routed, Routing, TitleReading
 
 LIVE_STAGES: frozenset[FixStage] = frozenset(
     {FixStage.PLANNING, FixStage.PLANNED, FixStage.STARTED}
@@ -92,6 +93,38 @@ def rail_defects(cards: list[Card], index: CorpusIndex) -> list[tuple[Card, Docu
         if document.suggestion_kind != SuggestionKind.DEFECT:
             continue
         found.append((card, document))
+    return found
+
+
+TITLE_READ_COLUMNS: frozenset[Column] = frozenset(
+    {Column.BACKLOG, Column.PLANNED, Column.UP_NEXT}
+)
+"""Where a title is read cold (card #74, item 3): the columns a card is
+ranked in before anyone has hands on it. A card in flight, shipped, parked
+or on the owner's desk is not read — its Start is closed by other facts
+and a reading would answer a question nothing acts on."""
+
+
+def unread_titles(
+    cards: list[Card], index: CorpusIndex, latest: dict[int, TitleReading]
+) -> list[tuple[Card, Document]]:
+    """Every card standing on its own behind a live plan or idea whose
+    title has not been read as it stands. Defects are not listed here: a
+    defect's title is read by the same session as its mark, so it rides on
+    the mark's reading (`rail_defects`) and never opens a second one."""
+    found: list[tuple[Card, Document]] = []
+    for card in cards:
+        if card.folded_into is not None or card.place.column not in TITLE_READ_COLUMNS:
+            continue
+        if card.link is None:
+            continue
+        document = index.find(card.link.kind, card.link.stem)
+        if document is None or document.archived:
+            continue
+        if document.suggestion_kind == SuggestionKind.DEFECT:
+            continue
+        if wants_title_reading(document, latest.get(card.number)):
+            found.append((card, document))
     return found
 
 

@@ -724,6 +724,7 @@ def doors_for(
     waits: list[Wait],
     routed: Routed | None = None,
     ruled: str | None = None,
+    title_hold: str | None = None,
 ) -> Doors:
     """`suggestion_live`: the card's document is a suggestion still in its
     live folder, so Plan may write the plan that carries it. `signal_evidence`
@@ -733,7 +734,10 @@ def doors_for(
     card's (`board/sequencing.py`). `routed` is where a defect routes right
     now and `ruled` his own answer to this reading when he has already given
     one: together they are what opens Answer on a card with no session at
-    all, exactly once (plan 59, item 5)."""
+    all, exactly once (plan 59, item 5). `title_hold` is why a cold reading
+    could not place the card from its title, when the last one could not
+    (card #74, item 3): the one hold that is the board's on every project's
+    card, since Start is the one door every card goes through."""
     live = lane.session is not None and lane.session.pid is not None and lane.state in HANDS_ON
     background = live and lane.session is not None and lane.session.kind == SessionKind.BACKGROUND
     shares = collision is not None and collision.verdict == CollisionVerdict.COLLIDES
@@ -760,6 +764,12 @@ def doors_for(
             f"Start is offered in Up next and Planned; this card is in {card.place.column}.",
         )
         state = StartState.ELSEWHERE
+    elif title_hold is not None:
+        # The owner ranks from the title alone; a card he cannot place is
+        # not started until the writer has rewritten it and a reading with
+        # no share of the writer's context has passed it (card #74, item 3).
+        start = _closed("Start", title_hold)
+        state = StartState.TITLE_FAILS
     elif placement is None:
         start = _closed("Start", f"The rule found nowhere to run: {placement_note}")
         state = StartState.UNREAD if placement_note == UNREAD else StartState.NOWHERE

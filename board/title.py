@@ -21,6 +21,10 @@ from pathlib import Path
 
 from pydantic import BaseModel
 
+from board.triage import fingerprint
+from domain.document import Document
+from domain.triage import TitleReading, TitleVerdict
+
 REPO_ROOT = Path(__file__).resolve().parent.parent
 VOCABULARY_PATH = REPO_ROOT / "docs" / "vocabulary.md"
 VOCABULARY = "docs/vocabulary.md"
@@ -95,3 +99,50 @@ def sequence_number_in(title: str, stem: str) -> str | None:
     if stem_match:
         return f"stem carries {stem_match.group(1)!r} after its date"
     return None
+
+
+# ── the cold read at birth (item 3) ─────────────────────────────────────
+
+
+def title_fingerprint(title: str, essence: str | None) -> str:
+    """What a title reading binds itself to: the title and the line
+    beneath it, which is all the reader judged. Not the whole document — a
+    body edited under a passing title is not a new title, and a reading
+    costs a session."""
+    return fingerprint(f"{title}\n{essence or ''}")
+
+
+def wants_title_reading(
+    document: Document | None, latest: TitleReading | None
+) -> bool:
+    """Whether a card's title has not been read as it stands: no reading
+    yet, or the title or essence changed under the last one. A reading
+    that failed and a title that has not changed is not read again — the
+    writer rewrites, and the reader reads again."""
+    if document is None or document.archived:
+        return False
+    if latest is None:
+        return True
+    return latest.title_fingerprint != title_fingerprint(document.title, document.essence)
+
+
+def title_hold(latest: TitleReading | None, document: Document | None) -> str | None:
+    """Why Start is closed on this title, or None. The hold is the last
+    reading's verdict, not the fingerprint: a title rewritten after a
+    failing read stays held until a reading of the new title passes, so a
+    rewrite is never its own verification (the reader marks, the writer
+    writes, and the reader reads again)."""
+    if latest is None or latest.verdict != TitleVerdict.UNPLACEABLE:
+        return None
+    changed = (
+        document is not None
+        and not document.archived
+        and latest.title_fingerprint != title_fingerprint(document.title, document.essence)
+    )
+    failed = f" — the words that failed: {', '.join(latest.failed)}" if latest.failed else ""
+    tail = (
+        "; the title has changed since, and Start opens when a reading of the new title passes"
+        if changed
+        else "; Start opens when a reading of a rewritten title passes"
+    )
+    return f"A cold reading could not place this card from its title: {latest.words}{failed}{tail}"

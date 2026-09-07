@@ -254,6 +254,14 @@ export function OpenCard({ card, onMoveTo }: { card: CardSummary; onMoveTo: (num
         ) : (
           <Quiet>Nothing written yet — no SERVES row on the card and no intent in a document.</Quiet>
         )}
+        {detail.summary.title_reading && detail.summary.title_reading.verdict === "unplaceable" ? (
+          <Doubt>
+            A cold reading on {detail.summary.title_reading.at.slice(0, 10)} could not place this card from its title: {detail.summary.title_reading.words}
+            {detail.summary.title_reading.failed.length ? ` — the words that failed: ${detail.summary.title_reading.failed.join(", ")}` : ""}. The writer rewrites the title; the board reads it again, and Start opens when a reading passes.
+          </Doubt>
+        ) : detail.summary.title_reading ? (
+          <Quiet>A cold reading on {detail.summary.title_reading.at.slice(0, 10)} could place this card from its title alone.</Quiet>
+        ) : null}
         {detail.card.deep ? (
           <Note>
             <Inline text={detail.card.deep} />

@@ -188,14 +188,19 @@ def triage(
 ) -> int:
     """A triage reading's result on the card, and the routing it implies
     (plan 59, item 3): the one verb a reading of a defect's mark ends its
-    turn with."""
+    turn with — and, since card #74, the cold reading of any card's title:
+    the mark's result and the title's verdict in one command on a defect,
+    the title's verdict alone on a plan or an idea."""
+    failed = [w.strip() for w in (args.failed or "").split(",") if w.strip()]
     result = doors.triage(
         args.slug,
         args.number,
-        result=TriageResult(args.result),
+        result=TriageResult(args.result) if args.result else None,
         words=args.words,
         source=args.source,
         direction=Direction(args.direction) if args.direction else None,
+        title=args.title,
+        failed=failed,
     )
     print(result.said)
     return 0
@@ -801,12 +806,29 @@ def register(sub: "argparse._SubParsersAction[argparse.ArgumentParser]") -> None
     p_reading.set_defaults(run=_with_board(reading))
 
     p_triage = sub.add_parser(
-        "triage", help="a triage reading's result on a defect's mark, with the source it read"
+        "triage",
+        help="a reading's result on a card: a defect's mark with the source it read, and "
+        "whether the owner could place the card from its title",
     )
     p_triage.add_argument("slug")
     p_triage.add_argument("number", type=int)
-    p_triage.add_argument("result", choices=[r.value for r in TriageResult])
-    p_triage.add_argument("words", help="what the source said, in the words the result needs")
+    p_triage.add_argument(
+        "result",
+        nargs="?",
+        choices=[r.value for r in TriageResult],
+        help="the mark's result; a defect's reading lands one, a plan's or an idea's lands none",
+    )
+    p_triage.add_argument(
+        "words", nargs="?", help="what the source said, in the words the result needs"
+    )
+    p_triage.add_argument(
+        "-t",
+        "--title",
+        required=True,
+        help='the title\'s verdict: "passes", or what you could not place, in words the '
+        "writer can act on",
+    )
+    p_triage.add_argument("--failed", help="the words that failed, comma-separated")
     p_triage.add_argument("--source", help="the path or #N the result rests on")
     p_triage.add_argument(
         "--direction",

@@ -7,6 +7,7 @@ leaves the store as it was; any other failure propagates with the database's
 own words, which the page shows verbatim.
 """
 
+import json
 import re
 import sqlite3
 import threading
@@ -46,6 +47,8 @@ from domain.triage import (
     CorpusLane,
     CorpusLaneKind,
     Direction,
+    TitleReading,
+    TitleVerdict,
     Triage,
     TriageResult,
 )
@@ -71,6 +74,7 @@ from infrastructure.schema import (
     ReadingRow,
     RescueRow,
     SessionSlotRow,
+    TitleReadingRow,
     TriageRow,
     TrunkRow,
     WatercoolerRow,
@@ -1513,6 +1517,56 @@ class Store:
             latest[triage.card_number] = triage
         return latest
 
+    # ── the cold readings of a title (card #74, item 3) ────────────────
+
+    def record_title_reading(
+        self,
+        slug: str,
+        number: int,
+        *,
+        at: datetime,
+        verdict: TitleVerdict,
+        words: str,
+        failed: list[str],
+        title_fingerprint: str,
+        session_id: str | None,
+    ) -> TitleReading:
+        """One reading of a card's title, kept whole and never replaced: the
+        readings are a history, and a title that failed twice before it
+        passed is a fact about the writer's register the loop can read."""
+        with self._session() as session, session.begin():
+            if session.get(CardRow, (slug, number)) is None:
+                raise StoreRefusal(f"There is no card #{number} on this board.")
+            row = TitleReadingRow(
+                project_slug=slug,
+                card_number=number,
+                at=at,
+                verdict=verdict.value,
+                words=words,
+                failed=json.dumps(failed),
+                title_fingerprint=title_fingerprint,
+                session_id=session_id,
+            )
+            session.add(row)
+            session.flush()
+            return _title_reading(row)
+
+    def title_readings(self, slug: str, number: int | None = None) -> list[TitleReading]:
+        """Every title reading of a project, oldest first; of one card when named."""
+        with self._session() as session:
+            query = select(TitleReadingRow).where(TitleReadingRow.project_slug == slug)
+            if number is not None:
+                query = query.where(TitleReadingRow.card_number == number)
+            return [_title_reading(r) for r in session.scalars(query.order_by(TitleReadingRow.id))]
+
+    def latest_title_readings(self, slug: str) -> dict[int, TitleReading]:
+        """The newest title reading on each of the project's cards: what the
+        face and the Start door read."""
+        latest: dict[int, TitleReading] = {}
+        for reading in self.title_readings(slug):
+            latest[reading.card_number] = reading
+        return latest
+
     # ── the short lanes that write the corpus (plan 59, items 4 and 5) ──
 
     def open_corpus_lane(
@@ -1940,6 +1994,20 @@ def _triage(row: TriageRow) -> Triage:
         source_path=row.source_path,
         source_fingerprint=row.source_fingerprint,
         document_fingerprint=row.document_fingerprint,
+        session_id=row.session_id,
+    )
+
+
+def _title_reading(row: TitleReadingRow) -> TitleReading:
+    return TitleReading(
+        id=row.id,
+        project=row.project_slug,
+        card_number=row.card_number,
+        at=row.at,
+        verdict=TitleVerdict(row.verdict),
+        words=row.words,
+        failed=list(json.loads(row.failed)),
+        title_fingerprint=row.title_fingerprint,
         session_id=row.session_id,
     )
 

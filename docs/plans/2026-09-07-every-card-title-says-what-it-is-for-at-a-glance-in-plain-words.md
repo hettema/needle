@@ -62,6 +62,13 @@ intent; the brief quotes it by path; the ratchet fails on a fixture title
 containing "lane" and passes on Needle's live corpus after item 2 lands;
 `docs/plans/README.md` lines 43–51 point at the file as the list of words the
 title never uses.
+**Met:** `docs/vocabulary.md` carries twenty-five words, the fourteen among
+them; `board/title.py` reads it; the planning brief's rule 1 and the filing
+rule in `board/brief.py` name it by path, and the birth reading's brief
+quotes it whole; `tests/ratchets/test_every_title_is_in_the_owners_words.py`
+fails on "A lane the machine ended comes back by itself" and passed on the
+live corpus once the sweep landed (commit 9bcd26e); the README's title
+paragraph points at the file.
 
 ### 2. Every live title on every board is rewritten to the bar, and the card keeps its number
 Every live plan and suggestion on the four projects is retitled: the
@@ -90,6 +97,21 @@ week is a finding for the loop below.
 Hands out: search — the list of live plan and suggestion paths with their
 first line, per project; verifies the count against `ls` of each folder
 before rewriting anything.
+**Met:** the search role listed 193 + 35 + 17 + 1 live documents, each count
+checked against `ls`; the lane retitled 149 on Hello Revenue (commit
+23de0e2c1 on its trunk), 27 on Needle (9bcd26e in this lane, the three
+numbered plans losing their number), 6 on the machine (1bfaf74, four numbered
+stems and three titles) and none on Hello Revenue 3, each old title kept on a
+`**Formerly:**` line under the head and every citation of a renamed path
+elsewhere in each tree following the rename — the method for "the record
+loses nothing", chosen over moving the old sentence into the intent because
+it is uniform and lossless for 182 documents. Skipped, their lanes' own: Hello
+Revenue #452, #459, #461, #462, the machine's #22, and this plan. Read back
+from the served board after the sweep: no card born, none archived on any of
+the four boards, `tools/renames_kept.py --since 2026-09-07` answers 0, and the
+card numbers per project are listed in the review record; the rehearsal is
+`tests/api/test_title.py`'s rename test. The owner's read of the new titles
+is the loop below.
 
 ### 3. A title is read cold at its birth, and a title that fails is marked on the face
 The reading that verifies a suggestion's `Fix:` mark from outside the
@@ -153,6 +175,11 @@ in its stem or title; both READMEs state the rule with its reason; the
 ratchet fails on a fixture plan stem `2026-09-07-17-…` and passes on the live
 corpus; the planning brief in `board/brief.py` names the card number as the
 way to cite a plan.
+**Met:** Needle's three numbered plans and the machine's four are renamed
+(9bcd26e here, 1bfaf74 there); both READMEs carry the rule with the ruling's
+reason and the machine's plan-write skill names it in one line; the ratchet's
+own test fails `2026-09-07-17-x` and the live corpus passes; the planning
+brief's rule 1 says a plan is cited by its card number.
 
 ## Acceptance criteria
 

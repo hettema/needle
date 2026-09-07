@@ -51,6 +51,9 @@ class AuditKind(StrEnum):
     DIAL = "dial"
     """The dial took the card, planned it, started it, or left it to the
     owner, with why (plan 11, item 4)."""
+    TITLE = "title"
+    """A cold reading of the card's title landed: placeable, or not, with
+    the reader's words (card #74, item 3)."""
 
 
 class AuditEntry(BaseModel):

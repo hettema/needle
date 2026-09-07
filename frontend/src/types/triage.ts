@@ -10,6 +10,9 @@ export type Direction = (typeof DIRECTION_VALUES)[number];
 export const ROUTING_VALUES = ["needs triage", "triaged now", "triaged his", "triaged when", "cannot tell", "stale"] as const;
 export type Routing = (typeof ROUTING_VALUES)[number];
 
+export const TITLE_VERDICT_VALUES = ["placeable", "unplaceable"] as const;
+export type TitleVerdict = (typeof TITLE_VERDICT_VALUES)[number];
+
 export const TRIAGE_RESULT_VALUES = ["now", "his", "when", "split", "cannot-tell"] as const;
 export type TriageResult = (typeof TRIAGE_RESULT_VALUES)[number];
 
@@ -65,6 +68,18 @@ export interface Source {
   text: string | null;
   fingerprint: string | null;
   note: string;
+}
+
+export interface TitleReading {
+  id: number;
+  project: string;
+  card_number: number;
+  at: string;
+  verdict: TitleVerdict;
+  words: string;
+  failed: string[];
+  title_fingerprint: string;
+  session_id: string | null;
 }
 
 export interface Triage {

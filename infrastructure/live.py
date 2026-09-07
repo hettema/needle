@@ -312,6 +312,7 @@ class Live:
             triages=self.store.latest_triages(slug),
             sources=self.sources(slug),
             dial=self.dial_state(),
+            title_readings=self.store.latest_title_readings(slug),
         )
 
     def dial_state(self) -> DialState:
@@ -382,6 +383,7 @@ class Live:
             triaging=self.store.open_windowless_sessions(slug, SessionWork.TRIAGE).get(number),
             triage=self.store.triage(slug, number),
             sources=self.sources(slug),
+            title_reading=self.store.latest_title_readings(slug).get(number),
         )
 
     def lane_and_doors(self, slug: str, card: Card) -> tuple[Lane | None, Doors]:

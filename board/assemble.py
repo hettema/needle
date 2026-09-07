@@ -22,6 +22,7 @@ from board.lane import (
 from board.moves import GroupLayout
 from board.reconcile import carried_stems, corpus_path_of, ref
 from board.signals import is_due, past_due, read_or_decline
+from board.title import title_hold
 from board.triage import Sources, routing_now, routing_of
 from board.verdicts import read_or_decline as read_verdict_or_decline
 from domain.audit import AuditEntry
@@ -66,7 +67,7 @@ from domain.lane import HANDS_ON, Doors, Lane, LaneSnapshot, LaneState, StartSta
 from domain.project import Project
 from domain.row import ROW_HALF, Row, RowHalf, RowKind
 from domain.signal import Reading, Signal, SignalKind, WindowlessSession
-from domain.triage import Routed, Routing, Triage
+from domain.triage import Routed, Routing, TitleReading, Triage
 from domain.verdict import Verdict, VerdictLine
 from domain.watercooler import WatercoolerLine
 
@@ -97,6 +98,8 @@ CLAIM_WORDS: dict[Claim, tuple[str, str]] = {
     Claim.PLANNING: ("defect being planned", "defects being planned"),
     Claim.MARK_BEING_READ: ("mark being read", "marks being read"),
     Claim.RULING_YOURS: ("defect waiting on your ruling", "defects waiting on your ruling"),
+    Claim.TITLE_FAILS: ("title you could not place", "titles you could not place"),
+    Claim.TITLE_BEING_READ: ("title being read", "titles being read"),
 }
 """Each claim's words, singular and plural: the head's breakdown (plan 27, item 1)."""
 
@@ -500,6 +503,8 @@ def state_of(
     planning: WindowlessSession | None = None,
     triaging: WindowlessSession | None = None,
     routed: Routed | None = None,
+    hold: str | None = None,
+    defect: bool = False,
 ) -> CardState:
     """The one function that names a card's state (plan 27, item 2). The
     order is the rule's precedence: broken before yours, yours before live,
@@ -507,7 +512,9 @@ def state_of(
     state; the head's claims may count it under several. `trigger` is a
     defect's `Fix: when` signal, `planning` the dial's session writing its
     plan (plan 11), `triaging` the reading verifying its mark and `routed`
-    where it routes (plan 59)."""
+    where it routes (plan 59); `hold` is why a cold reading could not place
+    the card from its title, and `defect` whether a reading in flight is a
+    mark's or only a title's (card #74, item 3)."""
     hands_on = lane is not None and lane.state in HANDS_ON
     if document_state == DocumentState.GONE:
         return _state(
@@ -580,6 +587,10 @@ def state_of(
         )
     if card.place.column in SHIPPED:
         return _loop_state(card, signal, signal_note, last, reading, now)
+    if hold is not None:
+        # Broken before quiet: the title and the bar disagree, and nothing
+        # below this line — a Start, a plan door — is offered while they do.
+        return _state("title fails", Meaning.BROKEN, detail=hold, hint="open to see")
     if card.place.column == Column.DECISION_MOMENT:
         return _state(
             "your move",
@@ -626,13 +637,23 @@ def state_of(
             detail=routed.why,
             door=_door(FaceDoorName.OPEN, "Rule", doors.answer.why, primary=True),
         )
-    if document_state == DocumentState.SUGGESTION and triaging is not None:
+    if triaging is not None and defect:
         return _state(
             f"mark being read · {triaging.slot}",
             Meaning.LIVE,
             detail=(
                 "A reading with no share of the finding session's context is verifying who "
-                "fixes this, against the source the mark cites."
+                "fixes this, against the source the mark cites — and whether you could place "
+                "the card from its title."
+            ),
+        )
+    if triaging is not None:
+        return _state(
+            f"title being read · {triaging.slot}",
+            Meaning.LIVE,
+            detail=(
+                "A reading with no share of the writer's context is judging whether you could "
+                "place this card from its title and the line beneath it."
             ),
         )
     if document_state == DocumentState.SUGGESTION:
@@ -712,6 +733,8 @@ def claims_of(
     triaging: WindowlessSession | None = None,
     routed: Routed | None = None,
     answer_offered: bool = False,
+    hold: str | None = None,
+    defect: bool = False,
 ) -> list[Claim]:
     """Every claim the card makes on the owner's eye, in the head's order.
     A card can carry several; the head counts each. `placement` is the
@@ -748,9 +771,11 @@ def claims_of(
     if planning is not None:
         claims.append(Claim.PLANNING)
     if triaging is not None:
-        claims.append(Claim.MARK_BEING_READ)
+        claims.append(Claim.MARK_BEING_READ if defect else Claim.TITLE_BEING_READ)
     if routed is not None and routed.state == Routing.TRIAGED_HIS and answer_offered:
         claims.append(Claim.RULING_YOURS)
+    if hold is not None and card.place.column not in SHIPPED:
+        claims.append(Claim.TITLE_FAILS)
     return claims
 
 
@@ -784,13 +809,15 @@ def summarize(
     triage: Triage | None = None,
     sources: Sources | None = None,
     project_path: str = "",
+    title_reading: TitleReading | None = None,
 ) -> CardSummary:
     """`doors` is the card's doors as the loop last read them; before its
     first read they are the closed doors of `nothing_read`. The state line and
     the claims are named here from the same facts (plan 27). `reading` is the
     session reading the card's signal right now (plan 09); `planning` the
     dial's session writing its plan (plan 11); `triaging` the session
-    verifying its mark and `triage` its latest verified reading (plan 59)."""
+    verifying its mark and `triage` its latest verified reading (plan 59);
+    `title_reading` the latest cold reading of its title (card #74)."""
     document = document_of(card, index)
     text, source = essence(card, document)
     state = document_state(card, document)
@@ -800,6 +827,8 @@ def summarize(
     standing = standing_for(card, placement, lane, last, read=read)
     signal, signal_note = watch_signal(card)
     trigger, _ = trigger_signal(document)
+    hold = title_hold(title_reading, document)
+    defect = document is not None and document.suggestion_kind == SuggestionKind.DEFECT
     return CardSummary(
         number=card.number,
         title=card.title,
@@ -828,6 +857,8 @@ def summarize(
             planning=planning,
             triaging=triaging,
             routed=routed,
+            hold=hold,
+            defect=defect,
         ),
         claims=claims_of(
             card,
@@ -845,6 +876,8 @@ def summarize(
             triaging=triaging,
             routed=routed,
             answer_offered=doors.answer.offered,
+            hold=hold,
+            defect=defect,
         ),
         folded=folded or [],
         is_new=is_new(card, now),
@@ -858,6 +891,7 @@ def summarize(
         planning=planning,
         triaging=triaging,
         triage=triage,
+        title_reading=title_reading,
     )
 
 
@@ -923,6 +957,7 @@ def assemble_board(
     triages: dict[int, Triage] | None = None,
     sources: Sources | None = None,
     dial: DialState | None = None,
+    title_readings: dict[int, TitleReading] | None = None,
 ) -> BoardState:
     """`snapshot`, `readings`, `trunk` and `machine` are what the loop has
     read; before its first read they are absent and the board says so.
@@ -935,6 +970,7 @@ def assemble_board(
     planning_sessions = planning_sessions or {}
     triage_sessions = triage_sessions or {}
     triages = triages or {}
+    title_readings = title_readings or {}
     watercooler = watercooler or []
     placements = placements or {}
     trunk = trunk or TrunkState(level=None, behind=0, note=None, read_at=None)
@@ -966,6 +1002,7 @@ def assemble_board(
             triaging=triage_sessions.get(n),
             triage=triages.get(n),
             sources=sources,
+            title_reading=title_readings.get(n),
         )
         for n, c in by_number.items()
     }
@@ -1078,6 +1115,7 @@ def assemble_detail(
     triaging: WindowlessSession | None = None,
     triage: Triage | None = None,
     sources: Sources | None = None,
+    title_reading: TitleReading | None = None,
 ) -> CardDetail:
     """`readings` newest first; `read` is whether the loop has read the
     machine; `folded` the cards folded under this one; `reading` the
@@ -1106,6 +1144,7 @@ def assemble_detail(
             triaging=triaging,
             triage=triage,
             sources=sources,
+            title_reading=title_reading,
         ),
         brief=brief,
         record=record,
