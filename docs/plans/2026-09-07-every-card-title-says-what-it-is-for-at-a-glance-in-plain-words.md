@@ -2,7 +2,7 @@
 
 **Carries:** docs/slice-suggestions/done/2026-09-07-a-cards-title-tells-the-owner-what-it-is-for-at-a-glance-in-his-words.md, docs/slice-suggestions/done/2026-09-05-plans-carry-no-sequence-number-the-card-is-the-one-identifier.md
 **Status:** NEW — planned, not started; the owner placed it at the top of Up next on 2026-09-07.
-**Written:** 2026-09-07, from Dennis reading his own board: "the card titles are very difficult for me to understand which makes the board difficult to read. What can we do to communicate the card's intent better?" and, asked what the title is for: "the intent of the card titles is for me to instantly understand the intent of the card. I am not technical so e.g. tech jargon in there doesn't help me." Then: "Let's make it a plan and put it at the top of up next in the needle board and do we also do a sweep of all the existing cards in all boards to rewrite the card titles?" — yes: the rule is doctrine (HOW-WE-WORK §10, `docs/plans/README.md` lines 43–51, his ruling of 2026-09-04), so the sweep and the reader cover every project on the board, not Needle alone. And, the same day, on #46 — which had waited on him since 2026-09-05: "plan numbering and card numbering seem to be out of sync … if we refer to a plan in the card it feels like it should be the same number" — the ruling: the card number is the one identifier, and a plan carries no number of its own.
+**Written:** 2026-09-07, from Dennis reading his own board: "the card titles are very difficult for me to understand which makes the board difficult to read. What can we do to communicate the card's intent better?" and, asked what the title is for: "the intent of the card titles is for me to instantly understand the intent of the card. I am not technical so e.g. tech jargon in there doesn't help me." Then: "Let's make it a plan and put it at the top of up next in the needle board and do we also do a sweep of all the existing cards in all boards to rewrite the card titles?" — yes: the rule is doctrine (HOW-WE-WORK §10, `docs/plans/README.md` lines 43–51, his ruling of 2026-09-04), so the sweep and the reader cover every project on the board, not Needle alone. And, the same day, on #46 — which had waited on him since 2026-09-05: "plan numbering and card numbering seem to be out of sync … if we refer to a plan in the card it feels like it should be the same number" — the ruling: the card number is the one identifier, and a plan carries no number of its own. And the intent in one line, the same day: "My intent is to understand the board at a glance and understand the cards when I open them. This needs to be true for the HR, Omarchy and needle needles … the idea is to run a needle for any project reliably."
 **Effort gate:** high — the code is small (one reading widened, one parser rule, one ratchet, one brief line), but the sweep rewrites some 230 live titles across four projects and every one of them is a judgment about what the owner would say, made in his absence and read by him afterwards; a title that mis-states the intent is a wrong card, silently.
 **Sequencing:** after #20 (plan 08's item 1 makes a card's face follow its document's current title; read live on 2026-09-07, cards #74, #63 and #53 all show the title of the suggestion they were born from while their document is a plan, so without #20 the sweep renames documents and no carried card's face changes). Items 1, 3 and 4 do not wait on it; item 2 does.
 **Class:** a ratchet on Needle's own corpus refuses a live title that uses a word the board defines, and the cold read at birth marks a title on any project's board that fails the owner's test; the failure that was silent nineteen times over is loud on the face.
@@ -93,15 +93,25 @@ finder's context (plan 11; `api/dial.py::_triage`, the triage brief in
 against the README's test and the vocabulary file, and lands the outcome as
 part of its one typed result. A plan gets the same read when it is carded,
 through the same reading session, since a plan's title becomes the card's
-the moment it lands. A title that fails puts a machine fact on the card's
+the moment it lands. The read covers the title and the essence line beneath
+it (the first sentence he reads on the face, and the first line inside the
+open card), since he opens a card to understand it and the title alone is
+not the whole face. A title that fails puts a machine fact on the card's
 face — the reader's words for what he could not place, with the words that
-failed — and the fact clears on the next read of a title that passes. The
-reading is the same session as the mark's reading, never a second one, and
-it never rewrites the title: the writer does, and the reader reads again.
+failed — and closes the Start door until a title passes: Start is the one
+door every project's card goes through, so the refusal holds for Hello
+Revenue, Omarchy and Hello Revenue 3 by the same mechanism as for Needle,
+with nothing to copy into a project. The fact and the hold clear on the next
+read of a title that passes. The reading is the same session as the mark's
+reading, never a second one, and it never rewrites the title: the writer
+does, and the reader reads again.
 Done means: on the fixture, a suggestion born with "lane" in its title
 shows the mark on its face after one reading, a suggestion retitled to the
 bar shows none after the next, and a plan carded with a vocabulary word in
-its title shows the same mark; the mark's evidence names the reading's
+its title shows the same mark; a marked card's Start door is closed with
+the mark as its reason and opens on the read that clears it, on the
+fixture and on a second fixture project, so the hold is proven to be the
+board's and not one project's; the mark's evidence names the reading's
 session and the words; `board/triage.py::routing_of` is untouched — the
 title reading changes no routing, only what the face says.
 
@@ -171,6 +181,16 @@ way to cite a plan.
   sweep per project, each on its own card. The rule is the one text's, the
   vocabulary is one file, and four lanes would learn the register four
   times; one lane learns it once and the owner corrects it once.
+- **The board is the check for every project; nothing is copied into a
+  project.** Rejected: a ratchet each project carries in its own test
+  suite. The owner's intent is that a Needle runs for any project
+  reliably, and a check a project has to adopt is a convention with extra
+  steps — Hello Revenue 3 has no test suite for it to live in. Needle's own
+  ratchet (item 1) is Needle's floor for its own corpus, because its tests
+  can read its docs; the mechanism for all four boards is the cold read
+  and the closed Start door of item 3, one code path, read by every
+  project's card. A project may add its own floor and say why in its own
+  instructions; none has to.
 - **The reader marks, never rewrites.** Rejected: a reading that retitles a
   failing document itself. The title is the owner's intent in a session's
   words; a second session overwriting the first's guess is two guesses, and
