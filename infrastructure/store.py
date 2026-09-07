@@ -16,7 +16,7 @@ from pathlib import Path
 
 from alembic import command
 from alembic.config import Config
-from sqlalchemy import create_engine, delete, event, select, text, update
+from sqlalchemy import create_engine, delete, event, select, text
 from sqlalchemy.engine import Engine
 from sqlalchemy.orm import Session, sessionmaker
 
@@ -1059,19 +1059,27 @@ class Store:
             assert group is not None
             was = Place(column=Column(group.column), group=group.name, position=card.position)
             born = card.born_at
-            session.execute(
-                update(AuditRow)
+            # The retired card's lines stay under its own number and are
+            # quoted here, never re-homed: `placements` reads the last MOVED
+            # line per number by id, and omarchy's #13 was moved to Not now
+            # after #15 reached Done, so a re-homed line would have made the
+            # board say the owner placed #15 in Not now (review pass 2).
+            story = session.scalars(
+                select(AuditRow)
                 .where(AuditRow.project_slug == slug, AuditRow.card_number == number)
-                .values(card_number=into)
+                .order_by(AuditRow.id)
+            ).all()
+            told = " · ".join(
+                f"{line.at.date().isoformat()} {line.kind}: {line.detail}" for line in story
             )
             session.delete(card)
             session.flush()
             detail = (
                 f"Absorbed #{number} ({card.title!r}, born {born.date().isoformat()}, sat in "
-                f"{_where(was)}): {why} Its history now reads here"
-                + (f", and its rows {', '.join(kept)} moved onto this card" if kept else "")
-                + "."
+                f"{_where(was)}): {why}"
+                + (f" Its rows {', '.join(kept)} moved onto this card." if kept else "")
                 + (" Not carried, this card already has one: " + "; ".join(left) if left else "")
+                + f" Its history, {len(story)} lines: {told}"
             )
             _audit(
                 session,

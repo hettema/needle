@@ -66,15 +66,22 @@ def test_a_retired_cards_rows_and_history_read_on_the_survivor_and_its_number_sa
     ], "rows move over; a one-per-card kind the survivor has stays in the audit line"
     history = store.history("proj", new_number)
     kinds = [h.kind for h in history]
-    assert kinds.count(AuditKind.BORN) == 2, "the retired card's history reads here now"
+    assert kinds.count(AuditKind.BORN) == 1, "the retired card's lines are quoted, never adopted"
     absorbed = history[0]
     assert absorbed.kind == AuditKind.RETIRED and f"Absorbed #{old_number}" in absorbed.detail
-    assert "its rows RULING moved onto this card" in absorbed.detail
+    assert "Its rows RULING moved onto this card" in absorbed.detail
     assert "Not carried, this card already has one: DELIVERED: old delivered" in absorbed.detail
     assert "renamed into this card's" in absorbed.detail
+    assert f"Its history, {len(before)} lines:" in absorbed.detail
+    assert "born: Born from docs/slice-suggestions/2026-09-04-the-closed-card.md" in absorbed.detail
     left = store.history("proj", old_number)
-    assert [h.kind for h in left] == [AuditKind.RETIRED]
+    assert [h.kind for h in left][0] == AuditKind.RETIRED and len(left) == len(before) + 1
     assert f"Retired into #{new_number}" in left[0].detail and left[0].from_place is not None
+    placed = store.placements("proj")
+    assert old_number not in placed or placed[old_number].card_number == old_number
+    assert placed[new_number].card_number == new_number and placed[new_number].kind == (
+        AuditKind.BORN
+    ), "the survivor's placement is its own, not a line adopted from the retired card"
     remaining = [
         c
         for c in store.cards("proj")
