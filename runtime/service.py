@@ -38,7 +38,16 @@ from runtime import (
     windows,
 )
 
-COMMANDS = ("claude", "claude-acct", "hyprctl", "omarchy-launch-tui", "busctl", "git", "curl")
+COMMANDS = (
+    "claude",
+    "claude-acct",
+    "hyprctl",
+    "omarchy-launch-tui",
+    "busctl",
+    "systemctl",
+    "git",
+    "curl",
+)
 """What the runtime needs on PATH. `journalctl` is asked for a death's reason
 and its absence is only a reason unknown."""
 
@@ -323,6 +332,20 @@ class Runtime:
             return machine.meminfo()
         except (OSError, ValueError):
             return None
+
+    def scope_memory(self, units: list[str]) -> dict[str, int] | None:
+        """What each lane's scope holds right now, in bytes, for the scopes
+        the manager holds; None when the reading could not be made (plan
+        53, item 1)."""
+        try:
+            return machine.scope_memory(units)
+        except (OSError, machine.Timeout, machine.CommandMissing):
+            return None
+
+    def rescope(self, session: Session, card: str) -> launch.Scoped:
+        """Put a session with hands on a lane back in the lane's scope
+        (plan 53, item 2); the same act as at Start, recorded the same way."""
+        return launch.rescope(self.store, session, card)
 
     def machine_is_reachable(self) -> list[str]:
         """Which of the commands the runtime needs are missing, by name."""

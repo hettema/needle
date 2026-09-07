@@ -33,6 +33,10 @@ class AuditKind(StrEnum):
     STOPPED = "stopped"
     RESCUED = "rescued"
     """The runtime moved the lane's session to another rung."""
+    SCOPED = "scoped"
+    """The lane's session was found outside the lane's scope — put back by
+    the machine after a kill, or resumed by hand — and put back in it, so a
+    limit or a kill stays one lane's (plan 53, item 2)."""
     ENDED = "ended"
     """The lane's session ended, with the machine's reason."""
     SIGNAL = "signal"

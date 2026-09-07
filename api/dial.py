@@ -42,9 +42,7 @@ from board.brief import (
 )
 from board.dial import (
     LIVE_STAGES,
-    MEMORY_FLOOR_BYTES,
     Candidate,
-    headroom,
     held_lanes,
     is_quiet,
     rail_count,
@@ -204,7 +202,7 @@ class Dial:
         that folded or ended to its end, a planning session that died to the
         card — whether or not the dial is still on; then, with it on, room
         under the number and room on the machine, take the next defect."""
-        self.live.set_headroom(headroom(self.runtime.meminfo(), MEMORY_FLOOR_BYTES, clock.now()))
+        self.loops.headroom_now()
         # One read of the machine for the whole beat: the two halves that
         # follow judge the same sessions, and a beat costs one walk of the
         # registries rather than two.
@@ -228,8 +226,7 @@ class Dial:
         process — reads it now, so the terminal's reasons are the beat's."""
         room = self.live.headroom
         if room is None:
-            room = headroom(self.runtime.meminfo(), MEMORY_FLOOR_BYTES, clock.now())
-            self.live.set_headroom(room)
+            room = self.loops.headroom_now()
         return room.sentence if room.full else None
 
     def _take_next(self, setting: DialSetting) -> None:

@@ -22,6 +22,7 @@ COMMANDS = (
     "hyprctl",
     "omarchy-launch-tui",
     "busctl",
+    "systemctl",
     "curl",
     "journalctl",
     "codex",

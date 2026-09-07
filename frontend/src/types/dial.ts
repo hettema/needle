@@ -73,6 +73,7 @@ export interface Headroom {
   floor: number;
   full: boolean;
   sentence: string | null;
+  scopes?: ScopeMemory[];
   read_at: string;
 }
 
@@ -86,6 +87,13 @@ export interface RailCount {
   project: string;
   counts: Record<string, number>;
   total: number;
+}
+
+export interface ScopeMemory {
+  unit: string;
+  held: number;
+  project: string | null;
+  card_number: number | null;
 }
 
 export interface Waiting {

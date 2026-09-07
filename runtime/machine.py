@@ -327,15 +327,86 @@ def cgroup_of(pid: int) -> str | None:
     return line.rsplit("/", 1)[-1] or None
 
 
+_SHOW_LINE = re.compile(r"^(\w+)=(.*)$", re.M)
+UNSET = "[not set]"
+"""What `systemctl show` prints for a property the unit does not carry —
+`MemoryCurrent` of a scope the manager no longer holds (verified
+2026-09-07 on this machine, exit 0 even for a unit that never existed)."""
+
+
+def show_units(units: list[str], properties: list[str]) -> dict[str, dict[str, str]]:
+    """`systemctl --user show -p …` for several units in one call: per unit,
+    the properties it printed, verbatim. One blank-line-separated block per
+    unit, each carrying its `Id` (verified 2026-09-07); a unit the manager
+    does not hold still gets a block, with `[not set]` where it has no
+    value. Raises `CommandMissing` when there is no `systemctl`."""
+    if not units:
+        return {}
+    argv = [which("systemctl"), "--user", "show", "-p", "Id"]
+    for name in properties:
+        argv += ["-p", name]
+    done = run(argv + units, timeout=20)
+    if done.returncode != 0:
+        raise OSError(f"systemctl show failed: {(done.stderr or done.stdout).strip()}")
+    found: dict[str, dict[str, str]] = {}
+    for block in done.stdout.split("\n\n"):
+        fields = dict(_SHOW_LINE.findall(block))
+        if fields.get("Id"):
+            found[fields["Id"]] = fields
+    return found
+
+
+def scope_memory(units: list[str]) -> dict[str, int]:
+    """What each scope holds right now, in bytes (`MemoryCurrent`, as the
+    user manager counts it); a scope with no value — gone, or never made —
+    is left out. Raises `CommandMissing` or `OSError` when the reading
+    could not be made, so the caller can say so rather than read zero."""
+    held: dict[str, int] = {}
+    for unit, fields in show_units(units, ["MemoryCurrent"]).items():
+        value = fields.get("MemoryCurrent", UNSET)
+        if value.isdigit():
+            held[unit] = int(value)
+    return held
+
+
+def unit_state(unit: str) -> str | None:
+    """The unit's `ActiveState` — `active`, `failed`, `inactive` — or None
+    when the manager does not hold it or cannot be asked."""
+    try:
+        fields = show_units([unit], ["ActiveState", "LoadState"]).get(unit)
+    except (OSError, Timeout, CommandMissing):
+        return None
+    if fields is None or fields.get("LoadState") == "not-found":
+        return None
+    return fields.get("ActiveState") or None
+
+
+def reset_failed(unit: str) -> bool:
+    """Clear a unit the manager still holds as failed. A scope oomd killed
+    stays loaded as `failed` (nine of them stood on this machine on
+    2026-09-07), and `StartTransientUnit` under that name is refused with
+    "was already loaded" until it is reset — so a lane that came back could
+    never be put in its own scope again (plan 53, item 2)."""
+    try:
+        done = run([which("systemctl"), "--user", "reset-failed", unit], timeout=10)
+    except (OSError, Timeout, CommandMissing):
+        return False
+    return done.returncode == 0
+
+
 def adopt(unit: str, pids: list[int]) -> tuple[bool, str]:
     """Put running processes of ours into a transient scope of the user manager.
 
     `StartTransientUnit` with a `PIDs` property is what `systemd-run --scope`
     does for its own pid. Verified 2026-09-04 that the user manager takes any
     pid of ours, that the process keeps running where it was, and that
-    stopping the scope ends it. Returns whether the call succeeded and the
-    command's own words.
+    stopping the scope ends it. A unit of that name the manager still holds
+    as failed is reset first (verified 2026-09-07: the call is refused
+    otherwise, and lands after the reset). Returns whether the call
+    succeeded and the command's own words.
     """
+    if unit_state(unit) == "failed":
+        reset_failed(unit)
     argv = [
         which("busctl"),
         "--user",

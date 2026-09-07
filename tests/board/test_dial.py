@@ -22,7 +22,7 @@ from board.triage import routing_of
 from domain.card import Actor, Card, CardOrigin, DocumentLink, Place
 from domain.column import DEFECTS_RAIL, Column
 from domain.corpus import CorpusIndex
-from domain.dial import Dial, Filer, FixLane, FixStage, Meminfo
+from domain.dial import Dial, Filer, FixLane, FixStage, Meminfo, ScopeMemory
 from domain.document import DocumentKind
 from domain.lane import LaneState
 from domain.row import Row, RowKind
@@ -139,10 +139,7 @@ def test_a_mark_alone_no_longer_opens_the_dial_and_an_unmarked_defect_is_nobodys
     unread = why_not_eligible(card(1, "a"), now, routed=routed_for(now, None), **common)
     assert unread is not None and "no reading has verified it" in unread
     assert (
-        why_not_eligible(
-            card(1, "a"), now, routed=routed_for(now, verified(now)), **common
-        )
-        is None
+        why_not_eligible(card(1, "a"), now, routed=routed_for(now, verified(now)), **common) is None
     )
     nobodys = routed_for(unmarked, None)
     assert nobodys.state == Routing.NEEDS_TRIAGE
@@ -289,6 +286,57 @@ def test_the_memory_floor_is_read_against_available_memory_and_free_swap():
     # A reading the runtime could not make is full, and says so.
     unread = headroom(None, floor, NOW)
     assert unread.full and unread.sentence == "the machine is full: its memory could not be read"
+    # The lanes' scopes are read beside the machine (plan 53, item 1): a
+    # scope holding as much as the floor is the lane the floor was set from,
+    # again, and the head names it; short memory names the biggest lane.
+    lanes = [
+        ScopeMemory(unit="needle-card-7-x.scope", held=gb, project="proj", card_number=7),
+        ScopeMemory(
+            unit="needle-card-9-y.scope", held=3 * gb + gb // 2, project="proj", card_number=9
+        ),
+    ]
+    grown = headroom(
+        Meminfo(available=9 * gb, swap_total=8 * gb, swap_free=7 * gb), floor, NOW, scopes=lanes
+    )
+    assert grown.full
+    assert grown.sentence == "the machine is full: proj #9's lane holds 3.5 GB, past the 3 GB floor"
+    assert [s.card_number for s in grown.scopes] == [9, 7], "biggest first"
+    quiet = headroom(
+        Meminfo(available=9 * gb, swap_total=8 * gb, swap_free=7 * gb), floor, NOW, scopes=lanes[:1]
+    )
+    assert not quiet.full and quiet.sentence is None and quiet.scopes == lanes[:1]
+    short = headroom(
+        Meminfo(available=2 * gb, swap_total=8 * gb, swap_free=7 * gb), floor, NOW, scopes=lanes[:1]
+    )
+    assert short.sentence == (
+        "the machine is full: 2.0 GB available, 3 GB needed; "
+        "the biggest lane is proj #7's lane at 1.0 GB"
+    )
+    both = headroom(
+        Meminfo(available=2 * gb, swap_total=8 * gb, swap_free=7 * gb), floor, NOW, scopes=lanes
+    )
+    assert both.sentence == (
+        "the machine is full: 2.0 GB available, 3 GB needed; "
+        "proj #9's lane holds 3.5 GB, past the 3 GB floor"
+    )
+    nameless = headroom(
+        Meminfo(available=9 * gb, swap_total=0, swap_free=0),
+        floor,
+        NOW,
+        scopes=[
+            ScopeMemory(unit="needle-reading-1.scope", held=4 * gb, project=None, card_number=None)
+        ],
+    )
+    assert (
+        nameless.sentence
+        == "the machine is full: needle-reading-1.scope holds 4.0 GB, past the 3 GB floor"
+    )
+    # Lanes there were and the reading could not be made: full, and said.
+    unread_lanes = headroom(
+        Meminfo(available=9 * gb, swap_total=0, swap_free=0), floor, NOW, scopes=None
+    )
+    assert unread_lanes.full
+    assert unread_lanes.sentence == "the machine is full: what its lanes hold could not be read"
     assert MEMORY_FLOOR_BYTES == 5 * 1024**3, "the owner's 5 GB after #386's 4.7 GB kill"
     state = dial_state(
         Dial(on=True, lanes=4, changed_at=NOW, first_on_at=NOW),

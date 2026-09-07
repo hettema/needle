@@ -12,7 +12,7 @@ owner rank, so age is the one fact every card has.
 """
 
 import re
-from collections.abc import Callable
+from collections.abc import Callable, Sequence
 from datetime import datetime
 
 from pydantic import BaseModel
@@ -30,6 +30,7 @@ from domain.dial import (
     Headroom,
     Meminfo,
     RailCount,
+    ScopeMemory,
 )
 from domain.document import Document, DocumentKind, FixMark, SuggestionKind
 from domain.lane import HANDS_ON, Lane, LaneState
@@ -207,20 +208,39 @@ board restarted on the floor, oomd killed Hello Revenue #386's lane, whose
 scope peaked at 4.7 GB after the dial had let it in — the plan's loop said
 the floor rises by a killed scope's peak, the reading said so, and the owner
 set 5 GB (the peak with headroom) rather than the rule's 7.7 GB, which would
-have let the dial open little on a 16 GB machine. The floor is read at the
-beat, before a start; a lane that grows past the machine after it is in is
-the card "a lane that grows toward the machine's ceiling pauses new starts
-before oomd has to kill it"."""
+have let the dial open little on a 16 GB machine. Since plan 53 the floor
+is read on every pass of the lane loop, not only at the beat, and each
+lane's scope is read beside it: a scope holding as much as the floor is the
+lane the floor was set from, again, and the machine reads full until it
+shrinks or folds — the board stops admitting; it never stops a lane (that
+plan's ruling 1). No code path raises the number; the loop in that plan
+says when the owner should."""
 
 
 def _gb(byte_count: int) -> str:
     return f"{byte_count / 1024**3:.1f} GB"
 
 
-def headroom(meminfo: Meminfo | None, floor: int, now: datetime) -> Headroom:
-    """The machine against the floor. A reading the runtime could not make
-    is full: the beat waits until the machine can be read, and the head says
-    so, rather than opening a lane on a number nobody has."""
+def _lane_of(scope: ScopeMemory) -> str:
+    if scope.card_number is None:
+        return scope.unit
+    return f"{scope.project} #{scope.card_number}'s lane"
+
+
+def headroom(
+    meminfo: Meminfo | None,
+    floor: int,
+    now: datetime,
+    *,
+    scopes: Sequence[ScopeMemory] | None = (),
+) -> Headroom:
+    """The machine against the floor, and every lane's scope beside it
+    (plan 53, item 1). A reading the runtime could not make — the memory,
+    or the scopes when there were lanes to read — is full: the beat waits
+    until the machine can be read, and the head says so, rather than
+    opening a lane on a number nobody has. Full names what is short and
+    which lane is growing — the one past the floor, else the biggest — with
+    what it holds, so the owner reads which lane the machine waits on."""
     if meminfo is None:
         return Headroom(
             available=0,
@@ -230,20 +250,38 @@ def headroom(meminfo: Meminfo | None, floor: int, now: datetime) -> Headroom:
             sentence="the machine is full: its memory could not be read",
             read_at=now,
         )
+    if scopes is None:
+        return Headroom(
+            available=meminfo.available,
+            swap_free=meminfo.swap_free,
+            floor=floor,
+            full=True,
+            sentence="the machine is full: what its lanes hold could not be read",
+            read_at=now,
+        )
+    ranked = sorted(scopes, key=lambda s: (-s.held, s.unit))
     short: list[str] = []
     if meminfo.available < floor:
         short.append(f"{_gb(meminfo.available)} available")
     if meminfo.swap_total > 0 and meminfo.swap_free < floor:
         short.append(f"{_gb(meminfo.swap_free)} swap free")
-    sentence = (
-        f"the machine is full: {', '.join(short)}, {floor // 1024**3} GB needed" if short else None
-    )
+    parts: list[str] = []
+    if short:
+        parts.append(f"{', '.join(short)}, {floor // 1024**3} GB needed")
+    biggest = ranked[0] if ranked else None
+    if biggest is not None and biggest.held >= floor:
+        parts.append(
+            f"{_lane_of(biggest)} holds {_gb(biggest.held)}, past the {floor // 1024**3} GB floor"
+        )
+    elif short and biggest is not None:
+        parts.append(f"the biggest lane is {_lane_of(biggest)} at {_gb(biggest.held)}")
     return Headroom(
         available=meminfo.available,
         swap_free=meminfo.swap_free,
         floor=floor,
-        full=bool(short),
-        sentence=sentence,
+        full=bool(parts),
+        sentence=f"the machine is full: {'; '.join(parts)}" if parts else None,
+        scopes=ranked,
         read_at=now,
     )
 

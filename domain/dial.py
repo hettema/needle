@@ -50,20 +50,35 @@ class Meminfo(BaseModel):
     swap_free: int
 
 
+class ScopeMemory(BaseModel):
+    """What one lane's scope holds right now, as the user manager counts it
+    (`MemoryCurrent`), with the card whose lane it is when the board knows
+    (plan 53, item 1)."""
+
+    unit: str
+    held: int
+    project: str | None
+    card_number: int | None
+
+
 class Headroom(BaseModel):
-    """The dial's reading of the machine's memory against the floor (the
-    plan "as many lanes as the machine can hold", item 3): the number is a
-    ceiling the machine lowers, never a count of records."""
+    """The board's reading of the machine's memory against the floor (the
+    plan "as many lanes as the machine can hold", item 3; read on every
+    pass since plan 53): the number is a ceiling the machine lowers, never
+    a count of records."""
 
     available: int
     swap_free: int
     floor: int
     full: bool
     """Available memory, or free swap on a machine that has swap, is under
-    the floor: the beat takes nothing."""
+    the floor, or a lane's scope holds as much as the floor: the beat takes
+    nothing."""
     sentence: str | None
-    """What the head says when the machine is full, with the two numbers;
-    None while there is headroom."""
+    """What the head says when the machine is full, with the numbers and
+    the lane that is growing; None while there is headroom."""
+    scopes: list[ScopeMemory] = []
+    """Every lane scope the pass could read, biggest first."""
     read_at: datetime
 
 

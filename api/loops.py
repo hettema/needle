@@ -41,6 +41,7 @@ from board.assemble import (
 )
 from board.brief import reading_brief, reading_name
 from board.collision import footprint, verdict
+from board.dial import MEMORY_FLOOR_BYTES, headroom
 from board.lane import (
     HANDS_ON,
     STARTABLE_COLUMNS,
@@ -68,6 +69,7 @@ from domain.board import MachineState, TrunkState
 from domain.call import Call, CallOutcome
 from domain.card import Actor, Card, Place
 from domain.column import Column
+from domain.dial import Headroom, ScopeMemory
 from domain.document import DocumentKind
 from domain.evidence import Evidence
 from domain.gate import Gate
@@ -164,6 +166,10 @@ class Loops:
         self._released: set[str] = set()
         """Sessions stopped because their lane folded and closed: one stop
         each, so a stop that did not end the process is said once."""
+        self._scoped: set[str] = set()
+        """Sessions the loop put back in their lane's scope (plan 53, item
+        2): one adopt each, so a move the machine refused is said once and
+        not every thirty seconds."""
         """Session ids whose second wall was parked, so the card is told once."""
         self._notes: list[Note] = []
         """The machine's watercooler as the last read saw it (plan 17)."""
@@ -376,6 +382,36 @@ class Loops:
                     "reconciling %s failed (%s: %s)", live.project.slug, type(error).__name__, error
                 )
         self._tend_calls()
+        self.headroom_now()
+
+    def headroom_now(self) -> Headroom:
+        """The machine against the floor, on every pass and not only at the
+        dial's beat (plan 53, item 1): available memory and free swap, and
+        beside them what every lane with hands on holds, read from the
+        lane's own scope by the name it was given at Start. A lane that
+        grows after the beat let it in is seen here before oomd sees it,
+        and the head says which lane and how far; the dial's beat and the
+        terminal read the machine through this one call."""
+        units: dict[str, tuple[str, int]] = {}
+        for slug, live in self.live.projects.items():
+            if live.snapshot is None:
+                continue
+            for number, lane in live.snapshot.lanes.items():
+                if lane.state in HANDS_ON:
+                    units[launch.lane_unit(lane.name)] = (slug, number)
+        held = self.runtime.scope_memory(sorted(units)) if units else {}
+        scopes = (
+            [
+                ScopeMemory(unit=unit, held=held[unit], project=slug, card_number=number)
+                for unit, (slug, number) in units.items()
+                if unit in held
+            ]
+            if held is not None
+            else None
+        )
+        room = headroom(self.runtime.meminfo(), MEMORY_FLOOR_BYTES, clock.now(), scopes=scopes)
+        self.live.set_headroom(room)
+        return room
 
     def _tend_calls(self) -> None:
         """Every open call against the one list (plan 17): the record
@@ -493,7 +529,7 @@ class Loops:
         records = self._keep_lane_records(slug, project.path, worktrees, now)
         facts = self._facts(live, sessions, windows, records, worktrees, now)
         lanes = {c.number: lane_for(c, facts) for c in cards}
-        if self._rescue(lanes, slug):
+        if self._rescue(lanes, slug) | self._keep_in_scope(lanes, slug):
             sessions = self.runtime.sessions()
             windows = self.runtime.open_windows()
             facts = self._facts(live, sessions, windows, records, worktrees, now)
@@ -662,6 +698,54 @@ class Loops:
                 except WindowRefused as refusal:
                     said += f"; the new window did not open: {refusal}"
             self.live.note(slug, number, AuditKind.RESCUED, Actor.MACHINE, said + ".")
+        return moved_any
+
+    def _keep_in_scope(self, lanes: dict[int, Lane], slug: str) -> bool:
+        """A session with hands on a lane runs in the lane's scope, whoever
+        put it back (plan 53, item 2). The machine's recover unit resumes a
+        killed session into the subscription's daemon scope, and so does a
+        hand `claude --bg --resume`; there, the next kill takes every lane
+        on that subscription at once (17:59Z on 2026-09-05: four Hello
+        Revenue lanes in one second). Every background session found
+        outside its lane's scope is put back in it through the runtime's
+        one adopt, once per session, and the card says so in one row; an
+        interactive session is the owner's own terminal and stays where his
+        terminal put it. Returns whether anything was moved, so the caller
+        re-reads the machine."""
+        moved_any = False
+        for number, lane in lanes.items():
+            session = lane.session
+            if (
+                session is None
+                or session.pid is None
+                or session.stale
+                or session.kind != SessionKind.BACKGROUND
+                or session.scope is None
+                or session.session_id in self._scoped
+            ):
+                continue
+            unit = launch.lane_unit(lane.name)
+            if session.scope == unit:
+                continue
+            self._scoped.add(session.session_id)
+            scoped = self.runtime.rescope(session, lane.name)
+            if scoped.verified:
+                words = (
+                    f"Put {session.short_id} back in the lane's own scope ({unit}); it was "
+                    f"running in {session.scope}, where a kill would take every session there."
+                )
+                moved_any = True
+            elif scoped.asked:
+                words = (
+                    f"Asked the machine to put {session.short_id} back in {unit} from "
+                    f"{session.scope}; the move is not verified in /proc yet: {scoped.words}"
+                )
+            else:
+                words = (
+                    f"Could not put {session.short_id} back in {unit} from {session.scope}: "
+                    f"{scoped.words}"
+                )
+            self.live.note(slug, number, AuditKind.SCOPED, Actor.MACHINE, words)
         return moved_any
 
     def _machine_moves(

@@ -242,6 +242,13 @@ class Scoped:
     words: str
 
 
+def lane_unit(card: str) -> str:
+    """The one scope a card's sessions run in, named after the lane as at
+    Start: what `systemctl --user` shows per lane, what the memory reading
+    asks for, and where a session that came back is put (plan 53)."""
+    return machine.unit_name(SESSION_UNIT_PREFIX, card)
+
+
 def scope_session(slot: Slot | Placement, config_dir: Path, pid: int, card: str) -> Scoped:
     """Put the slot's daemon in a scope of its own, and the session's pty host
     and process in one named after the card.
@@ -264,7 +271,7 @@ def scope_session(slot: Slot | Placement, config_dir: Path, pid: int, card: str)
             daemon_pid = candidate
             if machine.cgroup_of(candidate) != daemon_unit:
                 machine.adopt(daemon_unit, [candidate])
-    unit = machine.unit_name(SESSION_UNIT_PREFIX, card)
+    unit = lane_unit(card)
     if machine.cgroup_of(pid) == unit:
         return Scoped(unit, False, True, "already there")
     pids: list[int] = []
@@ -283,6 +290,31 @@ def scope_session(slot: Slot | Placement, config_dir: Path, pid: int, card: str)
     # unverified.
     verified = asked and _in_scope(pid, unit)
     return Scoped(unit, asked, verified, words)
+
+
+def rescope(store: Store, session: Session, card: str) -> Scoped:
+    """Put a session that has hands on a lane back in the lane's scope,
+    whoever put it elsewhere (plan 53, item 2): the machine's recover unit
+    after an oom-kill, or a hand `claude --bg --resume`, both of which land
+    the session in the subscription's daemon scope, where the next kill
+    takes every lane on that subscription at once (2026-09-05, 17:59Z: four
+    Hello Revenue lanes in one second). The same act as at Start, recorded
+    the same way, so the reason for a later death is read from the lane's
+    own journal."""
+    assert session.pid is not None
+    slot = Slot(name=session.slot, config_dir=session.config_dir)
+    scoped = scope_session(slot, Path(session.config_dir), session.pid, card)
+    if scoped.asked or scoped.verified:
+        store.record_session_slot(
+            SessionSlot(
+                session_id=session.session_id,
+                slot=session.slot,
+                card=card,
+                scope=scoped.unit,
+                recorded_at=clock.now(),
+            )
+        )
+    return scoped
 
 
 def _in_scope(pid: int, unit: str) -> bool:
@@ -746,9 +778,7 @@ def call_codex(store: Store, session: Session, *, brief: str, name: str, answer:
     except OSError as error:
         return dead(name, [], f"the answer's schema could not be written beside it: {error}", None)
     try:
-        argv = codex.resume_argv(
-            session.session_id, brief=brief, answer=answer, schema=str(schema)
-        )
+        argv = codex.resume_argv(session.session_id, brief=brief, answer=answer, schema=str(schema))
     except machine.CommandMissing as missing:
         return dead(name, [], str(missing), None)
     since = time.time()
@@ -793,7 +823,7 @@ def call_codex(store: Store, session: Session, *, brief: str, name: str, answer:
         if elapsed >= OBSERVATION_SECONDS:
             break
         time.sleep(POLL_SECONDS)
-    unit = machine.unit_name(SESSION_UNIT_PREFIX, name)
+    unit = lane_unit(name)
     try:
         asked, words = machine.adopt(unit, [pid, *machine.descendants_of(pid)])
     except machine.CommandMissing as missing:

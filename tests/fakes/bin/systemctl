@@ -1,0 +1,93 @@
+#!/usr/bin/env python3
+"""A stand-in for `systemctl` on the test floor: answers `show` from the
+scope properties the test put in `$NEEDLE_FAKE_STATE["scopes"]`, clears a
+failed scope on `reset-failed`, and records every call so the test can read
+what the runtime asked the user manager."""
+
+import fcntl
+import json
+import os
+import sys
+from pathlib import Path
+
+STATE = Path(os.environ["NEEDLE_FAKE_STATE"])
+
+NOT_SET = "[not set]"
+
+
+def _default(prop: str, known: bool) -> str:
+    if prop == "ActiveState":
+        return "inactive"
+    if prop == "LoadState":
+        return "loaded" if known else "not-found"
+    return NOT_SET
+
+
+def _show(argv: list[str], blob: dict) -> int:
+    props: list[str] = []
+    units: list[str] = []
+    i = 0
+    while i < len(argv):
+        arg = argv[i]
+        if arg == "-p" and i + 1 < len(argv):
+            props.append(argv[i + 1])
+            i += 2
+            continue
+        if not arg.startswith("-") and arg != "show":
+            units.append(arg)
+        i += 1
+    scopes = blob.get("scopes", {})
+    blocks: list[str] = []
+    for unit in units:
+        known = unit in scopes
+        values = scopes.get(unit, {})
+        lines = [f"Id={unit}"]
+        for prop in props:
+            if prop == "Id":
+                continue
+            lines.append(f"{prop}={values.get(prop, _default(prop, known))}")
+        blocks.append("\n".join(lines))
+    if blocks:
+        print("\n\n".join(blocks))
+    return 0
+
+
+def _reset_failed(argv: list[str], blob: dict) -> int:
+    units = [a for a in argv if not a.startswith("-") and a != "reset-failed"]
+    unit = units[0] if units else ""
+    scope = blob.get("scopes", {}).get(unit)
+    if scope is not None and scope.get("ActiveState") == "failed":
+        scope["ActiveState"] = "inactive"
+        scope["LoadState"] = "not-found"
+        with (STATE.parent / (STATE.name + ".lock")).open("a+") as lock:
+            fcntl.flock(lock, fcntl.LOCK_EX)
+            STATE.write_text(json.dumps(blob, indent=1), encoding="utf-8")
+            fcntl.flock(lock, fcntl.LOCK_UN)
+        return 0
+    print(
+        f"Failed to reset failed state of unit {unit}: Unit {unit} not loaded.",
+        file=sys.stderr,
+    )
+    return 1
+
+
+def main(argv: list[str]) -> int:
+    with (STATE.parent / (STATE.name + ".lock")).open("a+") as lock:
+        fcntl.flock(lock, fcntl.LOCK_EX)
+        blob = json.loads(STATE.read_text(encoding="utf-8"))
+        blob.setdefault("systemctl_calls", []).append(argv)
+        STATE.write_text(json.dumps(blob, indent=1), encoding="utf-8")
+        fcntl.flock(lock, fcntl.LOCK_UN)
+    if blob.get("systemctl_fails"):
+        print("Failed to connect to bus: No medium found", file=sys.stderr)
+        return 1
+    if "show" in argv:
+        return _show(argv, blob)
+    if "reset-failed" in argv:
+        return _reset_failed(argv, blob)
+    print(f"fake systemctl: unsupported: {argv}", file=sys.stderr)
+    return 2
+
+
+if __name__ == "__main__":
+    sys.exit(main(sys.argv[1:]))

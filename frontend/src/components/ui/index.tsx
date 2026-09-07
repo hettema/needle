@@ -223,7 +223,7 @@ export function DialControl({ state, onTurn, disabled, said }: { state: DialStat
         </span>
       ) : null}
       {full ? (
-        <span className="dial-full" data-meaning="broken" title="The memory floor: while available memory or free swap is under it the dial opens nothing. The floor is the board's; the number stays yours">
+        <span className="dial-full" data-meaning="broken" title="The memory floor, read on every pass: while available memory or free swap is under it, or a lane holds as much as it, the dial opens nothing and no lane is stopped. The floor is the board's; the number stays yours">
           {full}
         </span>
       ) : null}
