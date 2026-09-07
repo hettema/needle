@@ -1,6 +1,6 @@
 # Every make sees a project's skills, and a called Codex colleague answers in the shape asked
 
-**Status:** NEW — planned, not started.
+**Status:** SHIPPED — 2026-09-07, closed on card #73; the review is `docs/reviews/2026-09-07-every-make-sees-a-projects-skills-and-a-called-codex-colleague-answers-in-the-shape-asked.md`.
 **Written:** 2026-09-07, from Dennis at card #60's Discuss door, after the research on how Codex takes instructions: "Claude code (you) work with a harness that automatically reads claude.md etc. Codex has its own harness. What I want you to do is research how codex works and then find the way we optimise for codex's way of working as well. How does codex read instructions at startup, how does it do skills, what other tricks does it have that we're not utilising, etc." Then, on the recommendations: "I agree with your recs. And on the execution, why does this need cards? Feels like something we can just execute now or am I wrong? Is it big/risky?" It is neither; the card is the writing, and his agreement is the gate's confirmation.
 **Effort gate:** medium — the code is three small seams (an idempotent link, a flag and a field, one pass in a review); the judgment is small and made here (one reader for both makes' answers; a relative link so a project stays portable), and the one failure that would be silent — a link laid into a project's tree that git sees as a change nobody commits — is what item 1 names.
 **Sequencing:** none.
@@ -108,6 +108,8 @@ carries the pass with its raw output verbatim, the count of its findings that
 survived verification, and the count from the Claude passes beside it, so the
 loop below can be read.
 
+**Met:** `docs/reviews/2026-09-07-every-make-sees-a-projects-skills-and-a-called-codex-colleague-answers-in-the-shape-asked.md`, pass 4: `codex review -c sandbox_mode="read-only" --base origin/develop` from the lane, twice (before the rebase and on the final tree), the final message of each verbatim, 0 findings and 0 surviving beside the Claude passes' 7 (6 fixed). **Deviated:** the command takes no prompt beside `--base` and its sandbox is a config key, not `-s`; the record says so.
+
 ## Acceptance criteria
 
 1. The installer's test covers the link (laid, left alone, named, idempotent);
@@ -136,7 +138,8 @@ loop below can be read.
 
 We think the link will make a Codex session on Hello Revenue write plans and
 UI through the project's skills instead of refusing or substituting, because
-the only thing between it and the skill was a directory name. Fixed before
+the only thing between it and the skill was a directory name. (The fold is
+2026-09-07; the read is 2026-09-21, the card's WATCH row.) Fixed before
 the data: over the Codex sessions started in Hello Revenue in the fourteen
 days after the fold, at least one rollout under `~/.codex/sessions/` reads a
 `SKILL.md` under `.agents/skills/` (grep for `hr-plan-write/SKILL.md`,
@@ -150,7 +153,10 @@ We think a Codex review pass will surface findings the Claude passes did not,
 because a reader of another make shares fewer blind spots with the author
 (§13's reader "who was not its author", taken one step further). Fixed before
 the data: the surviving count from item 3 against the Claude passes' count on
-this close. If the Codex pass surfaces nothing new, the pass costs one command
+this close. Read at the close, 2026-09-07: Codex 0 surviving (two runs, both
+"no actionable regressions", tests blocked by its read-only sandbox), Claude
+passes 7 found, 6 fixed — the first reading says the pass stays optional; one
+close is one reading, and the next card that runs the pass adds the second. If the Codex pass surfaces nothing new, the pass costs one command
 and stays optional; if it surfaces one finding the Claude passes missed and
 verified, that is the evidence a later card needs to make the pass part of
 the review's form in CLAUDE.md, which is the owner's to align on (§2).
