@@ -1,6 +1,6 @@
 # A plan or a defect is born knowing the live cards on its ground, so the board never holds two plans for one thing
 
-**Carried by:** docs/plans/2026-09-07-the-door-tells-you-when-your-idea-is-already-a-card-overlaps-one-or-contradicts-one.md — planned on 2026-09-07 at the owner's word in the second door conversation ("can you not write the plan? You have context"), with a cold read of another make folded into the suggestion first
+**Carried by:** docs/plans/2026-09-07-typing-an-idea-tells-you-when-it-is-already-a-card-overlaps-one-or-contradicts-one.md — planned on 2026-09-07 at the owner's word in the second door conversation ("can you not write the plan? You have context"), with a cold read of another make folded into the suggestion first
 
 **Kind:** defect
 **Fix:** now — the intent is written (Needle's `CLAUDE.md`: one way to do each thing, and a new primitive is born after a search for the existing one; HOW-WE-WORK §3: two ways is failed alignment; `docs/INTENT.md`: the board executes plans, which it cannot when the plans are a mess); the fix stays inside the corpus read and the briefs the board hands out; it removes the class — every document born blind to its neighbours, on every project — not the twelve found tonight.

@@ -1,10 +1,11 @@
-# The door tells you when your idea is already a card, overlaps one or contradicts one, and nothing is born blind to its neighbours
+# Typing an idea tells you when it is already a card, overlaps one or contradicts one
 
 **Carries:** docs/slice-suggestions/done/2026-09-05-a-plan-or-a-defect-is-born-knowing-the-live-cards-on-its-ground.md
 **Status:** NEW — planned, not started; written at the Idea door for the owner to rank.
 **Written:** 2026-09-07, at the board's Idea door (conversation 206dd83f), on the owner's ruling in that conversation: "can you not write the plan? You have context so it feels like you're better positioned than the clean plan agent." The words that asked for it, twice at the same door: 2026-09-05, "I'm worried we're trying to solve the same thing in similar ways which goes against our working doctrine … cards that smell of planning drift either folded or aware of each other"; 2026-09-07, "when I enter a card to any needle board I don't have full understanding of the open cards in that project. What if I suggest a plan it has massive overlap with another plan? Is that a bad thing? I'm for example concerned about me contradicting myself." A colleague of another make (Codex 0.153.4, read-only, two rounds, 2026-09-07) read the finding cold: its corrections are in the suggestion, and its objection to a plan written at the door is ruling 1.
 **Effort gate:** high — the code is four readers widened (the corpus read against itself, the briefs, the head's claims, the Sequencing verdict) with a fixture test each and a page change behind them; the judgment is what counts as a neighbour and what the door says about one, and a reading that gets it wrong is silent: a door that names no neighbour looks exactly like a door with none to name.
 **Class:** the head counts live documents beside a neighbour they do not name, as a broken claim beside "document without card", on every board; and a reader of another make reads the first ten births after the fold for conflicts missed, invented or silently chosen (the Loop), so a wrong reading is loud within three weeks, never silent.
+**Formerly:** The door tells you when your idea is already a card, overlaps one or contradicts one, and nothing is born blind to its neighbours (retitled 2026-09-07 to the bar docs/plans/README.md sets, card #74 on Needle)
 
 ## Intent
 

@@ -1,8 +1,9 @@
-# A lane the laptop took down says so, and is resumed with the truth
+# Work the laptop took down says so and comes back with the truth
 
 **Found by:** the machine session, 2026-09-07 22:10, reading the board after the laptop's battery drained in flight (lid closed 18:51 on a low battery, normal sleep, power gone before 22:06; boot 5438b1ea)
 **Kind:** defect
 **Fix:** now — §11 is the written intent (*every other move is a machine fact with named evidence, or the board lies while they are away*) and §8's rule that a load-bearing claim says how it was known; the fix is inside `runtime/service.py::why_ended` and `board/lane.py`'s death line, plus `runtime/launch.py`'s `CONTINUE`; it removes the class — every session whose process vanished with a boot — not these four lanes.
+**Formerly:** A lane the laptop took down says so, and is resumed with the truth (retitled 2026-09-07 to the bar docs/plans/README.md sets, card #74 on Needle)
 
 ## Observation
 
