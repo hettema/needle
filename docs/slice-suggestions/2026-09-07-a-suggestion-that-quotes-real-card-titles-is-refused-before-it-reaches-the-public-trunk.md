@@ -1,7 +1,7 @@
 # A suggestion that quotes real card titles is refused before it reaches the public trunk
 
 **Kind:** defect
-**Fix:** now — the intent is written (`tests/ratchets/test_the_fixture_project_is_synthetic.py` and CLAUDE.md's boundary that a real project's titles never enter this public repository), the fix stays inside the corpus (redact the five titles in the one file, and arm the same ratchet in `hooks/commit-msg` so a docs commit from the main checkout is refused the way a lane's suite refuses it), and it removes the class — a commit path that never runs the suite — not the instance.
+**Fix:** now — the intent is written (`tests/ratchets/test_the_fixture_project_is_synthetic.py` and CLAUDE.md's boundary that a real project's titles never enter this public repository), the fix stays inside its ring (arm the same check in `hooks/commit-msg`, already on every checkout through `core.hooksPath`, so a docs commit from the main checkout is refused the way a lane's suite refuses it), and it removes the class — a commit path that never runs the suite — not the instance, which the owner's session redacted in `20f6a33` an hour after it landed.
 **Found by:** the lane on card #20 (docs/plans/done/2026-09-04-08-identity-and-the-record.md), in the review's boundaries pass, running the full suite after rebasing onto `origin/develop` at 379b6ce
 
 ## Observation
@@ -12,5 +12,5 @@ This is the second instance of the class `docs/slice-suggestions/2026-09-04-real
 
 ## What would hold it
 
-- The five titles described, not quoted, in the one file (the fix inside the change).
+- The five titles described, not quoted, in the one file — done in `20f6a33` (2026-09-07), which is why this suggestion is about the class alone.
 - `hooks/commit-msg` — already armed on every checkout and worktree through `core.hooksPath` (card #54) — runs the synthetic-title check over the files a commit touches under `docs/`, so the refusal happens at the commit, on the main checkout too, not a suite later.
