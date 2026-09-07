@@ -47,7 +47,27 @@ code. "Defects fix themselves", not "A standing ruling lets a defect enter
 execution". The test: could he place it against every other card without
 opening it? A suggestion's title is held to the same bar, because it becomes
 a card the moment it lands (owner ruling 2026-09-04: "I need to be able to
-derive from the card title what the intent of the card is").
+derive from the card title what the intent of the card is"). The words the
+title never uses are listed in `docs/vocabulary.md`, one line each with what
+the board means by it and how to say the outcome without it: a ratchet
+refuses a live title here that uses one, and a reading with no share of the
+writer's context judges every new title on every board against his test,
+marks a title that fails on the card's face, and keeps Start closed until a
+title passes (card #74). Short enough to place at a glance: the archive's
+twelve-word titles read at a glance and its twenty-five-word ones do not.
+
+**A plan carries no number of its own.** The stem is the date and the
+title's slug (`2026-09-07-defects-fix-themselves.md`), never `08 — ` in the
+title or `-08-` after the date. The board numbers cards at birth, per
+project, and the two sequences drifted for good the first time a suggestion
+was carded (plan 08 became #20, plan 12 #36); two identifiers for one thing,
+born in two places, is the registry drift the doctrine refuses, and the
+owner clicks cards, not filenames. So prose written from here on cites a
+plan by its card (`#20`) or by its stem, never "plan 08"; the archive under
+`done/` keeps its numbers and the citations to them, because a rename there
+costs every citation and he does not rank Done (owner ruling 2026-09-07,
+card #74: "if we refer to a plan in the card it feels like it should be the
+same number").
 
 A plan that carries suggestions names their paths in its head — a
 `**Carries:**` line, or the `**Written:**` line as the early plans did. The

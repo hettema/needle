@@ -9,6 +9,7 @@ from pathlib import Path
 from domain.board import CardDetail
 from domain.lane import HANDS_ON, Lane
 from domain.project import Project
+from board.title import VOCABULARY
 from domain.row import RowKind
 from domain.signal import Signal
 from domain.triage import CorpusLaneKind, Direction, Source, Triage
@@ -188,7 +189,8 @@ def filing_rule(found_by: str) -> str:
         "file it as a suggestion in docs/slice-suggestions/, titled by docs/plans/README.md's "
         "rule — what will be true when it is fixed, in the owner's words, never a mechanism "
         "or a term from the code, since it is a card the moment it lands and he ranks it from "
-        "the title alone — with three lines under the title: `**Kind:** defect`, `**Fix:** "
+        f"the title alone; the words a title never uses are listed in Needle's {VOCABULARY} — "
+        "with three lines under the title: `**Kind:** defect`, `**Fix:** "
         f"<mark>` and `**Found by:** {found_by}`. The mark says who fixes it: {FIX_BAR}. "
         "One mark, one document: a finding that carries a different mark is its own "
         "suggestion, cross-linked by path. Commit it on develop with a body saying what "
@@ -316,7 +318,11 @@ def planning_brief(
         "this plan holds, because no owner reads it before it runs:\n"
         "1. The title says what will be true when the plan is done, in the owner's words, so "
         'he can rank the card without opening it ("Defects fix themselves", never a '
-        "mechanism, an area or a term from the code).\n"
+        f"mechanism, an area or a term from the code); the words it never uses are listed in "
+        f"Needle's {VOCABULARY}, and a reading with no share of your context judges the title "
+        "against his test before the card can start. The plan's stem is its date and the "
+        "title's slug with no sequence number; cite another plan by its card number "
+        f"(`#{card.number}`), never by a plan number.\n"
         '2. Each item\'s "done means" comes from the suggestion\'s own "What would hold it" '
         '(or "Done means"); the plan adds no scope the suggestion did not name.\n'
         "3. The plan carries an item that makes the class loud — a validator, a ratchet, an "
