@@ -441,6 +441,21 @@ class Live:
         self.bump()
         return card
 
+    def retire(self, slug: str, number: int, into: int, why: str) -> Card:
+        """Retire a card into another (plan 08, item 1). Refused while the
+        card's document is in the corpus: a card whose document exists is
+        not a duplicate, whatever else it looks like."""
+        live = self._live(slug)
+        card = self.card(slug, number)
+        if card.link is not None and live.index.find(card.link.kind, card.link.stem) is not None:
+            raise StoreRefusal(
+                f"#{number} cannot be retired: its document {card.link.path()} is in the corpus, "
+                "so it is a card of its own."
+            )
+        survivor = self.store.retire_into(slug, number, into, why=why, at=self.now())
+        self.bump()
+        return survivor
+
     def rule_on_verdict(
         self,
         slug: str,

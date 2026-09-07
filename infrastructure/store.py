@@ -16,7 +16,7 @@ from pathlib import Path
 
 from alembic import command
 from alembic.config import Config
-from sqlalchemy import create_engine, delete, event, select, text
+from sqlalchemy import create_engine, delete, event, select, text, update
 from sqlalchemy.engine import Engine
 from sqlalchemy.orm import Session, sessionmaker
 
@@ -990,6 +990,111 @@ class Store:
         with self._session() as session:
             row = session.get(LaneRow, (slug, number))
             return None if row is None else _lane_record(row)
+
+    def retire_into(self, slug: str, number: int, into: int, *, why: str, at: datetime) -> Card:
+        """A card the board should never have born — its document was another
+        card's, renamed before the board could follow a rename (plan 08,
+        item 1: Needle's #11 into #18, omarchy's #13 into #15) — is retired
+        into that card: its rows move onto the survivor (a one-per-card kind
+        the survivor already carries stays in the audit line only), its
+        history is re-homed under the survivor's number so the merged story
+        reads in one place, the retired number keeps one line saying where it
+        went (the shape 0.1's retired numbers have), and the card row is gone.
+        Refused while anything but rows and history is keyed to the retired
+        number — a lane, a reading, a session, a triage, a card folded under
+        it — because such a card is not a duplicate the board can absorb."""
+        if number == into:
+            raise StoreRefusal(f"#{number} cannot be retired into itself.")
+        with self._session() as session, session.begin():
+            card = session.get(CardRow, (slug, number))
+            survivor = session.get(CardRow, (slug, into))
+            if card is None or survivor is None:
+                missing = number if card is None else into
+                raise StoreRefusal(f"There is no card #{missing} on this board.")
+            keyed = {
+                "a lane": session.get(LaneRow, (slug, number)) is not None,
+                "a signal reading": _any(session, ReadingRow, slug, number),
+                "a session": _any(session, WindowlessSessionRow, slug, number),
+                "a triage": _any(session, TriageRow, slug, number),
+                "a corpus lane": _any(session, CorpusLaneRow, slug, number),
+                "a fix lane": _any(session, FixLaneRow, slug, number),
+                "a card folded under it": session.scalar(
+                    select(CardRow.number).where(
+                        CardRow.project_slug == slug, CardRow.folded_into == number
+                    )
+                )
+                is not None,
+            }
+            held = [name for name, present in keyed.items() if present]
+            if held:
+                raise StoreRefusal(
+                    f"#{number} is not a duplicate the board can retire: it has {', '.join(held)}."
+                )
+            rows = session.scalars(
+                select(CardRowRow)
+                .where(CardRowRow.project_slug == slug, CardRowRow.card_number == number)
+                .order_by(CardRowRow.position)
+            ).all()
+            theirs = session.scalars(
+                select(CardRowRow)
+                .where(CardRowRow.project_slug == slug, CardRowRow.card_number == into)
+                .order_by(CardRowRow.position)
+            ).all()
+            position = max([r.position for r in theirs], default=-1) + 1
+            kept: list[str] = []
+            left: list[str] = []
+            for row in rows:
+                kind = RowKind(row.kind)
+                if kind in ONE_PER_CARD and any(t.kind == row.kind for t in theirs):
+                    left.append(f"{row.kind}: {row.text}")
+                    session.delete(row)
+                    continue
+                row.card_number = into
+                row.position = position
+                position += 1
+                kept.append(row.kind)
+            group = session.get(GroupRow, card.group_id)
+            assert group is not None
+            was = Place(column=Column(group.column), group=group.name, position=card.position)
+            born = card.born_at
+            session.execute(
+                update(AuditRow)
+                .where(AuditRow.project_slug == slug, AuditRow.card_number == number)
+                .values(card_number=into)
+            )
+            session.delete(card)
+            session.flush()
+            detail = (
+                f"Absorbed #{number} ({card.title!r}, born {born.date().isoformat()}, sat in "
+                f"{_where(was)}): {why} Its history now reads here"
+                + (f", and its rows {', '.join(kept)} moved onto this card" if kept else "")
+                + "."
+                + (" Not carried, this card already has one: " + "; ".join(left) if left else "")
+            )
+            _audit(
+                session,
+                slug,
+                into,
+                at=at,
+                actor=Actor.SESSION,
+                kind=AuditKind.RETIRED,
+                from_place=None,
+                to_place=None,
+                detail=detail,
+            )
+            _audit(
+                session,
+                slug,
+                number,
+                at=at,
+                actor=Actor.SESSION,
+                kind=AuditKind.RETIRED,
+                from_place=was,
+                to_place=None,
+                detail=f"Retired into #{into}: {why}",
+            )
+            _renumber(session, group.id)
+            return _card_now(session, slug, into)
 
     def forget_lane(self, slug: str, number: int) -> None:
         """The card is being launched again: its lane record starts over, and
@@ -2091,6 +2196,25 @@ def _landing_group(session: Session, slug: str, column: Column, *, rail: bool = 
     session.add(group)
     session.flush()
     return group
+
+
+def _any(session: Session, table: type, slug: str, number: int) -> bool:
+    """Whether the table holds any row keyed to the card."""
+    return (
+        session.scalar(
+            select(table.id).where(table.project_slug == slug, table.card_number == number)
+        )
+        is not None
+    )
+
+
+def _renumber(session: Session, group_id: int) -> None:
+    """Close the gap a card leaving the group left in its positions."""
+    cards = session.scalars(
+        select(CardRow).where(CardRow.group_id == group_id).order_by(CardRow.position)
+    ).all()
+    for position, card in enumerate(cards):
+        card.position = position
 
 
 def _group_size(session: Session, group_id: int) -> int:

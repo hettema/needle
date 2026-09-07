@@ -743,6 +743,24 @@ def rows(args: argparse.Namespace, live: Live, runtime: Runtime, loops: Loops, d
     return 0
 
 
+def retire(
+    args: argparse.Namespace, live: Live, runtime: Runtime, loops: Loops, doors: Doors
+) -> int:
+    """Retire a card the board should never have born into the card that
+    carries its document (plan 08, item 1): rows and history merge onto the
+    survivor, and the retired number keeps one line saying where it went."""
+    why = args.why.strip()
+    if not why:
+        print("a retirement says why: needle retire SLUG N --into M \"…\"", file=sys.stderr)
+        return 1
+    survivor = live.retire(args.slug, args.number, args.into, why)
+    print(
+        f"#{args.number} retired into #{args.into} ({survivor.title}); its history and rows "
+        "read there now"
+    )
+    return 0
+
+
 def register(sub: "argparse._SubParsersAction[argparse.ArgumentParser]") -> None:
     p_card = sub.add_parser("card", help="the card as text: the brief a lane opens with")
     p_card.add_argument("slug")
@@ -860,6 +878,15 @@ def register(sub: "argparse._SubParsersAction[argparse.ArgumentParser]") -> None
     p_rows.add_argument("--since", help="a day or a moment, ISO; rows written from then on")
     p_rows.add_argument("--kind", help="one row kind, e.g. DELIVERED")
     p_rows.set_defaults(run=_with_board(rows))
+
+    p_retire = sub.add_parser(
+        "retire", help="retire a duplicate card into the card that carries its document"
+    )
+    p_retire.add_argument("slug")
+    p_retire.add_argument("number", type=int, help="the card to retire")
+    p_retire.add_argument("--into", type=int, required=True, help="the card that survives")
+    p_retire.add_argument("why", help="why, in a sentence, for both cards' history")
+    p_retire.set_defaults(run=_with_board(retire))
 
     p_water = sub.add_parser(
         "watercooler", help="the project's watercooler: read it, or say one line as a card's lane"
