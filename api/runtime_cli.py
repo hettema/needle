@@ -275,25 +275,32 @@ def rescues(runtime: Runtime, args: argparse.Namespace) -> int:
 
 def call_brief(note: str, answer: str, objective: str | None, *, by_message: bool = False) -> str:
     """What a called colleague is told: the thread, the question, where the
-    answer goes. The note is the record; the brief only points at it. A
+    answer goes, and the shape to answer in — `domain.call.Answer`, the
+    same for both makes so `runtime.calls.read_answer` is the one reader
+    (card #73). The note is the record; the brief only points at it. A
     Codex worker answers by its last message, which Codex writes to the
-    file itself (`by_message`, plan 57): its own shell runs in a sandbox
-    that refused the shared record on 2026-09-05, so it is told not to
-    try."""
+    file itself (`by_message`, plan 57) and holds to the shape's schema:
+    its own shell runs in a sandbox that refused the shared record on
+    2026-09-05, so it is told not to try. A Claude colleague writes the
+    file and is asked for the shape in words; prose still lands, read by
+    its first line."""
     asked = f" {objective.strip()}" if objective and objective.strip() else ""
     if by_message:
         return (
             f"A colleague calls you with a question. Read {note} first — it holds the thread "
-            f"and the question.{asked} Answer as your final message: the runtime writes your "
-            f"last message to {answer}, where the caller waits on it. Do not write that file "
-            "yourself — your sandbox may refuse it, and only the message the runtime writes "
-            "reaches the caller."
+            f"and the question.{asked} Answer as your final message, in the shape the output "
+            "schema asks: `answer` (your reply), `how_known` (checked, recalled or inferred) "
+            "and `sources` (what you stood on). The runtime writes your last message to "
+            f"{answer}, where the caller waits on it. Do not write that file yourself — your "
+            "sandbox may refuse it, and only the message the runtime writes reaches the caller."
         )
     return (
         f"A colleague calls you with a question. Read {note} first — it holds the thread "
         f"and the question.{asked} Answer in the record: write your reply to {answer} "
-        "(create it, or append under a head of your own if it exists), and end your turn "
-        "once it is written. The caller waits on that file, not on your words here."
+        "(create it, or overwrite it — the note holds the thread) as one JSON object "
+        "with `answer` (your reply), `how_known` (checked, recalled or inferred) and "
+        "`sources` (what you stood on, as a list), and end your turn once it is written. "
+        "The caller waits on that file, not on your words here."
     )
 
 

@@ -197,6 +197,13 @@ def test_the_call_resumes_the_rollout_with_the_brief_and_the_answer_lands_in_the
     assert len(ran) == 1 and ran[0]["id"] == WORKER
     assert ran[0]["prompt"] == "Read /srv/note.md; answer in one word"
     assert ran[0]["answer"] == str(answer), "Codex writes its last message there itself"
+    schema = tmp_path / "from-01a07123-re-note.schema.json"
+    assert ran[0]["schema"] == str(schema), "held to the one shape, beside the answer (card #73)"
+    import json as _json
+
+    from domain.call import Answer
+
+    assert _json.loads(schema.read_text(encoding="utf-8")) == Answer.model_json_schema()
     assert "-s" not in ran[0]["argv"] and "danger-full-access" not in " ".join(ran[0]["argv"])
     assert call.session_id == WORKER and call.slot == "codex"
 

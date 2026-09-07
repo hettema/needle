@@ -3,6 +3,15 @@
 export const CALL_OUTCOME_VALUES = ["landed", "nothing", "blocked", "moved", "ended"] as const;
 export type CallOutcome = (typeof CALL_OUTCOME_VALUES)[number];
 
+export const HOW_KNOWN_VALUES = ["checked", "recalled", "inferred"] as const;
+export type HowKnown = (typeof HOW_KNOWN_VALUES)[number];
+
+export interface Answer {
+  answer: string;
+  how_known: HowKnown;
+  sources: string[];
+}
+
 export interface Call {
   id: number;
   session_id: string;

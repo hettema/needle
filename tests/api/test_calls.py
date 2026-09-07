@@ -150,8 +150,8 @@ def test_call_resumes_the_colleague_with_the_note_and_wait_returns_as_the_answer
     assert took < 2.0, f"the answer landed at 0.6 s and the wait returned at {took:.1f} s"
     said = capsys.readouterr().out
     assert said.startswith(f"landed: {answer} landed at ") and said.rstrip().endswith(
-        "# From the colleague"
-    )
+        "# From the colleague (prose, its first line)"
+    ), "a Claude colleague's prose lands as before, read by its first line and said so (card #73)"
 
     reconcile(client)
     ended = store.call(1)
@@ -286,7 +286,8 @@ def test_call_codex_resumes_the_worker_and_wait_returns_as_its_last_message_land
     client: TestClient, machine_floor: Floor, repo: Path, capsys
 ):
     machine_floor.write_rollout(WORKER, cwd=str(repo))
-    machine_floor.script_codex({"then": "answer", "text": "The second.", "after": 4.0})
+    shaped = '{"answer": "The second.", "how_known": "checked", "sources": ["the note"]}'
+    machine_floor.script_codex({"then": "answer", "text": shaped, "after": 4.0})
     note = a_note(machine_floor)
     answer = machine_floor.discussion / "from-01a07123-re-topic.md"
 
@@ -301,6 +302,9 @@ def test_call_codex_resumes_the_worker_and_wait_returns_as_its_last_message_land
     assert brief.startswith(f"A colleague calls you with a question. Read {note} first")
     assert "Say which." in brief and "Answer as your final message" in brief
     assert "Do not write that file yourself" in brief
+    assert "`how_known` (checked, recalled or inferred)" in brief, "asked for the one shape"
+    assert ran[0]["schema"] == str(answer.with_name("from-01a07123-re-topic.schema.json"))
+    assert "--output-schema" in ran[0]["argv"], "held to the shape by Codex itself"
     assert machine_floor.state()["launch_log"] == [], "no Claude session was started for it"
 
     assert main(["sessions"]) == 0
@@ -311,8 +315,9 @@ def test_call_codex_resumes_the_worker_and_wait_returns_as_its_last_message_land
     took = time.monotonic() - started
     said = capsys.readouterr().out
     assert said.startswith(f"landed: {answer} landed at ") and said.rstrip().endswith("The second.")
+    assert "(prose" not in said and "not in the shape" not in said, "the verdict's words are the answer field"
     assert took < 9.0, f"the answer landed at about 4 s and the wait returned at {took:.1f} s"
-    assert answer.read_text(encoding="utf-8") == "The second."
+    assert answer.read_text(encoding="utf-8") == shaped
 
     reconcile(client)
     store = client.app.state.loops.live.store

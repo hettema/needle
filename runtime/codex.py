@@ -277,13 +277,17 @@ def warm() -> Session | None:
 # ── the call ───────────────────────────────────────────────────────────
 
 
-def resume_argv(session_id: str, *, brief: str, answer: str) -> list[str]:
-    """`codex exec -o <answer> resume <id> <brief>`: the worker's last
-    message is written to `answer` by Codex itself, outside the sandbox
-    its shell commands run in, so the answer lands whatever the sandbox
-    allows (the plan's evidence: a worker's own write to the shared record
-    was refused on 2026-09-05, and `-o` before `resume` was verified the
-    same day with a one-word reply). The sandbox is never widened here.
+def resume_argv(session_id: str, *, brief: str, answer: str, schema: str) -> list[str]:
+    """`codex exec -o <answer> --output-schema <schema> resume <id> <brief>`:
+    the worker's last message is written to `answer` by Codex itself,
+    outside the sandbox its shell commands run in, so the answer lands
+    whatever the sandbox allows (the plan's evidence: a worker's own write
+    to the shared record was refused on 2026-09-05, and `-o` before
+    `resume` was verified the same day with a one-word reply). The sandbox
+    is never widened here. `--output-schema` holds the last message to the
+    one answer shape (`domain.call.Answer`, card #73), so the board reads
+    the words from a field and not from a first line guessed out of prose;
+    `codex exec resume` takes the flag (its help, read 2026-09-07).
     `--skip-git-repo-check` lets a worker whose directory is no repository
     (a scratch probe) be resumed rather than refused for that alone."""
     return [
@@ -291,11 +295,21 @@ def resume_argv(session_id: str, *, brief: str, answer: str) -> list[str]:
         "exec",
         "-o",
         answer,
+        "--output-schema",
+        schema,
         "resume",
         "--skip-git-repo-check",
         session_id,
         brief,
     ]
+
+
+def schema_path(answer: str) -> Path:
+    """Where the answer's schema is written before the call: beside the
+    answer, named for it, so a reader of the record can see what the worker
+    was held to, and never `.md`, so the board's note reader skips it."""
+    given = Path(answer)
+    return given.with_name(given.stem + ".schema.json")
 
 
 def log_path(answer: str) -> Path:

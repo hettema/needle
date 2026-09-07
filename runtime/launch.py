@@ -10,11 +10,13 @@ loops. After a verified start the session's processes are put in a scope of
 their own, so nothing the board does can end them.
 """
 
+import json
 import re
 import time
 from dataclasses import dataclass
 from pathlib import Path
 
+from domain.call import Answer
 from domain.gate import Gate
 from domain.launch import Attempt, Launch, LaunchVerdict, Rescue, Start, Stopped, WindowlessStart
 from domain.session import Session, SessionKind, SessionSlot, SessionState
@@ -737,8 +739,16 @@ def call_codex(store: Store, session: Session, *, brief: str, name: str, answer:
     in a scope named for the call, so the one list shows it as a unit of
     its own and its death has a journal."""
     log = codex.log_path(answer)
+    schema = codex.schema_path(answer)
     try:
-        argv = codex.resume_argv(session.session_id, brief=brief, answer=answer)
+        schema.parent.mkdir(parents=True, exist_ok=True)
+        schema.write_text(json.dumps(Answer.model_json_schema(), indent=1), encoding="utf-8")
+    except OSError as error:
+        return dead(name, [], f"the answer's schema could not be written beside it: {error}", None)
+    try:
+        argv = codex.resume_argv(
+            session.session_id, brief=brief, answer=answer, schema=str(schema)
+        )
     except machine.CommandMissing as missing:
         return dead(name, [], str(missing), None)
     since = time.time()

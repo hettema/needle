@@ -15,7 +15,7 @@ colleague it waits on. The verb owns nothing of the colleague's life
 from datetime import datetime
 from enum import StrEnum
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 
 
 class CallOutcome(StrEnum):
@@ -65,3 +65,32 @@ class CallVerdict(BaseModel):
     session_id: str
     """The session the call now names: the fork when the colleague moved."""
     slot: str
+
+
+class HowKnown(StrEnum):
+    """How a colleague knew what it answered: `docs/HOW-WE-WORK.md` §8's own
+    three words, so an answer says how it was known and never speaks in the
+    voice of the checked."""
+
+    CHECKED = "checked"
+    RECALLED = "recalled"
+    INFERRED = "inferred"
+
+
+class Answer(BaseModel):
+    """The shape a called colleague answers in (card #73, item 2): the
+    words, how they were known, and what they stood on. One shape for
+    every call, whatever the make: a Codex worker is held to it by
+    `--output-schema` with this model's JSON schema, and a Claude colleague
+    is asked for it in words, so `runtime.calls` has one reader for both.
+    Extra keys are forbidden so the schema says `additionalProperties:
+    false`, which Codex's structured output requires of an object."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    answer: str
+    """The reply itself, the words the verdict carries."""
+    how_known: HowKnown
+    sources: list[str]
+    """What the answer stood on: files read, commands run, a document; empty
+    when it stood on nothing, which the caller then sees."""

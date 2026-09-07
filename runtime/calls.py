@@ -9,10 +9,14 @@ nothing of the colleague's life: a wall is the lifecycle owner's, and this
 only reports it.
 """
 
+import json
+from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
 
-from domain.call import Call, CallOutcome, CallVerdict
+from pydantic import ValidationError
+
+from domain.call import Answer, Call, CallOutcome, CallVerdict
 from domain.session import Session, SessionState
 
 
@@ -39,10 +43,11 @@ def judge(
     the rescue's reason when a live fork of the called session exists."""
     landed = answer_landed(call)
     if landed is not None:
-        first = _first_line(call.answer)
+        read = read_answer(call.answer)
         return CallVerdict(
             outcome=CallOutcome.LANDED,
-            words=f"{call.answer} landed at {landed.isoformat(timespec='seconds')}: {first}",
+            words=f"{call.answer} landed at {landed.isoformat(timespec='seconds')}: {read.words}"
+            + (f" ({read.how})" if read.answer is None else ""),
             session_id=call.session_id,
             slot=call.slot,
         )
@@ -101,12 +106,48 @@ def judge(
     return None
 
 
-def _first_line(path: str) -> str:
+@dataclass
+class Read:
+    """One reading of an answer file: the words the verdict carries, the
+    parsed shape when the file is in it, and how the words were read."""
+
+    words: str
+    answer: Answer | None
+    how: str
+
+
+def read_answer(path: str) -> Read:
+    """The one reader of every answer, whatever the make wrote it (card
+    #73, item 2). A file that parses as `domain.call.Answer` — a Codex
+    worker held to the schema, or a Claude colleague that wrote the JSON —
+    gives its `answer` field; anything else gives its first non-blank line
+    and says so, so an off-shape answer is reported and never lost."""
+    text = _text_of(path)
     try:
-        with Path(path).open(encoding="utf-8", errors="replace") as f:
-            for line in f:
-                if line.strip():
-                    return line.strip()
-    except OSError:
+        answer = Answer.model_validate_json(text)
+    except (ValidationError, ValueError):
         pass
+    else:
+        return Read(words=answer.answer.strip(), answer=answer, how="in the shape asked")
+    stripped = text.lstrip()
+    if stripped.startswith("{"):
+        how = "not in the shape asked, its first line"
+    else:
+        how = "prose, its first line"
+    return Read(words=_first_line(text), answer=None, how=how)
+
+
+def _text_of(path: str) -> str:
+    try:
+        return Path(path).read_text(encoding="utf-8", errors="replace")
+    except OSError:
+        return ""
+
+
+def _first_line(text: str) -> str:
+    for line in text.splitlines():
+        if line.strip():
+            return line.strip()
     return ""
+
+

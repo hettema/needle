@@ -1,14 +1,17 @@
 #!/usr/bin/env python3
 """A stand-in for the Codex CLI on the test floor (plan 57).
 
-`codex exec -o ANSWER resume [--skip-git-repo-check] ID PROMPT` is the one
-form the runtime runs. The fake finds the rollout by id under
+`codex exec -o ANSWER --output-schema SCHEMA resume [--skip-git-repo-check]
+ID PROMPT` is the one form the runtime runs. The fake finds the rollout by id under
 `$NEEDLE_CODEX_HOME/sessions`, appends the turn's events the way Codex does
 (`task_started`, a tool call, `task_complete`) and follows the fate the
 test scripted in `$NEEDLE_FAKE_STATE` (`codex`): it answers by writing its
 last message to the `-o` file, as Codex itself does outside the sandbox;
-answers with nothing; fails at once; or lingers at work until stopped.
-Every call is logged with its argv, the id and the prompt, so a test can
+answers with nothing; fails at once; or lingers at work until stopped. The
+schema file is read and must be JSON, as Codex itself refuses one that is
+not (card #73); a fate's `text` is written as given, so a test that wants
+the shape scripts JSON and one that wants prose scripts prose. Every call
+is logged with its argv, the id, the prompt and the schema, so a test can
 read what the runtime asked for.
 """
 
@@ -51,11 +54,15 @@ def _append(path: Path, kind: str, payload: dict) -> None:
 
 def resume(args: list[str]) -> int:
     answer = None
+    schema = None
     rest: list[str] = []
     i = 0
     while i < len(args):
         if args[i] in ("-o", "--output-last-message") and i + 1 < len(args):
             answer = args[i + 1]
+            i += 2
+        elif args[i] == "--output-schema" and i + 1 < len(args):
+            schema = args[i + 1]
             i += 2
         elif args[i].startswith("-"):
             i += 1
@@ -66,10 +73,23 @@ def resume(args: list[str]) -> int:
         print("error: usage: codex exec [-o FILE] resume ID PROMPT", file=sys.stderr)
         return 2
     session_id, prompt = rest[1], rest[2]
+    if schema is not None:
+        try:
+            json.loads(Path(schema).read_text(encoding="utf-8"))
+        except (OSError, ValueError) as error:
+            print(f"error: Failed to read output schema {schema}: {error}", file=sys.stderr)
+            return 1
     fate = _locked(lambda blob: blob["codex"].pop(0) if blob.get("codex") else {"then": "answer"})
     _locked(
         lambda blob: blob.setdefault("codex_log", []).append(
-            {"argv": args, "id": session_id, "prompt": prompt, "answer": answer, "fate": fate}
+            {
+                "argv": args,
+                "id": session_id,
+                "prompt": prompt,
+                "answer": answer,
+                "schema": schema,
+                "fate": fate,
+            }
         )
     )
     then = fate.get("then", "answer")

@@ -219,7 +219,8 @@ def test_the_judge_reads_landed_moved_blocked_ended_and_nothing(tmp_path: Path):
     Path(call.answer).write_text("# From the colleague\n\nthe answer\n", encoding="utf-8")
     landed = calls.judge(call, [working], why_ended=None, moved_words=None)
     assert landed is not None and landed.outcome == CallOutcome.LANDED
-    assert landed.words.endswith("# From the colleague") and call.answer in landed.words
+    assert landed.words.endswith("# From the colleague (prose, its first line)")
+    assert call.answer in landed.words
     Path(call.answer).unlink()
 
     fork = session(
@@ -380,3 +381,45 @@ def test_the_notes_are_read_oldest_change_first_with_their_first_lines(machine_f
     )
     assert discussion.named_in(text) == {str(first), str(machine_floor.discussion / "from-x.md")}
     assert discussion.in_directory(str(first)) and not discussion.in_directory("/tmp/from-x.md")
+
+
+def test_the_one_reader_takes_the_answer_field_and_falls_back_to_the_first_line_saying_why(
+    tmp_path: Path,
+):
+    """Card #73, item 2: every answer, whatever the make wrote it, goes
+    through one reader. In the shape, the verdict's words are the `answer`
+    field; prose is read by its first line and says so; JSON that is not
+    the shape (a key missing, a `how_known` outside §8's three words) is
+    read by its first line and says that — reported, never lost."""
+    call = a_call(tmp_path)
+    path = Path(call.answer)
+
+    path.write_text(
+        '{"answer": "  The second.\\n", "how_known": "checked", "sources": ["a.md"]}',
+        encoding="utf-8",
+    )
+    read = calls.read_answer(call.answer)
+    assert read.words == "The second." and read.how == "in the shape asked"
+    assert read.answer is not None and read.answer.sources == ["a.md"]
+    verdict = calls.judge(call, [session()], why_ended=None, moved_words=None)
+    assert verdict is not None and verdict.words.endswith(": The second.")
+
+    path.write_text("\n\nThe second, in prose.\nmore\n", encoding="utf-8")
+    read = calls.read_answer(call.answer)
+    assert read.words == "The second, in prose." and read.answer is None
+    assert read.how == "prose, its first line"
+
+    path.write_text('{"answer": "no how", "sources": []}', encoding="utf-8")
+    read = calls.read_answer(call.answer)
+    assert read.answer is None and read.how == "not in the shape asked, its first line"
+    assert read.words == '{"answer": "no how", "sources": []}'
+    verdict = calls.judge(call, [session()], why_ended=None, moved_words=None)
+    assert verdict is not None and verdict.words.endswith("(not in the shape asked, its first line)")
+
+    path.write_text('{"answer": "x", "how_known": "guessed", "sources": []}', encoding="utf-8")
+    assert calls.read_answer(call.answer).answer is None, "a fourth word is not the shape"
+
+    path.write_text(
+        '{"answer": "x", "how_known": "checked", "sources": [], "extra": 1}', encoding="utf-8"
+    )
+    assert calls.read_answer(call.answer).answer is None, "the shape is closed"
