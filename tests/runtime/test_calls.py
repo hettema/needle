@@ -370,9 +370,17 @@ def test_the_notes_are_read_oldest_change_first_with_their_first_lines(machine_f
     second = machine_floor.discussion / "from-claude-topic.md"
     second.write_text("\n# From Claude\n", encoding="utf-8")
     (machine_floor.discussion / "notes.txt").write_text("not a note", encoding="utf-8")
+    third = machine_floor.discussion / "from-01a07bae-re-topic.md"
+    third.write_text(
+        '{"answer": "The second.", "how_known": "checked", "sources": []}', encoding="utf-8"
+    )
     notes = discussion.notes()
-    assert [n.path for n in notes] == [str(first), str(second)]
-    assert notes[0].first_line == "# From Codex — the ask" and notes[1].first_line == ""
+    assert [n.path for n in notes] == [str(first), str(second), str(third)]
+    assert notes[0].first_line == "# From Codex — the ask"
+    assert notes[1].first_line == "# From Claude", "the first line that says something"
+    assert notes[2].first_line == "The second.", (
+        "a reply in the shape is heard by its answer, through the one reader (card #73)"
+    )
     assert notes[0].at < notes[1].at
 
     text = (
@@ -414,7 +422,8 @@ def test_the_one_reader_takes_the_answer_field_and_falls_back_to_the_first_line_
     assert read.answer is None and read.how == "not in the shape asked, its first line"
     assert read.words == '{"answer": "no how", "sources": []}'
     verdict = calls.judge(call, [session()], why_ended=None, moved_words=None)
-    assert verdict is not None and verdict.words.endswith("(not in the shape asked, its first line)")
+    assert verdict is not None
+    assert verdict.words.endswith("(not in the shape asked, its first line)")
 
     path.write_text('{"answer": "x", "how_known": "guessed", "sources": []}', encoding="utf-8")
     assert calls.read_answer(call.answer).answer is None, "a fourth word is not the shape"

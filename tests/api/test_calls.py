@@ -315,7 +315,9 @@ def test_call_codex_resumes_the_worker_and_wait_returns_as_its_last_message_land
     took = time.monotonic() - started
     said = capsys.readouterr().out
     assert said.startswith(f"landed: {answer} landed at ") and said.rstrip().endswith("The second.")
-    assert "(prose" not in said and "not in the shape" not in said, "the verdict's words are the answer field"
+    assert "(prose" not in said and "not in the shape" not in said, (
+        "the verdict's words are the answer field"
+    )
     assert took < 9.0, f"the answer landed at about 4 s and the wait returned at {took:.1f} s"
     assert answer.read_text(encoding="utf-8") == shaped
 

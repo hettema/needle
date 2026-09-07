@@ -9,7 +9,7 @@ needle close SLUG N --delivered … --watch … [--review PATH] [--column COL]
 needle reading SLUG N delivered|not-delivered|cannot-tell "…" [--watch "…"]
 needle fold [--main] [--worktree PATH]   # fast-forward push to origin/develop, trunk synced
 needle start-card SLUG N                # Start, through the running board
-needle hook install REPO                 # the session hook in REPO/.claude/settings.json, and REPO/hooks as git's
+needle hook install REPO                 # the hook in REPO/.claude/settings.json, Codex's skills link, git's hooks
 needle sync [SLUG]                       # level each main checkout with origin/develop now
 needle signals [SLUG]                    # read every due signal now
 needle lanes SLUG                        # every card's lane, as the board reads it

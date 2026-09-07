@@ -13,6 +13,7 @@ from pathlib import Path
 
 from domain.watercooler import Note
 from runtime import machine
+from runtime.calls import read_answer
 
 _NAMED_NOTE = re.compile(r"discussion/([A-Za-z0-9._-]+\.md)\b")
 """How a document names a note on the machine's watercooler: any path that
@@ -35,13 +36,16 @@ def notes() -> list[Note]:
 
 
 def note_of(path: Path) -> Note | None:
-    """One note as it stands, or None when it cannot be read."""
+    """One note as it stands, or None when it cannot be read. Its head
+    line comes from the one answer reader (card #73): a reply a Codex
+    worker landed in the shape is heard by its `answer`, not as a JSON
+    blob, and prose by its first non-blank line, the same words the call's
+    verdict carries."""
     try:
         stamp = path.stat().st_mtime
-        with path.open(encoding="utf-8", errors="replace") as f:
-            first = f.readline().strip()
     except OSError:
         return None
+    first = read_answer(str(path)).words
     return Note(path=str(path), first_line=first, at=datetime.fromtimestamp(stamp, UTC))
 
 

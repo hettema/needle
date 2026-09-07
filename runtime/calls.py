@@ -9,7 +9,6 @@ nothing of the colleague's life: a wall is the lifecycle owner's, and this
 only reports it.
 """
 
-import json
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path

@@ -229,7 +229,9 @@ def test_hook_install_lays_the_codex_skills_link_once_and_leaves_a_projects_own_
     out = capsys.readouterr().out
     assert "laid .agents/skills -> ../.claude/skills in with-skills" in out and "commit it" in out
     link = repo / ".agents" / "skills"
-    assert link.is_symlink() and os.readlink(link) == "../.claude/skills", "relative, so a clone keeps it"
+    assert link.is_symlink() and os.readlink(link) == "../.claude/skills", (
+        "relative, so a clone keeps it"
+    )
     assert (link / "hr-plan-write").is_dir()
 
     assert main(["hook", "install", str(repo)]) == 0
@@ -247,12 +249,14 @@ def test_hook_install_lays_the_codex_skills_link_once_and_leaves_a_projects_own_
     (own / ".agents" / "skills" / "theirs").mkdir(parents=True)
     assert main(["hook", "install", str(own)]) == 0
     assert "keeps its own .agents/skills" in capsys.readouterr().out
-    assert (own / ".agents" / "skills" / "theirs").is_dir() and not (own / ".agents" / "skills").is_symlink()
+    assert (own / ".agents" / "skills" / "theirs").is_dir()
+    assert not (own / ".agents" / "skills").is_symlink()
 
     elsewhere = tmp_path / "elsewhere"
     (elsewhere / ".claude" / "skills").mkdir(parents=True)
     (elsewhere / ".agents").mkdir()
     (elsewhere / ".agents" / "skills").symlink_to("/nowhere/skills")
     assert main(["hook", "install", str(elsewhere)]) == 0
-    assert "links to /nowhere/skills, not ../.claude/skills; left as it is" in capsys.readouterr().out
+    said = capsys.readouterr().out
+    assert "links to /nowhere/skills, not ../.claude/skills; left as it is" in said
     assert os.readlink(elsewhere / ".agents" / "skills") == "/nowhere/skills"

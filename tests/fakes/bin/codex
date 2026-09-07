@@ -77,7 +77,7 @@ def resume(args: list[str]) -> int:
         try:
             json.loads(Path(schema).read_text(encoding="utf-8"))
         except (OSError, ValueError) as error:
-            print(f"error: Failed to read output schema {schema}: {error}", file=sys.stderr)
+            print(f"Output schema file {schema} is not valid JSON: {error}", file=sys.stderr)
             return 1
     fate = _locked(lambda blob: blob["codex"].pop(0) if blob.get("codex") else {"then": "answer"})
     _locked(
