@@ -580,8 +580,9 @@ def test_the_close_writes_what_the_plan_named_against_what_the_lane_dispatched(
     plan.write_text(
         plan.read_text(encoding="utf-8")
         + "\n## Items\n\n### 1. The parser\nRead the meter. Hands out: search — every reading "
-        "the meter wrote;\nverifies the reading at the line named.\n\n### 2. The bill\n"
-        "Hands out: execution — the suite; verifies the failing test it names.\n",
+        "the meter wrote;\nverifies the reading at the line named.\n**Met:** it reads.\n\n"
+        "### 2. The bill\nHands out: execution — the suite; verifies the failing test it names.\n"
+        "**Met:** it bills.\n",
         encoding="utf-8",
     )
     git(repo, "add", "-A")
