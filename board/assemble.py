@@ -20,7 +20,7 @@ from board.lane import (
     where_of,
 )
 from board.moves import GroupLayout
-from board.reconcile import carried_stems, ref
+from board.reconcile import carried_stems, corpus_path_of, ref
 from board.signals import is_due, past_due, read_or_decline
 from board.triage import Sources, routing_now, routing_of
 from board.verdicts import read_or_decline as read_verdict_or_decline
@@ -121,6 +121,29 @@ def document_of(card: Card, index: CorpusIndex) -> Document | None:
     if card.link is None:
         return None
     return index.find(card.link.kind, card.link.stem)
+
+
+def other_citations(card: Card, index: CorpusIndex) -> list[str]:
+    """What else the card cites, shown only where the corpus holds it (plan
+    08, item 1): a citation of a corpus document follows the file — a plan
+    archived at the close is named once, at done/, never again at the path
+    it left — and one whose file is nowhere is not shown, because a path
+    that names no file is the memory of a citation, not one. A path outside
+    the four folders is the card's own word and stands as written."""
+    own = cited_path(card)
+    shown: list[str] = []
+    for citation in card.citations:
+        parts = corpus_path_of(citation)
+        if parts is None:
+            current: str | None = citation
+        else:
+            kind, stem, _ = parts
+            document = index.find(kind, stem)
+            current = document.path if document is not None else None
+        if current is None or current == own or current in shown:
+            continue
+        shown.append(current)
+    return shown
 
 
 def document_state(card: Card, document: Document | None) -> DocumentState:
@@ -1063,7 +1086,6 @@ def assemble_detail(
     `planning` the dial's session writing the card's plan (plan 11)."""
     document = document_of(card, index)
     brief, record = split_rows(card.rows)
-    own = cited_path(card)
     signal, signal_note = watch_signal(card)
     trigger, trigger_note = trigger_signal(document)
     verdict, verdict_note = card_verdict(card)
@@ -1088,7 +1110,7 @@ def assemble_detail(
         brief=brief,
         record=record,
         document=document,
-        other_citations=[c for c in card.citations if c != own],
+        other_citations=other_citations(card, index),
         history=history,
         lane=lane,
         doors=doors,

@@ -2,20 +2,26 @@
 
 The corpus is the only way in (owner ruling 2026-09-03): a live document with
 no card becomes one. Identity follows the document — its stem first, then its
-title — so a card keeps its number when its file is archived or renamed. And
+title, then what git or the previous read says about a file that vanished as
+another appeared (plan 08, item 1) — so a card keeps its number when its file
+is archived or renamed, even when the rename changed the title too. And
 a card follows its plan (plan 06, item 5): a plan whose head cites a
 suggestion carries it, so the suggestion's card becomes the plan's card with
 the same number and history, and the other suggestions the same plan cites
-fold under that card instead of standing on their own. The function is pure:
-it says what should happen and the store makes it so.
+fold under that card instead of standing on their own. The card's face
+follows the document as well: a card born from the corpus reads the title of
+the document it cites, on every read (plan 08, item 1). The function is
+pure: it says what should happen and the store makes it so.
 """
+
+from collections.abc import Callable
 
 from pydantic import BaseModel
 
-from domain.card import Card, DocumentLink
+from domain.card import Card, CardOrigin, DocumentLink
 from domain.column import DEFECTS_RAIL, Column
 from domain.corpus import CorpusIndex
-from domain.document import Document, DocumentKind, DocumentRef, SuggestionKind
+from domain.document import DOCUMENT_FOLDER, Document, DocumentKind, DocumentRef, SuggestionKind
 
 BIRTH_COLUMN: dict[DocumentKind, Column] = {
     DocumentKind.PLAN: Column.PLANNED,
@@ -45,6 +51,21 @@ class Renamed(BaseModel):
     card_number: int
     old_stem: str
     document: DocumentRef
+    how: str
+    """What matched the vanished document to the one that appeared, for the
+    history row: the title, git's own record of the rename, or the body
+    against the previous read."""
+
+
+class Retitled(BaseModel):
+    """A card's face reads its document's title, and the document's title
+    changed — renamed, carried, or edited in place (plan 08, item 1). Only a
+    card born from the corpus: a card imported from 0.1 carries the owner's
+    own title for it, which no document ever held."""
+
+    card_number: int
+    title: str
+    was: str
 
 
 class Relinked(BaseModel):
@@ -94,6 +115,7 @@ class Effects(BaseModel):
     rehomed: list[Rehomed]
     archived: list[Archived]
     born: list[Born]
+    retitled: list[Retitled]
 
     def empty(self) -> bool:
         return not (
@@ -103,7 +125,59 @@ class Effects(BaseModel):
             or self.rehomed
             or self.archived
             or self.born
+            or self.retitled
         )
+
+
+Moves = Callable[[], dict[str, str]]
+"""What git says moved in the corpus, old path to new path, both relative to
+the project root; read lazily, since it costs a git call and is only wanted
+when a card's document is nowhere under its own name."""
+
+RENAME_HOPS = 8
+"""How far a chain of renames is followed before the board gives up on it."""
+
+
+def follows_title(document: Document, link: DocumentLink) -> bool:
+    return document.kind == link.kind and document.title == link.title
+
+
+def same_body(old: Document, new: Document) -> bool:
+    """Two documents whose Found-by line and whole intent body are identical
+    are one document under two names — the suggestion's own bar was the
+    Found-by line and the first paragraph, and the whole body is stricter. A
+    rename that also edited the body is git's to say."""
+    return (
+        old.kind == new.kind
+        and bool(new.intent.strip())
+        and old.intent == new.intent
+        and old.found_by == new.found_by
+    )
+
+
+def moved_to(moves: dict[str, str], path: str) -> str | None:
+    """Where git says a path ended up, following a chain of renames; None
+    when git has no rename from it."""
+    seen = {path}
+    current = path
+    for _ in range(RENAME_HOPS):
+        nxt = moves.get(current)
+        if nxt is None or nxt in seen:
+            break
+        seen.add(nxt)
+        current = nxt
+    return current if current != path else None
+
+
+def corpus_path_of(path: str) -> tuple[DocumentKind, str, bool] | None:
+    """A corpus path taken apart: the kind, the stem and whether it names
+    done/. None for a path outside the four folders."""
+    for kind, folder in DOCUMENT_FOLDER.items():
+        for archived, prefix in ((True, f"{folder}/done/"), (False, f"{folder}/")):
+            rest = path[len(prefix) :]
+            if path.startswith(prefix) and rest.endswith(".md") and "/" not in rest:
+                return kind, rest[:-3], archived
+    return None
 
 
 def ref(document: Document) -> DocumentRef:
@@ -128,7 +202,17 @@ def carried_stems(index: CorpusIndex) -> set[str]:
     return {stem for d in index.documents if d.kind == DocumentKind.PLAN for stem in d.cites}
 
 
-def reconcile(index: CorpusIndex, cards: list[Card]) -> Effects:
+def reconcile(
+    index: CorpusIndex,
+    cards: list[Card],
+    *,
+    previous: CorpusIndex | None = None,
+    moves: Moves | None = None,
+) -> Effects:
+    """`previous` is the last read of the same corpus, when the caller has
+    one, so a document that vanished as another appeared is matched by its
+    body; `moves` is git's record of renames, read only when a card's
+    document is nowhere and no title matches."""
     by_number = {c.number: c for c in cards}
     linked = _linked_stems(cards)
     card_of = {(c.link.kind, c.link.stem): c for c in cards if c.link}
@@ -146,7 +230,35 @@ def reconcile(index: CorpusIndex, cards: list[Card]) -> Effects:
     rehomed: list[Rehomed] = []
     archived: list[Archived] = []
     born: list[Born] = []
+    retitled: list[Retitled] = []
     claimed: set[tuple[DocumentKind, str]] = set()
+    git_moves: dict[str, str] | None = None
+
+    def unclaimed(test: Callable[[Document], bool]) -> Document | None:
+        return next((d for d in unlinked_docs if (d.kind, d.stem) not in claimed and test(d)), None)
+
+    def rename_of(link: DocumentLink) -> tuple[Document, str] | None:
+        """The document a card's vanished one became: by title first, then
+        by git's word, then by the body against the previous read."""
+        nonlocal git_moves
+        match = unclaimed(lambda d: follows_title(d, link))
+        if match is not None:
+            return match, "matched by title"
+        if moves is not None:
+            if git_moves is None:
+                git_moves = moves()
+            destination = moved_to(git_moves, link.path())
+            if destination is not None:
+                match = unclaimed(lambda d: d.path == destination)
+                if match is not None:
+                    return match, "git records the rename"
+        if previous is not None:
+            old = previous.find(link.kind, link.stem)
+            if old is not None:
+                match = unclaimed(lambda d: same_body(old, d))
+                if match is not None:
+                    return match, "its body is the one the board read before"
+        return None
 
     for card in cards:
         if card.link is None:
@@ -155,21 +267,19 @@ def reconcile(index: CorpusIndex, cards: list[Card]) -> Effects:
         if current is not None:
             if current.archived and not card.link.archived:
                 archived.append(Archived(card_number=card.number, document=ref(current)))
+            if card.origin != CardOrigin.IMPORTED and current.title != card.title:
+                retitled.append(
+                    Retitled(card_number=card.number, title=current.title, was=card.title)
+                )
             continue
-        match = next(
-            (
-                d
-                for d in unlinked_docs
-                if d.kind == card.link.kind
-                and d.title == card.link.title
-                and (d.kind, d.stem) not in claimed
-            ),
-            None,
-        )
-        if match is not None:
+        found = rename_of(card.link)
+        if found is not None:
+            match, how = found
             claimed.add((match.kind, match.stem))
             renamed.append(
-                Renamed(card_number=card.number, old_stem=card.link.stem, document=ref(match))
+                Renamed(
+                    card_number=card.number, old_stem=card.link.stem, document=ref(match), how=how
+                )
             )
 
     def names_its_card(document: Document) -> Card | None:
@@ -287,7 +397,9 @@ def reconcile(index: CorpusIndex, cards: list[Card]) -> Effects:
         wants_rail = document.suggestion_kind == SuggestionKind.DEFECT
         if in_rail != wants_rail:
             rehomed.append(
-                Rehomed(card_number=card.number, into_rail=wants_rail, kind=document.suggestion_kind)
+                Rehomed(
+                    card_number=card.number, into_rail=wants_rail, kind=document.suggestion_kind
+                )
             )
 
     # A card whose suggestion a plan takes over in this same read is not a
@@ -308,4 +420,5 @@ def reconcile(index: CorpusIndex, cards: list[Card]) -> Effects:
         rehomed=rehomed,
         archived=archived,
         born=born,
+        retitled=retitled,
     )

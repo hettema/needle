@@ -31,6 +31,7 @@ from infrastructure import clock
 from infrastructure.live import Live
 from infrastructure.paths import db_path
 from infrastructure.store import Store, StoreRefusal
+from runtime.git import corpus_renames
 from runtime.service import Runtime
 
 STREAM_KEEPALIVE_SECONDS = 15.0
@@ -101,7 +102,7 @@ def create_app(store: Store | None = None, *, dist: Path | None = FRONTEND_DIST)
     @asynccontextmanager
     async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         owned = store is None
-        live = Live(store or Store(db_path()))
+        live = Live(store or Store(db_path()), renames_of=corpus_renames)
         live.load()
         await live.start_watching()
         runtime = Runtime(live.store)

@@ -29,7 +29,9 @@ def board(store: Store, project: Project, card_file_01: dict[str, object]) -> St
 
 
 def effects(**parts) -> Effects:
-    base: dict = dict(renamed=[], relinked=[], folded=[], rehomed=[], archived=[], born=[])
+    base: dict = dict(
+        renamed=[], relinked=[], folded=[], rehomed=[], archived=[], born=[], retitled=[]
+    )
     base.update(parts)
     return Effects(**base)
 

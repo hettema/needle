@@ -30,7 +30,7 @@ from domain.call import Call
 from domain.card import Actor, Card, CardOrigin, DocumentLink, Place
 from domain.column import COLUMN_DEFINITIONS, DEFECTS_RAIL, DEFECTS_RAIL_POSITION, Column
 from domain.dial import Dial, DialChange, Filer, FixLane, FixStage, RailCount
-from domain.document import DocumentKind, DocumentRef, SuggestionKind
+from domain.document import DOCUMENT_FOLDER, DocumentKind, DocumentRef, SuggestionKind
 from domain.entrance import Entrance
 from domain.evidence import Evidence
 from domain.gate import Gate
@@ -448,7 +448,9 @@ class Store:
                 assert card is not None
                 card.link_stem = renamed.document.stem
                 card.link_title = renamed.document.title
-                card.link_archived = False
+                card.link_archived = renamed.document.path.startswith(
+                    DOCUMENT_FOLDER[renamed.document.kind] + "/done/"
+                )
                 if renamed.document.path not in card.citations:
                     card.citations = [*card.citations, renamed.document.path]
                 _audit(
@@ -461,7 +463,8 @@ class Store:
                     from_place=None,
                     to_place=None,
                     detail=f"Its document was renamed from {renamed.old_stem} to "
-                    f"{renamed.document.stem}; matched by title.",
+                    f"{renamed.document.stem}; {renamed.how}."
+                    + _retitle(card, renamed.document.title),
                 )
             for relinked in effects.relinked:
                 card = session.get(CardRow, (slug, relinked.card_number))
@@ -481,7 +484,8 @@ class Store:
                     kind=AuditKind.LINKED,
                     from_place=None,
                     to_place=None,
-                    detail=f"Linked to {relinked.document.path}, {relinked.why}.",
+                    detail=f"Linked to {relinked.document.path}, {relinked.why}."
+                    + _retitle(card, relinked.document.title),
                 )
                 if card.folded_into is not None:
                     # A plan naming a folded card by number wants that card
@@ -552,6 +556,23 @@ class Store:
                     from_place=None,
                     to_place=None,
                     detail=f"Its document was archived to {archived.document.path}.",
+                )
+            for retitled in effects.retitled:
+                card = session.get(CardRow, (slug, retitled.card_number))
+                assert card is not None
+                said = _retitle(card, retitled.title)
+                if not said:
+                    continue
+                _audit(
+                    session,
+                    slug,
+                    card.number,
+                    at=at,
+                    actor=Actor.CORPUS,
+                    kind=AuditKind.RETITLED,
+                    from_place=None,
+                    to_place=None,
+                    detail="Its document's title changed." + said,
                 )
             for birth in effects.born:
                 group = _landing_group(
@@ -1827,6 +1848,21 @@ def _rows_by_card(session: Session, slug: str, number: int | None = None) -> dic
     for row in session.scalars(query):
         out.setdefault(row.card_number, []).append(Row(kind=RowKind(row.kind), text=row.text))
     return out
+
+
+def _retitle(card: CardRow, title: str) -> str:
+    """The face follows the document (plan 08, item 1): a card born from the
+    corpus takes its document's title, and the history keeps the one it
+    read. Returns the sentence for the audit row, empty when nothing
+    changed. A card imported from 0.1 keeps its own title: that title was
+    the owner's words for the card, which no document ever held (74 of
+    Hello Revenue's 132 imported cards differ from their plan's title, and
+    the plans are the older, mechanism-named ones)."""
+    if card.origin == CardOrigin.IMPORTED.value or card.title == title:
+        return ""
+    was = card.title
+    card.title = title
+    return f' Its face now reads "{title}"; it read "{was}".'
 
 
 def _card_now(session: Session, slug: str, number: int) -> Card:

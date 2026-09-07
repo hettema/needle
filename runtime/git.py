@@ -122,6 +122,46 @@ def reverted(repo: str | Path, tip: str) -> bool:
     return bool(out and out.strip())
 
 
+CORPUS_FOLDERS = ("docs/plans", "docs/slice-suggestions")
+RENAME_LOG_DEPTH = 400
+"""How many commits back the corpus's renames are read: a card whose
+document vanished lost it recently, and a rename older than this is one the
+board followed long ago or never will."""
+_RENAME_LINE = re.compile(r"^R\d*\t(.+?)\t(.+)$")
+_STAGED_RENAME = re.compile(r"^R.\s+(.+?) -> (.+)$")
+
+
+def corpus_renames(checkout: str | Path) -> dict[str, str]:
+    """Every rename of a corpus document git knows, old path → new path
+    (plan 08, item 1): the commits on the checkout's history with git's own
+    rename detection, newest first so a path renamed twice maps to its
+    latest name, plus a rename staged and not yet committed. A file deleted
+    and another created without git seeing a rename is not here — that is
+    the body match's case, in `board/reconcile.py::same_body`."""
+    moves: dict[str, str] = {}
+    log = _try(
+        checkout,
+        "log",
+        "-M",
+        "--diff-filter=R",
+        "--name-status",
+        "--format=",
+        f"-n{RENAME_LOG_DEPTH}",
+        "--",
+        *CORPUS_FOLDERS,
+    )
+    for line in (log or "").splitlines():
+        match = _RENAME_LINE.match(line)
+        if match and match.group(1) not in moves:
+            moves[match.group(1)] = match.group(2)
+    porcelain = _try(checkout, "status", "--porcelain", "--untracked-files=no")
+    for line in (porcelain or "").splitlines():
+        match = _STAGED_RENAME.match(line)
+        if match:
+            moves[match.group(1)] = match.group(2)
+    return moves
+
+
 def tracked_changes(checkout: str | Path) -> list[str]:
     """Uncommitted changes to tracked files; untracked files are not work in progress."""
     porcelain = _try(checkout, "status", "--porcelain", "--untracked-files=no")

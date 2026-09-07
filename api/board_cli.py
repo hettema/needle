@@ -53,7 +53,7 @@ from infrastructure import clock
 from infrastructure.live import Live
 from infrastructure.paths import db_path
 from infrastructure.store import Store, StoreRefusal
-from runtime.git import GitFailed, arm_hooks_path
+from runtime.git import GitFailed, arm_hooks_path, corpus_renames
 from runtime.service import Runtime
 
 DEFAULT_URL = "http://127.0.0.1:8480"
@@ -72,7 +72,7 @@ Claude Code's default is 600 s."""
 
 def _board() -> tuple[Store, Live, Runtime, Loops, Doors]:
     store = Store(db_path())
-    live = Live(store)
+    live = Live(store, renames_of=corpus_renames)
     live.load()
     runtime = Runtime(store)
     loops = Loops(live, runtime)

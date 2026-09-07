@@ -52,11 +52,24 @@ WRITE_POLL_SECONDS = 1.0
 (plan 06, item 6): a session's `needle row` is on the page within this."""
 
 
+RenamesOf = Callable[[Path], dict[str, str]]
+"""What git knows about renames in a project's corpus, old path → new path;
+the runtime's reader, handed in by the door that composes the board, since
+the store's layer runs nothing (plan 08, item 1)."""
+
+
 def sweep(
-    store: Store, project: Project, *, origin: CardOrigin, at: datetime
+    store: Store,
+    project: Project,
+    *,
+    origin: CardOrigin,
+    at: datetime,
+    previous: CorpusIndex | None = None,
+    renames_of: RenamesOf | None = None,
 ) -> tuple[CorpusIndex, Effects]:
     index = scan(Path(project.path), at)
-    effects = reconcile(index, store.cards(project.slug))
+    moves = (lambda: renames_of(Path(project.path))) if renames_of is not None else None
+    effects = reconcile(index, store.cards(project.slug), previous=previous, moves=moves)
     if not effects.empty():
         store.apply_effects(project.slug, effects, origin=origin, at=at)
     return index, effects
@@ -74,9 +87,15 @@ class LiveProject:
 
 
 class Live:
-    def __init__(self, store: Store, now: Callable[[], datetime] = clock.now):
+    def __init__(
+        self,
+        store: Store,
+        now: Callable[[], datetime] = clock.now,
+        renames_of: RenamesOf | None = None,
+    ):
         self.store = store
         self.now = now
+        self.renames_of = renames_of
         self.version = 0
         self.projects: dict[str, LiveProject] = {}
         self.closing = False
@@ -103,7 +122,13 @@ class Live:
         for project in self.store.projects():
             if project.slug in self.projects:
                 continue
-            index, effects = sweep(self.store, project, origin=CardOrigin.ARRIVED, at=self.now())
+            index, effects = sweep(
+                self.store,
+                project,
+                origin=CardOrigin.ARRIVED,
+                at=self.now(),
+                renames_of=self.renames_of,
+            )
             self.projects[project.slug] = LiveProject(project, index)
             added.append(project.slug)
             if not effects.empty():
@@ -206,7 +231,14 @@ class Live:
 
     def rescan(self, slug: str) -> Effects:
         live = self._live(slug)
-        index, effects = sweep(self.store, live.project, origin=CardOrigin.ARRIVED, at=self.now())
+        index, effects = sweep(
+            self.store,
+            live.project,
+            origin=CardOrigin.ARRIVED,
+            at=self.now(),
+            previous=live.index,
+            renames_of=self.renames_of,
+        )
         live.index = index
         self.bump()
         return effects

@@ -140,6 +140,7 @@ def test_births_land_last_in_the_unnamed_group_and_number_onward(
         folded=[],
         rehomed=[],
         archived=[],
+        retitled=[],
         born=[
             Born(
                 document=DocumentRef(
@@ -185,6 +186,7 @@ def test_births_land_last_in_the_unnamed_group_and_number_onward(
             folded=[],
             rehomed=[],
             archived=[],
+            retitled=[],
             born=[
                 Born(
                     document=DocumentRef(
@@ -218,6 +220,7 @@ def test_renames_relinks_and_archives_move_the_link_and_leave_a_row(
                     path="docs/plans/renamed.md",
                     title="The waiting list offers every berth that fits",
                 ),
+                how="matched by title",
             )
         ],
         relinked=[
@@ -248,6 +251,7 @@ def test_renames_relinks_and_archives_move_the_link_and_leave_a_row(
             )
         ],
         born=[],
+        retitled=[],
     )
     store.apply_effects("proj", effects, origin=CardOrigin.ARRIVED, at=NOW)
     renamed = store.card("proj", 196)

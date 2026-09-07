@@ -17,8 +17,13 @@ class AuditKind(StrEnum):
     MOVED = "moved"
     LINKED = "linked"
     RENAMED = "renamed"
+    RETITLED = "retitled"
+    """The card's document changed its title and the face followed (plan 08, item 1)."""
     ARCHIVED = "archived"
     RETIRED = "retired"
+    """A number that is no longer a card: 0.1's retired numbers, and a card
+    retired into another whose document its own was renamed into before the
+    board could follow the rename (plan 08, item 1)."""
     STARTED = "started"
     """A lane was launched for the card."""
     ROW = "row"

@@ -33,6 +33,7 @@ from infrastructure.entrance import read_entrance
 from infrastructure.live import Live, sweep
 from infrastructure.paths import db_path
 from infrastructure.store import Store, StoreRefusal
+from runtime.git import corpus_renames
 
 DEFAULT_PORT = 8480
 CARD_FILE_01 = Path("docs/board/needle-board.json")
@@ -74,7 +75,9 @@ def reread(store: Store, project: Project, root: Path) -> int:
     print(f"{root} is already on the board as {project.slug} ({project.name}).")
     if (root / CARD_FILE_01).is_file():
         print("Its 0.1 card file was imported at registration and is not read again.")
-    index, effects = sweep(store, project, origin=CardOrigin.ARRIVED, at=clock.now())
+    index, effects = sweep(
+        store, project, origin=CardOrigin.ARRIVED, at=clock.now(), renames_of=corpus_renames
+    )
     print(describe_read(index, effects))
     say_entrance(store, project.slug)
     return 0
@@ -143,7 +146,9 @@ def _register(store: Store, root: Path, args: argparse.Namespace, database: Path
                 f"  Skipped #{ask.number} ({ask.alarm}): 0.1's own ask, stated as a count instead."
             )
 
-    index, effects = sweep(store, project, origin=CardOrigin.FOUNDING, at=clock.now())
+    index, effects = sweep(
+        store, project, origin=CardOrigin.FOUNDING, at=clock.now(), renames_of=corpus_renames
+    )
     print(describe_read(index, effects))
     say_entrance(store, project.slug)
     print(f"Store: {database}")

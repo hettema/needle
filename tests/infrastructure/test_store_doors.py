@@ -307,6 +307,7 @@ def test_a_document_naming_its_conversation_is_born_from_it(board: Store):
             folded=[],
             rehomed=[],
             archived=[],
+            retitled=[],
             born=[
                 Born(
                     document=DocumentRef(
