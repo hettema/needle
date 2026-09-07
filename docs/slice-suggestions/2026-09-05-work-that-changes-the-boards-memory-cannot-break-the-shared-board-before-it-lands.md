@@ -1,8 +1,9 @@
-# A lane that carries a migration cannot break the shared store before it folds
+# Work that changes the board's memory cannot break the shared board before it lands
 
 **Kind:** defect
 **Fix:** now
 **Found by:** the lane on card #51 (docs/plans/2026-09-05-17-asking-a-colleague-takes-a-minute-not-ten-and-nobody-waits-blind.md), in the review's seams pass
+**Formerly:** A lane that carries a migration cannot break the shared store before it folds (retitled 2026-09-07 to the bar docs/plans/README.md sets, card #74 on Needle)
 
 ## Observation
 

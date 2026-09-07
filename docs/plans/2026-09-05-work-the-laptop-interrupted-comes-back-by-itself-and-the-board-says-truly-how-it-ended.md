@@ -1,4 +1,4 @@
-# A lane the machine ended comes back by itself once the reason has passed, and the board's word on how a lane ended is true
+# Work the laptop interrupted comes back by itself, and the board says truly how it ended
 
 **Carries:** docs/slice-suggestions/2026-09-05-a-lane-the-machine-ended-is-resumed-by-the-machine-once-the-reason-has-passed.md, docs/slice-suggestions/2026-09-04-a-lane-that-folded-cleanly-is-reported-as-having-died.md, docs/slice-suggestions/2026-09-04-the-board-asks-for-a-rescue-on-work-it-recorded-as-done.md, docs/slice-suggestions/2026-09-04-nothing-moves-a-walled-lane.md
 **Found by:** the owner, from the board's Idea door on 2026-09-05 (conversation 6b683c8b), reading four defects about one mechanism
@@ -6,6 +6,7 @@
 **Written:** 2026-09-05. Four suggestions, three finders, two days, one mechanism: what the lane loop remembers about how a lane ended, and what it does with the memory. #31 (2026-09-04) found that no actor moved a walled lane; the actor exists now (`api/loops.py::_rescue` moves on the handoff, and tonight's card histories read "Moved to fable on hrme"), so what is left of #31 is its second finding, a handoff file nothing consumes. #33 found the rescue asking the owner for a hand on finished work, because a wall never stops being true. #32 found the death reason written at first sight and never revised, a fold reported as a death, and two memories kept in one process's head. #68 found that after the one automatic retry nothing revives a lane the machine ended, though every cause has an end the machine can read: eight Hello Revenue cards sat ended for up to six hours through a wall reset nobody was awake for. Each was marked `now` on its own; together they are one plan, so one lane reads the loop once and fixes the class.
 **Effort gate:** high — every piece is inside `api/loops.py` and `board/lane.py` with a fixture; the judgment is the rule's shape: once per cause, a park with an end, and never a guess at why a lane died.
 **Sequencing:** after #53 (a resume that lands in the daemon scope rebuilds the pile that killed four lanes in one second tonight; #53's plan keeps a revived lane in its own scope and stops admitting when the machine is full, and this plan's resume goes through that gate).
+**Formerly:** A lane the machine ended comes back by itself once the reason has passed, and the board's word on how a lane ended is true (retitled 2026-09-07 to the bar docs/plans/README.md sets, card #74 on Needle)
 
 ## Intent
 

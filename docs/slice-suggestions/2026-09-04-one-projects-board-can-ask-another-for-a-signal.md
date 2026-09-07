@@ -1,4 +1,4 @@
-# Cross-repo knowledge sharing: one board asks another for a signal
+# One project's board can ask another for a signal
 
 **Found by:** the owner, 2026-09-04, reasoning about two repos that hold
 something similar: "One repo being able to query another repo to see if it
@@ -8,6 +8,7 @@ believes." And: "I guess it's a feature that needs some way to turn repos
 on/off to be included in cross repo knowledge sharing."
 **Kind:** idea
 **Fix:** his
+**Formerly:** Cross-repo knowledge sharing: one board asks another for a signal (retitled 2026-09-07 to the bar docs/plans/README.md sets, card #74 on Needle)
 
 ## Observation
 

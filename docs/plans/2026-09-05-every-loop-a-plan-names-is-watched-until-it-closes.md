@@ -1,4 +1,4 @@
-# 16 — Every loop a plan names is watched until it closes
+# Every loop a plan names is watched until it closes
 
 **Found by:** the owner, 2026-09-05, in the close conversation of Hello Revenue's card #403 (session 01UCkn75A1juj6pzhFP6feBz): "we have a watcher that watches automatically? after a bunch of cards have completed we close the loop automatically?" — and, on hearing the root cause: "sounds good, lets do it."
 **Carries:** docs/slice-suggestions/2026-09-05-a-loop-cannot-close-itself-the-moment-it-is-written.md, docs/slice-suggestions/2026-09-05-a-watch-row-the-reader-cannot-run-is-accepted-at-the-close.md — two refusals at the same door, folded from the board's Idea door on 2026-09-05 (conversation 6b683c8b): a `command` or `url` row with no `expect` states no observation, and a reader that cannot run at the close fails a day later when nobody reads the error.
@@ -6,6 +6,7 @@
 **Written:** 2026-09-05. The machine's card 12 wrote three loops into its plan — the allowance lasting the week, `search` earning a cheaper model after twenty folds with redo under one in ten, `execution` after it — and closed with one WATCH row and a WAITS row for the rest. The close door was satisfied: it asks for a signal per card, and a plan has a loop per thesis. Nothing counts the twenty folds; nothing reads the HANDED OUT rows across cards (card #403's already says "general-purpose dispatched and never named", the evidence that would name the next role, and nobody reads it). The guard holds "a card has a signal", not "every loop the plan stated has one".
 **Effort gate:** high — the mechanics are small and shaped like plan 12's `Hands out:` (a line the parser reads, a stance the close requires, a verb that tables the rows); the judgment is in keeping a loop one line a plan already owes in prose, never a form, and in making the close write the signals from the plan so a session under close pressure cannot park a loop as a wish.
 **Sequencing:** after 12 (the `Hands out:` reader and the HANDED OUT row, both live) and 13 (the item reader — a `Loop:` line is read beside an item the way a handout is). Beside the machine's sibling card, "the plan shape is taught once, for every project", which moves the teaching of this grammar into one shared skill; this plan is the enforcement, that one the teaching, and each is whole without the other. Plan 14 (#30) layers its rules on this grammar and sequences after this card; plan 15 (#41) adds a call beside it in `api/loops.py` and holds nothing.
+**Formerly:** 16 — Every loop a plan names is watched until it closes (retitled 2026-09-07 to the bar docs/plans/README.md sets, card #74 on Needle)
 
 ## Intent
 

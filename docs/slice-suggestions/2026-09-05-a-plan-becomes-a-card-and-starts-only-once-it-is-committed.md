@@ -1,8 +1,9 @@
-# A plan is carded and its lane started before the plan is committed
+# A plan becomes a card and starts only once it is committed
 
 **Kind:** defect
 **Fix:** now — the planning brief already states the intent ("the board cards the plan the moment it lands", `board/brief.py`), and every lane brief assumes the lane's worktree carries the plan its card reads; the fix is one gate on the dial's start — the plan's path is in the main checkout's HEAD (or in `origin/develop`) — and it removes the class, not the instance.
 **Found by:** the owner's session on 2026-09-05, reading the board's "not level with origin/develop" notice while auto-fix ran on Hello Revenue; card #405 there is the instance.
+**Formerly:** A plan is carded and its lane started before the plan is committed (retitled 2026-09-07 to the bar docs/plans/README.md sets, card #74 on Needle)
 
 ## Observation
 

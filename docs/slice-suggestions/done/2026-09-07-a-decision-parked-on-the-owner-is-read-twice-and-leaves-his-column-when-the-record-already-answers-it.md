@@ -1,6 +1,6 @@
 # A decision parked on the owner is read twice, and leaves his column when the record already answers it
 
-**Carried by:** docs/plans/2026-09-07-a-decision-parked-on-the-owner-is-read-twice-and-leaves-his-column-when-the-record-already-answers-it.md — planned on 2026-09-07 at the owner's word ("if you can close the loop mechanically, let's close it"), with a cold read of another make folded in
+**Carried by:** docs/plans/2026-09-07-a-decision-parked-on-you-leaves-your-column-when-the-record-already-answers-it.md — planned on 2026-09-07 at the owner's word ("if you can close the loop mechanically, let's close it"), with a cold read of another make folded in
 
 **Kind:** defect
 **Fix:** now — the intent is written (HOW-WE-WORK §1: "a decision nobody has read twice belongs to nobody yet", and the test in the owner's words; §11: a board the owner has to move by hand lies while he is away), the reading that applies the test already exists for a defect's mark (`board/triage.py`, plan 59) and only its ground widens, and the fix removes a class — every card parked on him on every board, now and later — rather than sweeping one column once as plan 05 did on 2026-09-04

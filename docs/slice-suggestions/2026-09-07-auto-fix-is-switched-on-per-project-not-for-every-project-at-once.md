@@ -1,8 +1,9 @@
-# The auto-fix dial runs for the board you are looking at, not every board at once
+# Auto-fix is switched on per project, not for every project at once
 
 **Kind:** idea
 **Fix:** now — the owner ruled it on 2026-09-07 (below), and HOW-WE-WORK §11 already says which project's work enters execution is his ruling while how much the machine can hold is a machine fact; the fix is one field on the dial's setting (the project it is on for) with the memory floor and the lane ceiling left machine-wide, which removes the class — a dial that spends the machine on a board he is not looking at — rather than adding a filter to one beat
 **Found by:** the owner, on 2026-09-07, after the laptop had been pushed past its memory twice: "when auto fix is running, I want it to run for the selected needle, not across needles."
+**Formerly:** The auto-fix dial runs for the board you are looking at, not every board at once (retitled 2026-09-07 to the bar docs/plans/README.md sets, card #74 on Needle)
 
 ## Observation
 

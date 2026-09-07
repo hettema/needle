@@ -1,8 +1,9 @@
-# A shipped card's brief names a plan path that no longer exists
+# A shipped card's brief names only paths that exist
 
 **Kind:** defect
 **Fix:** now — HOW-WE-WORK §14 says "the plan is archived and every citation follows it", and the brief's `also:` line is the board's own citation list; the fix is in `board/assemble.py`'s `other_citations` (or wherever a card's citations are resolved): a citation whose stem is the archived document's is the same document and is dropped, not shown as a second file — which holds every shipped card on every project rather than one
 **Found by:** the review on Omarchy card #25 (`omarchy-machine/docs/reviews/2026-09-07-25-codex-on-a-key-beside-claude.md`), 2026-09-07
+**Formerly:** A shipped card's brief names a plan path that no longer exists (retitled 2026-09-07 to the bar docs/plans/README.md sets, card #74 on Needle)
 
 ## Observation
 

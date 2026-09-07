@@ -1,8 +1,9 @@
-# A lane the board opened and nobody closes leaves nothing behind
+# A short job the board opened for itself is cleaned up when it ends
 
 **Kind:** defect
 **Fix:** now `CLAUDE.md`'s close ritual already says the lane is removed at the close, and a lane no person ever closes is the one case where nothing carries that out
 **Found by:** the lane on card #59 (docs/plans/2026-09-05-a-defects-mark-is-verified-before-it-routes.md), in the review's seams pass
+**Formerly:** A lane the board opened and nobody closes leaves nothing behind (retitled 2026-09-07 to the bar docs/plans/README.md sets, card #74 on Needle)
 
 ## Observation
 

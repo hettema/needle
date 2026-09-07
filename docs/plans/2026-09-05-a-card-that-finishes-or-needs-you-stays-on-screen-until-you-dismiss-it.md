@@ -1,10 +1,11 @@
-# 15 — A card that finishes or needs you rings, and stays on screen until you dismiss it
+# A card that finishes or needs you stays on screen until you dismiss it
 
 **Found by:** the owner, from the board's Idea door on 2026-09-04 (conversation 1ae6dcc3)
 **Status:** PENDING
 **Written:** 2026-09-05, from the owner at Needle's Idea door: "can we play a sound and show a notification I have to dismiss when a card finishes executing?" He agreed with the shape proposed back — the popup says where the card went and why, carries one button that puts the board in front of him, and a running card that asks him a question rings the same bell — and asked for the card in Up next.
 **Effort gate:** low — one runtime door, one audit kind, and a call at the two places the board already decides the thing worth telling him. The judgment is which moments ring, and that is ruled below; everything else has a fixture.
 **Sequencing:** beside 14 (both add a call in `api/loops.py`; 14 counts signals, this one tells him at the machine move; no function is shared). Nothing else waits on it.
+**Formerly:** 15 — A card that finishes or needs you rings, and stays on screen until you dismiss it (retitled 2026-09-07 to the bar docs/plans/README.md sets, card #74 on Needle)
 
 ## Intent
 

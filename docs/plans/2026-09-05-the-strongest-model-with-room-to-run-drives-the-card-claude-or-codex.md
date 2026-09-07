@@ -1,4 +1,4 @@
-# The strongest model with headroom drives the card, whatever its make
+# The strongest model with room to run drives the card, Claude or Codex
 
 **Carries:** docs/slice-suggestions/2026-09-05-every-rung-is-a-claude-one-so-sol-can-be-asked-but-never-given-the-wheel.md
 **Found by:** the owner, from the board's Idea door on 2026-09-05 (conversation a4386ba3)
@@ -6,6 +6,7 @@
 **Written:** 2026-09-05, from Dennis: "most of our claude accounts are out of fable credits, only one left. But we have a lot of headroom with codex sol. When fable runs out, can Sol be selected as the driver of a card instead of opus? And can we make it so that if other fable/sol level models pop up, we can let them drive cards?" — and, told that #63 waited on two rulings: "it's not just about metering, it's also about having the strongest model steer. Opus is not as strong as fable or sol I'd say."
 **Effort gate:** high — the launch, the scope and the fold are transcriptions of what a Claude lane already does and what a called Codex worker already gets; the judgment is in what the board honestly shows for a make that has no wall, no rung-walk and no fork, and in keeping the tier a dated ruling the evidence can move rather than a fact the code asserts.
 **Sequencing:** none as a hold. #58 (the composition router) can only assign a hand the runtime can execute, so this card is its prerequisite, not its dependant. The machine's half — one rule ranking tiers across makes and reading Codex's headroom — is a card on the Omarchy board written after item 1 here ships, because a rule that names a rung nothing can execute is a rule that lies (#63).
+**Formerly:** The strongest model with headroom drives the card, whatever its make (retitled 2026-09-07 to the bar docs/plans/README.md sets, card #74 on Needle)
 
 ## Intent
 

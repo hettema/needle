@@ -1,4 +1,4 @@
-# `ruff check` does not pass, so it cannot be a gate
+# The code style check passes, so it can refuse a commit
 
 **Found by:** card #27's lane (the colour language), 2026-09-04, in the review's
 boundary pass. `uv run ruff check .` reported 27 errors on the lane's base
@@ -6,6 +6,7 @@ commit (`16a8023`) and 25 after it — this lane introduced none and incidentall
 cleared two.
 **Kind:** defect
 **Fix:** now
+**Formerly:** `ruff check` does not pass, so it cannot be a gate (retitled 2026-09-07 to the bar docs/plans/README.md sets, card #74 on Needle)
 
 ## Observation
 

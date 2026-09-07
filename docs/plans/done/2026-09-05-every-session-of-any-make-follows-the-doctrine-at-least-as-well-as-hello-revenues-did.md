@@ -131,4 +131,4 @@ We think rebuilding the one text on Hello Revenue's shape with its verification 
 - omarchy-machine: `1cabeb0:home/.claude/CLAUDE.md` (the former global file, for what Hello Revenue's head assumed), `home/.claude/settings.json` (global Claude hooks), `home/.codex/hooks.json` (global Codex hooks), `docs/codex-on-this-machine.md` (the events Codex fires), its `CLAUDE.md` (read before anything under `home/` is touched; nothing there is touched here)
 - `hooks/needle_hook.py`, `tests/ratchets/test_one_rule_one_hook.py` (the seam a prompt-time re-anchor reconciles with)
 - `docs/reviews/` (Needle's baseline), `~/.cache/omarchy/claude-acct/discussion/` (the cross-make notes: Codex's `from-claude-shared-organisation-prerequisite.md` §4 is the first observation of this defect)
-- `docs/plans/2026-09-05-16-every-loop-a-plan-names-is-watched-until-it-closes.md` (live as this is written) and `docs/plans/README.md` (the loop and WATCH grammar the board reads)
+- `docs/plans/2026-09-05-every-loop-a-plan-names-is-watched-until-it-closes.md` (live as this is written) and `docs/plans/README.md` (the loop and WATCH grammar the board reads)

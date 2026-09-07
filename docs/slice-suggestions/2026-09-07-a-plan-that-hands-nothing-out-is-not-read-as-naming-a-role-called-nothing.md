@@ -1,8 +1,9 @@
-# A plan that says it hands nothing out is not read as handing out to a role called nothing
+# A plan that hands nothing out is not read as naming a role called nothing
 
 **Kind:** defect
 **Fix:** now — `docs/plans/README.md` says an item that is judgment hands nothing out and that silence means Fable, so a `Hands out:` sentence whose object is nothing (or none) states that same intent in words and names no role; the fix is inside `board/parse.py::handouts_of` and its `_handout` reader and removes the class: every plan that writes the sentence out reads as naming no handout, so no card carries a false undefined-role notice and no close writes a false named-and-never-dispatched cell
 **Found by:** #36's reading, 2026-09-07
+**Formerly:** A plan that says it hands nothing out is not read as handing out to a role called nothing (retitled 2026-09-07 to the bar docs/plans/README.md sets, card #74 on Needle)
 
 ## Observation
 

@@ -1,10 +1,11 @@
-# Real card titles reached the public repository through the design comps
+# Real card titles never reach the public repository
 
 **Kind:** defect
 **Fix:** now
 **Found by:** the lane on card #26 (plan 10), running the suite after rebasing
 onto `origin/develop` and finding the synthetic-fixture ratchet red on develop
 itself, from commit `16a8023` (2026-09-04).
+**Formerly:** Real card titles reached the public repository through the design comps (retitled 2026-09-07 to the bar docs/plans/README.md sets, card #74 on Needle)
 
 ## Observation
 

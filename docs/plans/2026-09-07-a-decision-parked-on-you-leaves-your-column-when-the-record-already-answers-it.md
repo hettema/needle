@@ -1,4 +1,4 @@
-# A decision parked on the owner is read twice, and leaves his column when the record already answers it
+# A decision parked on you leaves your column when the record already answers it
 
 **Carries:** docs/slice-suggestions/done/2026-09-07-a-decision-parked-on-the-owner-is-read-twice-and-leaves-his-column-when-the-record-already-answers-it.md
 **Status:** NEW — planned, not started; placed in Up next by the owner on 2026-09-07, after admission, comprehension and recovery.
@@ -6,6 +6,7 @@
 **Effort gate:** high — the code widens one reading and adds one door (`api/dial.py`'s reading loop, `board/triage.py`'s results, `api/doors.py`'s act on a result); the judgment is the rule for what may leave the owner's attention, settled in the Rulings and held by a test, and a reading that gets it wrong takes a decision from him silently, which is the one failure this board exists to prevent.
 **Sequencing:** after #75 (the result's words on the card face take #75's shape, and the reading's vocabulary is #74's file); #53 and #68 are not holds, but the owner placed this after them.
 **Class:** a test refuses any result that lets a card leave the column while a commitment on it is unaccounted for, and the fourteen-day audit by a reader of another make is a WATCH row on this card; a wrong exit is loud within two weeks, never silent.
+**Formerly:** A decision parked on the owner is read twice, and leaves his column when the record already answers it (retitled 2026-09-07 to the bar docs/plans/README.md sets, card #74 on Needle)
 
 ## Intent
 

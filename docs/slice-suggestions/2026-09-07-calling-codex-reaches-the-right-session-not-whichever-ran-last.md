@@ -1,8 +1,9 @@
-# A warm call resumes whatever Codex session was last, including its effort and its half-spawned threads
+# Calling Codex reaches the right session, not whichever ran last
 
 **Kind:** defect
 **Fix:** now — a call that answers nothing costs the caller ten minutes of wait and the doctrine says a call is the one way to ask a colleague; the class is "the colleague a call reaches is chosen by recency, not fitness"
 **Found by:** the allowance-glance session on slot eduard, 2026-09-07 (calls 5 and 6, `~/.cache/omarchy/claude-acct/discussion/from-allowance-glance-eduard.md`)
+**Formerly:** A warm call resumes whatever Codex session was last, including its effort and its half-spawned threads (retitled 2026-09-07 to the bar docs/plans/README.md sets, card #74 on Needle)
 
 `needle call codex <note>` resumed the most recent Codex session, 01a07bb6,
 a card-73 lane whose header says `reasoning effort: none`. It read the note,

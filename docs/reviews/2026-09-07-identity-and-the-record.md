@@ -44,6 +44,6 @@ The review runs as a loop (`CLAUDE.md`): each pass one lens, the fixes landed, t
 
 ## Not done, stated
 
-- The full suite on the levelled tree before the fold was 505 passed and one failure that was the trunk's own: a docs commit from the main checkout (379b6ce) quoted five real Hello Revenue card titles; filed as `docs/slice-suggestions/2026-09-07-a-suggestion-that-quotes-real-card-titles-is-refused-before-it-reaches-the-public-trunk.md`, and the owner's session redacted the instance in 20f6a33 before this lane folded; the ratchets are green on the fold.
+- The full suite on the levelled tree before the fold was 505 passed and one failure that was the trunk's own: a docs commit from the main checkout (379b6ce) quoted five real Hello Revenue card titles; filed as `docs/slice-suggestions/2026-09-07-a-suggestion-that-quotes-real-card-titles-is-refused-before-it-reaches-the-public-repository.md`, and the owner's session redacted the instance in 20f6a33 before this lane folded; the ratchets are green on the fold.
 - Hello Revenue's morning note still reads plans only: its run is a GitHub Actions job and the board runs on the owner's laptop (ruling 6). The verb and the route are what it would read.
 - Hello Revenue's archive gate still stances acceptance criteria in a block of its own (ruling 4); whether that list goes is the owner's.

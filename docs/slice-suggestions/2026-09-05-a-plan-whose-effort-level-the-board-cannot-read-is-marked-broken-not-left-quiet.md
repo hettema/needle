@@ -1,8 +1,9 @@
-# A gate the board cannot read is a quiet pill, not a count
+# A plan whose effort level the board cannot read is marked broken, not left quiet
 
 **Found by:** the session writing Hello Revenue's card #411 on 2026-09-05 (conversation bbd1dd9c), reading `board/assemble.py` to decide whether Hello Revenue's effort-gate ratchet can retire into the board's door.
 **Kind:** defect
 **Fix:** now
+**Formerly:** A gate the board cannot read is a quiet pill, not a count (retitled 2026-09-07 to the bar docs/plans/README.md sets, card #74 on Needle)
 
 ## Observation
 

@@ -175,9 +175,9 @@ path is proved on the floor; none has run on his own rail, and this close does
 not pretend otherwise.
 
 **Two findings filed rather than fixed** —
-`docs/slice-suggestions/2026-09-05-a-lane-the-board-opened-and-nobody-closes-leaves-nothing-behind.md`
+`docs/slice-suggestions/2026-09-05-a-short-job-the-board-opened-for-itself-is-cleaned-up-when-it-ends.md`
 (`Fix: now`) and
-`docs/slice-suggestions/2026-09-05-one-word-names-two-different-things-on-the-board.md`
+`docs/slice-suggestions/2026-09-05-one-word-never-names-two-different-things-on-the-board.md`
 (`Fix: his`). Both are on the rail as cards, and both are now `needs triage`
 under the rule this card shipped, which is the first thing it proves about
 itself.

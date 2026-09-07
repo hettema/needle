@@ -1,4 +1,4 @@
-# Two processes can birth the same card number
+# A card number is never given twice, whoever births the card
 
 **Found by:** card #16's lane (plan 06), 2026-09-04, reading the served board's
 journal while changing `apply_effects`: at 16:29:13 the server's `/api/projects`
@@ -7,6 +7,7 @@ cards.project_slug, cards.number` inside `Store.apply_effects`, on the birth
 of a card whose number another process had just used.
 **Kind:** defect
 **Fix:** now
+**Formerly:** Two processes can birth the same card number (retitled 2026-09-07 to the bar docs/plans/README.md sets, card #74 on Needle)
 
 ## Observation
 

@@ -131,7 +131,7 @@ lens, the fixes landed, and the next pass re-read the fixed work.
     them cleared by it in passing. A check nobody can pass is a check nobody
     runs, and the suite does not run it, so nothing catches the drift. OUTSIDE
     THE CHANGE: filed as
-    `docs/slice-suggestions/2026-09-04-ruff-does-not-pass-so-it-cannot-be-a-gate.md`,
+    `docs/slice-suggestions/2026-09-04-the-code-style-check-passes-so-it-can-refuse-a-commit.md`,
     `Kind: defect`, with the before/after counts as its evidence and a
     two-step fix. Not fixed here — a formatting sweep across the repository is
     exactly the scope creep the effort gate warns about.

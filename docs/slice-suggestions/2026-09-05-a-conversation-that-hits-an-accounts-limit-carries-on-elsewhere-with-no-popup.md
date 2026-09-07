@@ -1,10 +1,11 @@
-# A door window is never handed off at a wall; the owner gets a popup instead
+# A conversation that hits an account's limit carries on elsewhere, with no popup
 
 **Kind:** defect
 **Fix:** now
 **Found by:** the owner, from a session on gmail (2026-09-05 03:30), after the
 Idea-door conversation a2d30083 on Needle hit hrclaude's session limit and
 stopped dead with a popup saying "not launched via claude-acct".
+**Formerly:** A door window is never handed off at a wall; the owner gets a popup instead (retitled 2026-09-07 to the bar docs/plans/README.md sets, card #74 on Needle)
 
 ## Observation
 

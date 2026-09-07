@@ -1,8 +1,9 @@
-# A fix lane that files its own third ring is counted as undone
+# A fix that files what it found outside its change still counts as done
 
 **Found by:** the owner, from the board's Idea door on 2026-09-05 (conversation a2d30083), watching the dial's first night on Hello Revenue: the first fix lane to fold, #377, was reported by `needle fixes all` as *undone* ten minutes after a clean fold.
 **Kind:** defect
 **Fix:** now — plan 11's item 6 is the written intent (*undone* means "a defect filed against it or its fold reverted since"), and its own cycle says a lane's third-ring findings go to the board by design; the fix is inside `api/dial.py::fixes` and the report it fills; it removes the class — every fix lane that files what it found — not the one card.
+**Formerly:** A fix lane that files its own third ring is counted as undone (retitled 2026-09-07 to the bar docs/plans/README.md sets, card #74 on Needle)
 
 ## Observation
 

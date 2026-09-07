@@ -1,8 +1,9 @@
-# One word names two different things on the board
+# One word never names two different things on the board
 
 **Kind:** defect
 **Fix:** his one of the two surfaces is already shipped and its name is on a URL and in the page's own language, so which word moves is a call about what the owner reads, not a call the code can make
 **Found by:** the lane on card #59 (docs/plans/2026-09-05-a-defects-mark-is-verified-before-it-routes.md), in the review's boundaries pass
+**Formerly:** One word names two different things on the board (retitled 2026-09-07 to the bar docs/plans/README.md sets, card #74 on Needle)
 
 ## Observation
 

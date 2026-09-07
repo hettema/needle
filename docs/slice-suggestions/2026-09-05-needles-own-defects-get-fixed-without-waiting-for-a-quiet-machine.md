@@ -1,8 +1,9 @@
-# Needle's own defects wait for a quiet machine that may never come
+# Needle's own defects get fixed without waiting for a quiet machine
 
 **Kind:** idea
 **Fix:** his — whether a moment's risk to running work is worth more than Needle's rail draining; decided at the ten-lane look on card #34
 **Found by:** the owner, at the close of card #34 (plan 11) on 2026-09-05, asking whether the rule "Needle's own defects run only when no lane is live on any project" means developing Needle is unstable for the other projects on the board.
+**Formerly:** Needle's own defects wait for a quiet machine that may never come (retitled 2026-09-07 to the bar docs/plans/README.md sets, card #74 on Needle)
 
 ## Observation
 

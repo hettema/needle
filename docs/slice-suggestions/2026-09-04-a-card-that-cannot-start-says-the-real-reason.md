@@ -1,10 +1,11 @@
-# A closed Start door names the wrong cause
+# A card that cannot start says the real reason
 
 **Kind:** defect
 **Fix:** now
 **Found by:** work-0c on the Omarchy board (2026-09-04), when Dennis could not
 start card #7 and the card's own sentence sent us both to look at its column,
 which was not the problem.
+**Formerly:** A closed Start door names the wrong cause (retitled 2026-09-07 to the bar docs/plans/README.md sets, card #74 on Needle)
 
 ## Observation
 

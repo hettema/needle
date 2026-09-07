@@ -41,7 +41,7 @@ that ceremony, and the ratchet keeps it honest.*
 *Traced by:* the plan's `Met:` and `Deviated:` lines and the review record, presented on the card at the close; nothing guarantees they are read. The close itself is one act or refused, `api/doors.py::close`.
 
 ## 7. We live in iterations, and a loop is a thesis
-*Undefended until:* docs/plans/2026-09-05-16-every-loop-a-plan-names-is-watched-until-it-closes.md by 2026-09-19 — every loop a plan names is watched by the board until it closes, and a loop that never closed is shown as a belief.
+*Undefended until:* docs/plans/2026-09-05-every-loop-a-plan-names-is-watched-until-it-closes.md by 2026-09-19 — every loop a plan names is watched by the board until it closes, and a loop that never closed is shown as a belief.
 
 ## 8. Verify, don't assume — and the answer is usually there
 *Traced by:* the `[verification]` findings in every review record — a claim with no source, a hedge shipped as a fact, a primitive built beside an existing one — which the review's boundaries pass reads for by name and the loop on card #60 counts per carded close, read by the session at the tenth close after its fold against Hello Revenue's rate over the same window (`docs/plans/done/2026-09-05-every-session-of-any-make-follows-the-doctrine-at-least-as-well-as-hello-revenues-did.md`, its Loop); the one clause held is that every finding says its class, `tests/ratchets/test_every_finding_says_its_class.py`. The section is read back into a session verbatim on the word "backbrief" (`hooks/needle_hook.py`), which is delivery, not a hold: a session that has stopped checking reads like one that has not, and only the count says which.

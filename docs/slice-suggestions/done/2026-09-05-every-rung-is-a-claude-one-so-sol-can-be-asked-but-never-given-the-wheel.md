@@ -1,6 +1,6 @@
 # Every rung is a Claude one, so Sol can be asked but never given the wheel
 
-**Carried by:** docs/plans/2026-09-05-the-strongest-model-with-headroom-drives-the-card-whatever-its-make.md — both rulings the `his` mark waited on were made in the Idea door on 2026-09-05 (conversation a4386ba3): a make the board cannot fully instrument may hold the wheel, and the ladder is a quality tier, so a top-tier rung of any make outranks Opus.
+**Carried by:** docs/plans/2026-09-05-the-strongest-model-with-room-to-run-drives-the-card-claude-or-codex.md — both rulings the `his` mark waited on were made in the Idea door on 2026-09-05 (conversation a4386ba3): a make the board cannot fully instrument may hold the wheel, and the ladder is a quality tier, so a top-tier rung of any make outranks Opus.
 **Kind:** idea
 **Fix:** his — two rulings come before this can be planned: whether a make the board cannot instrument the way it instruments Claude may hold a card's wheel at all, and whether a rung that spends no Claude allowance may outrank Opus, which changes the machine's ruling 1 in a repository that is not this one.
 **Found by:** the owner, from the board's Idea door on 2026-09-05 (conversation f8e98e34)
@@ -17,7 +17,7 @@ Nothing planned puts a colleague of another make in the driver's seat.
   read-only sandbox. It has never held a worktree, a branch or a card.
 - **The live composition card chooses who challenges whom, and assumes the
   hand is Claude.**
-  `docs/plans/2026-09-05-the-team-learns-which-composition-earns-its-place.md`
+  `docs/plans/2026-09-05-the-team-learns-which-mix-of-colleagues-earns-its-place.md`
   item 1 assigns one composition at every Start — "accountable hand alone,
   same-make challenge, or different-make challenge, with the models named" —
   and refuses an unexecutable composition. Nothing can execute a Codex hand,
