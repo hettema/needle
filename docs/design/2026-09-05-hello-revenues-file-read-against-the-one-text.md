@@ -1132,4 +1132,4 @@ level, so the readout is the residual for a session not launched from a card.
 
 ## The owner's rulings
 
-*Written here when they land, dated, before the rewrite uses them.*
+**2026-09-07, after reading the full rewritten text: "as it stands"** — rows 43a, 43c and 152 take the first reading of each (one sentence on estimates in §8; a plan carries the words that asked for it, in §10; the timezone stays in Hello Revenue's file), and the text is accepted with one edit of his own, the opening sentence: "We cherish alignment on intent above all else". His reading also asked for a cold-session walk of the text, whose two findings (the word "backbrief" defined where it first appears; the folders restored to §10) landed before the fold and are in the review record.
