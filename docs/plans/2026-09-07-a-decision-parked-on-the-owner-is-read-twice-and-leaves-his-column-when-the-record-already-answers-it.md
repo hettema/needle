@@ -108,8 +108,8 @@ the card history for three of them before the list is used.
 
 - **The dangerous exit is `stale`, so it is the one the door refuses.**
   From the other make's read: a reader can take inactivity or shipped code
-  as permission to abandon a commitment ("Close the doubling-clock
-  program?"), which takes the owner's decision without any external
+  as permission to abandon a commitment (a card asking whether to close a running
+  programme), which takes the owner's decision without any external
   exposure, so the exposure test alone would miss it. Rejected: `stale` on
   the reading's word alone. Item 3 is the rule.
 - **`execution` means Planned, not started.** §1 says who owns a decision;
