@@ -358,7 +358,23 @@ def start_card(args: argparse.Namespace) -> int:
     return 0
 
 
+LANES = ".claude/worktrees"
+"""Where every lane's worktree lives, under a project's main checkout."""
+
+
 def hook_install(args: argparse.Namespace) -> int:
+    """Register the hook, lay the Codex skills link, arm the git hooks.
+    Refused from a lane: the command it registers names this checkout's
+    script by absolute path, and a lane's path is gone at the lane's
+    close — on 2026-09-07 a lane wrote its own worktree path into three
+    projects' settings before anyone read the line (card #73)."""
+    if LANES in REPO_ROOT.as_posix():
+        print(
+            f"needle hook install runs from Needle's main checkout, never a lane: {REPO_ROOT} is "
+            "a worktree, and the hook path it would register dies with the lane",
+            file=sys.stderr,
+        )
+        return 1
     repo = Path(args.repo).expanduser().resolve()
     settings = repo / ".claude" / "settings.json"
     blob: dict = {}

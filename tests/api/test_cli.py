@@ -137,8 +137,34 @@ def test_kinds_prints_every_live_suggestions_kind_and_why(corpus: Path, database
     assert main(["kinds", "nowhere"]) == 1
 
 
+@pytest.fixture
+def main_checkout(monkeypatch: pytest.MonkeyPatch) -> Path:
+    """The installer runs from Needle's main checkout and refuses a lane
+    (card #73); the suite runs in lanes, so the tests stand it where the
+    main checkout is."""
+    root = Path("/srv/needle")
+    monkeypatch.setattr("api.board_cli.REPO_ROOT", root)
+    return root
+
+
+def test_hook_install_refuses_to_run_from_a_lane(tmp_path: Path, capsys, monkeypatch):
+    """Card #73: the command the installer registers names its own checkout's
+    script by absolute path; from a lane that path dies with the lane, and
+    on 2026-09-07 one lane wrote it into three projects before reading the
+    line. The installer refuses, and writes nothing."""
+    monkeypatch.setattr(
+        "api.board_cli.REPO_ROOT", Path("/srv/needle/.claude/worktrees/card-1-a-lane")
+    )
+    (tmp_path / ".claude" / "skills").mkdir(parents=True)
+    assert main(["hook", "install", str(tmp_path)]) == 1
+    err = capsys.readouterr().err
+    assert "never a lane" in err and "dies with the lane" in err
+    assert not (tmp_path / ".claude" / "settings.json").exists()
+    assert not (tmp_path / ".agents").exists()
+
+
 def test_hook_install_registers_every_event_once_and_names_the_word_hooks_ceiling(
-    tmp_path: Path, capsys
+    tmp_path: Path, capsys, main_checkout: Path
 ):
     """Plan 10, item 2, and card #60: `needle hook install` adds PostToolUse and
     UserPromptSubmit to a project that has the four session events, keeps
@@ -187,7 +213,7 @@ def test_hook_install_registers_every_event_once_and_names_the_word_hooks_ceilin
 
 
 def test_hook_install_lays_the_codex_skills_link_once_and_leaves_a_projects_own_alone(
-    tmp_path: Path, capsys
+    tmp_path: Path, capsys, main_checkout: Path
 ):
     """Card #73, item 1: `needle hook install` lays `.agents/skills` as a
     relative link at `../.claude/skills` when that folder exists, so a Codex
