@@ -310,6 +310,27 @@ when it serves this intent, else filed as a suggestion marked a defect; outside
 is never fixed here, only filed. One clean pass after a pass with findings is
 the floor.
 
+What makes it hard: a fix is surface no pass has read, so a loop whose only
+stopping rule is "a pass finds nothing new" ends only if fixes stay small, and
+nothing in that rule says they must; a rule that bounds a fix by its size
+blocks the one repair that crosses files because the contract it restores
+does. So a repair is bounded by the promise it restores, not by how many lines
+it touches: every review repair names the finding, the promise it must
+restore, and the affected dependencies; it changes enough to remove the cause
+and reconcile those dependencies, and omits unrelated improvements. A
+structural repair remains part of delivering the existing promise — if it
+needs a separate item, the original promise stays unmet until that item lands
+or the person explicitly changes the promised outcome. The revision under
+review is frozen while a pass reads it, and a finding names a violated promise
+or an unsupported claim; another equally truthful wording is not a finding.
+The record is reviewed the same way as the work, including its decision-bearing
+claims; mechanical checks support that judgment and never replace it.
+*Shaped by:* 2026-09-08, two lanes on one day — #472's record held eleven
+defects its own fixes had made, all in the last quarter of twenty-two readings,
+and #456's fixes introduced regressions; a size bound, proposed first, would
+have blocked #456's right repair (Codex's reading, adopted by the owner the
+same day).
+
 ## 14. The close ritual
 
 Every finished piece of work is closed the same way, and a close that was
