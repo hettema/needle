@@ -180,10 +180,16 @@ suggestion cannot enter execution without a plan; protects-progress cards
 keep their column and order after the helps-remove ones; needs-evidence,
 unread and stale cards keep their place and are marked as such; a card
 with a Sequencing hold shows the hold beside its class; a card that would
-move is marked as moving, with where from. Executed, Done and Decision
-moment are never rearranged — the first two are machine facts, the third is
-his by name. Flipping back to Rank shows his real board untouched; a drop
-under the lens is not a rank (plan 01). Under the lens the head offers one
+move is marked as moving, with where from. Every column is ordered under
+the lens, and only Backlog, Planned, Up next and Not now have cards moved
+between them: Executed, Done and Decision moment are never rearranged — the
+first two are machine facts, the third is his by name — but Decision moment
+is ordered by what each ruling unblocks, the one that frees the most
+helps-remove work first, and Executed with the signals only he can read
+first and the rest by their read date (his question of 2026-09-08: "each
+column, not just up next, will be sorted in order of importance/execution?").
+Flipping back to Rank shows his real board untouched; a drop under the lens
+is not a rank (plan 01). Under the lens the head offers one
 act, "Accept this order", with a count of the moves and each unticked at
 will: the board applies every accepted move through the one move door
 (`api/doors.py`, the same write a drag makes), with the owner as the mover
@@ -222,7 +228,7 @@ Harbourmaster data, and is signed before the build (`docs/design/README.md`);
 the arrangement function has a test per rule above (a helps-remove plan
 into Up next, a does-not-address card out of it with a readable wake
 trigger, a Backlog defect never into Up next, Executed and Decision moment
-untouched, ties keep his rank); `vitest` covers the view storing nothing,
+ordered but never moved, ties keep his rank); `vitest` covers the view storing nothing,
 the unavailable state and the drop-is-not-a-rank rule; on the door fixture,
 an acceptance moves exactly the ticked cards through the move door with the
 owner as mover and one batch entry, a put-back restores every one of them,
