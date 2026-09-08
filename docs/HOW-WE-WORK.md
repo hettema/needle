@@ -310,12 +310,10 @@ when it serves this intent, else filed as a suggestion marked a defect; outside
 is never fixed here, only filed. One clean pass after a pass with findings is
 the floor.
 
-What makes it hard: a fix is surface no pass has read, so a loop whose only
-stopping rule is "a pass finds nothing new" ends only if fixes stay small, and
-nothing in that rule says they must; a rule that bounds a fix by its size
-blocks the one repair that crosses files because the contract it restores
-does. So a repair is bounded by the promise it restores, not by how many lines
-it touches: every review repair names the finding, the promise it must
+What makes it hard: each repair creates changed surface that needs review, and
+repairs can introduce new defects; bounding repairs by size can block a
+structural correction whose promise crosses files. So a repair is bounded by
+the promise it restores, not by how many lines it touches: every review repair names the finding, the promise it must
 restore, and the affected dependencies; it changes enough to remove the cause
 and reconcile those dependencies, and omits unrelated improvements. A
 structural repair remains part of delivering the existing promise — if it
