@@ -26,7 +26,7 @@ def lane(
         name="card-253-x",
         path=path,
         state=state,
-        sentence="Working.",
+        sentence="Happening now: a session is working on it.",
         session=None,
         question=None,
         said=None,

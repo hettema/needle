@@ -92,7 +92,10 @@ def test_verdicts_proposes_what_the_boards_facts_settle_and_writes_them_on_reque
     # 0.1's file put #259 and #223 in Executing with no lane: doubted on the first read.
     # #259's plan is archived, so the read itself moved it (plan 06, item 1); #223's
     # suggestion is live, so it stays and the verdict says why.
-    assert "#223  Executing        doubted — no lane exists for it" in out
+    assert (
+        "#223  Executing        doubted — no work on it exists — no copy of the code on disk "
+        "and no session"
+    ) in out
     assert "#259  Decision moment" in out
     assert "→ Decision moment" in out
     assert "(the corpus decides)" in out

@@ -49,7 +49,7 @@ colour already says. One opening per meaning, and the page reads the same
 map for the sentences it writes itself (the column note, the head's
 tooltips)."""
 
-_CLOSERS = ".!?"
+_CLOSERS = ".!?…"
 _QUOTES = "”\"'"
 
 

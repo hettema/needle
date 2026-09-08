@@ -23,6 +23,7 @@ from pydantic import BaseModel
 
 from board.triage import fingerprint
 from domain.document import Document
+from domain.meaning import Meaning, say
 from domain.triage import TitleReading, TitleVerdict
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
@@ -124,6 +125,17 @@ def wants_title_reading(document: Document | None, latest: TitleReading | None) 
     return latest.title_fingerprint != title_fingerprint(document.title, document.essence)
 
 
+def hold_sentence(hold: str) -> str:
+    """The one sentence a held title shows, on the face and on the Start
+    door: the same parts through the one shape (card #75), so the two never
+    disagree whatever else closes the door."""
+    return say(
+        Meaning.BROKEN,
+        "a cold reading could not place this card from its title, so it cannot start",
+        why=hold,
+    )
+
+
 def title_hold(latest: TitleReading | None, document: Document | None) -> str | None:
     """Why Start is closed on this title, or None. The hold is the last
     reading's verdict, not the fingerprint: a title rewritten after a
@@ -139,8 +151,11 @@ def title_hold(latest: TitleReading | None, document: Document | None) -> str | 
     )
     failed = f" — the words that failed: {', '.join(latest.failed)}" if latest.failed else ""
     tail = (
-        "; the title has changed since, and Start opens when a reading of the new title passes"
+        "The title has changed since, and Start opens by itself when a reading of the new "
+        "title passes."
         if changed
-        else "; Start opens when a reading of a rewritten title passes"
+        else "The writer rewrites the title, and Start opens by itself when a reading of the "
+        "rewritten title passes."
     )
-    return f"A cold reading could not place this card from its title: {latest.words}{failed}{tail}"
+    # The plain reason, which the face wraps in the one sentence shape (card #75).
+    return f"The reading said: {latest.words}{failed}. {tail}"

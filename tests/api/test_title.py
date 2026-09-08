@@ -144,7 +144,7 @@ def test_a_plan_with_a_vocabulary_word_is_marked_on_its_face_and_held_until_a_re
     assert reading["failed"] == ["lane", "machine ended"]
     assert reading["session_id"] == opened["session_id"]
     assert face["state"]["word"] == "title fails" and face["state"]["meaning"] == "broken"
-    assert "could not place this card from its title" in face["state"]["detail"]
+    assert "Something is wrong: a cold reading could not place this card" in face["state"]["detail"]
     assert "the words that failed: lane, machine ended" in face["state"]["detail"]
     assert "title fails" in face["claims"]
     after = detail(client, number)
@@ -164,7 +164,7 @@ def test_a_plan_with_a_vocabulary_word_is_marked_on_its_face_and_held_until_a_re
     held = detail(client, number)
     assert held["card"]["title"] == PLAIN
     assert not held["doors"]["start"]["offered"]
-    assert "the title has changed since" in held["doors"]["start"]["why"]
+    assert "The title has changed since" in held["doors"]["start"]["why"]
     assert face_of(client, number)["state"]["word"] == "title fails"
 
     read_cold(client, machine_floor, "proj", number, "--title", "passes")

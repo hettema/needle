@@ -20,7 +20,7 @@ from board.lane import (
 from board.moves import GroupLayout
 from board.reconcile import carried_stems, corpus_path_of, ref
 from board.signals import is_due, past_due, read_or_decline
-from board.title import title_hold
+from board.title import hold_sentence, title_hold
 from board.triage import Sources, routing_now, routing_of
 from board.verdicts import read_or_decline as read_verdict_or_decline
 from domain.audit import AuditEntry
@@ -638,17 +638,7 @@ def state_of(
     if hold is not None:
         # Broken before quiet: the title and the bar disagree, and nothing
         # below this line — a Start, a plan door — is offered while they do.
-        return _state(
-            "title fails",
-            Meaning.BROKEN,
-            detail=say(
-                Meaning.BROKEN,
-                "a cold reading could not place this card from its title",
-                why=hold,
-                then="the writer rewrites the title and the next reading clears this by itself",
-            ),
-            hint="open to see",
-        )
+        return _state("title fails", Meaning.BROKEN, detail=hold_sentence(hold), hint="open to see")
     if card.place.column == Column.DECISION_MOMENT:
         return _state(
             "your move",

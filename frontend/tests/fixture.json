@@ -600,7 +600,7 @@
                 "state": {
                   "word": "not read yet",
                   "meaning": "quiet",
-                  "detail": "Nothing for you: the board has not read this project yet, so nothing can start. It reads within a minute and the door opens by itself.",
+                  "detail": "Nothing for you: the board has not read this project yet, so nothing can start. It reads within a minute and Start opens by itself.",
                   "loop": null,
                   "door": null,
                   "hint": "open to see"
@@ -652,7 +652,7 @@
                 "state": {
                   "word": "not read yet",
                   "meaning": "quiet",
-                  "detail": "Nothing for you: the board has not read this project yet, so nothing can start. It reads within a minute and the door opens by itself.",
+                  "detail": "Nothing for you: the board has not read this project yet, so nothing can start. It reads within a minute and Start opens by itself.",
                   "loop": null,
                   "door": null,
                   "hint": "open to see"
@@ -704,7 +704,7 @@
                 "state": {
                   "word": "not read yet",
                   "meaning": "quiet",
-                  "detail": "Nothing for you: the board has not read this project yet, so nothing can start. It reads within a minute and the door opens by itself.",
+                  "detail": "Nothing for you: the board has not read this project yet, so nothing can start. It reads within a minute and Start opens by itself.",
                   "loop": null,
                   "door": null,
                   "hint": "open to see"
@@ -754,7 +754,7 @@
                 "state": {
                   "word": "not read yet",
                   "meaning": "quiet",
-                  "detail": "Nothing for you: the board has not read this project yet, so nothing can start. It reads within a minute and the door opens by itself.",
+                  "detail": "Nothing for you: the board has not read this project yet, so nothing can start. It reads within a minute and Start opens by itself.",
                   "loop": null,
                   "door": null,
                   "hint": "open to see"
@@ -798,7 +798,7 @@
                 "state": {
                   "word": "not read yet",
                   "meaning": "quiet",
-                  "detail": "Nothing for you: the board has not read this project yet, so nothing can start. It reads within a minute and the door opens by itself.",
+                  "detail": "Nothing for you: the board has not read this project yet, so nothing can start. It reads within a minute and Start opens by itself.",
                   "loop": null,
                   "door": null,
                   "hint": "open to see"
@@ -865,7 +865,7 @@
                 "state": {
                   "word": "not read yet",
                   "meaning": "quiet",
-                  "detail": "Nothing for you: the board has not read this project yet, so nothing can start. It reads within a minute and the door opens by itself.",
+                  "detail": "Nothing for you: the board has not read this project yet, so nothing can start. It reads within a minute and Start opens by itself.",
                   "loop": null,
                   "door": null,
                   "hint": "open to see"
@@ -909,7 +909,7 @@
                 "state": {
                   "word": "not read yet",
                   "meaning": "quiet",
-                  "detail": "Nothing for you: the board has not read this project yet, so nothing can start. It reads within a minute and the door opens by itself.",
+                  "detail": "Nothing for you: the board has not read this project yet, so nothing can start. It reads within a minute and Start opens by itself.",
                   "loop": null,
                   "door": null,
                   "hint": "open to see"
@@ -953,7 +953,7 @@
                 "state": {
                   "word": "not read yet",
                   "meaning": "quiet",
-                  "detail": "Nothing for you: the board has not read this project yet, so nothing can start. It reads within a minute and the door opens by itself.",
+                  "detail": "Nothing for you: the board has not read this project yet, so nothing can start. It reads within a minute and Start opens by itself.",
                   "loop": null,
                   "door": null,
                   "hint": "open to see"
@@ -997,7 +997,7 @@
                 "state": {
                   "word": "not read yet",
                   "meaning": "quiet",
-                  "detail": "Nothing for you: the board has not read this project yet, so nothing can start. It reads within a minute and the door opens by itself.",
+                  "detail": "Nothing for you: the board has not read this project yet, so nothing can start. It reads within a minute and Start opens by itself.",
                   "loop": null,
                   "door": null,
                   "hint": "open to see"
@@ -1043,7 +1043,7 @@
                 "state": {
                   "word": "not read yet",
                   "meaning": "quiet",
-                  "detail": "Nothing for you: the board has not read this project yet, so nothing can start. It reads within a minute and the door opens by itself.",
+                  "detail": "Nothing for you: the board has not read this project yet, so nothing can start. It reads within a minute and Start opens by itself.",
                   "loop": null,
                   "door": null,
                   "hint": "open to see"
@@ -1837,12 +1837,12 @@
         "discuss": {
           "offered": false,
           "label": "Discuss",
-          "why": "Nothing for you: the board has not read this project yet, so nothing can start. It reads within a minute and the door opens by itself."
+          "why": "Nothing for you: the board has not read this project yet, so nothing can start. It reads within a minute and Start opens by itself."
         },
         "plan": {
           "offered": false,
           "label": "Create plan",
-          "why": "Nothing for you: the board has not read this project yet, so nothing can start. It reads within a minute and the door opens by itself."
+          "why": "Nothing for you: the board has not read this project yet, so nothing can start. It reads within a minute and Start opens by itself."
         },
         "look": {
           "offered": false,
@@ -2079,12 +2079,12 @@
         "discuss": {
           "offered": false,
           "label": "Discuss",
-          "why": "Nothing for you: the board has not read this project yet, so nothing can start. It reads within a minute and the door opens by itself."
+          "why": "Nothing for you: the board has not read this project yet, so nothing can start. It reads within a minute and Start opens by itself."
         },
         "plan": {
           "offered": false,
           "label": "Create plan",
-          "why": "Nothing for you: the board has not read this project yet, so nothing can start. It reads within a minute and the door opens by itself."
+          "why": "Nothing for you: the board has not read this project yet, so nothing can start. It reads within a minute and Start opens by itself."
         },
         "look": {
           "offered": false,
@@ -2335,12 +2335,12 @@
         "discuss": {
           "offered": false,
           "label": "Discuss",
-          "why": "Nothing for you: the board has not read this project yet, so nothing can start. It reads within a minute and the door opens by itself."
+          "why": "Nothing for you: the board has not read this project yet, so nothing can start. It reads within a minute and Start opens by itself."
         },
         "plan": {
           "offered": false,
           "label": "Create plan",
-          "why": "Nothing for you: the board has not read this project yet, so nothing can start. It reads within a minute and the door opens by itself."
+          "why": "Nothing for you: the board has not read this project yet, so nothing can start. It reads within a minute and Start opens by itself."
         },
         "look": {
           "offered": false,
@@ -2591,12 +2591,12 @@
         "discuss": {
           "offered": false,
           "label": "Discuss",
-          "why": "Nothing for you: the board has not read this project yet, so nothing can start. It reads within a minute and the door opens by itself."
+          "why": "Nothing for you: the board has not read this project yet, so nothing can start. It reads within a minute and Start opens by itself."
         },
         "plan": {
           "offered": false,
           "label": "Create plan",
-          "why": "Nothing for you: the board has not read this project yet, so nothing can start. It reads within a minute and the door opens by itself."
+          "why": "Nothing for you: the board has not read this project yet, so nothing can start. It reads within a minute and Start opens by itself."
         },
         "look": {
           "offered": false,
@@ -2800,12 +2800,12 @@
         "discuss": {
           "offered": false,
           "label": "Discuss",
-          "why": "Nothing for you: the board has not read this project yet, so nothing can start. It reads within a minute and the door opens by itself."
+          "why": "Nothing for you: the board has not read this project yet, so nothing can start. It reads within a minute and Start opens by itself."
         },
         "plan": {
           "offered": false,
           "label": "Create plan",
-          "why": "Nothing for you: the board has not read this project yet, so nothing can start. It reads within a minute and the door opens by itself."
+          "why": "Nothing for you: the board has not read this project yet, so nothing can start. It reads within a minute and Start opens by itself."
         },
         "look": {
           "offered": false,
@@ -2993,7 +2993,7 @@
         "discuss": {
           "offered": false,
           "label": "Discuss",
-          "why": "Nothing for you: the board has not read this project yet, so nothing can start. It reads within a minute and the door opens by itself."
+          "why": "Nothing for you: the board has not read this project yet, so nothing can start. It reads within a minute and Start opens by itself."
         },
         "plan": {
           "offered": false,
@@ -3216,12 +3216,12 @@
         "discuss": {
           "offered": false,
           "label": "Discuss",
-          "why": "Nothing for you: the board has not read this project yet, so nothing can start. It reads within a minute and the door opens by itself."
+          "why": "Nothing for you: the board has not read this project yet, so nothing can start. It reads within a minute and Start opens by itself."
         },
         "plan": {
           "offered": false,
           "label": "Create plan",
-          "why": "Nothing for you: the board has not read this project yet, so nothing can start. It reads within a minute and the door opens by itself."
+          "why": "Nothing for you: the board has not read this project yet, so nothing can start. It reads within a minute and Start opens by itself."
         },
         "look": {
           "offered": false,
@@ -3439,12 +3439,12 @@
         "discuss": {
           "offered": false,
           "label": "Discuss",
-          "why": "Nothing for you: the board has not read this project yet, so nothing can start. It reads within a minute and the door opens by itself."
+          "why": "Nothing for you: the board has not read this project yet, so nothing can start. It reads within a minute and Start opens by itself."
         },
         "plan": {
           "offered": false,
           "label": "Create plan",
-          "why": "Nothing for you: the board has not read this project yet, so nothing can start. It reads within a minute and the door opens by itself."
+          "why": "Nothing for you: the board has not read this project yet, so nothing can start. It reads within a minute and Start opens by itself."
         },
         "look": {
           "offered": false,
@@ -3662,12 +3662,12 @@
         "discuss": {
           "offered": false,
           "label": "Discuss",
-          "why": "Nothing for you: the board has not read this project yet, so nothing can start. It reads within a minute and the door opens by itself."
+          "why": "Nothing for you: the board has not read this project yet, so nothing can start. It reads within a minute and Start opens by itself."
         },
         "plan": {
           "offered": false,
           "label": "Create plan",
-          "why": "Nothing for you: the board has not read this project yet, so nothing can start. It reads within a minute and the door opens by itself."
+          "why": "Nothing for you: the board has not read this project yet, so nothing can start. It reads within a minute and Start opens by itself."
         },
         "look": {
           "offered": false,
@@ -3885,12 +3885,12 @@
         "discuss": {
           "offered": false,
           "label": "Discuss",
-          "why": "Nothing for you: the board has not read this project yet, so nothing can start. It reads within a minute and the door opens by itself."
+          "why": "Nothing for you: the board has not read this project yet, so nothing can start. It reads within a minute and Start opens by itself."
         },
         "plan": {
           "offered": false,
           "label": "Create plan",
-          "why": "Nothing for you: the board has not read this project yet, so nothing can start. It reads within a minute and the door opens by itself."
+          "why": "Nothing for you: the board has not read this project yet, so nothing can start. It reads within a minute and Start opens by itself."
         },
         "look": {
           "offered": false,
@@ -3990,7 +3990,7 @@
         "state": {
           "word": "not read yet",
           "meaning": "quiet",
-          "detail": "Nothing for you: the board has not read this project yet, so nothing can start. It reads within a minute and the door opens by itself.",
+          "detail": "Nothing for you: the board has not read this project yet, so nothing can start. It reads within a minute and Start opens by itself.",
           "loop": null,
           "door": null,
           "hint": "open to see"
@@ -4136,11 +4136,11 @@
         "start": {
           "offered": false,
           "label": "Start",
-          "why": "Nothing for you: the board has not read this project yet, so nothing can start. It reads within a minute and the door opens by itself."
+          "why": "Nothing for you: the board has not read this project yet, so nothing can start. It reads within a minute and Start opens by itself."
         },
         "readiness": {
           "state": "unread",
-          "why": "Nothing for you: the board has not read this project yet, so nothing can start. It reads within a minute and the door opens by itself.",
+          "why": "Nothing for you: the board has not read this project yet, so nothing can start. It reads within a minute and Start opens by itself.",
           "cards": [],
           "files": [],
           "waits": []
@@ -4162,7 +4162,7 @@
         "discuss": {
           "offered": false,
           "label": "Discuss",
-          "why": "Nothing for you: the board has not read this project yet, so nothing can start. It reads within a minute and the door opens by itself."
+          "why": "Nothing for you: the board has not read this project yet, so nothing can start. It reads within a minute and Start opens by itself."
         },
         "plan": {
           "offered": false,
@@ -4263,7 +4263,7 @@
         "state": {
           "word": "not read yet",
           "meaning": "quiet",
-          "detail": "Nothing for you: the board has not read this project yet, so nothing can start. It reads within a minute and the door opens by itself.",
+          "detail": "Nothing for you: the board has not read this project yet, so nothing can start. It reads within a minute and Start opens by itself.",
           "loop": null,
           "door": null,
           "hint": "open to see"
@@ -4400,11 +4400,11 @@
         "start": {
           "offered": false,
           "label": "Start",
-          "why": "Nothing for you: the board has not read this project yet, so nothing can start. It reads within a minute and the door opens by itself."
+          "why": "Nothing for you: the board has not read this project yet, so nothing can start. It reads within a minute and Start opens by itself."
         },
         "readiness": {
           "state": "unread",
-          "why": "Nothing for you: the board has not read this project yet, so nothing can start. It reads within a minute and the door opens by itself.",
+          "why": "Nothing for you: the board has not read this project yet, so nothing can start. It reads within a minute and Start opens by itself.",
           "cards": [],
           "files": [],
           "waits": []
@@ -4426,7 +4426,7 @@
         "discuss": {
           "offered": false,
           "label": "Discuss",
-          "why": "Nothing for you: the board has not read this project yet, so nothing can start. It reads within a minute and the door opens by itself."
+          "why": "Nothing for you: the board has not read this project yet, so nothing can start. It reads within a minute and Start opens by itself."
         },
         "plan": {
           "offered": false,
@@ -4531,7 +4531,7 @@
         "state": {
           "word": "not read yet",
           "meaning": "quiet",
-          "detail": "Nothing for you: the board has not read this project yet, so nothing can start. It reads within a minute and the door opens by itself.",
+          "detail": "Nothing for you: the board has not read this project yet, so nothing can start. It reads within a minute and Start opens by itself.",
           "loop": null,
           "door": null,
           "hint": "open to see"
@@ -4672,11 +4672,11 @@
         "start": {
           "offered": false,
           "label": "Start",
-          "why": "Nothing for you: the board has not read this project yet, so nothing can start. It reads within a minute and the door opens by itself."
+          "why": "Nothing for you: the board has not read this project yet, so nothing can start. It reads within a minute and Start opens by itself."
         },
         "readiness": {
           "state": "unread",
-          "why": "Nothing for you: the board has not read this project yet, so nothing can start. It reads within a minute and the door opens by itself.",
+          "why": "Nothing for you: the board has not read this project yet, so nothing can start. It reads within a minute and Start opens by itself.",
           "cards": [],
           "files": [],
           "waits": []
@@ -4698,7 +4698,7 @@
         "discuss": {
           "offered": false,
           "label": "Discuss",
-          "why": "Nothing for you: the board has not read this project yet, so nothing can start. It reads within a minute and the door opens by itself."
+          "why": "Nothing for you: the board has not read this project yet, so nothing can start. It reads within a minute and Start opens by itself."
         },
         "plan": {
           "offered": false,
@@ -4786,7 +4786,7 @@
         "state": {
           "word": "not read yet",
           "meaning": "quiet",
-          "detail": "Nothing for you: the board has not read this project yet, so nothing can start. It reads within a minute and the door opens by itself.",
+          "detail": "Nothing for you: the board has not read this project yet, so nothing can start. It reads within a minute and Start opens by itself.",
           "loop": null,
           "door": null,
           "hint": "open to see"
@@ -4907,11 +4907,11 @@
         "start": {
           "offered": false,
           "label": "Start",
-          "why": "Nothing for you: the board has not read this project yet, so nothing can start. It reads within a minute and the door opens by itself."
+          "why": "Nothing for you: the board has not read this project yet, so nothing can start. It reads within a minute and Start opens by itself."
         },
         "readiness": {
           "state": "unread",
-          "why": "Nothing for you: the board has not read this project yet, so nothing can start. It reads within a minute and the door opens by itself.",
+          "why": "Nothing for you: the board has not read this project yet, so nothing can start. It reads within a minute and Start opens by itself.",
           "cards": [],
           "files": [],
           "waits": []
@@ -4933,7 +4933,7 @@
         "discuss": {
           "offered": false,
           "label": "Discuss",
-          "why": "Nothing for you: the board has not read this project yet, so nothing can start. It reads within a minute and the door opens by itself."
+          "why": "Nothing for you: the board has not read this project yet, so nothing can start. It reads within a minute and Start opens by itself."
         },
         "plan": {
           "offered": false,
@@ -5021,7 +5021,7 @@
         "state": {
           "word": "not read yet",
           "meaning": "quiet",
-          "detail": "Nothing for you: the board has not read this project yet, so nothing can start. It reads within a minute and the door opens by itself.",
+          "detail": "Nothing for you: the board has not read this project yet, so nothing can start. It reads within a minute and Start opens by itself.",
           "loop": null,
           "door": null,
           "hint": "open to see"
@@ -5171,11 +5171,11 @@
         "start": {
           "offered": false,
           "label": "Start",
-          "why": "Nothing for you: the board has not read this project yet, so nothing can start. It reads within a minute and the door opens by itself."
+          "why": "Nothing for you: the board has not read this project yet, so nothing can start. It reads within a minute and Start opens by itself."
         },
         "readiness": {
           "state": "unread",
-          "why": "Nothing for you: the board has not read this project yet, so nothing can start. It reads within a minute and the door opens by itself.",
+          "why": "Nothing for you: the board has not read this project yet, so nothing can start. It reads within a minute and Start opens by itself.",
           "cards": [],
           "files": [],
           "waits": []
@@ -5197,7 +5197,7 @@
         "discuss": {
           "offered": false,
           "label": "Discuss",
-          "why": "Nothing for you: the board has not read this project yet, so nothing can start. It reads within a minute and the door opens by itself."
+          "why": "Nothing for you: the board has not read this project yet, so nothing can start. It reads within a minute and Start opens by itself."
         },
         "plan": {
           "offered": false,
@@ -5302,7 +5302,7 @@
         "state": {
           "word": "not read yet",
           "meaning": "quiet",
-          "detail": "Nothing for you: the board has not read this project yet, so nothing can start. It reads within a minute and the door opens by itself.",
+          "detail": "Nothing for you: the board has not read this project yet, so nothing can start. It reads within a minute and Start opens by itself.",
           "loop": null,
           "door": null,
           "hint": "open to see"
@@ -5451,11 +5451,11 @@
         "start": {
           "offered": false,
           "label": "Start",
-          "why": "Nothing for you: the board has not read this project yet, so nothing can start. It reads within a minute and the door opens by itself."
+          "why": "Nothing for you: the board has not read this project yet, so nothing can start. It reads within a minute and Start opens by itself."
         },
         "readiness": {
           "state": "unread",
-          "why": "Nothing for you: the board has not read this project yet, so nothing can start. It reads within a minute and the door opens by itself.",
+          "why": "Nothing for you: the board has not read this project yet, so nothing can start. It reads within a minute and Start opens by itself.",
           "cards": [],
           "files": [],
           "waits": []
@@ -5477,7 +5477,7 @@
         "discuss": {
           "offered": false,
           "label": "Discuss",
-          "why": "Nothing for you: the board has not read this project yet, so nothing can start. It reads within a minute and the door opens by itself."
+          "why": "Nothing for you: the board has not read this project yet, so nothing can start. It reads within a minute and Start opens by itself."
         },
         "plan": {
           "offered": false,
@@ -5586,7 +5586,7 @@
         "state": {
           "word": "not read yet",
           "meaning": "quiet",
-          "detail": "Nothing for you: the board has not read this project yet, so nothing can start. It reads within a minute and the door opens by itself.",
+          "detail": "Nothing for you: the board has not read this project yet, so nothing can start. It reads within a minute and Start opens by itself.",
           "loop": null,
           "door": null,
           "hint": "open to see"
@@ -5739,11 +5739,11 @@
         "start": {
           "offered": false,
           "label": "Start",
-          "why": "Nothing for you: the board has not read this project yet, so nothing can start. It reads within a minute and the door opens by itself."
+          "why": "Nothing for you: the board has not read this project yet, so nothing can start. It reads within a minute and Start opens by itself."
         },
         "readiness": {
           "state": "unread",
-          "why": "Nothing for you: the board has not read this project yet, so nothing can start. It reads within a minute and the door opens by itself.",
+          "why": "Nothing for you: the board has not read this project yet, so nothing can start. It reads within a minute and Start opens by itself.",
           "cards": [],
           "files": [],
           "waits": []
@@ -5765,7 +5765,7 @@
         "discuss": {
           "offered": false,
           "label": "Discuss",
-          "why": "Nothing for you: the board has not read this project yet, so nothing can start. It reads within a minute and the door opens by itself."
+          "why": "Nothing for you: the board has not read this project yet, so nothing can start. It reads within a minute and Start opens by itself."
         },
         "plan": {
           "offered": false,
@@ -5863,7 +5863,7 @@
         "state": {
           "word": "not read yet",
           "meaning": "quiet",
-          "detail": "Nothing for you: the board has not read this project yet, so nothing can start. It reads within a minute and the door opens by itself.",
+          "detail": "Nothing for you: the board has not read this project yet, so nothing can start. It reads within a minute and Start opens by itself.",
           "loop": null,
           "door": null,
           "hint": "open to see"
@@ -5953,11 +5953,11 @@
         "start": {
           "offered": false,
           "label": "Start",
-          "why": "Nothing for you: the board has not read this project yet, so nothing can start. It reads within a minute and the door opens by itself."
+          "why": "Nothing for you: the board has not read this project yet, so nothing can start. It reads within a minute and Start opens by itself."
         },
         "readiness": {
           "state": "unread",
-          "why": "Nothing for you: the board has not read this project yet, so nothing can start. It reads within a minute and the door opens by itself.",
+          "why": "Nothing for you: the board has not read this project yet, so nothing can start. It reads within a minute and Start opens by itself.",
           "cards": [],
           "files": [],
           "waits": []
@@ -5979,7 +5979,7 @@
         "discuss": {
           "offered": false,
           "label": "Discuss",
-          "why": "Nothing for you: the board has not read this project yet, so nothing can start. It reads within a minute and the door opens by itself."
+          "why": "Nothing for you: the board has not read this project yet, so nothing can start. It reads within a minute and Start opens by itself."
         },
         "plan": {
           "offered": false,
@@ -6084,7 +6084,7 @@
         "state": {
           "word": "not read yet",
           "meaning": "quiet",
-          "detail": "Nothing for you: the board has not read this project yet, so nothing can start. It reads within a minute and the door opens by itself.",
+          "detail": "Nothing for you: the board has not read this project yet, so nothing can start. It reads within a minute and Start opens by itself.",
           "loop": null,
           "door": null,
           "hint": "open to see"
@@ -6244,11 +6244,11 @@
         "start": {
           "offered": false,
           "label": "Start",
-          "why": "Nothing for you: the board has not read this project yet, so nothing can start. It reads within a minute and the door opens by itself."
+          "why": "Nothing for you: the board has not read this project yet, so nothing can start. It reads within a minute and Start opens by itself."
         },
         "readiness": {
           "state": "unread",
-          "why": "Nothing for you: the board has not read this project yet, so nothing can start. It reads within a minute and the door opens by itself.",
+          "why": "Nothing for you: the board has not read this project yet, so nothing can start. It reads within a minute and Start opens by itself.",
           "cards": [],
           "files": [],
           "waits": []
@@ -6270,7 +6270,7 @@
         "discuss": {
           "offered": false,
           "label": "Discuss",
-          "why": "Nothing for you: the board has not read this project yet, so nothing can start. It reads within a minute and the door opens by itself."
+          "why": "Nothing for you: the board has not read this project yet, so nothing can start. It reads within a minute and Start opens by itself."
         },
         "plan": {
           "offered": false,
@@ -6382,7 +6382,7 @@
         "state": {
           "word": "not read yet",
           "meaning": "quiet",
-          "detail": "Nothing for you: the board has not read this project yet, so nothing can start. It reads within a minute and the door opens by itself.",
+          "detail": "Nothing for you: the board has not read this project yet, so nothing can start. It reads within a minute and Start opens by itself.",
           "loop": null,
           "door": null,
           "hint": "open to see"
@@ -6551,11 +6551,11 @@
         "start": {
           "offered": false,
           "label": "Start",
-          "why": "Nothing for you: the board has not read this project yet, so nothing can start. It reads within a minute and the door opens by itself."
+          "why": "Nothing for you: the board has not read this project yet, so nothing can start. It reads within a minute and Start opens by itself."
         },
         "readiness": {
           "state": "unread",
-          "why": "Nothing for you: the board has not read this project yet, so nothing can start. It reads within a minute and the door opens by itself.",
+          "why": "Nothing for you: the board has not read this project yet, so nothing can start. It reads within a minute and Start opens by itself.",
           "cards": [],
           "files": [],
           "waits": []
@@ -6577,7 +6577,7 @@
         "discuss": {
           "offered": false,
           "label": "Discuss",
-          "why": "Nothing for you: the board has not read this project yet, so nothing can start. It reads within a minute and the door opens by itself."
+          "why": "Nothing for you: the board has not read this project yet, so nothing can start. It reads within a minute and Start opens by itself."
         },
         "plan": {
           "offered": false,
@@ -6875,7 +6875,7 @@
         "discuss": {
           "offered": false,
           "label": "Discuss",
-          "why": "Nothing for you: the board has not read this project yet, so nothing can start. It reads within a minute and the door opens by itself."
+          "why": "Nothing for you: the board has not read this project yet, so nothing can start. It reads within a minute and Start opens by itself."
         },
         "plan": {
           "offered": false,
@@ -7139,12 +7139,12 @@
         "discuss": {
           "offered": false,
           "label": "Discuss",
-          "why": "Nothing for you: the board has not read this project yet, so nothing can start. It reads within a minute and the door opens by itself."
+          "why": "Nothing for you: the board has not read this project yet, so nothing can start. It reads within a minute and Start opens by itself."
         },
         "plan": {
           "offered": false,
           "label": "Create plan",
-          "why": "Nothing for you: the board has not read this project yet, so nothing can start. It reads within a minute and the door opens by itself."
+          "why": "Nothing for you: the board has not read this project yet, so nothing can start. It reads within a minute and Start opens by itself."
         },
         "look": {
           "offered": false,
@@ -7443,7 +7443,7 @@
         "discuss": {
           "offered": false,
           "label": "Discuss",
-          "why": "Nothing for you: the board has not read this project yet, so nothing can start. It reads within a minute and the door opens by itself."
+          "why": "Nothing for you: the board has not read this project yet, so nothing can start. It reads within a minute and Start opens by itself."
         },
         "plan": {
           "offered": false,
@@ -7666,7 +7666,7 @@
         "discuss": {
           "offered": false,
           "label": "Discuss",
-          "why": "Nothing for you: the board has not read this project yet, so nothing can start. It reads within a minute and the door opens by itself."
+          "why": "Nothing for you: the board has not read this project yet, so nothing can start. It reads within a minute and Start opens by itself."
         },
         "plan": {
           "offered": false,
@@ -7953,7 +7953,7 @@
         "discuss": {
           "offered": false,
           "label": "Discuss",
-          "why": "Nothing for you: the board has not read this project yet, so nothing can start. It reads within a minute and the door opens by itself."
+          "why": "Nothing for you: the board has not read this project yet, so nothing can start. It reads within a minute and Start opens by itself."
         },
         "plan": {
           "offered": false,
@@ -8174,7 +8174,7 @@
         "discuss": {
           "offered": false,
           "label": "Discuss",
-          "why": "Nothing for you: the board has not read this project yet, so nothing can start. It reads within a minute and the door opens by itself."
+          "why": "Nothing for you: the board has not read this project yet, so nothing can start. It reads within a minute and Start opens by itself."
         },
         "plan": {
           "offered": false,
@@ -8449,7 +8449,7 @@
         "discuss": {
           "offered": false,
           "label": "Discuss",
-          "why": "Nothing for you: the board has not read this project yet, so nothing can start. It reads within a minute and the door opens by itself."
+          "why": "Nothing for you: the board has not read this project yet, so nothing can start. It reads within a minute and Start opens by itself."
         },
         "plan": {
           "offered": false,
@@ -8667,7 +8667,7 @@
         "discuss": {
           "offered": false,
           "label": "Discuss",
-          "why": "Nothing for you: the board has not read this project yet, so nothing can start. It reads within a minute and the door opens by itself."
+          "why": "Nothing for you: the board has not read this project yet, so nothing can start. It reads within a minute and Start opens by itself."
         },
         "plan": {
           "offered": false,

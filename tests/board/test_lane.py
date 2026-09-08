@@ -174,7 +174,7 @@ def test_a_card_with_no_trace_has_no_lane_and_a_closed_watch():
 def test_a_live_session_in_the_worktree_is_hands_on_and_says_so():
     lane = lane_for(card(), facts(sessions=[session()], worktrees={LANE: "card-7-the-thing"}))
     assert lane.state == LaneState.WORKING and lane.path == LANE
-    assert lane.sentence == "Working, fable on alpha, hands on for 12 min."
+    assert lane.sentence == "Happening now: a session is working on it, fable on alpha, for 12 min."
     assert lane.hands_on_since == NOW - timedelta(minutes=12)
 
 
@@ -188,7 +188,10 @@ def test_a_stop_with_a_question_is_asking_you_with_the_question():
         ),
     )
     assert lane.state == LaneState.ASKING and lane.question == said
-    assert lane.sentence == "Asking you: Should the gate default to high or medium?"
+    assert lane.sentence == (
+        "Your move: answer its question. The session on it stopped to ask: "
+        "Should the gate default to high or medium? Nothing moves until you do."
+    )
     assert is_question("Done?") and not is_question("Done.") and not is_question(None)
 
 
@@ -204,7 +207,7 @@ def test_a_stop_the_hook_pushed_wins_over_the_registrys_stale_word():
             events=[event(HookKind.STOP, "THANKS", at=NOW - timedelta(seconds=20))],
         ),
     )
-    assert lane.state == LaneState.STOPPED and lane.sentence.endswith(": THANKS")
+    assert lane.state == LaneState.STOPPED and lane.sentence.endswith(": THANKS. It waits for your word.")
     older = lane_for(
         card(),
         facts(
@@ -226,7 +229,10 @@ def test_a_stop_without_a_question_is_stopped_with_its_words():
         ),
     )
     assert lane.state == LaneState.STOPPED
-    assert lane.sentence == "Stopped 3 min ago, fable on alpha: Folded and closed."
+    assert lane.sentence == (
+        "Your move: read what it said and answer. The session on it stopped 3 min ago, "
+        "fable on alpha: Folded and closed. It waits for your word."
+    )
 
 
 def test_a_wall_reads_as_moving_and_a_rescue_is_said_on_the_card():
@@ -247,8 +253,9 @@ def test_a_wall_reads_as_moving_and_a_rescue_is_said_on_the_card():
     )
     lane = lane_for(card(), facts(sessions=[session(state=SessionState.BLOCKED, wall=wall)]))
     assert lane.state == LaneState.MOVING
-    assert (
-        lane.sentence == "Hit a limit on alpha (You've reached your Fable limit.); moving to beta."
+    assert lane.sentence == (
+        "Happening now: the session on it ran out of allowance on alpha and is moving to "
+        "beta. You've reached your Fable limit. It carries on by itself once it lands."
     )
 
     rescue = Rescue(
@@ -277,8 +284,9 @@ def test_a_wall_reads_as_moving_and_a_rescue_is_said_on_the_card():
             windows=[window],
         ),
     )
-    assert moved_lane.moved == "Moved to fable on beta, new window opened."
-    assert moved_lane.sentence.startswith("Moved to fable on beta, new window opened. Working")
+    assert moved_lane.moved == "It moved to fable on beta, and a new window opened."
+    assert moved_lane.sentence.startswith("Happening now: a session is working on it")
+    assert moved_lane.sentence.endswith("It moved to fable on beta, and a new window opened.")
     assert moved_lane.window_open
     answered = rescue.model_copy(
         update={
@@ -322,7 +330,10 @@ def test_a_session_with_no_process_is_an_ended_lane_with_the_machines_reason():
     )
     assert lane.state == LaneState.ENDED and lane.hands_on_since is None
     assert lane.died == "the journal says: Killed process 4242"
-    assert lane.sentence == "Lane ended 1 min ago: the journal says: Killed process 4242. folded."
+    assert lane.sentence == (
+        "Nothing for you: the session on it ended 1 min ago. Its work landed on the shared "
+        "branch."
+    )
     assert lane.folded and not lane.trunk_synced
 
 
@@ -342,7 +353,7 @@ def test_a_discussion_is_never_hands_on_but_is_said():
     talking = talking.model_copy(update={"cwd": PROJECT, "worktree": None, "name": "x"})
     lane = lane_for(card(), facts(sessions=[talking], discussions=[talk], worktrees={}))
     assert lane.state == LaneState.NONE and lane.discussing == ["dddd0001"]
-    assert lane.sentence == "In discussion with you (dddd0001)."
+    assert lane.sentence == "Happening now: In discussion with you (dddd0001)."
 
 
 def test_the_card_of_a_working_directory():
@@ -505,11 +516,11 @@ def test_start_says_the_slot_and_model_the_rule_named_and_refuses_by_name():
     assert not offered.watch.offered and not offered.answer.offered and not offered.look.offered
     assert offered.discuss.offered
     gateless = doors(card(gate=None), fresh, gate_named=False)
-    assert not gateless.start.offered and "names no effort gate" in gateless.start.why
+    assert not gateless.start.offered and "names no effort level" in gateless.start.why
     elsewhere = doors(card(column=Column.BACKLOG), fresh)
-    assert "offered in Up next and Planned" in elsewhere.start.why
+    assert "a card starts from Up next or Planned, and this one is in Backlog" in elsewhere.start.why
     nowhere = doors(card(), fresh, placement=None, placement_note="no account with headroom")
-    assert not nowhere.start.offered and "nowhere to run" in nowhere.start.why
+    assert not nowhere.start.offered and "no account has room to run it" in nowhere.start.why
     assert not nowhere.discuss.offered
 
 
@@ -530,9 +541,11 @@ def test_shared_ground_opens_start_with_the_ground_in_its_label():
     offered = doors(card(), fresh, collision=collision)
     assert offered.start.offered
     assert offered.start.label == (
-        "Start · fable on alpha — shares 1 file with #9's lane; the second to fold rebases"
+        "Start · fable on alpha — shares 1 file with #9's session; the second to finish catches up"
     )
-    assert offered.start.why == collision.sentence
+    assert offered.start.why == (
+        "Your move: press it and a session takes this card, fable on alpha. " + collision.sentence
+    )
     assert offered.readiness.state == StartState.SHARES
     assert offered.readiness.cards == [9] and offered.readiness.files == ["api/app.py"]
     assert not hasattr(offered, "start_anyway")
@@ -558,9 +571,9 @@ def test_the_plans_own_word_is_the_one_hold_on_start():
     )
     assert not held.start.offered and held.readiness.state == StartState.WAITS
     assert held.start.why == (
-        "Start waits on the plan's own word: its Sequencing names #139 (Decision moment), "
-        "Needle #20 (Up next), #999 (not on the board); it opens by itself once every named "
-        "card is in Executed or Done."
+        "Nothing for you: this starts by itself once #139 (Decision moment), Needle #20 "
+        "(Up next) and #999 (not on the board) ship. Move #139, Needle #20 and #999 up to "
+        "have it sooner."
     )
     assert [w.number for w in held.readiness.waits] == [139, 20, 999]
     assert [w.number for w in held.waits] == [139, 20, 222, 999], "the open face lists them all"
@@ -633,10 +646,10 @@ def test_an_ended_lane_offers_look_and_resume_and_never_watch():
     )
     after_removal = doors(card(), gone)
     assert after_removal.start.offered, "a removed worktree is a lane that can start again"
-    assert not after_removal.look.offered and "worktree is gone" in after_removal.look.why
+    assert not after_removal.look.offered and "own copy of the code is gone" in after_removal.look.why
     with_worktree = lane_for(card(), facts(worktrees={LANE: "card-7-the-thing"}))
     blocked = doors(card(), with_worktree)
-    assert not blocked.start.offered and "already exists" in blocked.start.why
+    assert not blocked.start.offered and "work on it began before and its own copy of the code is still on disk" in blocked.start.why
 
 
 def test_the_owners_signal_question_opens_at_its_due_time():
@@ -658,7 +671,7 @@ def test_a_session_whose_worktree_is_gone_is_an_ended_lane_whatever_proc_says():
         ),
     )
     assert lane.state == LaneState.ENDED and lane.hands_on_since is None
-    assert lane.died == "its worktree is gone from disk"
+    assert lane.died == "its own copy of the code is gone from disk"
 
 
 def test_entered_executing_at_reads_the_last_entry_into_executing():
@@ -766,7 +779,9 @@ def test_the_pill_is_the_start_doors_verdict_in_one_word():
 
     fresh = lane_for(card(), facts(worktrees={}))
     assert doors(card(), fresh).readiness.state == StartState.FREE
-    assert doors(card(), fresh).readiness.why == PLACEMENT.why
+    assert doors(card(), fresh).readiness.why == (
+        "Your move: press it and a session takes this card, fable on alpha. " + PLACEMENT.why + "."
+    )
     assert doors(card(gate=None), fresh, gate_named=False).readiness.state == StartState.NO_GATE
     assert doors(card(column=Column.BACKLOG), fresh).readiness.state == StartState.ELSEWHERE
     nowhere = doors(card(), fresh, placement=None, placement_note="every slot is spent")
@@ -781,7 +796,9 @@ def test_the_pill_is_the_start_doors_verdict_in_one_word():
     )
     shares = doors(card(), fresh, collision=collision).readiness
     assert shares.state == StartState.SHARES and shares.cards == [9]
-    assert shares.files == ["api/app.py"] and shares.why.startswith("Shares ground")
+    assert shares.files == ["api/app.py"] and shares.why.startswith(
+        "Your move: press it and a session takes this card, fable on alpha. Shares ground"
+    )
     waits = doors(card(), fresh, waits=[wait(139, Column.PLANNED)]).readiness
     assert waits.state == StartState.WAITS and [w.number for w in waits.waits] == [139]
     on_disk = lane_for(card(), facts())
@@ -804,10 +821,10 @@ def test_the_pill_is_the_start_doors_verdict_in_one_word():
 def test_plan_is_offered_on_a_live_suggestion_with_somewhere_to_run():
     fresh = lane_for(card(), facts(worktrees={}))
     closed = doors(card(), fresh).plan
-    assert not closed.offered and "not behind a live suggestion" in closed.why
+    assert not closed.offered and "not behind a live one" in closed.why
     assert doors(card(), fresh, suggestion_live=True).plan.offered
     nowhere = doors(card(), fresh, suggestion_live=True, placement=None, placement_note="spent")
-    assert not nowhere.plan.offered and "nowhere to run" in nowhere.plan.why
+    assert not nowhere.plan.offered and "no account has room to run it" in nowhere.plan.why
 
 
 def test_a_plan_conversation_for_several_cards_is_one_line_on_the_rail():

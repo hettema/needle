@@ -86,10 +86,11 @@ def test_a_machine_placement_is_re_tested_against_the_predicate_it_named():
     doubted = standing_for(executing, hands, dead, None, read=True)
     assert doubted.state == EvidenceState.DOUBTED
     assert doubted.words == (
-        DOUBT + "no live session has hands on its worktree (the journal says: Killed process 4242)"
+        DOUBT
+        + "no live session has hands on its copy of the code (the journal says: Killed process 4242)"
     )
     nothing = lane_for(executing, facts(worktrees={}))
-    assert "no lane exists for it" in (
+    assert "no work on it exists — no copy of the code on disk and no session" in (
         standing_for(executing, hands, nothing, None, read=True).words or ""
     )
     assert standing_for(executing, hands, None, None, read=True).state == EvidenceState.DOUBTED

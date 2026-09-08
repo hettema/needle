@@ -22,13 +22,13 @@ def test_every_lane_on_the_ground_is_named_an_edit_in_progress_first():
     said = verdict(mine, editing={7: {"board/moves.py"}}, declared={9: {"api/app.py"}})
     assert said.verdict == CollisionVerdict.COLLIDES
     assert said.sentence == (
-        "Shares ground: #7's lane is editing board/moves.py right now; #9's lane's plan "
-        "names api/app.py too. The second to fold rebases."
+        "#7's session is editing board/moves.py right now; #9's session's plan "
+        "names api/app.py too."
     )
     assert said.files == ["api/app.py", "board/moves.py"] and said.cards == [7, 9]
     declared_only = verdict(mine, editing={7: set()}, declared={9: {"api/app.py"}})
     assert declared_only.verdict == CollisionVerdict.COLLIDES
-    assert declared_only.sentence.startswith("Shares ground: #9's lane's plan names api/app.py")
+    assert declared_only.sentence.startswith("#9's session's plan names api/app.py")
     assert declared_only.cards == [9]
     # A file a lane is editing is not named twice when its plan names it too.
     both = verdict(mine, editing={7: {"api/app.py"}}, declared={7: {"api/app.py"}})
@@ -48,6 +48,6 @@ def test_two_live_lanes_editing_the_same_file_collide_on_both_sides_and_others_d
     seven, nine = said[7], said[9]
     assert seven is not None and nine is not None and said[11] is None
     assert seven.verdict == CollisionVerdict.COLLIDES and seven.files == ["shared.py"]
-    assert seven.sentence == "#9's lane is also editing shared.py." and seven.cards == [9]
-    assert nine.sentence == "#7's lane is also editing shared.py." and nine.cards == [7]
+    assert seven.sentence == "#9's session is also editing shared.py." and seven.cards == [9]
+    assert nine.sentence == "#7's session is also editing shared.py." and nine.cards == [7]
     assert drift({}) == {} and drift({7: {"a.py"}}) == {7: None}

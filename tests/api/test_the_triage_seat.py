@@ -522,7 +522,9 @@ def test_the_owner_answers_a_parked_card_and_a_lane_writes_his_ruling_into_the_c
     client.app.state.loops.live.rescan("proj")
     reconcile(client)
     assert detail(client, defect)["doors"]["answer"]["offered"] is False
-    assert detail(client, defect)["doors"]["answer"]["why"] == "No live session to answer."
+    assert detail(client, defect)["doors"]["answer"]["why"] == (
+        "Nothing for you: there is no live session to answer."
+    )
     assert answer(client, defect, RULING).status_code == 409, "not on his pile until it is read"
 
     verify(
@@ -537,7 +539,7 @@ def test_the_owner_answers_a_parked_card_and_a_lane_writes_his_ruling_into_the_c
     capsys.readouterr()
     reading = store.triages("proj", defect)[0]
     door = detail(client, defect)["doors"]["answer"]
-    assert door["offered"] is True and "A reading says this decision is yours" in door["why"]
+    assert door["offered"] is True and "A second reading says the decision is yours" in door["why"]
 
     ruled = answer(client, defect, RULING)
     assert ruled.status_code == 200, ruled.text
@@ -547,7 +549,7 @@ def test_the_owner_answers_a_parked_card_and_a_lane_writes_his_ruling_into_the_c
     assert history[0]["detail"] == f"Ruled: {RULING}"
     assert store.answers("proj")[defect].detail == f"Ruled: {RULING}"
     assert detail(client, defect)["doors"]["answer"]["offered"] is False, "never asked twice"
-    assert "you ruled on this on" in detail(client, defect)["doors"]["answer"]["why"]
+    assert "You ruled on this on" in detail(client, defect)["doors"]["answer"]["why"]
 
     tick(client)
     lane = store.corpus_lanes("proj", open_only=True)[0]

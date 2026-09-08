@@ -57,7 +57,7 @@ def test_a_free_card_is_proven_and_its_one_door_is_start_filled():
     assert s.door is not None and s.door.name == FaceDoorName.START and s.door.primary
     # The collapsed door is one word; where it would run is in its reason.
     assert s.door.label == "Start" and s.hint is None and s.loop is None
-    assert s.door.why.startswith("Start · fable on alpha — ")
+    assert s.door.why.startswith("Your move: press it and a session takes this card, fable on alpha.")
 
 
 def test_shared_ground_before_start_is_proven_and_its_door_is_start():
@@ -75,10 +75,14 @@ def test_shared_ground_before_start_is_proven_and_its_door_is_start():
     assert s.door is not None and s.door.name == FaceDoorName.START and s.door.primary
     assert s.door.label == "Start" and s.hint is None
     assert s.door.why == (
-        "Start · fable on alpha — shares 2 files with #23's lane; the second to fold rebases — "
+        "Your move: press it and a session takes this card, fable on alpha. "
         + collision.sentence
     )
-    assert s.detail == collision.sentence
+    assert s.detail == (
+        "Proven: this can start now and shares files with #23. "
+        + collision.sentence
+        + " The second to finish catches up with the first."
+    )
 
 
 def test_a_plan_that_waits_on_a_named_card_is_quiet_and_says_which():
@@ -89,7 +93,7 @@ def test_a_plan_that_waits_on_a_named_card_is_quiet_and_says_which():
     s = state(card(), doors={"waits": waits})
     assert (s.word, s.meaning) == ("waits on #139, Needle #20", Meaning.QUIET)
     assert s.door is None and s.hint == "open to see"
-    assert s.detail is not None and s.detail.startswith("Start waits on the plan's own word")
+    assert s.detail is not None and s.detail.startswith("Nothing for you: this starts by itself once #139")
 
 
 def test_a_suggestion_has_no_plan_yet_and_its_door_creates_one_outlined():
@@ -109,7 +113,10 @@ def test_a_working_lane_is_live_with_its_time_and_place_and_watch_outlined():
     lane = lane_for(c, facts(sessions=[session(detail="Skimming the suites.")]))
     s = state(c, lane=lane)
     assert (s.word, s.meaning) == ("working · 12 min · fable on alpha", Meaning.LIVE)
-    assert s.detail == "Skimming the suites."
+    assert s.detail == (
+        "Happening now: a session is working on it, fable on alpha, for 12 min. "
+        "Skimming the suites."
+    )
     assert s.door is not None and s.door.name == FaceDoorName.WATCH
     assert s.door.label == "Watch" and not s.door.primary
 
@@ -126,7 +133,10 @@ def test_a_lane_asking_is_yours_with_the_question_and_answer_filled():
     )
     s = state(c, lane=lane)
     assert (s.word, s.meaning) == ("asking you", Meaning.YOURS)
-    assert s.detail == "“Should the gate default to high or medium?”"
+    assert s.detail == (
+        "Your move: answer its question. The session on it stopped to ask: "
+        "Should the gate default to high or medium? Nothing moves until you do."
+    )
     assert s.door is not None and (s.door.name, s.door.label, s.door.primary) == (
         FaceDoorName.OPEN,
         "Answer",
@@ -147,7 +157,10 @@ def test_a_lane_that_stopped_or_is_blocked_is_yours_with_the_way_on():
     assert stopped.state == LaneState.STOPPED
     s = state(c, lane=stopped)
     assert (s.word, s.meaning) == ("stopped · fable on alpha", Meaning.YOURS)
-    assert s.detail == "The parser is in. Nothing else to do."
+    assert s.detail == (
+        "Your move: read what it said and answer. The session on it stopped 0 s ago, "
+        "fable on alpha: The parser is in. Nothing else to do. It waits for your word."
+    )
     assert s.door is not None and s.door.label == "Answer"
 
     blocked = lane_for(
@@ -156,7 +169,10 @@ def test_a_lane_that_stopped_or_is_blocked_is_yours_with_the_way_on():
     assert blocked.state == LaneState.BLOCKED
     b = state(c, lane=blocked)
     assert (b.word, b.meaning) == ("blocked · fable on alpha", Meaning.YOURS)
-    assert b.detail == "waiting on a permission"
+    assert b.detail == (
+        "Your move: unblock it. The session on it is stuck, fable on alpha: "
+        "waiting on a permission. Nothing moves until you do."
+    )
 
 
 def test_a_lane_the_runtime_is_moving_is_live_and_says_where_it_went():
@@ -205,7 +221,7 @@ def test_a_lane_that_folded_is_finished_and_a_lane_that_lost_its_work_is_broken(
     folded = lane_for(c, facts(records=[record]))
     assert folded.state == LaneState.ENDED and folded.folded
     s = state(c, lane=folded, doors={"placement": PLACEMENT})
-    assert (s.word, s.meaning) == ("lane exists", Meaning.QUIET)
+    assert (s.word, s.meaning) == ("already begun", Meaning.QUIET)
     assert s.detail is not None and LANE in s.detail
     assert Claim.LANE_ENDED not in claims_of(
         c,
@@ -221,7 +237,7 @@ def test_a_lane_that_folded_is_finished_and_a_lane_that_lost_its_work_is_broken(
 
     lost = lane_for(c, facts(records=[record.model_copy(update={"folded_at": None})]))
     assert lost.state == LaneState.ENDED and not lost.folded
-    assert state(c, lane=lost).word == "lane ended"
+    assert state(c, lane=lost).word == "session died"
 
 
 def test_an_archived_plan_outside_the_shipped_columns_is_quiet():
@@ -231,7 +247,7 @@ def test_an_archived_plan_outside_the_shipped_columns_is_quiet():
     )
     assert (s.word, s.meaning) == ("archived", Meaning.QUIET) and s.hint == "open ▸"
     planned = state(card(column=Column.PLANNED, gate=None), doors={"gate_named": False})
-    assert planned.word == "no gate"
+    assert planned.word == "no effort level"
 
 
 def test_two_lanes_in_one_file_is_broken_and_beats_live():
@@ -249,13 +265,23 @@ def test_two_lanes_in_one_file_is_broken_and_beats_live():
     )
     s = state(c, lane=lane)
     assert (s.word, s.meaning) == ("colliding with #241", Meaning.BROKEN)
-    assert s.detail == "#241's lane is also editing a.py." and s.hint == "open to see"
+    assert s.detail == (
+        "Something is wrong: two sessions are editing the same files. "
+        "#241's lane is also editing a.py. The second to finish catches up with the first; "
+        "nothing needs you unless they stay stuck."
+    )
+    assert s.hint == "open to see"
 
 
 def test_a_doubted_status_is_broken_with_the_doubt_in_the_essences_place():
     s = state(card(column=Column.DECISION_MOMENT), standing=DOUBTED)
     assert (s.word, s.meaning) == ("doubted", Meaning.BROKEN)
-    assert s.detail == DOUBTED.words and s.hint == "open to decide" and s.door is None
+    assert s.detail == (
+        "Something is wrong: the board doubts that this card belongs where it sits. "
+        "The board doubts this: no live session has hands on its worktree. "
+        "Open it to decide where it belongs."
+    )
+    assert s.hint == "open to decide" and s.door is None
 
 
 def test_a_lane_that_died_before_the_fold_is_broken_but_after_it_is_the_loop():
@@ -263,7 +289,7 @@ def test_a_lane_that_died_before_the_fold_is_broken_but_after_it_is_the_loop():
     lane = lane_for(c, facts(sessions=[session(pid=None)], deaths={}))
     assert lane.state == LaneState.ENDED
     s = state(c, lane=lane)
-    assert (s.word, s.meaning) == ("lane ended", Meaning.BROKEN) and s.hint == "open to resume"
+    assert (s.word, s.meaning) == ("session died", Meaning.BROKEN) and s.hint == "open to resume"
     shipped = card(column=Column.EXECUTED, archived=True)
     s = state(
         shipped, lane=lane_for(shipped, facts(sessions=[session(pid=None)])), signal=OWNER_SIGNAL
@@ -329,7 +355,11 @@ def test_a_document_nowhere_is_broken_before_anything_else():
     c = card(column=Column.DECISION_MOMENT)
     s = state(c, document_state=DocumentState.GONE, standing=DOUBTED)
     assert (s.word, s.meaning) == ("document nowhere", Meaning.BROKEN)
-    assert s.detail == "cites docs/plans/p.md, and no such file exists in the project"
+    assert s.detail == (
+        "Something is wrong: the document this card cites is nowhere. It cites "
+        "docs/plans/p.md, and no such file exists in the project. Put the file back, or "
+        "point the card at the right one, and the board reads it again by itself."
+    )
 
 
 def test_a_decision_moment_card_is_your_move_and_decide_opens_it():
@@ -350,7 +380,11 @@ def test_a_shipped_cards_state_is_its_loop():
     assert open_loop.meaning == Meaning.QUIET and open_loop.hint is None
     assert open_loop.loop is not None and open_loop.loop.state == LoopState.OPEN
     assert not open_loop.loop.owner_only
-    assert open_loop.detail == "Signal: no session re-grows the old doors — by 11 Sep"
+    assert open_loop.detail == (
+        "Nothing for you: a session reads the signal 11 Sep. The signal: no session "
+        "re-grows the old doors, by 11 Sep. The card moves to Done by itself once the "
+        "signal delivers."
+    )
 
     owner_ring = state(c, signal=OWNER_SIGNAL)
     assert owner_ring.loop is not None and owner_ring.loop.owner_only
@@ -397,7 +431,12 @@ def test_a_shipped_cards_state_is_its_loop():
 
     unnamed = state(c, signal_note="No WATCH row names a signal.")
     assert (unnamed.word, unnamed.meaning) == ("no signal named", Meaning.QUIET)
-    assert unnamed.detail == "No WATCH row names a signal." and unnamed.loop is None
+    assert unnamed.detail == (
+        "Nothing for you: the board cannot tell from this card what would prove it "
+        "delivered. No WATCH row names a signal. A session writes a signal the board can "
+        "read, and the board reads it from then on."
+    )
+    assert unnamed.loop is None
 
     # A loop the board said it would close and has not is broken, and says so
     # on the head as well as on the card.
@@ -438,7 +477,7 @@ def test_the_quiet_states_each_have_their_word():
         ).word
         == "nowhere to run"
     )
-    assert state(card(gate=None), doors={"gate_named": False}).word == "no gate"
+    assert state(card(gate=None), doors={"gate_named": False}).word == "no effort level"
     assert state(card(column=Column.EXECUTING)).word == "no hands on it"
     assert (
         state(card(column=Column.BACKLOG), document_state=DocumentState.NOTE).word == "no document"

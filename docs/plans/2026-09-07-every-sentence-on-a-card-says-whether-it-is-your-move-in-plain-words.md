@@ -1,7 +1,7 @@
 # Every sentence on a card says whether it is your move, in plain words
 
 **Carries:** docs/slice-suggestions/done/2026-09-07-every-sentence-on-a-card-says-whether-it-is-your-move-in-plain-words.md
-**Status:** NEW — planned, not started; the owner placed it third in Up next on 2026-09-07, after #20 and #74.
+**Status:** SHIPPED 2026-09-08 — every item stanced below; the review record is `docs/reviews/2026-09-08-every-sentence-on-a-card-says-whether-it-is-your-move.md`.
 **Written:** 2026-09-07, from Dennis reading #74's face: "the sub sentence 'Start waits on the plan's own word:' makes no sense to me? Is there something I need to do? The card is a surface that helps me understand intent and actions that require me, the sub sentence kinda failed on that. Same is true for held cards and cards in decision moment." And then, asking for the plan: "My intent is to understand the board at a glance and understand the cards when I open them. This needs to be true for the HR, Omarchy and needle needles."
 **Effort gate:** medium — the sentences are string literals in three modules and a test can read every one of them; the judgment is the shape (one opening per meaning, and the opening agrees with the colour), settled in the Rulings here; the sweep is many small edits with a ratchet that says when it is whole.
 **Sequencing:** after #74 (the vocabulary file `docs/vocabulary.md` is #74's item 1; this plan reads it and adds nothing to it). The two share that file and nothing else.
@@ -43,6 +43,18 @@ meaning; every `_state(...)`, `_closed(...)` and `_open(...)` call and every
 lane sentence in `api/loops.py` is built through the one function; a test
 builds a sentence for each meaning and reads the opening; a sentence built
 with a mismatched opening is refused at construction.
+**Met:** `domain/meaning.py` holds `Meaning`, `OPENING` (one opening per
+meaning) and `say(meaning, what, why=, then=)`, the one builder;
+`CardState` refuses a detail whose opening is not its meaning's and an
+amber or red face with no sentence, `Door.why`, `FaceDoor.why` and
+`Lane.sentence` refuse a text with no opening (`domain/board.py`,
+`domain/lane.py`); every `_state`, `_closed`, `_open` call and every lane
+sentence in `board/lane.py::lane_for` goes through it (the lane sentences
+live there, not in `api/loops.py` — see item 2); `tests/board/test_meaning.py`
+builds a sentence per meaning, reads the opening, and shows the refusals.
+The held card reads "Nothing for you: this starts by itself once #20 ships.
+Move #20 up to have it sooner." — the plan's example with the opening's
+colon instead of "yet", so one shape serves every meaning (commit 07c47c8).
 
 ### 2. Every sentence the board can say is rewritten to the shape, held cards and Decision moment cards first
 The sixty-three state sentences in `board/assemble.py`, the door sentences
@@ -59,6 +71,23 @@ live check of the served board shows #74's hold sentence in its new words.
 Hands out: search — every sentence literal the three modules build, with
 file and line; verifies the count against the ratchet's own read before the
 sweep and after it.
+**Deviated:** the search read forty `_state` calls in `board/assemble.py`
+(the suggestion's sixty-three was a miscount, verified by `grep -c`),
+thirty-eight door builders in `board/lane.py`, and none in `api/loops.py`:
+that module builds history rows and machine readings that never reach a
+face, so the third module of the sweep is `board/collision.py` (whose
+sentence every face wraps as its reason), with `board/evidence.py`'s doubt
+words beside it. Every one is rewritten (commits 07c47c8, 9746c4b); the
+Decision moment note (`domain/column.py`) and the head's held tooltip take
+the shape, the openings reaching the page through `needle types`.
+`tests/ratchets/test_every_face_sentence_says_whose_move.py` reads every
+literal handed to a builder in the three modules and every sentence the
+test board builds (states, doors, lanes, the language cases, the column
+notes, the tooltip) against `docs/vocabulary.md` and the openings, and
+holds that an amber face opens "Your move" and no other does. The live
+check of the served board is in the review record's last pass; #74's own
+hold no longer exists because #74 shipped on 2026-09-07, so the check reads
+a held card and a Decision moment card as the served board has them.
 
 ### 3. The open card reads the same way
 When a card is opened, the state sentence replaces the essence
@@ -69,6 +98,12 @@ sentences too and are read by the same ratchet.
 Done means: the ratchet of item 2 covers the door labels and reasons; on
 the fixture an open held card reads "Nothing for you yet …" as its first
 line and its Start door's reason in the same words.
+**Met:** the ratchet reads every door's `why` on the test board and the
+language cases' face doors; `frontend/tests/board.test.tsx` ("says on the
+open card why a plan waits on the cards its Sequencing names") opens a held
+card and reads "Nothing for you: this starts by itself once #139 …" as the
+state sentence under the title and again as the Start note, the "Start is
+closed:" prefix gone (`frontend/src/board/OpenCard.tsx`, commit 9746c4b).
 
 ## Acceptance criteria
 

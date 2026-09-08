@@ -166,7 +166,7 @@ def test_cannot_tell_asks_the_owner_with_the_sessions_words_and_his_click_answer
     assert asked["doors"]["signal"]["offered"]
     assert (
         asked["doors"]["signal"]["why"]
-        == f"A session read this signal and could not tell — {words}"
+        == f"Your move: say whether this signal delivered. A session read it and could not tell: {words}."
     )
     answered = client.post(f"/api/projects/proj/cards/{CARD}/signal", json={"delivered": True})
     assert answered.status_code == 200, answered.text

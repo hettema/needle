@@ -211,7 +211,7 @@ def test_a_card_without_a_gate_or_outside_the_queue_does_not_start(
     client: TestClient, machine_floor: Floor
 ):
     note = client.post("/api/projects/proj/cards/147/start", json={"anyway": False})
-    assert note.status_code == 409 and "no effort gate" in note.json()["detail"]
+    assert note.status_code == 409 and "no effort level" in note.json()["detail"]
     assert machine_floor.state()["launch_log"] == []
 
 
@@ -267,15 +267,12 @@ def test_shared_ground_opens_start_shows_it_on_both_cards_and_briefs_the_lane(
     reconcile(client)
 
     before = detail(client)
-    sentence = (
-        "Shares ground: #241's lane is editing engine/metering.py right now. "
-        "The second to fold rebases."
-    )
+    sentence = "#241's session is editing engine/metering.py right now."
     assert before["doors"]["start"] == {
         "offered": True,
-        "label": "Start · fable on alpha — shares 1 file with #241's lane; the second to fold "
-        "rebases",
-        "why": sentence,
+        "label": "Start · fable on alpha — shares 1 file with #241's session; the second to "
+        "finish catches up",
+        "why": "Your move: press it and a session takes this card, fable on alpha. " + sentence,
     }
     assert before["doors"]["collision"]["verdict"] == "collides"
     assert before["doors"]["readiness"]["state"] == "shares"
@@ -289,10 +286,7 @@ def test_shared_ground_opens_start_shows_it_on_both_cards_and_briefs_the_lane(
     assert "#241 " in client.get(f"/api/projects/proj/cards/{CARD}/brief").text
 
     said = start(client)
-    assert said["said"].endswith(
-        "; shares ground: #241's lane is editing engine/metering.py right now. "
-        "The second to fold rebases."
-    )
+    assert said["said"].endswith("; #241's session is editing engine/metering.py right now.")
     brief = machine_floor.state()["launch_log"][0]["argv"][-1]
     assert f"SHARED GROUND: {sentence}" in brief
     assert "git pull --rebase origin develop" in brief and "The files: engine/metering.py." in brief
@@ -330,16 +324,15 @@ def test_a_sequencing_line_naming_a_card_in_flight_holds_start_until_it_ships(
     held = detail(client)
     assert not held["doors"]["start"]["offered"]
     assert held["doors"]["start"]["why"] == (
-        "Start waits on the plan's own word: its Sequencing names #241 (Executing), "
-        "#999 (not on the board); it opens by itself once every named card is in Executed "
-        "or Done."
+        "Nothing for you: this starts by itself once #241 (Executing) and #999 (not on the "
+        "board) ship. Move #241 and #999 up to have it sooner."
     )
     assert held["doors"]["readiness"]["state"] == "waits"
     assert [w["label"] for w in held["doors"]["readiness"]["waits"]] == ["#241", "#999"]
     assert summary_of(client)["state"]["word"] == "waits on #241, #999"
     assert summary_of(client)["state"]["meaning"] == "quiet"
     refused = client.post(f"/api/projects/proj/cards/{CARD}/start", json={})
-    assert refused.status_code == 409 and "waits on the plan's own word" in refused.json()["detail"]
+    assert refused.status_code == 409 and "this starts by itself once #241" in refused.json()["detail"]
 
     # The named card ships: the next read opens the door by itself.
     plan.write_text(plan.read_text().replace(", and #999 too.", "."))
@@ -392,7 +385,10 @@ def test_a_stop_with_a_question_asks_you_and_answer_resumes_one_live_copy(
     assert asking["summary"]["lane_state"] == "asking"
     assert asking["lane"]["question"].endswith("Should the gate default to high or medium?")
     assert asking["summary"]["state"]["word"] == "asking you"
-    assert asking["summary"]["state"]["detail"] == "“Should the gate default to high or medium?”"
+    assert asking["summary"]["state"]["detail"] == (
+        "Your move: answer its question. The session on it stopped to ask: "
+        "Should the gate default to high or medium? Nothing moves until you do."
+    )
     assert asking["doors"]["answer"]["offered"] and not asking["doors"]["look"]["offered"]
     assert yours(client.get("/api/projects/proj/board").json()) >= 1
 
@@ -472,7 +468,7 @@ def test_watch_opens_a_tab_once_stop_ends_the_lane_and_look_takes_its_place(
     )
     ended = detail(client)
     assert ended["summary"]["lane_state"] == "ended"
-    assert ended["summary"]["state"]["word"] == "lane ended"
+    assert ended["summary"]["state"]["word"] == "session died"
     assert not ended["doors"]["watch"]["offered"] and ended["doors"]["look"]["offered"]
     assert ended["doors"]["resume"]["offered"]
     assert any(
@@ -747,7 +743,7 @@ def test_a_lane_that_dies_mid_close_is_doubted_on_the_next_read_until_the_loop_m
     doubted = summary_of(client)["standing"]
     assert doubted["state"] == "doubted" and doubted["evidence"] == "hands-on"
     assert doubted["words"].startswith(
-        "the board doubts this: no live session has hands on its worktree"
+        "the board doubts this: no live session has hands on its copy of the code"
     )
     assert detail(client)["summary"]["standing"] == doubted
     board = client.get("/api/projects/proj/board").json()
@@ -833,7 +829,10 @@ def test_a_lane_that_dies_on_a_limit_is_moved_and_the_card_says_where(
     ), [h["detail"] for h in moved["history"]]
     assert moved["lane"]["session"]["slot"] == "beta"
     assert moved["summary"]["state"]["word"].endswith("fable on beta")
-    assert moved["summary"]["state"]["detail"] == "Moved to fable on beta, new window opened."
+    assert moved["summary"]["state"]["detail"] == (
+        "Happening now: a session is working on it, fable on beta, for 0 s. "
+        "It moved to fable on beta, and a new window opened. Starting…"
+    )
     assert column_of(client, CARD) == "Executing"
     assert len(machine_floor.state()["spawned"]) == 2
 
@@ -987,12 +986,12 @@ def test_two_lanes_in_one_file_collide_on_both_cards_know_each_other_and_the_fol
     assert claim_count(board, "colliding") == 2
     assert summary_of(client, CARD)["colliding"] == {
         "verdict": "collides",
-        "sentence": "#241's lane is also editing README.md.",
+        "sentence": "#241's session is also editing README.md.",
         "files": ["README.md"],
         "cards": [241],
     }
     assert summary_of(client, 241)["colliding"]["sentence"] == (
-        "#253's lane is also editing README.md."
+        "#253's session is also editing README.md."
     )
     lane = detail(client)["lane"]
     assert lane["edits"] == ["README.md"] and lane["colliding"]["files"] == ["README.md"]
@@ -1184,12 +1183,12 @@ def test_a_running_lane_hears_its_drift_and_the_other_lanes_lines_once(
     (mine / "README.md").write_text("my edit\n")
     reconcile(client)
     assert word_of(client, str(mine / "docs")) == [
-        "#241's lane is also editing README.md. Say in the watercooler what you are doing there."
+        "#241's session is also editing README.md. Say in the watercooler what you are doing there."
     ]
     assert word_of(client, str(mine)) == []
     heard = detail(client)["heard"]
-    assert heard["collision"] == "#241's lane is also editing README.md."
-    assert heard["text"].startswith("#241's lane is also editing README.md.")
+    assert heard["collision"] == "#241's session is also editing README.md."
+    assert heard["text"].startswith("#241's session is also editing README.md.")
     assert heard["at"] is not None
 
     # B's line reaches A once; B never hears its own, only its side of the drift.
@@ -1199,7 +1198,7 @@ def test_a_running_lane_hears_its_drift_and_the_other_lanes_lines_once(
     assert word_of(client, str(mine)) == [f"#241 said on the watercooler: {line}"]
     assert word_of(client, str(mine)) == []
     assert word_of(client, str(other)) == [
-        "#253's lane is also editing README.md. Say in the watercooler what you are doing there."
+        "#253's session is also editing README.md. Say in the watercooler what you are doing there."
     ]
     assert word_of(client, str(other)) == []
     heard = detail(client)["heard"]
@@ -1230,7 +1229,7 @@ def test_a_running_lane_hears_its_drift_and_the_other_lanes_lines_once(
     git(mine, "commit", "-q", "-m", "my edit")
     (other / "README.md").write_text("their edit again\n")
     reconcile(client)
-    assert word_of(client, str(other))[0].startswith("#253's lane is also editing README.md.")
+    assert word_of(client, str(other))[0].startswith("#253's session is also editing README.md.")
     assert main(["fold", "--worktree", str(mine)]) == 0
     capsys.readouterr()
     # The board's own read, said rather than raced: the fold's writes reach
@@ -1348,7 +1347,7 @@ def test_plan_opens_a_plan_writing_conversation_for_one_suggestion_or_several(
     )
 
     refused = client.post("/api/projects/proj/plan", json={"numbers": [CARD]})
-    assert refused.status_code == 409 and "not behind a live suggestion" in refused.json()["detail"]
+    assert refused.status_code == 409 and "not behind a live one" in refused.json()["detail"]
     empty = client.post("/api/projects/proj/plan", json={"numbers": []})
     assert empty.status_code == 409
 

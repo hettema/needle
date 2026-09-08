@@ -17,6 +17,7 @@ from pydantic import BaseModel
 from board.brief import lane_name, lane_path
 from board.collision import drift
 from board.sequencing import holding, where
+from board.title import hold_sentence
 from domain.audit import AuditEntry, AuditKind
 from domain.card import Actor, Card
 from domain.column import Column
@@ -374,7 +375,9 @@ def lane_for(card: Card, facts: LaneFacts) -> Lane:
             if held
         ]
         when = f"the session on it ended {ago(last_seen, facts.now)} ago"
-        if landed:
+        # Only a fold says the work landed; a level checkout beside an
+        # unfolded lane says nothing about this card, and the face is red.
+        if folded:
             sentence = say(Meaning.QUIET, when, why="; ".join(landed))
         elif on_disk:
             sentence = say(
@@ -390,9 +393,10 @@ def lane_for(card: Card, facts: LaneFacts) -> Lane:
         sentence = ""
 
     if discussing:
-        sentence = (sentence + " " if sentence else "") + (
-            f"In discussion with you ({', '.join(discussing)})."
-        )
+        talk = f"In discussion with you ({', '.join(discussing)})."
+        # A discussion beside a lane is one more clause of its sentence; on
+        # its own it is the sentence, live because the conversation is.
+        sentence = f"{sentence} {talk}" if sentence else say(Meaning.LIVE, talk[:-1])
 
     return Lane(
         card_number=card.number,
@@ -760,7 +764,7 @@ def _nowhere(label: str, placement_note: str) -> Door:
             label,
             Meaning.QUIET,
             "the board has not read this project yet, so nothing can start",
-            then="it reads within a minute and the door opens by itself",
+            then="it reads within a minute and Start opens by itself",
         )
     return _closed(
         label,
@@ -863,13 +867,7 @@ def doors_for(
         # The owner ranks from the title alone; a card he cannot place is
         # not started until the writer has rewritten it and a reading with
         # no share of the writer's context has passed it (card #74, item 3).
-        start = _closed(
-            "Start",
-            Meaning.BROKEN,
-            "a cold reading could not place this card from its title, so it cannot start",
-            why=title_hold,
-            then="the writer rewrites the title and the next reading opens Start by itself",
-        )
+        start = Door(offered=False, label="Start", why=hold_sentence(title_hold))
         state = StartState.TITLE_FAILS
     elif placement is None:
         start = _nowhere("Start", placement_note)

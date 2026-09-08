@@ -492,7 +492,8 @@ def test_a_held_plan_does_not_count_and_the_memory_floor_stops_the_beat(
     assert column_of(client, tide) == "Planned"
     history = detail(client, tide)["history"]
     assert any(
-        h["detail"].startswith("Start waits: Start waits on the plan's own word") for h in history
+        h["detail"].startswith("Start waits: Nothing for you: this starts by itself once #228")
+        for h in history
     )
     # The same beat took the next defect: a held plan holds nothing, so the
     # beat read the gate log's mark, and a beat after its result the planning
@@ -549,7 +550,7 @@ def test_a_held_plan_does_not_count_and_the_memory_floor_stops_the_beat(
     assert column_of(client, tide) == "Executing"
     assert len(machine_floor.state()["launch_log"]) == taken + 1
     started_row = next(h for h in detail(client, tide)["history"] if h["kind"] == "started")
-    assert "started by the dial; shares ground: #241's lane is editing engine/metering.py" in (
+    assert "started by the dial; #241's session is editing engine/metering.py" in (
         started_row["detail"]
     )
     assert "SHARED GROUND" in machine_floor.state()["launch_log"][-1]["argv"][-1]
