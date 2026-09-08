@@ -46,6 +46,18 @@ def roles_path() -> Path:
     return slot_root() / "roles.json"
 
 
+def package_cache() -> Path:
+    """`uv`'s package cache, the one directory outside its worktree a lane
+    must write to run the suite (card #63). Named here rather than in the
+    launcher so the floor can stand it somewhere throwaway."""
+    override = os.environ.get("UV_CACHE_DIR")
+    if override:
+        return Path(override)
+    cache = os.environ.get("XDG_CACHE_HOME")
+    base = Path(cache) if cache else Path.home() / ".cache"
+    return _path("NEEDLE_PACKAGE_CACHE", base / "uv")
+
+
 def claude_home() -> Path:
     """Claude Code's default config directory, which is a registry of its own:
     a session started with no `CLAUDE_CONFIG_DIR` registers here."""

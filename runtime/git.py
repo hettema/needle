@@ -66,6 +66,38 @@ def worktrees(repo: str | Path) -> dict[str, str | None]:
     return found
 
 
+def add_worktree(repo: str | Path, path: str | Path, branch: str) -> str | None:
+    """Lay a lane's worktree on a branch of its own, off the trunk. What
+    `claude --bg --worktree` does for a Claude lane, done here for a make
+    whose launcher has no such flag (card #63): the same place, the same
+    branch name, so the board reads both lanes the same way. Answers None
+    when it worked, else git's own words.
+
+    The branch is started from `origin/develop` rather than from whatever
+    the main checkout has checked out, which is what the effort gate's click
+    means by "started from the card": a lane begins level with the trunk.
+    """
+    start = f"{REMOTE}/{TRUNK}" if head_of(repo, f"{REMOTE}/{TRUNK}") else "HEAD"
+    try:
+        _git(repo, "worktree", "add", "-b", branch, str(path), start)
+    except GitFailed as error:
+        return str(error)
+    return None
+
+
+def remove_worktree(repo: str | Path, path: str | Path, branch: str) -> str | None:
+    """Take back a worktree whose lane never started, and the branch with
+    it. Only ever called for a launch that died: git refuses to remove a
+    worktree with work in it, and the caller has just proved there is none.
+    Answers None when it worked, else git's own words."""
+    try:
+        _git(repo, "worktree", "remove", "--force", str(path))
+    except GitFailed as error:
+        return str(error)
+    _try(repo, "branch", "-D", branch)
+    return None
+
+
 def card_of_branch(branch: str | None) -> int | None:
     match = _LANE_BRANCH.search(branch or "")
     return int(match.group(1)) if match else None
@@ -333,7 +365,10 @@ def _rebase_ahead(repo: str | Path, behind: int, main_updated: bool, error: GitF
     ahead = ahead_count(repo)
     if ahead == 0:
         return Levelled(
-            level=False, behind=behind, note=f"could not fast-forward: {error}", fetched=True,
+            level=False,
+            behind=behind,
+            note=f"could not fast-forward: {error}",
+            fetched=True,
             main_updated=main_updated,
         )
     try:

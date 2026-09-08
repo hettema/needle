@@ -16,10 +16,13 @@ argv, a terminal holds the file open (both verified on this machine,
 This reader stays a file-format reader beside `runtime.transcripts`; the
 two share the `Session` and `Doing` shapes and nothing else, because the
 two formats repeat no boundary yet (the plan's item 3). What a Codex row
-never claims: a subscription slot (`slot` is the make's name), a model the
-`Model` rungs could hold, a wall, a fork. What it never surfaces: the brief
-it was given or the input of a tool call — a code-mode `exec` carries a
-whole script, so `doing` is the tool's name and its time, nothing more.
+never claims: a subscription slot (`slot` is the make's name), a wall, a
+fork. What it never surfaces: the brief it was given or the input of a tool
+call — a code-mode `exec` carries a whole script, so `doing` is the tool's
+name and its time, nothing more.
+
+Since card #63 this module also builds the argv that gives a Codex worker a
+card's lane, beside the one that calls a worker warm.
 """
 
 import json
@@ -28,6 +31,7 @@ from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
 
+from domain.gate import Gate
 from domain.session import Doing, Session, SessionKind, SessionState
 from runtime import machine
 
@@ -71,6 +75,10 @@ class Rollout:
     cwd: str
     source: str
     """The rollout's own word for what kind of session it was: `cli`, `exec`."""
+    model: str | None
+    """The model the rollout says answered it, from the session's own head;
+    None when this version writes it somewhere else. The board shows it or
+    shows the make alone, and never a guess (card #63, item 3)."""
     started_at: datetime | None
     updated_at: datetime
     """The file's last change: the last thing the session wrote."""
@@ -123,9 +131,22 @@ def _rollout_of(path: Path) -> Rollout | None:
         session_id=session_id,
         cwd=cwd if isinstance(cwd, str) else "",
         source=str(payload.get("source") or ""),
+        model=_model_of(payload),
         started_at=_when(payload.get("timestamp")) or _when(meta.get("timestamp")),
         updated_at=datetime.fromtimestamp(stamp, UTC),
     )
+
+
+def _model_of(payload: dict) -> str | None:
+    """The model named in a rollout's head. Codex records it as the
+    provenance of the base instructions it was given
+    (`base_instructions.provenance.model`, read from a 0.153.4 rollout on
+    2026-09-08); a version that records it elsewhere answers None here and
+    the board says the make alone, which is the truth and not a guess."""
+    instructions = payload.get("base_instructions")
+    provenance = instructions.get("provenance") if isinstance(instructions, dict) else None
+    named = provenance.get("model") if isinstance(provenance, dict) else None
+    return named if isinstance(named, str) and named else None
 
 
 def _when(stamp: object) -> datetime | None:
@@ -228,7 +249,7 @@ def row_of(rollout: Rollout, pid: int | None) -> Session:
         detail="",
         pid=pid,
         scope=machine.cgroup_of(pid) if pid is not None else None,
-        model=None,
+        model=rollout.model,
         effort=None,
         stale=False,
         wall=None,
@@ -310,6 +331,74 @@ def schema_path(answer: str) -> Path:
     was held to, and never `.md`, so the board's note reader skips it."""
     given = Path(answer)
     return given.with_name(given.stem + ".schema.json")
+
+
+# ── the lane ───────────────────────────────────────────────────────────
+
+REASONING = {Gate.LOW: "low", Gate.MEDIUM: "medium", Gate.HIGH: "high", Gate.XHIGH: "xhigh"}
+"""A plan's effort gate as Codex's own word for it. The four levels carry
+the same names on both makes (`codex exec --help`, `model_reasoning_effort`,
+read on 0.153.4 2026-09-08), so this map is an identity today and exists so
+that the day one make renames a level the other is not renamed with it."""
+
+GIT_ROOTS = ("objects", "refs", "logs")
+"""The directories under a repository's `.git` that a commit on a linked
+worktree's branch writes, beside the worktree's own `worktrees/<lane>`
+record. Codex's workspace sandbox denies every write under `.git` by rule —
+proved on 2026-09-08 in a plain repository, where a commit failed on
+`.git/index.lock` with the whole repository as the workspace root — so a
+lane that must commit names these four as writable roots and nothing else.
+What that leaves closed is the main checkout's own index and working tree,
+both verified refused in the same probe: the boundary a Claude lane holds by
+its harness's guard, a Codex lane holds in the kernel."""
+
+
+def lane_roots(repo: Path, lane: str, cache: Path) -> list[str]:
+    """Everything outside its own worktree a Codex lane may write: the four
+    git paths a commit on its branch needs, and the package cache its suite
+    needs. Directories only — a file named here makes the sandbox exit 101
+    before the session starts (`.git/config`, 2026-09-08)."""
+    git = repo / ".git"
+    return [str(git / "worktrees" / lane), *[str(git / part) for part in GIT_ROOTS], str(cache)]
+
+
+def lane_argv(
+    worktree: Path,
+    *,
+    model: str | None,
+    effort: Gate | None,
+    prompt: str,
+    roots: list[str],
+) -> list[str]:
+    """`codex exec` as a card's lane: working in the worktree, sandboxed to
+    it, allowed the roots a commit and a suite need, and told the brief a
+    Claude lane is told.
+
+    Why `workspace-write` and not the launcher's bypass: Omarchy runs the
+    owner's own Codex sessions with no sandbox at all, which is his call for
+    a session he is watching; a lane nobody watches gets the sandbox,
+    because the boundary "a lane never touches the main checkout" is then
+    held by the kernel rather than by a rule the session could reason its
+    way past (§5). Network access is on because the lane folds through the
+    same door a Claude lane does — it runs the suite and `needle fold`
+    itself — and a fold reaches origin and the board (all four verified
+    inside the sandbox, 2026-09-08). No `-o` and no `--output-schema`: a
+    lane's word is its commits and the card, not a last message.
+    """
+    roots_toml = "[" + ",".join(f'"{root}"' for root in roots) + "]"
+    argv = [machine.which("codex"), "exec", "-s", "workspace-write", "-C", str(worktree)]
+    if model:
+        argv += ["-m", model]
+    if effort is not None:
+        argv += ["-c", f"model_reasoning_effort={REASONING[effort]}"]
+    argv += [
+        "-c",
+        f"sandbox_workspace_write.writable_roots={roots_toml}",
+        "-c",
+        "sandbox_workspace_write.network_access=true",
+        prompt,
+    ]
+    return argv
 
 
 def log_path(answer: str) -> Path:

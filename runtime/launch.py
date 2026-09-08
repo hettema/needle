@@ -20,10 +20,10 @@ from domain.call import Answer
 from domain.gate import Gate
 from domain.launch import Attempt, Launch, LaunchVerdict, Rescue, Start, Stopped, WindowlessStart
 from domain.session import Session, SessionKind, SessionSlot, SessionState
-from domain.slot import Handoff, Model, Placement, Rung, Slot
-from infrastructure import clock
+from domain.slot import Handoff, Make, Placement, Rung, Slot
+from infrastructure import clock, paths
 from infrastructure.store import Store
-from runtime import codex, handoffs, machine, registry, rule, slots
+from runtime import codex, git, handoffs, machine, registry, rule, slots
 
 OBSERVATION_SECONDS = 5.0
 """How long a registered row must keep a live process before "registered"
@@ -109,10 +109,17 @@ def argv_for(
     resume: str | None,
     worktree: str | None,
 ) -> list[str]:
-    """The one argv for a background session. No `--session-id` (the CLI
-    assigns its own under `--bg`) and no `--fallback-model` (a silent drop to
-    a weaker model is what the rule exists to prevent)."""
-    argv = [machine.which("claude"), "--bg", "--model", placement.model.value]
+    """The one argv for a background Claude session. No `--session-id` (the
+    CLI assigns its own under `--bg`) and no `--fallback-model` (a silent
+    drop to a weaker model is what the rule exists to prevent).
+
+    A placement with no model named runs the slot's own top rung, with no
+    `--model` flag: the rule answers `model: null` for exactly that, and the
+    runtime used to turn it into the word `fable`, which was Needle
+    asserting the ladder it does not own (card #63)."""
+    argv = [machine.which("claude"), "--bg"]
+    if placement.model:
+        argv += ["--model", placement.model]
     if effort is not None:
         argv += ["--effort", effort.value]
     if worktree:
@@ -141,9 +148,11 @@ def placement_from(handoff: Handoff) -> Placement | None:
         return None
     return Placement(
         slot=slot.name,
-        model=handoff.model or Model.FABLE,
+        make=Make.CLAUDE,
+        model=handoff.model,
         config_dir=slot.config_dir,
         why=handoff.reason,
+        tier=None,
     )
 
 
@@ -413,24 +422,34 @@ def _settle(
         placement=placement,
         scope=scoped.unit if scoped.verified else None,
         attempts=attempts,
-        reason=None if scoped.verified else f"running, but not in its own scope: {scoped.words}",
+        reason=None
+        if scoped.verified
+        else f"running, but not in its own space on the machine: {scoped.words}",
     )
 
 
 def start(store: Store, request: Start) -> Launch:
     """Start a session for a card where the rule says, in a worktree of its
-    own, and walk down the ladder when a rung dies on a wall."""
+    own, and walk down the ladder when a rung dies on a wall. The rule may
+    name a make of its own choosing (card #63): every make lands in the same
+    place with the same brief at the same effort, and each is launched by
+    its own launcher, because only Claude's ladder has rungs to walk."""
     repo = Path(request.repo)
     if not (repo / ".git").exists():
         return dead(
             request.card, [], f"{repo} is not a git repository; a lane needs a worktree", None
         )
+    where = rule.where(request.from_slot, [], cached=False)
+    if where.placement is None:
+        return dead(request.card, [], where.reason, None)
+    if where.placement.make is Make.CODEX:
+        return codex_lane(store, where.placement, request)
     return _walk(
         store,
+        placement=where.placement,
         card=request.card,
         brief=request.brief,
         effort=request.effort,
-        from_slot=request.from_slot,
         cwd=repo,
         worktree=request.card,
     )
@@ -440,13 +459,35 @@ def windowless(store: Store, request: WindowlessStart) -> Launch:
     """Start a session in the repository's own checkout with no worktree — a
     reading of a signal (plan 09, item 1) or the planning of a defect under
     the dial (plan 11, item 4): the same walk as a lane's, so the board never
-    reads it as hands on a tree."""
+    reads it as hands on a tree.
+
+    Asked of the rule with the Codex rung already spent, so the answer is a
+    Claude one. A windowless session works in the project's own checkout,
+    and the one thing this card gave the other make is a lane sandboxed to a
+    worktree; running it here would either hand it the main checkout or
+    invent a second shape of Codex session for a reading. Neither is this
+    card's (`docs/plans/…-drives-the-card-claude-or-codex.md`, item 1), so
+    the reading stays Claude's until a card gives the other make one, and
+    `--tried` is how the rule is told, not a make of our own choosing.
+    """
+    where = rule.where(None, [CODEX_RUNG], cached=False)
+    if where.placement is None:
+        return dead(request.card, [], where.reason, None)
+    if where.placement.make is not Make.CLAUDE:
+        return dead(
+            request.card,
+            [],
+            f"the rule answered {where.placement.make.value} even with that make's rung spent, "
+            "and a session with no window runs in the project's own checkout, which this "
+            "runtime gives no make but Claude",
+            where.placement,
+        )
     return _walk(
         store,
+        placement=where.placement,
         card=request.card,
         brief=request.brief,
         effort=request.effort,
-        from_slot=None,
         cwd=Path(request.repo),
         worktree=None,
     )
@@ -455,19 +496,17 @@ def windowless(store: Store, request: WindowlessStart) -> Launch:
 def _walk(
     store: Store,
     *,
+    placement: Placement,
     card: str,
     brief: str,
     effort: Gate | None,
-    from_slot: str | None,
     cwd: Path,
     worktree: str | None,
 ) -> Launch:
-    """Launch where the rule says and walk down the ladder when a rung dies
-    on a wall; one verified session or a named death."""
-    where = rule.where(from_slot, [], cached=False)
-    if where.placement is None:
-        return dead(card, [], where.reason, None)
-    placement = where.placement
+    """Launch where the rule said and walk down the ladder when a rung dies
+    on a wall; one verified session or a named death. Claude's, because a
+    wall, a handoff and a rung below are Claude's ladder and no other make
+    on this machine has one."""
     attempts: list[Attempt] = []
     prompt, resume, worktree_flag = brief, None, worktree
     rescued_from: tuple[Rung, str] | None = None
@@ -759,6 +798,155 @@ CODEX_RUNG = Rung(slot=codex.SLOT, model=None)
 the rungs are Claude's subscription ladder and a worker of the other make
 never stands on one."""
 
+CODEX_LANE_SECONDS = 8.0
+"""How long a Codex lane's process must live before the launch is called
+alive. Longer than a Claude session's five, because a Claude launch is
+verified against a registry row that appears in under a second while a Codex
+one is verified against /proc and its own rollout file, which the CLI writes
+after it has authenticated and loaded the project's doctrine chain — 3.1 s
+on the fastest of the probe runs of 2026-09-08."""
+
+
+def codex_lane(store: Store, placement: Placement, request: Start) -> Launch:
+    """Give a card's lane to a worker of the other make (card #63, item 1).
+
+    The shape a Claude lane gets, built from the parts this make has: the
+    worktree laid here because `codex exec` has no `--worktree` of its own,
+    the brief as the prompt, the plan's effort as the reasoning level, the
+    process detached so nothing the board does ends it, and the same scope
+    named after the card. What it does not get is a walk: a wall, a handoff
+    and a rung below are Claude's ladder, and this make has none of the
+    three (plan 57's ruling), so a launch that dies is a death with the
+    log's last words and not a step down.
+
+    A death takes the worktree back with it. A lane the board can see but no
+    session ever held is the worst of both — the card reads as taken and
+    Start is closed on it — so a launch that never came alive leaves nothing
+    behind, which is what a failed `claude --bg` leaves too.
+    """
+    repo = Path(request.repo)
+    name = request.card
+    path = repo / ".claude" / "worktrees" / name
+    log = paths.data_dir() / "lanes" / f"{name}.log"
+    if not path.exists():
+        laid = git.add_worktree(repo, path, name)
+        if laid is not None:
+            return dead(
+                name, [], f"the lane's own copy of the code could not be laid: {laid}", placement
+            )
+    argv = codex.lane_argv(
+        path,
+        model=placement.model,
+        effort=request.effort,
+        prompt=request.brief,
+        roots=codex.lane_roots(repo, name, machine.package_cache()),
+    )
+    since = time.time()
+    try:
+        log.parent.mkdir(parents=True, exist_ok=True)
+        pid = machine.detach(argv, cwd=path, log=log)
+    except (OSError, machine.CommandMissing) as error:
+        return _codex_died(
+            name, path, repo, placement, since, f"`codex exec` could not run: {error}"
+        )
+    born = machine.process_start(pid)
+    while True:
+        elapsed = time.time() - since
+        if not machine.process_alive(pid, born):
+            words = _last_words(log)
+            return _codex_died(
+                name,
+                path,
+                repo,
+                placement,
+                since,
+                f"the lane ended {elapsed:.1f} s after the start" + (f": {words}" if words else ""),
+            )
+        if elapsed >= CODEX_LANE_SECONDS:
+            break
+        time.sleep(POLL_SECONDS)
+    session = _codex_lane_row(pid, str(path))
+    if session is None:
+        return _codex_died(
+            name,
+            path,
+            repo,
+            placement,
+            since,
+            f"the process lived {time.time() - since:.1f} s but wrote no session of its own "
+            f"in {machine.codex_sessions_root()}, so the board has nothing to follow",
+        )
+    unit = lane_unit(name)
+    try:
+        asked, words = machine.adopt(unit, [pid, *machine.descendants_of(pid)])
+    except machine.CommandMissing as missing:
+        asked, words = False, str(missing)
+    scoped = asked and _in_scope(pid, unit)
+    store.record_session_slot(
+        SessionSlot(
+            session_id=session.session_id,
+            slot=codex.SLOT,
+            card=name,
+            scope=unit,
+            recorded_at=clock.now(),
+        )
+    )
+    return Launch(
+        card=name,
+        verdict=LaunchVerdict.ALIVE,
+        session=session,
+        placement=placement,
+        scope=unit if scoped else None,
+        attempts=[
+            Attempt(
+                rung=Rung(slot=placement.slot, model=placement.model),
+                verdict=LaunchVerdict.ALIVE,
+                short_id=session.short_id,
+                reason=None,
+                seconds=round(time.time() - since, 2),
+            )
+        ],
+        reason=None if scoped else f"running, but not in its own space on the machine: {words}",
+    )
+
+
+def _codex_lane_row(pid: int, path: str) -> Session | None:
+    """The row the board will follow: the rollout this process holds, which
+    is how every Codex row is found (`runtime.codex.processes`). Read after
+    the observation window, so the CLI has written its head."""
+    for session_id, held in codex.processes().items():
+        if held != pid:
+            continue
+        rows = codex.find(session_id)
+        if rows:
+            return rows[0].model_copy(update={"worktree": path})
+    return None
+
+
+def _codex_died(
+    name: str, path: Path, repo: Path, placement: Placement, since: float, reason: str
+) -> Launch:
+    """A Codex lane that never came alive, with its worktree taken back."""
+    if path.exists():
+        git.remove_worktree(repo, path, name)
+    return Launch(
+        card=name,
+        verdict=LaunchVerdict.DEAD,
+        session=None,
+        placement=placement,
+        scope=None,
+        attempts=[
+            Attempt(
+                rung=Rung(slot=placement.slot, model=placement.model),
+                verdict=LaunchVerdict.DEAD,
+                short_id=None,
+                reason=reason,
+                seconds=round(time.time() - since, 2),
+            )
+        ],
+        reason=reason,
+    )
+
 
 def call_codex(store: Store, session: Session, *, brief: str, name: str, answer: str) -> Launch:
     """Resume a Codex worker with the brief (plan 57, item 2): `codex exec
@@ -852,7 +1040,7 @@ def call_codex(store: Store, session: Session, *, brief: str, name: str, answer:
         placement=None,
         scope=unit if scoped else None,
         attempts=[attempt],
-        reason=None if scoped else f"running, but not in its own scope: {words}",
+        reason=None if scoped else f"running, but not in its own space on the machine: {words}",
     )
 
 

@@ -123,12 +123,98 @@ def resume(args: list[str]) -> int:
     return 0
 
 
+TAKES_A_VALUE = {"-o", "--output-last-message", "--output-schema", "-c", "--config",
+                 "-C", "--cd", "-m", "--model", "-s", "--sandbox", "--add-dir"}
+
+
+def _first_positional(args: list[str]) -> str | None:
+    i = 0
+    while i < len(args):
+        if args[i] in TAKES_A_VALUE:
+            i += 2
+        elif args[i].startswith("-"):
+            i += 1
+        else:
+            return args[i]
+    return None
+
+
+def lane(args: list[str]) -> int:
+    """`codex exec -s workspace-write -C <worktree> [-m M] [-c ...] <brief>`:
+    a card's lane (card #63). The fake records the argv whole so a test can
+    read the sandbox, the writable roots, the model and the reasoning level
+    the runtime asked for, then follows the scripted fate — `linger` writes
+    the rollout Codex would write and stays at work, which is what a lane
+    that took looks like from outside; anything else ends at once, which is
+    what a lane that did not looks like.
+    """
+    cwd = None
+    model = None
+    for i, arg in enumerate(args):
+        if arg in ("-C", "--cd") and i + 1 < len(args):
+            cwd = args[i + 1]
+        elif arg in ("-m", "--model") and i + 1 < len(args):
+            model = args[i + 1]
+    prompt = args[-1] if args else ""
+    fate = _locked(lambda blob: blob["codex"].pop(0) if blob.get("codex") else {"then": "linger"})
+    _locked(
+        lambda blob: blob.setdefault("codex_lanes", []).append(
+            {"argv": args, "cwd": cwd, "model": model, "prompt": prompt, "fate": fate}
+        )
+    )
+    then = fate.get("then", "linger")
+    if then != "linger":
+        print(fate.get("stderr", "error: the lane could not start"), file=sys.stderr)
+        return 1
+    session_id = fate.get("session_id", "01a08000-0000-7000-8000-000000000001")
+    folder = HOME / "sessions" / "2026" / "09" / "08"
+    folder.mkdir(parents=True, exist_ok=True)
+    rollout = folder / f"rollout-2026-09-08T09-00-00-{session_id}.jsonl"
+    meta = {
+        "timestamp": _now(),
+        "ordinal": 0,
+        "type": "session_meta",
+        "payload": {
+            "session_id": session_id,
+            "id": session_id,
+            "timestamp": _now(),
+            "cwd": cwd or os.getcwd(),
+            "originator": "codex_exec",
+            "cli_version": "0.153.4",
+            "source": "exec",
+            "base_instructions": {
+                "text": "You are Codex.",
+                "provenance": {"type": "model", "model": model or "gpt-6-astra"},
+            },
+        },
+    }
+    with rollout.open("a", encoding="utf-8") as f:
+        f.write(json.dumps(meta) + "\n")
+    _append(rollout, "event_msg", {"type": "task_started", "turn_id": "lane"})
+    pid = os.getpid()
+    _locked(lambda blob: blob.setdefault("pids", []).append([pid, _proc_start(pid)]))
+    # A lane's argv carries no rollout id — `codex exec` takes a brief, not a
+    # session — so the runtime finds its process by the rollout it holds
+    # open, which is how the real one is found (verified on 0.153.4,
+    # 2026-09-08: a live `codex exec` holds its rollout in /proc/<pid>/fd).
+    # The handle is made inheritable so it survives the exec below.
+    held = os.open(rollout, os.O_WRONLY | os.O_APPEND)
+    os.set_inheritable(held, True)
+    os.execv("/usr/bin/sleep", [f"codex-exec-lane-{session_id}", "300"])
+    return 0
+
+
 def main(argv: list[str]) -> int:
     if argv[:1] == ["--version"]:
-        print("codex-cli 0.152.1 (fake)")
+        print("codex-cli 0.153.4 (fake)")
         return 0
     if argv[:1] == ["exec"]:
-        return resume(argv[1:])
+        rest = argv[1:]
+        # `resume` is a subcommand and stands first past the flags; an `exec`
+        # without one is a lane. A flag's own value is never read as the
+        # subcommand, which is why the flags with values are skipped by name
+        # rather than by a leading dash (a brief is a positional too).
+        return resume(rest) if _first_positional(rest) == "resume" else lane(rest)
     print(f"fake codex: unsupported {argv}", file=sys.stderr)
     return 2
 
