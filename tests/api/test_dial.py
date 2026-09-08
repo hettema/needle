@@ -342,7 +342,7 @@ def test_with_the_dial_on_the_oldest_now_defect_is_planned_then_started_by_the_d
     assert opened["summary"]["state"]["meaning"] == "live"
     assert opened["summary"]["lane_state"] == "none", "a planning session is never hands on"
     assert opened["history"][0]["detail"].startswith(
-        f"The dial took it: planning session {planning['short']}, fable on alpha"
+        f"The dial took it: planning session {planning['short']}, alpha"
     )
     assert opened["history"][0]["actor"] == "machine"
     state = board(client)

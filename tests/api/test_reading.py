@@ -78,7 +78,7 @@ def test_a_session_signal_starts_a_reading_the_card_lists_and_delivered_moves_it
     assert reading["summary"]["lane_state"] == "none", "a reading is never hands on the tree"
     assert reading["doors"]["signal"]["offered"] is False
     assert reading["history"][0]["detail"].startswith(
-        f"Reading started: {launched['short']}, fable on alpha"
+        f"Reading started: {launched['short']}, alpha"
     )
     state = board(client)
     assert claim_count(state, "signal reading") == 1 and state["asks"] == []

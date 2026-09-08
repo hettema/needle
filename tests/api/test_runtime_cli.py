@@ -95,7 +95,10 @@ def test_move_and_rescues_from_the_command_line(machine_floor: Floor, repo: Path
     assert said.startswith(f"{new_short} is alive: card-5-moves on beta")
     assert main(["rescues", new_short]) == 0
     assert (
-        "alpha/fable → beta/default  You've hit your session limit · resets 12pm"
+        # Neither rung was named by model: the rule answered none for the start
+        # and the handoff named none for the move, so both read as the slot's
+        # own top rung (card #63).
+        "alpha/default → beta/default  You've hit your session limit · resets 12pm"
         in capsys.readouterr().out
     )
     assert main(["rescues", new_short, "--clear"]) == 0

@@ -9,6 +9,7 @@ subscription, a real daemon or a real window (plan 02, criterion 6). A
 ratchet holds that the floor is under every test.
 """
 
+import fcntl
 import json
 import os
 import signal
@@ -49,13 +50,31 @@ class Floor:
 
     # ── the fakes' state ───────────────────────────────────────────────
 
+    def _locked(self, work):
+        """Under the same lock every fake binary takes before it touches the
+        state file. Without it a read can land mid-write and see half a file:
+        `test_a_reading_is_stricter_at_once_and_a_looser_one_authorises_nothing`
+        died on a `JSONDecodeError` at setup on 2026-09-08 while the board's
+        own loops ran a fake in another thread. A suite that fails at random
+        is a trunk that goes red at random, so the reader takes the lock the
+        writers already take."""
+        with (self.state_file.parent / (self.state_file.name + ".lock")).open("a+") as lock:
+            fcntl.flock(lock, fcntl.LOCK_EX)
+            try:
+                return work()
+            finally:
+                fcntl.flock(lock, fcntl.LOCK_UN)
+
     def state(self) -> dict:
-        return json.loads(self.state_file.read_text(encoding="utf-8"))
+        return self._locked(lambda: json.loads(self.state_file.read_text(encoding="utf-8")))
 
     def update(self, **changes: object) -> None:
-        blob = self.state()
-        blob.update(changes)
-        self.state_file.write_text(json.dumps(blob, indent=1), encoding="utf-8")
+        def write() -> None:
+            blob = json.loads(self.state_file.read_text(encoding="utf-8"))
+            blob.update(changes)
+            self.state_file.write_text(json.dumps(blob, indent=1), encoding="utf-8")
+
+        self._locked(write)
 
     def answer_best(
         self,
@@ -374,12 +393,13 @@ def lay(root: Path) -> Floor:
     state.write_text(
         json.dumps(
             {
-                # The rule's answer as the machine's card will make it: a slot
-                # and the rung's model by name. `claude-acct` answers
-                # `model: null` today — "that slot's own top rung" — and a
-                # test that wants that answer scripts it (`answer_best(slot,
-                # None)`), which several do; both paths are live (card #63).
-                "best": {"slot": "alpha", "model": "fable", "why": "Fable headroom on alpha"},
+                # As `claude-acct best` answers today: a slot, and `model:
+                # null` for that slot's own top rung. The floor says what the
+                # machine says, so the suite reads what the owner reads; a
+                # test that wants a rung named by its model scripts it
+                # (`answer_best(slot, "fable")`), and both paths are live
+                # (card #63).
+                "best": {"slot": "alpha", "model": None, "why": "Fable headroom on alpha"},
                 "best_calls": [],
                 "launches": [],
                 "launch_log": [],

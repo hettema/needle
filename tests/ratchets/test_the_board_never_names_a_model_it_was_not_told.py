@@ -29,13 +29,10 @@ CLAUDE_MODEL_NAMES = ("fable", "opus", "sonnet", "haiku")
 """Claude's model names. Needle names none of them: the one place a model's
 word may appear is the answer the rule gave, which arrives as a string."""
 
-ALLOWED = {
-    # The two readers that turn the machine's own words into a rung, and the
-    # test floor's scripts of what the rule answered.
-    "runtime/rule.py",
-    "runtime/registry.py",
-    "runtime/handoffs.py",
-}
+# No file is exempt. The three readers that turn the machine's words into a
+# rung — `runtime/rule.py`, `runtime/registry.py`, `runtime/handoffs.py` —
+# pass the word through as a string and name none of them, so an exemption
+# list would only be a place for the guess to come back.
 
 _WORD = re.compile(r"[\"'](?:" + "|".join(CLAUDE_MODEL_NAMES) + r")[\"']")
 
@@ -44,8 +41,6 @@ def test_no_python_file_writes_a_claude_model_name_of_its_own():
     named: list[str] = []
     for path in python_files(*BACKEND_PACKAGES):
         relative = path.relative_to(REPO).as_posix()
-        if relative in ALLOWED:
-            continue
         for number, line in enumerate(path.read_text(encoding="utf-8").splitlines(), 1):
             if line.lstrip().startswith("#") or '"""' in line:
                 continue

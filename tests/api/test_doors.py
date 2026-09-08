@@ -160,7 +160,7 @@ def test_start_says_where_it_will_run_launches_there_and_the_card_enters_executi
     before = detail(client)
     in_flight_before = claim_count(client.get("/api/projects/proj/board").json(), "lane working")
     assert before["doors"]["start"]["offered"] and before["doors"]["start"]["label"] == (
-        "Start · fable on alpha"
+        "Start · alpha"
     )
     assert before["doors"]["placement"]["slot"] == "alpha"
     assert before["doors"]["collision"]["verdict"] == "unknown"
@@ -169,7 +169,7 @@ def test_start_says_where_it_will_run_launches_there_and_the_card_enters_executi
     said = start(client)
     assert said["door"] == "start" and said["said"].startswith("Started ")
     assert (
-        ", fable on alpha, at medium, in card-253-every-metered-kilowatt-is-billed" in said["said"]
+        ", alpha, at medium, in card-253-every-metered-kilowatt-is-billed" in said["said"]
     )
 
     launched = machine_floor.state()["launch_log"][0]
@@ -189,7 +189,7 @@ def test_start_says_where_it_will_run_launches_there_and_the_card_enters_executi
     after = detail(client)
     assert after["summary"]["lane_state"] == "working"
     assert after["summary"]["state"]["word"].startswith("working · ")
-    assert after["summary"]["state"]["word"].endswith("fable on alpha")
+    assert after["summary"]["state"]["word"].endswith("alpha")
     assert after["lane"]["session"]["short_id"] == launched["short"]
     # The floor's busctl moves nothing, so the loop's first read finds the
     # session outside its scope and says so (plan 53); live, a verified
@@ -270,9 +270,9 @@ def test_shared_ground_opens_start_shows_it_on_both_cards_and_briefs_the_lane(
     sentence = "#241's session is editing engine/metering.py right now."
     assert before["doors"]["start"] == {
         "offered": True,
-        "label": "Start · fable on alpha — shares 1 file with #241's session; the second to "
+        "label": "Start · alpha — shares 1 file with #241's session; the second to "
         "finish catches up",
-        "why": "Your move: press it and a session takes this card, fable on alpha. " + sentence,
+        "why": "Your move: press it and a session takes this card, alpha. " + sentence,
     }
     assert before["doors"]["collision"]["verdict"] == "collides"
     assert before["doors"]["readiness"]["state"] == "shares"
@@ -824,14 +824,14 @@ def test_a_lane_that_dies_on_a_limit_is_moved_and_the_card_says_where(
 
     moved = detail(client)
     assert any(
-        h["kind"] == "rescued" and h["detail"] == "Moved to fable on beta, new window opened."
+        h["kind"] == "rescued" and h["detail"] == "Moved to beta, new window opened."
         for h in moved["history"]
     ), [h["detail"] for h in moved["history"]]
     assert moved["lane"]["session"]["slot"] == "beta"
-    assert moved["summary"]["state"]["word"].endswith("fable on beta")
+    assert moved["summary"]["state"]["word"].endswith("beta")
     assert moved["summary"]["state"]["detail"] == (
-        "Happening now: a session is working on it, fable on beta, for 0 s. "
-        "It moved to fable on beta, and a new window opened. Starting…"
+        "Happening now: a session is working on it, beta, for 0 s. "
+        "It moved to beta, and a new window opened. Starting…"
     )
     assert column_of(client, CARD) == "Executing"
     assert len(machine_floor.state()["spawned"]) == 2
@@ -884,7 +884,7 @@ def test_idea_opens_a_conversation_the_rail_lists_and_a_document_it_writes_is_bo
     )
     assert opened.status_code == 200, opened.text
     assert opened.json()["said"].startswith(
-        "Talking in org.omarchy.board-idea-proj, fable on alpha"
+        "Talking in org.omarchy.board-idea-proj, alpha"
     )
     spawned = machine_floor.state()["spawned"][0]
     assert spawned["app_id"] == "org.omarchy.board-idea-proj"
