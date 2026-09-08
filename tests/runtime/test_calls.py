@@ -18,7 +18,7 @@ from domain.call import Call, CallOutcome
 from domain.gate import Gate
 from domain.launch import LaunchVerdict, WindowlessStart
 from domain.session import Doing, Session, SessionKind, SessionState
-from domain.slot import Handoff, Model
+from domain.slot import Handoff
 from runtime import calls, discussion, launch, machine, transcripts
 from runtime.service import Runtime
 from tests.floor import Floor
@@ -91,7 +91,7 @@ def session(
         detail=detail,
         pid=pid,
         scope=None,
-        model=Model.FABLE,
+        model="fable",
         effort=None,
         stale=False,
         wall=wall,

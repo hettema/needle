@@ -88,7 +88,7 @@ from domain.lane import (
 from domain.launch import LaunchVerdict, WindowlessStart
 from domain.session import Session, SessionKind, SessionState
 from domain.signal import SessionWork, Signal, SignalKind, WindowlessSession
-from domain.slot import Placement
+from domain.slot import Placement, rung_words
 from domain.watercooler import Note
 from domain.window import Window, WindowKind
 from infrastructure import clock
@@ -499,7 +499,7 @@ class Loops:
             )
             return
         placement = moved.placement
-        where = f"{placement.model.value} on {placement.slot}" if placement else moved.session.slot
+        where = rung_words(placement.model, placement.slot) if placement else moved.session.slot
         store.move_call(
             call.id,
             moved.session.session_id,
@@ -687,9 +687,9 @@ class Loops:
                 continue
             moved_any = True
             placement = result.placement
-            model = placement.model.value if placement else "fable"
+            model = placement.model if placement else result.session.model
             slot = placement.slot if placement else result.session.slot
-            said = f"Moved to {model} on {slot}"
+            said = f"Moved to {rung_words(model, slot)}"
             if had_window:
                 # The stop ended the attach window (`claude attach` exits with
                 # its session); recording that is not closing one, and the
@@ -1147,7 +1147,7 @@ class Loops:
             slug, card.number, SessionWork.READING, session.session_id, session.slot, now
         )
         placement = launch.placement
-        where = f"{placement.model.value} on {placement.slot}" if placement else session.slot
+        where = rung_words(placement.model, placement.slot) if placement else session.slot
         self.live.note(
             slug,
             card.number,

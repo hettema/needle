@@ -13,7 +13,7 @@ import pytest
 from domain.gate import Gate
 from domain.launch import LaunchVerdict, Start
 from domain.session import SessionState
-from domain.slot import Model
+from domain.slot import Make, Placement
 from runtime import launch
 from runtime.service import Runtime
 from tests.floor import Floor
@@ -63,7 +63,11 @@ def test_a_start_is_a_row_with_a_live_process_in_the_worktree_on_the_slot_the_ru
         machine_floor.config_dir("alpha")
     )
     argv = launched["argv"]
-    assert argv[:2] == ["--model", "fable"] and argv[-1] == BRIEF
+    # The rule answered no model (`model: null`, its word for "the slot's own
+    # top rung"), so no `--model` is passed and the slot's settings decide.
+    # This used to be the word `fable`, which was the runtime asserting a
+    # ladder it does not own (card #63).
+    assert "--model" not in argv and argv[:2] == ["--effort", "xhigh"] and argv[-1] == BRIEF
     assert "--worktree" in argv and argv[argv.index("--worktree") + 1] == "card-7-the-thing"
     assert (
         argv[argv.index("--effort") + 1] == "xhigh"
@@ -88,7 +92,7 @@ def test_the_scope_is_asked_for_and_only_claimed_when_proc_agrees(
     assert (
         result.scope is None
         and result.reason is not None
-        and "not in its own scope" in result.reason
+        and "not in its own space on the machine" in result.reason
     )
 
 
@@ -357,7 +361,7 @@ def test_short_ids_are_read_from_what_the_cli_prints():
 def test_the_launch_argv_carries_the_model_the_rule_named():
     from domain.slot import Placement
 
-    placement = Placement(slot="beta", model=Model.OPUS, config_dir="/x", why="")
+    placement = Placement(make=Make.CLAUDE, slot="beta", model="opus", config_dir="/x", why="")
     argv = launch.argv_for(
         placement, effort=None, name=None, prompt="go", resume=None, worktree=None
     )

@@ -5,7 +5,7 @@ session's rescue history never clears its slot (plan 02, item 3)."""
 from datetime import UTC, datetime
 
 from domain.session import SessionSlot
-from domain.slot import Model, Rung
+from domain.slot import Rung
 from domain.window import WindowKind
 
 AT = datetime(2026, 9, 4, 10, 0, tzinfo=UTC)
@@ -29,22 +29,22 @@ def test_clearing_rescues_leaves_the_slot_record_standing(store):
     store.record_session_slot(_slot("s2", "beta", "card-2", "needle-card-2.scope"))
     store.record_rescue(
         "s2",
-        Rung(slot="alpha", model=Model.FABLE),
-        Rung(slot="beta", model=Model.FABLE),
+        Rung(slot="alpha", model="fable"),
+        Rung(slot="beta", model="fable"),
         "Fable limit",
         AT,
     )
     store.record_rescue(
         "s2",
-        Rung(slot="beta", model=Model.FABLE),
-        Rung(slot="beta", model=Model.OPUS),
+        Rung(slot="beta", model="fable"),
+        Rung(slot="beta", model="opus"),
         "Fable limit again",
         AT,
     )
 
     assert [(r.from_rung.slot, r.to_rung.model) for r in store.rescues("s2")] == [
-        ("alpha", Model.FABLE),
-        ("beta", Model.OPUS),
+        ("alpha", "fable"),
+        ("beta", "opus"),
     ]
     assert store.clear_rescues("s2") == 2
     assert store.rescues("s2") == []

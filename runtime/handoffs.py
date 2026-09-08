@@ -13,7 +13,7 @@ from pathlib import Path
 
 from pydantic import BaseModel
 
-from domain.slot import Handoff, Model
+from domain.slot import Handoff
 from runtime import machine
 
 
@@ -31,12 +31,12 @@ def _when(value: object) -> datetime:
     raise ValueError(f"no time in {value!r}")
 
 
-def _model(value: object) -> Model | None:
+def _model(value: object) -> str | None:
     if value is None or value == "":
         return None
     if not isinstance(value, str):
         raise ValueError(f"model {value!r}")
-    return Model(value)
+    return value
 
 
 def read_handoff(path: Path) -> Handoff:

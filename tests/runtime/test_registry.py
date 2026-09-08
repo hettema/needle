@@ -5,7 +5,7 @@ import os
 
 from domain.gate import Gate
 from domain.session import SessionKind, SessionState
-from domain.slot import Model
+from domain.slot import Handoff
 from runtime.service import Runtime
 from tests.floor import Floor
 
@@ -121,8 +121,8 @@ def test_a_wall_rides_on_the_row_and_the_flags_are_read(machine_floor: Floor, st
     row = next(s for s in Runtime(store).sessions() if s.short_id == "1a2b3c4d")
 
     assert row.state == SessionState.BLOCKED
-    assert row.wall is not None and row.wall.account == "beta" and row.wall.model == Model.OPUS
-    assert row.model == Model.FABLE and row.effort == Gate.HIGH
+    assert row.wall is not None and row.wall.account == "beta" and row.wall.model == "opus"
+    assert row.model == "fable" and row.effort == Gate.HIGH
     assert row.worktree == "/repo/.claude/worktrees/card-1"
 
 

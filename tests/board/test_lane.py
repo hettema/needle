@@ -25,14 +25,14 @@ from domain.lane import CollisionVerdict, Discussion, LaneRecord, LaneState, Sta
 from domain.launch import Rescue
 from domain.row import Row, RowKind
 from domain.session import Session, SessionKind, SessionState
-from domain.slot import Handoff, Model, Placement, Rung
+from domain.slot import Handoff, Make, Placement, Rung
 from domain.window import Window, WindowKind
 
 NOW = datetime(2026, 9, 4, 12, 0, tzinfo=UTC)
 PROJECT = "/srv/harbour"
 LANE = f"{PROJECT}/.claude/worktrees/card-7-the-thing"
 PLACEMENT = Placement(
-    slot="alpha", model=Model.FABLE, config_dir="/x", why="Fable headroom on alpha"
+    slot="alpha", make=Make.CLAUDE, model="fable", config_dir="/x", why="Fable headroom on alpha"
 )
 
 
@@ -85,7 +85,7 @@ def session(
         detail=detail,
         pid=pid,
         scope="needle-card-7-the-thing.scope",
-        model=Model.FABLE,
+        model="fable",
         effort=Gate.HIGH,
         stale=False,
         wall=wall,
@@ -261,8 +261,8 @@ def test_a_wall_reads_as_moving_and_a_rescue_is_said_on_the_card():
     rescue = Rescue(
         id=1,
         session_id="aaaa0001-0000-4000-8000-000000000000",
-        from_rung=Rung(slot="alpha", model=Model.FABLE),
-        to_rung=Rung(slot="beta", model=Model.FABLE),
+        from_rung=Rung(slot="alpha", model="fable"),
+        to_rung=Rung(slot="beta", model="fable"),
         reason="You've reached your Fable limit.",
         at=NOW - timedelta(minutes=2),
     )
@@ -290,7 +290,7 @@ def test_a_wall_reads_as_moving_and_a_rescue_is_said_on_the_card():
     assert moved_lane.window_open
     answered = rescue.model_copy(
         update={
-            "to_rung": Rung(slot="alpha", model=Model.FABLE),
+            "to_rung": Rung(slot="alpha", model="fable"),
             "reason": "resumed with the owner's answer",
         }
     )

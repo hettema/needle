@@ -39,6 +39,7 @@ from domain.launch import LaunchVerdict, Start
 from domain.project import Project
 from domain.row import Row, RowKind
 from domain.signal import Finding, SessionWork
+from domain.slot import rung_words
 from domain.triage import (
     CorpusLane,
     CorpusLaneKind,
@@ -325,7 +326,7 @@ class Doors:
             )
         )
         placement = launch.placement
-        where = f"{placement.model.value} on {placement.slot}" if placement else session.slot
+        where = rung_words(placement.model, placement.slot) if placement else session.slot
         said = f"Started {session.short_id}, {where}, at {gate.value}, in {name}"
         said += f", in {launch.scope}" if launch.scope else f" ({launch.reason})"
         if actor == Actor.MACHINE:
@@ -375,7 +376,7 @@ class Doors:
             self.live.note(slug, number, AuditKind.ANSWERED, Actor.OWNER, words)
             raise DoorFailed(words)
         placement = result.placement
-        where = f"{placement.model.value} on {placement.slot}" if placement else result.session.slot
+        where = rung_words(placement.model, placement.slot) if placement else result.session.slot
         said = f"Answered, and the lane resumed as {result.session.short_id} ({where}): {text}"
         self.live.note(slug, number, AuditKind.ANSWERED, Actor.OWNER, said)
         self.loops.reconcile_now()
@@ -462,7 +463,7 @@ class Doors:
             self.live.note(slug, number, AuditKind.STARTED, Actor.OWNER, words)
             raise DoorFailed(words)
         placement = result.placement
-        where = f"{placement.model.value} on {placement.slot}" if placement else result.session.slot
+        where = rung_words(placement.model, placement.slot) if placement else result.session.slot
         said = f"Resumed as {result.session.short_id}, {where}"
         self.live.note(slug, number, AuditKind.STARTED, Actor.OWNER, said)
         self.loops.reconcile_now()
@@ -529,7 +530,7 @@ class Doors:
             raise DoorFailed(f"Discuss did not open: {refusal}") from refusal
         self.live.store.record_discussion(slug, number, session_id, placement.slot, clock.now())
         said = (
-            f"Discussing in {opened.window.app_id}, {placement.model.value} on {placement.slot}; "
+            f"Discussing in {opened.window.app_id}, {rung_words(placement.model, placement.slot)}; "
             "a conversation, never hands on the tree."
         )
         self.live.note(slug, number, AuditKind.DISCUSSED, Actor.OWNER, said)
@@ -564,8 +565,9 @@ class Doors:
         return DoorResult(
             door="idea",
             said=(
-                f"Talking in {opened.window.app_id}, {placement.model.value} on "
-                f"{placement.slot}; a conversation about nothing yet ({session_id[:8]}), never "
+                f"Talking in {opened.window.app_id}, "
+                f"{rung_words(placement.model, placement.slot)}; a conversation about nothing "
+                f"yet ({session_id[:8]}), never "
                 "hands on a tree. What it writes into the corpus becomes a card."
             ),
         )
@@ -606,8 +608,8 @@ class Doors:
             raise DoorFailed(f"Plan did not open: {refusal}") from refusal
         now = clock.now()
         said = (
-            f"Planning {numbered} in {opened.window.app_id}, {placement.model.value} on "
-            f"{placement.slot}; the plan it writes carries "
+            f"Planning {numbered} in {opened.window.app_id}, "
+            f"{rung_words(placement.model, placement.slot)}; the plan it writes carries "
             + ("this card" if len(numbers) == 1 else "these cards, the first keeping its number")
             + "."
         )
@@ -1047,7 +1049,7 @@ class Doors:
             self.live.note(slug, number, AuditKind.DIAL, Actor.MACHINE, words)
             return opened
         placement = launch.placement
-        where = f"{placement.model.value} on {placement.slot}" if placement else session.slot
+        where = rung_words(placement.model, placement.slot) if placement else session.slot
         self.live.note(
             slug,
             number,

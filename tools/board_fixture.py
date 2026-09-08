@@ -54,7 +54,7 @@ from domain.project import Project  # noqa: E402
 from domain.row import Row, RowKind  # noqa: E402
 from domain.session import Session, SessionKind, SessionState  # noqa: E402
 from domain.signal import Reading, SessionWork, WindowlessSession  # noqa: E402
-from domain.slot import Model, Placement  # noqa: E402
+from domain.slot import Make, Placement  # noqa: E402
 from domain.triage import Triage, TriageResult  # noqa: E402
 from infrastructure.corpus import scan  # noqa: E402
 from infrastructure.live import Live, sweep  # noqa: E402
@@ -70,7 +70,11 @@ directory and would differ on every run."""
 
 LANE_PATH = f"{SHOWN_PATH}/.claude/worktrees/card-900-a-card-in-every-state"
 PLACEMENT = Placement(
-    slot="alpha", model=Model.FABLE, config_dir="/x/alpha", why="Fable has room on alpha"
+    slot="alpha",
+    make=Make.CLAUDE,
+    model="fable",
+    config_dir="/x/alpha",
+    why="Fable has room on alpha",
 )
 
 
@@ -155,7 +159,7 @@ def _session(
         detail=detail,
         pid=pid,
         scope="needle-card-900.scope",
-        model=Model.FABLE,
+        model="fable",
         effort=Gate.HIGH,
         stale=False,
         wall=None,

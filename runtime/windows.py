@@ -17,7 +17,7 @@ import time
 
 from domain.gate import Gate
 from domain.session import Session, SessionKind
-from domain.slot import Placement
+from domain.slot import Placement, rung_words
 from domain.window import Focused, Opened, WindowKind
 from infrastructure import clock
 from infrastructure.store import Store
@@ -149,10 +149,10 @@ def look_command(session: Session, placement: Placement) -> tuple[str, str]:
     size = machine.transcript_size(home, session.session_id)
     banner = (
         f"Fresh session from the transcript of {session.short_id} ({session.name}) — "
-        f"{placement.model.value} on the {placement.slot} subscription. Closing this "
+        f"{rung_words(placement.model, placement.slot)}. Closing this "
         f"window ends this session and nothing else."
     )
-    parts = ["claude", "--model", placement.model.value]
+    parts = ["claude", *(["--model", placement.model] if placement.model else [])]
     if session.effort is not None:
         parts += ["--effort", session.effort.value]
     parts += list(PROMPTS_SETTLED)
@@ -181,10 +181,11 @@ def discuss_command(
     rule chose, with the card's brief as its first prompt. The session id is
     chosen here so the board can tell the conversation from hands on a tree."""
     banner = (
-        f"{what} — {placement.model.value} on the {placement.slot} subscription. "
+        f"{what} — {rung_words(placement.model, placement.slot)}. "
         "A conversation, never hands on any tree; closing this window ends only it."
     )
-    parts = ["claude", "--model", placement.model.value, "--session-id", session_id]
+    parts = ["claude", *(["--model", placement.model] if placement.model else [])]
+    parts += ["--session-id", session_id]
     if effort is not None:
         parts += ["--effort", effort.value]
     parts += [*PROMPTS_SETTLED, brief]

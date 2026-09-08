@@ -12,7 +12,7 @@ from enum import StrEnum
 from pydantic import BaseModel
 
 from domain.gate import Gate
-from domain.slot import Handoff, Model
+from domain.slot import Handoff
 
 
 class SessionKind(StrEnum):
@@ -66,7 +66,7 @@ class Session(BaseModel):
     """The process verified in /proc, by pid and start time; None is no process."""
     scope: str | None
     """The systemd unit holding the process, when it has one."""
-    model: Model | None
+    model: str | None
     effort: Gate | None
     """The effort the session was started with, so a fresh session from its transcript keeps it."""
     stale: bool

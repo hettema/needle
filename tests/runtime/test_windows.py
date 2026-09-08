@@ -120,7 +120,8 @@ def test_a_session_live_nowhere_gets_a_fresh_session_from_its_transcript(
     assert opened.banner is not None and opened.banner.startswith(
         "Fresh session from the transcript of dead0001"
     )
-    assert "fable on the beta subscription" in opened.banner
+    # The rule named no model, so the banner says the slot alone (card #63).
+    assert "— beta." in opened.banner
     command = machine_floor.state()["spawned"][0]["command"][-1]
     assert command.startswith("cd /repo/.claude/worktrees/card-3 && printf")
     assert f"--resume {session_id} --fork-session" in command and "--effort high" in command

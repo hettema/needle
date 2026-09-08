@@ -57,8 +57,35 @@ class Floor:
         blob.update(changes)
         self.state_file.write_text(json.dumps(blob, indent=1), encoding="utf-8")
 
-    def answer_best(self, slot: str, model: str | None = None, why: str = "") -> None:
-        self.update(best={"slot": slot, "model": model, "why": why or f"headroom on {slot}"})
+    def answer_best(
+        self,
+        slot: str,
+        model: str | None = None,
+        why: str = "",
+        *,
+        make: str | None = None,
+        tier: int | None = None,
+        tier_ruled_on: str | None = None,
+        tier_why: str = "",
+    ) -> None:
+        """What the one rule answers next. `make`, `tier` and `tier_ruled_on`
+        are left out unless a test asks for them, because `claude-acct` today
+        answers without them and the runtime must read that answer (card
+        #63): a test that names none of the three plays the rule as it is."""
+        answer: dict[str, object] = {
+            "slot": slot,
+            "model": model,
+            "why": why or f"headroom on {slot}",
+        }
+        if make is not None:
+            answer["make"] = make
+        if tier is not None:
+            answer["tier"] = tier
+        if tier_ruled_on is not None:
+            answer["tier_ruled_on"] = tier_ruled_on
+        if tier_why:
+            answer["tier_why"] = tier_why
+        self.update(best=answer)
 
     def refuse_best(self, error: str) -> None:
         self.update(best={"error": error})
@@ -164,6 +191,7 @@ class Floor:
         *,
         cwd: str = "/tmp/somewhere",
         source: str = "exec",
+        model: str | None = None,
         started_at: str = "2026-09-05T09:00:00.000Z",
         mid_turn: bool = False,
         tool: str | None = None,
@@ -196,6 +224,13 @@ class Floor:
                 "source": source,
             },
         }
+        if model is not None:
+            # Where Codex records the model that answered: the provenance of
+            # the base instructions it was given (0.153.4, read 2026-09-08).
+            meta["payload"]["base_instructions"] = {
+                "text": "You are Codex.",
+                "provenance": {"type": "model", "model": model},
+            }
         records = [
             meta,
             {
@@ -233,10 +268,13 @@ class Floor:
         return path
 
     def script_codex(self, *fates: dict) -> None:
-        """What the fake `codex exec resume` does next, one fate per call:
-        `answer` (writes `text` to the answer file after `after` seconds),
-        `silent` (an empty last message), `fail` (exits 1 at once with
-        `stderr`), `linger` (stays at work until stopped)."""
+        """What the fake `codex exec` does next, one fate per call. For a
+        `resume`: `answer` (writes `text` to the answer file after `after`
+        seconds), `silent` (an empty last message), `fail` (exits 1 at once
+        with `stderr`), `linger` (stays at work until stopped). For a lane
+        (an `exec` with no subcommand): `linger` writes a rollout of its own
+        and stays at work, which is a lane that took; `fail` and `silent`
+        end at once, which is a lane that did not."""
         self.update(codex=list(fates))
 
     def write_transcript(self, cwd: str, session_id: str, size: int) -> Path:

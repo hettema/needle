@@ -66,6 +66,7 @@ from domain.launch import LaunchVerdict, WindowlessStart
 from domain.row import Row, RowKind
 from domain.session import SessionState
 from domain.signal import SessionWork
+from domain.slot import rung_words
 from domain.triage import (
     CorpusLane,
     CorpusLaneKind,
@@ -414,7 +415,7 @@ class Dial:
             log.info("a second triage was refused on #%s: %s", card.number, refusal)
             return
         placement = launch.placement
-        where = f"{placement.model.value} on {placement.slot}" if placement else session.slot
+        where = rung_words(placement.model, placement.slot) if placement else session.slot
         self.live.note(
             slug,
             card.number,
@@ -476,7 +477,7 @@ class Dial:
             slug, card.number, SessionWork.PLANNING, session.session_id, session.slot, now
         )
         placement = launch.placement
-        where = f"{placement.model.value} on {placement.slot}" if placement else session.slot
+        where = rung_words(placement.model, placement.slot) if placement else session.slot
         self.live.note(
             slug,
             card.number,

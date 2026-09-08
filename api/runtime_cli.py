@@ -33,7 +33,7 @@ from domain.call import CallOutcome, CallVerdict
 from domain.gate import Gate
 from domain.launch import Launch, LaunchVerdict, Start
 from domain.session import Session
-from domain.slot import Model, Rung
+from domain.slot import Rung, rung_words
 from domain.window import WindowKind
 from infrastructure import clock
 from infrastructure.paths import db_path
@@ -85,12 +85,15 @@ def _emit(args: argparse.Namespace, value: BaseModel | Sequence[BaseModel], text
 
 
 def parse_rung(text: str) -> Rung:
+    """`slot` or `slot:model`, as the rule's own `--tried` argument spells a
+    rung. The model is not checked against a list here: the ladder is the
+    machine's data and not this command's knowledge (card #63), so a name
+    this runtime has never seen is passed on to the rule, which is the one
+    thing that knows the ladder."""
     slot, _, model = text.partition(":")
-    if model and model not in {m.value for m in Model}:
-        raise argparse.ArgumentTypeError(
-            f"{text!r}: the model must be one of {[m.value for m in Model]}"
-        )
-    return Rung(slot=slot, model=Model(model) if model else None)
+    if not slot:
+        raise argparse.ArgumentTypeError(f"{text!r}: a rung names a slot, optionally `slot:model`")
+    return Rung(slot=slot, model=model or None)
 
 
 # ── prose ──────────────────────────────────────────────────────────────
@@ -143,7 +146,7 @@ def describe_launch(launch: Launch) -> str:
         # A Codex worker is alive on no placement: the rule placed nothing,
         # it runs where its rollout says (plan 57).
         where = (
-            f"on {launch.placement.slot} with {launch.placement.model.value}"
+            f"as {rung_words(launch.placement.model, launch.placement.slot)}"
             if launch.placement is not None
             else f"on {launch.session.slot}"
             if launch.session is not None
@@ -159,7 +162,7 @@ def describe_launch(launch: Launch) -> str:
     lines = [head]
     for attempt in launch.attempts:
         rung = (
-            f"{attempt.rung.slot}/{attempt.rung.model.value if attempt.rung.model else 'default'}"
+            f"{attempt.rung.slot}/{attempt.rung.model or 'default'}"
         )
         line = f"  {rung}: {attempt.verdict.value}"
         line += f" ({attempt.short_id})" if attempt.short_id else ""
@@ -189,7 +192,7 @@ def where(runtime: Runtime, args: argparse.Namespace) -> int:
         _emit(args, answer, f"nowhere: {answer.reason}")
         return 1
     placement = answer.placement
-    _emit(args, answer, f"{placement.model.value} on {placement.slot} — {placement.why}")
+    _emit(args, answer, f"{rung_words(placement.model, placement.slot)} — {placement.why}")
     return 0
 
 
@@ -263,7 +266,7 @@ def rescues(runtime: Runtime, args: argparse.Namespace) -> int:
         return 0
 
     def rung(r: Rung | None) -> str:
-        return "—" if r is None else f"{r.slot}/{r.model.value if r.model else 'default'}"
+        return "—" if r is None else f"{r.slot}/{r.model or 'default'}"
 
     rows = runtime.rescues(args.short)
     lines = [
@@ -355,7 +358,7 @@ def call(runtime: Runtime, args: argparse.Namespace) -> int:
         at=called_at,
     )
     placement = launch.placement
-    where = f"{placement.model.value} on {placement.slot}" if placement else launch.session.slot
+    where = rung_words(placement.model, placement.slot) if placement else launch.session.slot
     forked = f" (resumed from {short})" if launch.session.session_id != session_id else ""
     text = (
         f"call {record.id}: {launch.session.short_id}{forked} is working on {note}, {where}\n"

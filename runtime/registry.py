@@ -15,7 +15,7 @@ from pathlib import Path
 
 from domain.gate import Gate
 from domain.session import Session, SessionKind, SessionState
-from domain.slot import Handoff, Model, Slot
+from domain.slot import Handoff, Slot
 from runtime import machine, transcripts
 
 _BACKGROUND_STATES = {
@@ -47,12 +47,14 @@ def _flag(flags: object, name: str) -> str | None:
     return None
 
 
-def _model(flags: object) -> Model | None:
-    value = (_flag(flags, "--model") or "").lower()
-    for model in Model:
-        if model.value in value:
-            return model
-    return None
+def _model(flags: object) -> str | None:
+    """The rung a session was launched on, as the word its own argv carries.
+    This used to match the argv against a `Model` enum and answer None for
+    anything the enum did not hold, which made a rung the ladder gained
+    invisible; the ladder is data now (card #63), so the word is kept as it
+    was given."""
+    value = (_flag(flags, "--model") or "").strip()
+    return value or None
 
 
 def _effort(flags: object) -> Gate | None:

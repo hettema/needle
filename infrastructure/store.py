@@ -42,7 +42,7 @@ from domain.project import Project
 from domain.row import Row, RowKind
 from domain.session import SessionSlot
 from domain.signal import Reading, SessionWork, WindowlessSession
-from domain.slot import Model, Rung
+from domain.slot import Rung
 from domain.triage import (
     CorpusLane,
     CorpusLaneKind,
@@ -1738,9 +1738,9 @@ class Store:
             row = RescueRow(
                 session_id=session_id,
                 from_slot=from_rung.slot if from_rung else None,
-                from_model=from_rung.model.value if from_rung and from_rung.model else None,
+                from_model=from_rung.model if from_rung else None,
                 to_slot=to_rung.slot,
-                to_model=to_rung.model.value if to_rung.model else None,
+                to_model=to_rung.model,
                 reason=reason,
                 at=at,
             )
@@ -1812,11 +1812,9 @@ def _rescue(row: RescueRow) -> Rescue:
         id=row.id,
         session_id=row.session_id,
         from_rung=(
-            Rung(slot=row.from_slot, model=Model(row.from_model) if row.from_model else None)
-            if row.from_slot
-            else None
+            Rung(slot=row.from_slot, model=row.from_model or None) if row.from_slot else None
         ),
-        to_rung=Rung(slot=row.to_slot, model=Model(row.to_model) if row.to_model else None),
+        to_rung=Rung(slot=row.to_slot, model=row.to_model or None),
         reason=row.reason,
         at=row.at,
     )

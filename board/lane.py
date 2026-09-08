@@ -45,7 +45,7 @@ from domain.meaning import Meaning, say
 from domain.row import RowKind
 from domain.session import Session, SessionKind, SessionState
 from domain.signal import Signal
-from domain.slot import Placement
+from domain.slot import Make, Placement, rung_words
 from domain.triage import Routed, Routing
 from domain.window import Window, WindowKind
 
@@ -127,12 +127,13 @@ def ago(then: datetime | None, now: datetime) -> str:
 
 def where_of(session: Session) -> str:
     """Where a session runs, as the board says it: its model and slot when
-    the registry recorded a model, else the slot alone. The board used to
-    say `fable` for a row with no model recorded, which was a guess for a
+    the row recorded a model, else the slot alone. The board used to say
+    `fable` for a row with no model recorded, which was a guess for a
     terminal of the owner's and a false claim for a session of another
-    make (plan 57): Codex rows carry the make's name as their slot and no
-    rung the `Model` ladder could hold."""
-    return f"{session.model.value} on {session.slot}" if session.model else f"on {session.slot}"
+    make (plan 57); every face builds the words in one place now
+    (`domain.slot.rung_words`, card #63) so none of them can start
+    guessing again."""
+    return rung_words(session.model, session.slot)
 
 
 def _sessions_in(path: str, name: str, facts: LaneFacts, discussing: set[str]) -> list[Session]:
@@ -174,9 +175,8 @@ def _moved_sentence(
     if not moves:
         return None
     last = moves[-1]
-    model = last.to_rung.model.value if last.to_rung.model else "fable"
     opened = any(w.session_id in chain and w.opened_at >= last.at for w in windows)
-    said = f"It moved to {model} on {last.to_rung.slot}"
+    said = f"It moved to {rung_words(last.to_rung.model, last.to_rung.slot)}"
     return said + (", and a new window opened." if opened else ".")
 
 
@@ -756,6 +756,32 @@ def nothing_read(card: Card, project_path: str, now: datetime) -> tuple[Lane, "D
     return lane, doors
 
 
+def driver(placement: Placement) -> str:
+    """Who will drive this card, as the Start door names it: the rung the
+    rule chose, and the make beside it when the make is not the one every
+    lane used to be (card #63). Naming the make on every rung would put
+    "claude" on a board that has said `fable on eduard` since its first
+    day; naming it only when it is news is what the owner reads."""
+    words = rung_words(placement.model, placement.slot)
+    return words if placement.make is Make.CLAUDE else f"{words} ({placement.make.value})"
+
+
+def why_this_driver(placement: Placement) -> str:
+    """The rule's reason for this rung, and the owner's dated ruling behind
+    it when the rule carried one. The tier is his and is dated on purpose:
+    it is a ruling the evidence may move, not a fact the code asserts, so
+    the date is on the face where he can see it going stale (card #63,
+    item 4)."""
+    tier = placement.tier
+    if tier is None:
+        return placement.why
+    said = (
+        f"{placement.why}; your ruling of {tier.ruled_on.isoformat()} "
+        f"puts it in tier {tier.rank}"
+    )
+    return f"{said} ({tier.why})" if tier.why else said
+
+
 def _nowhere(label: str, placement_note: str) -> Door:
     """A door closed because the rule found nowhere to run: before the
     board's first read that is only the wait, after it the accounts."""
@@ -890,19 +916,19 @@ def doors_for(
         assert collision is not None
         count = len(collision.files)
         start = _open(
-            f"Start · {placement.model.value} on {placement.slot} — shares "
+            f"Start · {driver(placement)} — shares "
             f"{count} file{'' if count == 1 else 's'} with "
             + ", ".join(f"#{n}'s session" for n in collision.cards)
             + "; the second to finish catches up",
-            f"press it and a session takes this card, {placement.model.value} on {placement.slot}",
+            f"press it and a session takes this card, {driver(placement)}",
             why=collision.sentence,
         )
         state = StartState.SHARES
     else:
         start = _open(
-            f"Start · {placement.model.value} on {placement.slot}",
-            f"press it and a session takes this card, {placement.model.value} on {placement.slot}",
-            why=placement.why,
+            f"Start · {driver(placement)}",
+            f"press it and a session takes this card, {driver(placement)}",
+            why=why_this_driver(placement),
         )
         state = StartState.FREE
     readiness = Readiness(

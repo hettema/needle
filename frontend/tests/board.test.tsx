@@ -320,7 +320,7 @@ describe("the doors", () => {
       ...d.doors,
       start: { offered: true, label: "Start · fable on alpha", why: "Fable headroom on alpha (12% of Fable used)" },
       discuss: { offered: true, label: "Discuss", why: "A fresh conversation about this card, never hands on its tree." },
-      placement: { slot: "alpha", model: "fable", config_dir: "/x", why: "Fable headroom on alpha (12% of Fable used)" },
+      placement: { slot: "alpha", make: "claude", model: "fable", config_dir: "/x", why: "Fable headroom on alpha (12% of Fable used)", tier: null },
       collision: { verdict: "clear", sentence: "No running lane or trunk session touches this plan's files.", files: [], cards: [] },
     };
     api.getCard.mockResolvedValue(d);
