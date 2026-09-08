@@ -1,4 +1,4 @@
-# A hook that arrives late still corrects the card, and nothing is thrown away unread
+# News that arrives late still corrects the card, and nothing is thrown away unread
 
 **Found by:** Codex, reading #68 from its Discuss door on 2026-09-08 (round one, point 15), verified by Claude against `hooks/needle_hook.py`
 **Kind:** defect

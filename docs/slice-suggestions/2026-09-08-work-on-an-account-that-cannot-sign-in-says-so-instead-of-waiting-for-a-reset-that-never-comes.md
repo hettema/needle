@@ -1,4 +1,4 @@
-# A lane on an account that cannot sign in says so, instead of waiting for a reset that never comes
+# Work on an account that cannot sign in says so, instead of waiting for a reset that never comes
 
 **Found by:** Codex, reading #68 from its Discuss door on 2026-09-08 (round one, point 16), verified by Claude against the machine's script
 **Kind:** defect
