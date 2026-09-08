@@ -828,7 +828,8 @@ def codex_lane(store: Store, placement: Placement, request: Start) -> Launch:
     name = request.card
     path = repo / ".claude" / "worktrees" / name
     log = paths.data_dir() / "lanes" / f"{name}.log"
-    if not path.exists():
+    ours = not path.exists()
+    if ours:
         laid = git.add_worktree(repo, path, name)
         if laid is not None:
             return dead(
@@ -847,7 +848,12 @@ def codex_lane(store: Store, placement: Placement, request: Start) -> Launch:
         pid = machine.detach(argv, cwd=path, log=log)
     except (OSError, machine.CommandMissing) as error:
         return _codex_died(
-            name, path, repo, placement, since, f"`codex exec` could not run: {error}"
+            name,
+            path if ours else None,
+            repo,
+            placement,
+            since,
+            f"`codex exec` could not run: {error}",
         )
     born = machine.process_start(pid)
     while True:
@@ -856,7 +862,7 @@ def codex_lane(store: Store, placement: Placement, request: Start) -> Launch:
             words = _last_words(log)
             return _codex_died(
                 name,
-                path,
+                path if ours else None,
                 repo,
                 placement,
                 since,
@@ -869,7 +875,7 @@ def codex_lane(store: Store, placement: Placement, request: Start) -> Launch:
     if session is None:
         return _codex_died(
             name,
-            path,
+            path if ours else None,
             repo,
             placement,
             since,
@@ -924,10 +930,13 @@ def _codex_lane_row(pid: int, path: str) -> Session | None:
 
 
 def _codex_died(
-    name: str, path: Path, repo: Path, placement: Placement, since: float, reason: str
+    name: str, path: Path | None, repo: Path, placement: Placement, since: float, reason: str
 ) -> Launch:
-    """A Codex lane that never came alive, with its worktree taken back."""
-    if path.exists():
+    """A Codex lane that never came alive, with the worktree taken back —
+    but only one this call laid. A worktree that was already there is a
+    previous life's, with its commits in it; removing it because a fresh
+    launch failed would destroy work no launch of ours wrote."""
+    if path is not None and path.exists():
         git.remove_worktree(repo, path, name)
     return Launch(
         card=name,

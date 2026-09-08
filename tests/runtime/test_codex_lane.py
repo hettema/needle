@@ -156,6 +156,30 @@ def test_a_lane_that_never_came_alive_leaves_no_worktree_and_says_why(
     assert [a.verdict for a in result.attempts] == [LaunchVerdict.DEAD]
 
 
+def test_a_failed_launch_never_takes_back_a_copy_of_the_code_it_did_not_make(
+    machine_floor: Floor, runtime: Runtime, repo: Path
+):
+    """A worktree already there is a previous life's, with its commits in it.
+    A fresh launch that dies takes back only what it laid; removing the other
+    would destroy work no launch of ours wrote."""
+    import subprocess
+
+    path = repo / ".claude" / "worktrees" / CARD
+    subprocess.run(
+        ["git", "-C", str(repo), "worktree", "add", "-b", CARD, str(path)],
+        check=True,
+        capture_output=True,
+    )
+    (path / "the-work.txt").write_text("a previous life's commit", encoding="utf-8")
+    machine_floor.answer_best("codex", "gpt-6-astra", make="codex")
+    machine_floor.script_codex({"then": "fail", "stderr": "error: stream disconnected"})
+
+    result = runtime.start(a_start(repo))
+
+    assert result.verdict == LaunchVerdict.DEAD
+    assert path.is_dir() and (path / "the-work.txt").is_file()
+
+
 def test_a_reading_is_asked_of_the_rule_with_the_other_makes_rung_spent(
     machine_floor: Floor, runtime: Runtime, repo: Path
 ):

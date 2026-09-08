@@ -236,7 +236,8 @@ def test_a_walled_colleague_is_moved_once_the_call_follows_and_a_second_wall_par
     assert moved is not None and moved.ended_at is None
     assert moved.session_id == log[2]["session_id"] and moved.slot == "beta"
     assert moved.moved is not None and moved.moved.startswith(
-        "colleague-x moved to fable on beta as "
+        # The handoff names beta and no model, so beta is said alone (card #63).
+        "colleague-x moved to beta as "
     )
     alive = [s for s in runtime.sessions() if s.pid is not None and s.name == "colleague-x"]
     assert len(alive) == 1, "one call, one colleague"

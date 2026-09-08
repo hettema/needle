@@ -374,7 +374,12 @@ def lay(root: Path) -> Floor:
     state.write_text(
         json.dumps(
             {
-                "best": {"slot": "alpha", "model": None, "why": "Fable headroom on alpha"},
+                # The rule's answer as the machine's card will make it: a slot
+                # and the rung's model by name. `claude-acct` answers
+                # `model: null` today — "that slot's own top rung" — and a
+                # test that wants that answer scripts it (`answer_best(slot,
+                # None)`), which several do; both paths are live (card #63).
+                "best": {"slot": "alpha", "model": "fable", "why": "Fable headroom on alpha"},
                 "best_calls": [],
                 "launches": [],
                 "launch_log": [],

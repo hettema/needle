@@ -342,22 +342,24 @@ read on 0.153.4 2026-09-08), so this map is an identity today and exists so
 that the day one make renames a level the other is not renamed with it."""
 
 GIT_ROOTS = ("objects", "refs", "logs")
-"""The directories under a repository's `.git` that a commit on a linked
-worktree's branch writes, beside the worktree's own `worktrees/<lane>`
-record. Codex's workspace sandbox denies every write under `.git` by rule —
-proved on 2026-09-08 in a plain repository, where a commit failed on
-`.git/index.lock` with the whole repository as the workspace root — so a
-lane that must commit names these four as writable roots and nothing else.
-What that leaves closed is the main checkout's own index and working tree,
-both verified refused in the same probe: the boundary a Claude lane holds by
-its harness's guard, a Codex lane holds in the kernel."""
+"""The shared directories under a repository's `.git` that a commit on a
+linked worktree's branch writes: the object store, the branch's ref and the
+reflog. With the worktree's own `worktrees/<lane>` record they are the four
+git paths a lane needs open, and no more. Codex's workspace sandbox denies
+every write under `.git` by rule — proved on 2026-09-08 in a plain
+repository, where a commit failed on `.git/index.lock` with the whole
+repository as the workspace root — so naming these is what lets a lane
+commit at all. What they leave closed is the main checkout's own index and
+working tree, both verified refused in the same probe: the boundary a Claude
+lane holds by its harness's guard, a Codex lane holds in the kernel."""
 
 
 def lane_roots(repo: Path, lane: str, cache: Path) -> list[str]:
     """Everything outside its own worktree a Codex lane may write: the four
-    git paths a commit on its branch needs, and the package cache its suite
-    needs. Directories only — a file named here makes the sandbox exit 101
-    before the session starts (`.git/config`, 2026-09-08)."""
+    git paths a commit on its branch needs (`GIT_ROOTS`), and the package
+    cache its suite needs — five in all, and nothing else. Directories only:
+    a file named here makes the sandbox exit 101 with a panic before the
+    session starts (`.git/config`, 2026-09-08)."""
     git = repo / ".git"
     return [str(git / "worktrees" / lane), *[str(git / part) for part in GIT_ROOTS], str(cache)]
 
@@ -385,7 +387,10 @@ def lane_argv(
     inside the sandbox, 2026-09-08). No `-o` and no `--output-schema`: a
     lane's word is its commits and the card, not a last message.
     """
-    roots_toml = "[" + ",".join(f'"{root}"' for root in roots) + "]"
+    # `-c` values are parsed as TOML, and JSON's array-of-strings escaping is
+    # TOML's, so a path carrying a quote or a backslash cannot end the array
+    # early and be read as something else.
+    roots_toml = json.dumps(roots)
     argv = [machine.which("codex"), "exec", "-s", "workspace-write", "-C", str(worktree)]
     if model:
         argv += ["-m", model]

@@ -30,7 +30,9 @@ def test_where_prints_the_rules_answer(machine_floor: Floor, capsys):
     machine_floor.answer_best("beta", None, "Fable headroom on beta")
 
     assert main(["where", "--from", "alpha", "--tried", "alpha:fable"]) == 0
-    assert capsys.readouterr().out.strip() == "fable on beta — Fable headroom on beta"
+    # The rule answered no model — its word for "that slot's own top rung" —
+    # so the slot is said alone and its own reason carries the rest (card #63).
+    assert capsys.readouterr().out.strip() == "beta — Fable headroom on beta"
     assert machine_floor.state()["best_calls"][-1] == [
         "best",
         "--json",
@@ -88,10 +90,12 @@ def test_move_and_rescues_from_the_command_line(machine_floor: Floor, repo: Path
     said = capsys.readouterr().out
     new_short = said.split(" ", 1)[0]
     assert new_short != short, "a resume forks the session id"
-    assert said.startswith(f"{new_short} is alive: card-5-moves on beta with fable")
+    # The handoff named beta and no model — its word for that slot's own top
+    # rung — so the slot is said alone (card #63).
+    assert said.startswith(f"{new_short} is alive: card-5-moves on beta")
     assert main(["rescues", new_short]) == 0
     assert (
-        "alpha/fable → beta/fable  You've hit your session limit · resets 12pm"
+        "alpha/fable → beta/default  You've hit your session limit · resets 12pm"
         in capsys.readouterr().out
     )
     assert main(["rescues", new_short, "--clear"]) == 0

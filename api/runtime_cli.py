@@ -146,7 +146,7 @@ def describe_launch(launch: Launch) -> str:
         # A Codex worker is alive on no placement: the rule placed nothing,
         # it runs where its rollout says (plan 57).
         where = (
-            f"as {rung_words(launch.placement.model, launch.placement.slot)}"
+            f"on {rung_words(launch.placement.model, launch.placement.slot)}"
             if launch.placement is not None
             else f"on {launch.session.slot}"
             if launch.session is not None
