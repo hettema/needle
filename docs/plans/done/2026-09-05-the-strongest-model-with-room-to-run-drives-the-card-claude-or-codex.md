@@ -57,6 +57,14 @@ A rung is a make, a model and a tier, and the tier is the owner's dated ruling �
 
 **Met, with the machine's half named:** `domain/slot.py::Model` is gone — a rung's model is the word the rule answered, kept as given. `Make` is what remains code, and deliberately: a make needs a launcher, so the makes this runtime *can* run are code and a make it may be *told about* is not; a rule naming `mistral` is refused with that word and the makes it can launch (`runtime/rule.py`; `tests/runtime/test_rule.py`). The tier is read from the rule's answer as the owner's dated ruling and shown on the Start door with its date (`board/lane.py::why_this_driver`); a half-named tier is no tier. What is not live: `claude-acct best` does not yet answer `make`, `tier` or `tier_ruled_on`, so today every Start preview reads a Claude rung with no tier, exactly as it did — the fixture rule answers drive both paths in the tests. That half is the machine's card, filed as this plan's Sequencing said it would be, with this plan as its evidence: `/home/dennis/Work/omarchy-machine/docs/slice-suggestions/2026-09-08-the-strongest-colleague-with-room-to-work-takes-the-next-card-whichever-kind-it-is.md`. One visible consequence today: the rule answers `model: null` for a slot's top rung and the runtime used to turn that into the word `fable`; it now passes no `--model` and the board says the slot alone, with the rule's own reason ("Fable headroom on eduard …") beside it. The word comes back to the label when the machine's card makes the answer name the model.
 
+## Measurement correction agreed on 2026-09-08
+
+Dennis accepted the allowance audit and asked: "do you need to update 63 so it knows to fix the measurement thing?" The correction belongs to the machine's existing reader, so its execution is machine **#47**, written in `/home/dennis/Work/omarchy-machine/docs/plans/2026-09-08-token-use-is-counted-once-and-savings-need-proof.md`. Read and coordinate that work alongside this card; the cross-make chooser in item 4 is a different machine responsibility and does not carry the measurement correction implicitly.
+
+The source search found machine #12 and `machine burn`, not a need for a new meter. The audit verified that copied histories inflate consumption and that #12's `expect walls` signal accepts both zero and 999 walls. The linked machine plan owns request deduplication, explicit uncertainty for conflicting copies or historical account attribution, and correction of #12's false success condition. This card's runtime work can start before that correction ships; any efficiency conclusion below must wait for its verified result. Preserve the first Codex-driven cards' existing traces so waiting on the reader cannot erase their observations.
+
+The close must identify the linked machine card and its actual state. If the correction or a comparable quality baseline remains missing, the comparison says insufficient evidence and stays open; shipping a working Codex driver is not proof of savings or unchanged quality. #58 still follows #63 and owns automatic collaboration, including who challenges the accountable driver.
+
 ## Loop
 
 We think a top-tier Codex lane will hold the quality a Fable lane holds while Opus-hours under a spent Fable allowance fall toward zero, because the owner's ruling says the tier is quality and #51, #54 and #57 showed Sol's corrections landing on real work. The read is #58's, on the first six Codex-driven cards against the six Fable-driven cards nearest them in work shape: corrections before build, review-ring findings, defects filed against the card within fourteen days. If the Codex arm escapes more defects, the tier ruling comes back to Dennis with those tallies and the rung drops a tier by a dated edit. If the arm holds and Opus-hours fall, the ruling stands as a fact and the machine-side card has its evidence. If Starts begin dying for want of any rung, that is a different failure — the board stopping — and the machine-side card goes first.
@@ -84,4 +92,46 @@ Loop: the first six Codex-driven cards against their nearest Fable-driven neighb
 
 ## Close-out
 
-Written by the lane: a stance per item; the two probe facts and where they were recorded; the first Codex lane's card number and its fold; the machine-side card's path; the loop's row as the close wrote it and its first reading date.
+Written by the lane: a stance per item; the two probe facts and where they were recorded; the first Codex lane's card number and its fold; the machine-side card's path; the loop's row as the close wrote it and its first reading date; the linked measurement card and whether its correction was verified or the efficiency comparison remains open.
+
+### What the close wrote
+
+- **A stance per item:** above, on each of the four.
+- **The two probe facts, and where:** the sandbox and the hook payload, both
+  probed on 0.153.4 on 2026-09-08 and written up in
+  `/home/dennis/Work/omarchy-machine/docs/codex-on-this-machine.md` under
+  "What a session of this make may do with a card". The first contradicted
+  this plan's own premise: the sandbox denies `.git` writes by rule, not
+  because a linked worktree's `.git` points elsewhere.
+- **The first Codex lane, and its fold:** none on a real card yet, and the
+  reason is item 4's — `claude-acct best` cannot answer `codex`, so no Start
+  will choose it until the machine's card lands. What did run, end to end on
+  2026-09-08, is a lane on a throwaway card with the rule stubbed to answer
+  `codex`: alive in 8.3 s, in its own worktree, in its own space on the
+  machine, and it committed its own work (`a3bbff1`) while its reach into the
+  main copy came back `Read-only file system`. Pass 5 of
+  `docs/reviews/2026-09-08-the-strongest-model-with-room-to-run-drives-the-card.md`
+  has it.
+- **The machine-side card:**
+  `/home/dennis/Work/omarchy-machine/docs/slice-suggestions/2026-09-08-the-strongest-colleague-with-room-to-work-takes-the-next-card-whichever-kind-it-is.md`,
+  filed with this plan as its evidence and naming the three fields the rule's
+  answer needs.
+- **The loop's row and its first reading:** the WATCH this close wrote is the
+  owner's reading of the first six Codex-driven cards against their nearest
+  Fable-driven neighbours, by 2026-09-26. It cannot read earlier than the
+  machine's card, because until then there are no Codex-driven cards to read.
+- **The linked measurement card, and whether its correction was verified:**
+  machine **#47**, `docs/plans/done/2026-09-08-token-use-is-counted-once-and-savings-need-proof.md`,
+  is **Done and its correction verified** — both items carry a `Met:` with
+  evidence: `count_once()` reconciled against the audit's independently
+  deduplicated counts exactly on every complete day, and `machine burn --days
+  7 --savings` now rejects the 999-wall counterexample the old vocabulary-only
+  condition passed. So the meter is trustworthy.
+  **The efficiency comparison itself remains open, on no evidence at all.**
+  Not one card has been driven by a Codex session, so there is nothing to
+  compare: no allowance figure, no quality baseline, no corrections-before-
+  build or defects-within-fourteen-days tally for either arm. This close
+  claims a working driver and nothing whatever about savings or about quality
+  holding, which is what this plan's own added section asks of it. The first
+  six Codex-driven cards' traces are what the reading will need, so nothing
+  in this card prunes a lane's log, its rollout or its card history.
