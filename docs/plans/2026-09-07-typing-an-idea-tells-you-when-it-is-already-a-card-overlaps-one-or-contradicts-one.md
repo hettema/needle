@@ -2,7 +2,7 @@
 
 **Carries:** docs/slice-suggestions/done/2026-09-05-a-plan-or-a-defect-is-born-knowing-the-live-cards-on-its-ground.md
 **Status:** NEW — planned, not started; written at the Idea door for the owner to rank.
-**Written:** 2026-09-07, at the board's Idea door (conversation 206dd83f), on the owner's ruling in that conversation: "can you not write the plan? You have context so it feels like you're better positioned than the clean plan agent." The words that asked for it, twice at the same door: 2026-09-05, "I'm worried we're trying to solve the same thing in similar ways which goes against our working doctrine … cards that smell of planning drift either folded or aware of each other"; 2026-09-07, "when I enter a card to any needle board I don't have full understanding of the open cards in that project. What if I suggest a plan it has massive overlap with another plan? Is that a bad thing? I'm for example concerned about me contradicting myself." A colleague of another make (Codex 0.153.4, read-only, two rounds, 2026-09-07) read the finding cold: its corrections are in the suggestion, and its objection to a plan written at the door is ruling 1.
+**Written:** 2026-09-07, at the board's Idea door (conversation 206dd83f), on the owner's ruling in that conversation: "can you not write the plan? You have context so it feels like you're better positioned than the clean plan agent." The words that asked for it, twice at the same door: 2026-09-05, "I'm worried we're trying to solve the same thing in similar ways which goes against our working doctrine … cards that smell of planning drift either folded or aware of each other"; 2026-09-07, "when I enter a card to any needle board I don't have full understanding of the open cards in that project. What if I suggest a plan it has massive overlap with another plan? Is that a bad thing? I'm for example concerned about me contradicting myself." A colleague of another make (Codex 0.153.4, read-only, two rounds, 2026-09-07) read the finding cold: its corrections are in the suggestion, and its objection to a plan written at the door is ruling 1. Amended 2026-09-08 at the card's Discuss door, on the owner's words there: ruling 8, the look at the moment of filing in item 2, and who clears a counted document in item 1.
 **Effort gate:** high — the code is four readers widened (the corpus read against itself, the briefs, the head's claims, the Sequencing verdict) with a fixture test each and a page change behind them; the judgment is what counts as a neighbour and what the door says about one, and a reading that gets it wrong is silent: a door that names no neighbour looks exactly like a door with none to name.
 **Class:** the head counts live documents beside a neighbour they do not name, as a broken claim beside "document without card", on every board; and a reader of another make reads the first ten births after the fold for conflicts missed, invented or silently chosen (the Loop), so a wrong reading is loud within three weeks, never silent.
 **Formerly:** The door tells you when your idea is already a card, overlaps one or contradicts one, and nothing is born blind to its neighbours (retitled 2026-09-07 to the bar docs/plans/README.md sets, card #74 on Needle)
@@ -34,11 +34,15 @@ that writes a document carries them by intent; the Idea door's first reply
 says of each one whether the idea is already that card, sits beside it, or
 contradicts it — and a contradiction comes back to him as one question he
 can answer cold, never as a refusal; and a Sequencing line the board cannot
-place says so instead of silently being prose.
+place says so instead of silently being prose. A duplicate — the same
+card under another name — folds into the card that holds it, by whoever
+finds it, with the new evidence under that card's own heading and a line
+saying so; only a contradiction is his (ruling 8).
 
 What does not change: nothing refuses a birth, nothing waits on shared
 ground, the board never says "contradicts" on its own (ruling 3), the one
-hold stays the plan's own Sequencing word, and the owner ranks.
+hold stays the plan's own Sequencing word, nothing born while he is
+away waits for him (ruling 8), and the owner ranks.
 
 ## Items
 
@@ -63,12 +67,16 @@ path anywhere — a `Carries:` line, a `Sequencing:` line, or prose (ruling
 ground with #N` does for a lane, and in the head as a claim in the broken
 list (`Claim` in `domain/board.py`, counted and filtered like "document
 without card", plan 27's pattern): live documents beside a neighbour they
-do not name.
+do not name. The count names the
+failure, so the row says who clears it: for a defect, the reading that
+verifies its mark (item 2) folds it into the neighbour or cites it; for a
+plan, the owner, from the row on the card, when he ranks (ruling 8).
 Done means: on the fixture (`tests/fixtures/harbourmaster/docs/`), a
 suggestion born naming a file a live plan's Terrain names shows that plan's
 card and the files on its own card; a suggestion naming no file but a live
 plan's words shows that card as a candidate, said as a candidate; a plan
-that carries or cites the neighbour clears the count; the head's count
+that carries or cites the neighbour clears the count; the row says who
+clears it — the reading for a defect, the owner for a plan; the head's count
 reads on the served page and filters the board to the cards carrying it;
 the types are regenerated (`needle types`), the frontend fixture rebuilt
 (`tools/board_fixture.py`), `tsc` and `vitest` clean; and after the fold —
@@ -91,7 +99,16 @@ The planning brief also hands the session every live defect on the same
 ground and says what a plan does with a neighbour: carry it, sequence after
 it, or cite it and say in the head why the plan is whole without it — so
 one plan for a class is the default and one plan per instance the
-exception. The reading that verifies a mark (`board/brief.py::triage_brief`,
+exception. The filing rule (`board/brief.py::filing_rule`) is read an
+hour after the lane's brief, about a finding on ground the card never
+touched, so the neighbours the brief carried are the card's and not the
+finding's: the rule says look first — before it writes, the session reads
+the live defects and plans on the finding's own paths and words, appends
+the new evidence under the heading of a card that already holds the bug
+instead of writing a second file, and cites by card or path a neighbour on
+shared ground in the file it does write. The head's count from item 1 is
+what proves the look happened (ruling 8). The reading that verifies a mark
+(`board/brief.py::triage_brief`,
 `board/triage.py`) reads the neighbours too: a `now` on a document whose
 ground a live plan already covers lands as `when` on that plan's card, in
 the result vocabulary plan 59 gave the reading, not as a second `now`.
@@ -99,7 +116,10 @@ Done means: the brief tests (`tests/board/test_brief.py`,
 `tests/api/test_doors.py`, `tests/api/test_dial.py`) read a fixture where a
 live neighbour exists and each of the five briefs names it with its card
 and intent sentence; the planning brief's three dispositions are in its
-text; and on the fixture a triage reading of a `now` whose files a live
+text; the filing rule's text says to read the finding's own neighbours
+before writing and to append to a card that already holds it, read by
+`tests/board/test_brief.py` in every brief that carries the rule; and on
+the fixture a triage reading of a `now` whose files a live
 plan's Terrain names lands `when` on that plan's card
 (`tests/api/test_triage.py`).
 Hands out: execution — the backend and frontend suites after the brief change (`uv run pytest -q`, `npx vitest run --root frontend`), every failure verbatim; verifies by re-running the one failing test it reports before acting on it.
@@ -214,6 +234,28 @@ no grammar change: `docs/plans/README.md` is not touched (ruling 4).
 - **Shared ground with running lanes is the fold's.** #74's lane is in the
   parser and the briefs today, and #72 adds a head field the parser reads;
   this plan names no hold on them. The second to fold rebases.
+- **A duplicate folds; only a contradiction is his (Discuss door,
+  2026-09-08).** The owner's intent in his words: "keep the needle boards
+  clean by not adding duplicate cards; when a card is being created and a
+  duplicate is detected we backbrief together." Sharpened in the same
+  conversation and agreed. A duplicate — the same card under another name
+  — is one of three neighbours and the easy one: whoever finds it folds
+  it, adding the new evidence under the existing card's own heading, and
+  says it did; that applies a rule already written (one way to do each
+  thing) and is execution under §1, never a decision parked for him. A
+  neighbour on shared ground is named, never waited on. A contradiction —
+  two intents that cannot both hold — is the one that reaches him, as one
+  question. "Together" means at the door: the Idea door's first reply is
+  that backbrief, before anything is written. A card born while he is away
+  — a review lane filing a defect, the dial planning one — never waits for
+  him: a duplicate folds, a contradiction lands on the card as a question
+  for him, and the board moves on. Rejected: a birth that waits for a
+  backbrief, which rebuilds the eight parked decisions §1 was shaped by.
+  Also settled at the door: the look at the moment of writing is a
+  convention — the brief says look first, and no verb writes a document,
+  so there is no door to refuse at — while the count after landing and the
+  reading before routing are the mechanisms; by HOW-WE-WORK §5 a failure
+  that shows loud on the head within one read may stay a convention.
 
 ## Deliberately not
 
@@ -230,6 +272,8 @@ no grammar change: `docs/plans/README.md` is not touched (ruling 4).
   counts any that still do not.
 - Any change to what a plan must contain: no grammar, no README, no
   doctrine.
+- A filing verb that shows the neighbours before it writes, the one hard
+  door at the moment of writing: a new primitive, its own card (ruling 8).
 
 ## Loop
 
