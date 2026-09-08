@@ -1,6 +1,6 @@
 # Every sentence on a card says whether it is your move, in plain words
 
-**Carried by:** docs/plans/2026-09-07-every-sentence-on-a-card-says-whether-it-is-your-move-in-plain-words.md — planned on 2026-09-07 at the owner's word, sequenced after #74
+**Carried by:** docs/plans/done/2026-09-07-every-sentence-on-a-card-says-whether-it-is-your-move-in-plain-words.md — planned on 2026-09-07 at the owner's word, sequenced after #74
 
 **Kind:** defect
 **Fix:** now — the intent is written (HOW-WE-WORK: "the person can see which without reading code"; the owner's steering: "say what changed and what it means for him, not how it works"; `domain/board.py::Meaning.YOURS` already defines amber as "only you can act"), the sentences are string constants in `board/lane.py`, `board/assemble.py` and `api/loops.py` that a test can read, and the fix is a shape every face sentence takes plus a ratchet that reads them all against the vocabulary file card #74 introduces, which ends the class for every project on the board rather than rewording one hold
