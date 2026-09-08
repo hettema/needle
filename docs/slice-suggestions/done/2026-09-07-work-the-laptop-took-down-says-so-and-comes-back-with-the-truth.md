@@ -1,5 +1,6 @@
 # Work the laptop took down says so and comes back with the truth
 
+**Carried by:** docs/plans/2026-09-05-work-the-laptop-interrupted-comes-back-by-itself-and-the-board-says-truly-how-it-ended.md — folded on 2026-09-08 from #68's Discuss door, where a two-round reading with Codex found it the same class as #68's item 1 (a death named at the end from the evidence that held the process) and its fix in the same three places; one lane reads the loop once
 **Found by:** the machine session, 2026-09-07 22:10, reading the board after the laptop's battery drained in flight (lid closed 18:51 on a low battery, normal sleep, power gone before 22:06; boot 5438b1ea)
 **Kind:** defect
 **Fix:** now — §11 is the written intent (*every other move is a machine fact with named evidence, or the board lies while they are away*) and §8's rule that a load-bearing claim says how it was known; the fix is inside `runtime/service.py::why_ended` and `board/lane.py`'s death line, plus `runtime/launch.py`'s `CONTINUE`; it removes the class — every session whose process vanished with a boot — not these four lanes.
