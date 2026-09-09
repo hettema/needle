@@ -33,6 +33,7 @@ from domain.dial import DialState, Headroom
 from domain.document import DocumentKind, SuggestionKind
 from domain.evidence import Evidence
 from domain.lane import Doors, Lane, LaneSnapshot
+from domain.notice import Shown
 from domain.project import Project
 from domain.row import Row
 from domain.signal import SessionWork
@@ -109,6 +110,9 @@ class Live:
         """What to run when another process wrote to the store, or the corpus
         changed a card: the loops set it, so a row written from the command
         line and a plan that landed are acted on at once, not at the floor."""
+        self.shown: Shown | None = None
+        """The card the runtime last asked every open page to put in front of
+        the owner (card #41): carried on the stream, never in a board."""
         self._stop = asyncio.Event()
         self._store_task: asyncio.Task[None] | None = None
         self._waiters: list[asyncio.Future[int]] = []
@@ -494,6 +498,17 @@ class Live:
         self._live(slug)
         self.store.note(slug, number, kind, actor, self.now(), detail)
         self.bump()
+
+    def show(self, slug: str, number: int) -> Shown:
+        """Ask every open page to put the card in front of the owner (card
+        #41): the notification's button, through the runtime's `show`."""
+        self._live(slug)
+        if self.store.card(slug, number) is None:
+            raise StoreRefusal(f"There is no card #{number} on this board.")
+        last = self.shown.id if self.shown is not None else 0
+        self.shown = Shown(id=last + 1, project=slug, card_number=number, at=self.now())
+        self.bump()
+        return self.shown
 
     def set_snapshot(self, slug: str, snapshot: LaneSnapshot) -> bool:
         """The loop's read of the project's lanes. Bumps only when a lane or

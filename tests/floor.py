@@ -34,6 +34,7 @@ class Floor:
     acct_cache: Path
     state_file: Path
     cgroup_root: Path
+    applications: Path
     pids: list[int] = field(default_factory=list)
 
     def config_dir(self, slot: str) -> Path:
@@ -132,6 +133,20 @@ class Floor:
             self.state_file.write_text(json.dumps(blob, indent=1), encoding="utf-8")
 
         self._locked(write)
+
+    def write_board_entry(self, slug: str, base: str = "http://127.0.0.1:8480") -> Path:
+        """The board's desktop entry for a project, as the machine writes it
+        (card #41): its Exec runs the floor's `board-window` stand-in on
+        the `--app=` URL, which adds a client under Chromium's app-id."""
+        path = self.applications / f"Needle {slug}.desktop"
+        path.write_text(
+            "[Desktop Entry]\nType=Application\n"
+            f"Name=Needle {slug}\n"
+            f"Exec={FAKE_BIN / 'board-window'} --app={base}/p/{slug}\n"
+            "Terminal=false\n",
+            encoding="utf-8",
+        )
+        return path
 
     def script_launches(self, *fates: dict) -> None:
         self.update(launches=list(fates))
@@ -469,6 +484,8 @@ def lay(root: Path) -> Floor:
     write_meminfo(meminfo, available_gb=16.0, swap_free_gb=8.0, swap_total_gb=8.0)
     cgroups = root / "cgroup"
     cgroups.mkdir()
+    applications = root / "applications"
+    applications.mkdir()
     state = root / "fake-state.json"
     state.write_text(
         json.dumps(
@@ -489,6 +506,9 @@ def lay(root: Path) -> Floor:
                 "busctl_calls": [],
                 "scopes": {},
                 "scope_stops": [],
+                "notified": [],
+                "played": [],
+                "press": None,
                 "codex": [],
                 "codex_log": [],
                 "windows_open": True,
@@ -511,6 +531,7 @@ def lay(root: Path) -> Floor:
         acct_cache=acct_cache,
         state_file=state,
         cgroup_root=cgroups,
+        applications=applications,
     )
 
 
@@ -544,6 +565,7 @@ ENVIRONMENT = {
     "NEEDLE_ACCT_CACHE": "acct_cache",
     "NEEDLE_FAKE_STATE": "state_file",
     "NEEDLE_CGROUP_ROOT": "cgroup_root",
+    "NEEDLE_APPLICATIONS": "applications",
 }
 """Variable → the floor attribute it points at. `runtime.machine` reads all
 but the fake state; the fakes read that one."""

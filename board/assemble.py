@@ -368,7 +368,7 @@ def _who_word(signal: Signal, owner_only: bool) -> str:
     return "a session reads it" if signal.kind == SignalKind.SESSION else "the board reads it"
 
 
-def _lane_is_spent(card: Card, lane: Lane) -> bool:
+def lane_is_spent(card: Card, lane: Lane) -> bool:
     """A lane with nothing left to say about this card. Its work folded and
     the card shipped on it: what matters now is whether the loop closed, not
     that the session which did the work has since stopped. Without this every
@@ -612,7 +612,7 @@ def state_of(
                 "unless they stay stuck",
             ),
         )
-    if lane is not None and lane.state in WAITING_ON_YOU and not _lane_is_spent(card, lane):
+    if lane is not None and lane.state in WAITING_ON_YOU and not lane_is_spent(card, lane):
         answer = (
             _door(FaceDoorName.OPEN, doors.answer.label, doors.answer.why, primary=True)
             if doors.answer.offered
@@ -862,7 +862,7 @@ def claims_of(
     claims: list[Claim] = []
     if verdict is not None and card.folded_into is None:
         claims.append(Claim.VERDICT)
-    if lane is not None and lane.state in WAITING_ON_YOU and not _lane_is_spent(card, lane):
+    if lane is not None and lane.state in WAITING_ON_YOU and not lane_is_spent(card, lane):
         claims.append(Claim.LANE_ASKING)
     if signal_asks_owner(card, signal, last, now) or trigger_asks_owner(card, trigger, last, now):
         claims.append(Claim.SIGNAL_ASKING)

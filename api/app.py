@@ -26,6 +26,7 @@ from domain.card import Move, RowRecord
 from domain.dial import DialState, Fixes
 from domain.hook import HookEvent, HookPosted, Word
 from domain.lane import DoorResult
+from domain.notice import Shown
 from domain.project import Project
 from domain.verdict import EvidenceClass, VerdictsRuled
 from infrastructure import clock
@@ -85,14 +86,23 @@ async def board_events(
     there is one serialisation of the truth and it is the board endpoint's.
     """
     version = live.version
-    yield f"event: board\ndata: {json.dumps({'version': version})}\n\n"
+    yield _board_event(live, version)
     while not live.closing and not await is_disconnected():
         latest = await live.wait_for_change(version, keepalive)
         if latest > version:
             version = latest
-            yield f"event: board\ndata: {json.dumps({'version': version})}\n\n"
+            yield _board_event(live, version)
         else:
             yield ": keep-alive\n\n"
+
+
+def _board_event(live: Live, version: int) -> str:
+    """One event: the version, and beside it the card the runtime last asked
+    the page to show (card #41) — a request to the page, not board state, so
+    the stream may carry it. The page acts on a `shown` it has not seen and
+    takes the first one it hears as already seen."""
+    shown = live.shown.model_dump(mode="json") if live.shown is not None else None
+    return f"event: board\ndata: {json.dumps({'version': version, 'shown': shown})}\n\n"
 
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
@@ -318,6 +328,15 @@ def create_app(store: Store | None = None, *, dist: Path | None = FRONTEND_DIST)
             received=len(recorded),
             attributed=sum(1 for e in recorded if e.card_number is not None),
         )
+
+    @app.post("/api/show/{slug}/{number}", response_model=Shown)
+    async def show(slug: str, number: int, request: Request) -> Shown:
+        """What the notification's button asks (card #41): every open page
+        navigates to the card, on its project's board."""
+        live = await live_for(request, slug)
+        if slug not in live.projects:
+            raise StoreRefusal(f'No project "{slug}" is on the board.')
+        return live.show(slug, number)
 
     @app.get("/api/projects/{slug}/files", response_model=ProjectFile)
     async def file(slug: str, path: str, request: Request) -> ProjectFile:

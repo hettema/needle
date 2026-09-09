@@ -7,6 +7,7 @@ needle move SHORT [--to SLOT] [--json]
 needle stop SHORT [--json]
 needle window SHORT [--as KIND] [--json]
 needle focus SHORT [--json]
+needle show SLUG CARD [--json]
 needle rescues SHORT [--clear] [--json]
 needle call WHO NOTE [--objective TEXT] [--answer PATH] [--json]
 needle wait CALL [--ceiling SECONDS] [--json]
@@ -41,6 +42,7 @@ from infrastructure import clock
 from infrastructure.paths import db_path
 from infrastructure.store import Store
 from runtime import calls, codex
+from runtime.notice import NoBoardEntry
 from runtime.service import NoSuchSession, Runtime
 from runtime.windows import WindowRefused
 
@@ -284,6 +286,22 @@ def focus(runtime: Runtime, args: argparse.Namespace) -> int:
     return 0
 
 
+class Shown(BaseModel):
+    said: str
+
+
+def show(runtime: Runtime, args: argparse.Namespace) -> int:
+    """What the notification's button runs (card #41): the card in front of
+    him, on that project's board."""
+    try:
+        said = runtime.show(args.slug, args.number)
+    except (NoBoardEntry, WindowRefused) as refused:
+        print(f"Could not show #{args.number} on {args.slug}: {refused}", file=sys.stderr)
+        return 1
+    _emit(args, Shown(said=said), said)
+    return 0
+
+
 def rescues(runtime: Runtime, args: argparse.Namespace) -> int:
     if args.clear:
         count = runtime.clear_rescues(args.short)
@@ -518,6 +536,15 @@ def register(sub: "argparse._SubParsersAction[argparse.ArgumentParser]") -> None
         "focus", "bring a session's open window forward, proved by the compositor", focus
     )
     p_focus.add_argument("short")
+
+    p_show = parser(
+        "show",
+        "put a card in front of the owner: the board's page opens it and its window comes "
+        "forward, or opens",
+        show,
+    )
+    p_show.add_argument("slug")
+    p_show.add_argument("number", type=int)
 
     p_rescues = parser("rescues", "a session's rescue history in the runtime's ledger", rescues)
     p_rescues.add_argument("short")

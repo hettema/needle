@@ -14,6 +14,7 @@ from domain.ending import Boot, Named, Sighting
 from domain.gate import Gate
 from domain.handout import Dispatch
 from domain.launch import Launch, Rescue, Start, Stopped, WindowlessStart
+from domain.notice import Notice, Told
 from domain.session import Session, SessionKind
 from domain.signal import Signal
 from domain.slot import Handoff, Limits, Placement, Rung, Slot, Where
@@ -30,6 +31,7 @@ from runtime import (
     launch,
     limits,
     machine,
+    notice,
     reasons,
     registry,
     roles,
@@ -447,6 +449,17 @@ class Runtime:
             return machine.stop_unit(unit)
         except (OSError, machine.Timeout, machine.CommandMissing) as error:
             return False, str(error)
+
+    def tell(self, what: Notice, opens: list[str]) -> Told:
+        """Tell the owner on his screen (card #41, item 1): a notification
+        that stays until he dismisses it, a sound, and a button that runs
+        `opens`. Never raises: what it could not do is in the words."""
+        return notice.tell(what, opens)
+
+    def show(self, slug: str, number: int) -> str:
+        """Put a card in front of him: the board's page navigates to it and
+        its window comes forward, or opens (card #41, item 1)."""
+        return notice.show(slug, number)
 
     def machine_is_reachable(self) -> list[str]:
         """Which of the commands the runtime needs are missing, by name."""

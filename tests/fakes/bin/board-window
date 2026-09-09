@@ -1,0 +1,50 @@
+#!/usr/bin/env python3
+"""A stand-in for the board's desktop entry on the test floor (card #41):
+what its Exec line runs. Records the argv under
+`$NEEDLE_FAKE_STATE["spawned"]` like the launcher does, and adds a client
+to the fake compositor under the app-id Chromium would derive from the
+`--app=` URL (`chrome-<host without port>__<path with / as _>-Profile_5`)."""
+
+import fcntl
+import json
+import os
+import re
+import sys
+from pathlib import Path
+
+STATE = Path(os.environ["NEEDLE_FAKE_STATE"])
+_URL = re.compile(r"^--app=https?://([^/]+)(/[^#?]*)")
+
+
+def main(argv: list[str]) -> int:
+    app_id = "chrome-unknown"
+    for word in argv:
+        found = _URL.match(word)
+        if found is not None:
+            host = found.group(1).split(":")[0]
+            app_id = f"chrome-{host}_{found.group(2).replace('/', '_')}-Profile_5"
+    with (STATE.parent / (STATE.name + ".lock")).open("a+") as lock:
+        fcntl.flock(lock, fcntl.LOCK_EX)
+        blob = json.loads(STATE.read_text(encoding="utf-8"))
+        blob.setdefault("spawned", []).append({"app_id": app_id, "command": argv})
+        number = len(blob.get("clients", [])) + 1
+        blob.setdefault("clients", []).append(
+            {
+                "address": f"0xfake{number:04x}",
+                "class": app_id,
+                "initialClass": app_id,
+                "title": "Needle",
+                "pid": os.getpid(),
+                "workspace": {"id": 2, "name": "2"},
+                "mapped": True,
+                "hidden": False,
+                "grouped": [],
+            }
+        )
+        STATE.write_text(json.dumps(blob, indent=1), encoding="utf-8")
+        fcntl.flock(lock, fcntl.LOCK_UN)
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main(sys.argv[1:]))

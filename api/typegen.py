@@ -43,6 +43,7 @@ MODULES: list[str] = [
     "triage",
     "dial",
     "call",
+    "notice",
 ]
 
 TYPES_DIR = Path(__file__).resolve().parent.parent / "frontend" / "src" / "types"

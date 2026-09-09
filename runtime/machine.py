@@ -137,6 +137,15 @@ def cgroup_root() -> Path:
     return _path("NEEDLE_CGROUP_ROOT", Path("/sys/fs/cgroup"))
 
 
+def applications_dir() -> Path:
+    """Where the desktop entries live (`~/.local/share/applications`): the
+    board's own entry is the machine's, read here to open the board on a
+    project when no window shows it (card #41, item 1)."""
+    data = os.environ.get("XDG_DATA_HOME")
+    base = Path(data) if data else Path.home() / ".local" / "share"
+    return _path("NEEDLE_APPLICATIONS", base / "applications")
+
+
 def meminfo_path() -> Path:
     """The kernel's memory summary; the floor lays one of its own."""
     return _path("NEEDLE_MEMINFO", PROC / "meminfo")
@@ -184,13 +193,22 @@ def run(
     )
 
 
-def spawn(argv: list[str], *, env: dict[str, str] | None = None) -> None:
+_forgotten: list[subprocess.Popen[bytes]] = []
+"""Children started with `spawn(…, wait=False)` and still to be reaped: a
+notification stays on his screen until he dismisses it, so its process
+lives for hours, and a handle dropped on the floor warns at collection."""
+
+
+def spawn(argv: list[str], *, env: dict[str, str] | None = None, wait: bool = True) -> None:
     """Start a process the runtime never waits on, pipes to or signals.
 
     A window is the owner's room: 0.1 held a pipe to the launcher, whose
     process chain ends in the terminal itself, and killed the window when its
     wait expired. Its own session and no pipes at all is what makes a door a
-    room he can stay in.
+    room he can stay in. With `wait=False` the caller does not even wait for
+    the child to exit: a notification with a button blocks until he answers
+    or dismisses it (card #41), and the loop that raised it beats on; the
+    handle is kept and reaped on a later spawn.
     """
     child = subprocess.Popen(
         argv,
@@ -200,6 +218,10 @@ def spawn(argv: list[str], *, env: dict[str, str] | None = None) -> None:
         start_new_session=True,
         env=env,
     )
+    if not wait:
+        _forgotten[:] = [c for c in _forgotten if c.poll() is None]
+        _forgotten.append(child)
+        return
     # The launcher itself exits at once — `omarchy-launch-tui` ends in
     # `exec setsid …`, which forks the terminal into its own session and
     # returns — so this reaps the launcher without holding the window it

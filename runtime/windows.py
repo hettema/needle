@@ -60,6 +60,16 @@ def present(app_id: str) -> dict[str, dict[str, object]]:
     }
 
 
+def present_under(prefix: str) -> dict[str, dict[str, object]]:
+    """Address → client, for every window whose app-id starts with `prefix`:
+    the board's own Chromium windows, whichever project each shows (card #41)."""
+    return {
+        str(c.get("address")): c
+        for c in clients()
+        if str(c.get("class") or c.get("initialClass") or "").startswith(prefix)
+    }
+
+
 def active() -> dict[str, object]:
     """The window the compositor reports focused, or an empty dict when none."""
     try:
@@ -88,6 +98,32 @@ def focus_script(address: str) -> str:
     )
 
 
+def focus_address(address: str, app_id: str = "the window") -> str:
+    """Bring the window at `address` forward and prove it by the compositor's
+    active window carrying that address; answers the app-id the compositor
+    reports. The one focus, for a session's window and for the board's own
+    (card #41)."""
+    try:
+        done = machine.run([machine.which("hyprctl"), "eval", focus_script(address)], timeout=10)
+    except (OSError, machine.CommandMissing) as error:
+        raise WindowRefused(f"the compositor cannot be asked: {error}") from error
+    if done.returncode != 0 or "error" in done.stdout.lower():
+        raise WindowRefused(
+            f"the compositor refused to focus {app_id} ({address}): "
+            f"{(done.stderr or done.stdout).strip()[:200]}"
+        )
+    deadline = time.time() + FOCUS_VERIFY_SECONDS
+    while time.time() < deadline:
+        now = active()
+        if str(now.get("address")) == address:
+            return str(now.get("class") or app_id)
+        time.sleep(WINDOW_POLL_SECONDS)
+    raise WindowRefused(
+        f"{app_id} ({address}) was told to focus and the compositor still "
+        f"reports {active().get('class') or 'no window'} active after {FOCUS_VERIFY_SECONDS:.0f} s"
+    )
+
+
 def focus_window(store: Store, session: Session) -> Focused:
     """Bring the session's open window forward and prove it by the
     compositor's active window carrying its address."""
@@ -96,27 +132,7 @@ def focus_window(store: Store, session: Session) -> Focused:
     if not open_windows:
         raise WindowRefused(f"no window is open into {session.short_id}; open one first")
     window = open_windows[0]
-    try:
-        done = machine.run(
-            [machine.which("hyprctl"), "eval", focus_script(window.address)], timeout=10
-        )
-    except (OSError, machine.CommandMissing) as error:
-        raise WindowRefused(f"the compositor cannot be asked: {error}") from error
-    if done.returncode != 0 or "error" in done.stdout.lower():
-        raise WindowRefused(
-            f"the compositor refused to focus {window.app_id} ({window.address}): "
-            f"{(done.stderr or done.stdout).strip()[:200]}"
-        )
-    deadline = time.time() + FOCUS_VERIFY_SECONDS
-    while time.time() < deadline:
-        now = active()
-        if str(now.get("address")) == window.address:
-            return Focused(window=window, app_id=str(now.get("class") or window.app_id))
-        time.sleep(WINDOW_POLL_SECONDS)
-    raise WindowRefused(
-        f"{window.app_id} ({window.address}) was told to focus and the compositor still "
-        f"reports {active().get('class') or 'no window'} active after {FOCUS_VERIFY_SECONDS:.0f} s"
-    )
+    return Focused(window=window, app_id=focus_address(window.address, window.app_id))
 
 
 def app_id_for(kind: WindowKind, card: str) -> str:

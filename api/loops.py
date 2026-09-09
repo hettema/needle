@@ -20,6 +20,8 @@ import both, and nothing below it may.
 import asyncio
 import contextlib
 import logging
+import shlex
+import sys
 from collections.abc import Awaitable, Callable
 from datetime import datetime, timedelta
 from enum import StrEnum
@@ -28,9 +30,11 @@ from pathlib import Path
 from watchfiles import awatch
 
 from board.assemble import (
+    WAITING_ON_YOU,
     asked_evidence,
     document_of,
     is_trigger_card,
+    lane_is_spent,
     routing_for,
     signal_asks_owner,
     signal_wants_reading,
@@ -39,7 +43,13 @@ from board.assemble import (
     trigger_wants_reading,
     watch_signal,
 )
-from board.brief import PLANNING_PREFIX, READING_PREFIX, reading_brief, reading_name
+from board.brief import (
+    PLANNING_PREFIX,
+    READING_PREFIX,
+    needle_command,
+    reading_brief,
+    reading_name,
+)
 from board.collision import footprint, verdict
 from board.dial import MEMORY_FLOOR_BYTES, headroom, who_is_home
 from board.lane import (
@@ -57,6 +67,7 @@ from board.lane import (
     entered_executing_at,
     exit_for,
     lane_for,
+    last_line,
     should_enter_executing,
     unpark,
     with_footprints,
@@ -67,7 +78,7 @@ from board.signals import where_after
 from board.title import title_hold
 from board.triage import already_ruled
 from board.word import compose, notes_word
-from domain.audit import AuditKind
+from domain.audit import AuditEntry, AuditKind
 from domain.board import MachineState, TrunkState
 from domain.call import Call, CallOutcome
 from domain.card import Actor, Card, Place
@@ -98,6 +109,7 @@ from domain.lane import (
     Wait,
 )
 from domain.launch import LaunchVerdict, WindowlessStart
+from domain.notice import Moment, Notice
 from domain.session import Session, SessionKind, SessionState
 from domain.signal import SessionWork, Signal, SignalKind, WindowlessSession
 from domain.slot import Placement, rung_words
@@ -157,6 +169,34 @@ between, both guards holding — before the beat asks the manager to end it
 reads is no settling time (Codex's reading, 2026-09-09); a Start's
 registry row is written in under a second, and thirty seconds is one
 floor beat."""
+
+
+TELL_HORIZON_SECONDS = 3600.0
+"""How far back a machine move out of Executing with no `told` row after it
+still rings (card #41, item 2). A crash between the move and the ring rings
+at the next reconcile; a move older than an hour was on the board through
+his next look, and ringing for it now would be 0.1's toast from a poll —
+and at the first beat after this shipped every old exit on every board
+would have rung at once."""
+OWN_MOVE_SECONDS = 60.0
+"""A machine move out of Executing within this of the owner's own Stop on
+the card is his move (card #41, rulings): he was there, and the exit is the
+machine writing down what he did. His drag out of Executing is never a
+machine move, and his Start or answer a minute before a death is not the
+death."""
+TELL_GRACE_SECONDS = 60.0
+"""How long a running card waits on him before its bell rings (card #41,
+item 3): a stop that becomes an exit inside the same minute is one ring,
+the exit's."""
+
+
+def show_command(slug: str, number: int) -> list[str]:
+    """What the notification's button runs: `needle show` from the same
+    environment the board serves from, so the verb is found where the
+    server was."""
+    own = Path(sys.executable).parent / "needle"
+    head = [str(own)] if own.exists() else shlex.split(needle_command())
+    return [*head, "show", slug, str(number)]
 
 
 class Tended(StrEnum):
@@ -689,6 +729,7 @@ class Loops:
             facts = self._facts(live, sessions, windows, records, worktrees, now)
             lanes = {c.number: lane_for(c, facts) for c in cards}
         cards = self._machine_moves(slug, cards, lanes, records)
+        self._tell_owner(live, cards, lanes)
         if self._release_finished(slug, cards, lanes, records):
             sessions = self.runtime.sessions()
             windows = self.runtime.open_windows()
@@ -1551,6 +1592,119 @@ class Loops:
             self.live.note(slug, card.number, AuditKind.STOPPED, Actor.MACHINE, words)
             stopped_any = True
         return stopped_any
+
+    def _tell_owner(self, live: LiveProject, cards: list[Card], lanes: dict[int, Lane]) -> None:
+        """Tell the owner on his screen, once per thing (card #41): a card
+        the machine moved out of Executing whose last such move has no
+        `told` row after it, and a running card that started waiting on him
+        since he was last told. The ring is owed by the record, not by this
+        pass having made the move, so a crash between the two rings at the
+        next reconcile and the same exit read twice rings once."""
+        slug = live.project.slug
+        now = clock.now()
+        for card in cards:
+            lane = lanes.get(card.number)
+            if lane is None or lane.state == LaneState.NONE or card.folded_into is not None:
+                continue
+            history = self.live.store.history(slug, card.number)
+            told = next((h for h in history if h.kind == AuditKind.TOLD), None)
+            notice = self._exit_owed(live, card, history, told, now) or self._wait_owed(
+                live, card, lane, told, now
+            )
+            if notice is None:
+                continue
+            outcome = self.runtime.tell(notice, show_command(slug, card.number))
+            if outcome.raised:
+                words = f"Told you ({notice.moment}): {outcome.words}"
+            else:
+                words = outcome.words[0].upper() + outcome.words[1:]
+                log.warning("#%s on %s: %s", card.number, slug, outcome.words)
+            self.live.note(slug, card.number, AuditKind.TOLD, Actor.MACHINE, words)
+
+    @staticmethod
+    def _exit_owed(
+        live: LiveProject,
+        card: Card,
+        history: list[AuditEntry],
+        told: AuditEntry | None,
+        now: datetime,
+    ) -> Notice | None:
+        """The machine's last move out of Executing, when no `told` row
+        follows it, it is recent, and it was not the owner's own act
+        written down. `history` is newest first."""
+        move = next(
+            (
+                h
+                for h in history
+                if h.kind == AuditKind.MOVED
+                and h.actor == Actor.MACHINE
+                and h.from_place is not None
+                and h.from_place.column == Column.EXECUTING
+                and h.to_place is not None
+            ),
+            None,
+        )
+        if move is None or move.to_place is None:
+            return None
+        if told is not None and told.id > move.id:
+            return None
+        if (now - move.at).total_seconds() > TELL_HORIZON_SECONDS:
+            return None
+        his = any(
+            h.actor == Actor.OWNER
+            and h.kind == AuditKind.STOPPED
+            and h.id < move.id
+            and (move.at - h.at).total_seconds() <= OWN_MOVE_SECONDS
+            for h in history
+        )
+        if his:
+            return None
+        return Notice(
+            project=live.project.slug,
+            project_name=live.project.name,
+            card_number=card.number,
+            title=card.title,
+            words=move.detail,
+            moment=Moment.MOVED_ON,
+        )
+
+    @staticmethod
+    def _wait_owed(
+        live: LiveProject, card: Card, lane: Lane, told: AuditEntry | None, now: datetime
+    ) -> Notice | None:
+        """A running card in a state the board shows as waiting on him,
+        that the board does not call spent, whose wait began after he was
+        last told and has lasted the grace."""
+        if card.place.column != Column.EXECUTING or lane.state not in WAITING_ON_YOU:
+            return None
+        if lane_is_spent(card, lane):
+            return None
+        since = lane.said_at or (lane.session.updated_at if lane.session is not None else None)
+        if since is None:
+            return None
+        waited = (now - since).total_seconds()
+        if waited < TELL_GRACE_SECONDS or waited > TELL_HORIZON_SECONDS:
+            return None
+        if told is not None and told.at >= since:
+            return None
+        if lane.state == LaneState.ASKING:
+            words = f"Asking you: {last_line(lane.question) or last_line(lane.said)}"
+        elif lane.state == LaneState.STOPPED:
+            words = "Stopped without a question" + (
+                f": {last_line(lane.said)}" if lane.said else ""
+            )
+        else:
+            words = "Waiting on a prompt" + (
+                f": {lane.session.detail}" if lane.session is not None and lane.session.detail else ""
+            )
+        return Notice(
+            project=live.project.slug,
+            project_name=live.project.name,
+            card_number=card.number,
+            title=card.title,
+            words=words,
+            moment=Moment.NEEDS_YOU,
+        )
 
     def _plan_footprint(self, live: LiveProject, card: Card) -> set[str]:
         """The files the card's live plan names in backticks and that exist."""

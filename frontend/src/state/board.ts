@@ -12,6 +12,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { ApiError, getBoard, moveCard, streamUrl } from "../api";
 import type { BoardState } from "../types/board";
 import type { Place } from "../types/card";
+import type { Shown } from "../types/notice";
 
 export type MoveStatus = { kind: "idle" } | { kind: "saving" } | { kind: "failed"; reason: string; to: Place };
 
@@ -28,12 +29,35 @@ export interface BoardStore {
 
 const IDLE: MoveStatus = { kind: "idle" };
 
+/** What one stream event carries: the version, and beside it the card the runtime last asked every open page to put in front of the owner (card #41) — a request to the page, never board state. */
+interface BoardEvent {
+  version: number;
+  shown: Shown | null;
+}
+
+function isBoardEvent(data: unknown): data is BoardEvent {
+  return typeof data === "object" && data !== null && "version" in data && typeof (data as { version: unknown }).version === "number";
+}
+
+/** The notification's button pressed (card #41): the card opens on its project's board — a hash on this page, a navigation when the card is another project's. */
+export function showCard(slug: string, shown: Shown): void {
+  const hash = `#card-${shown.card_number}`;
+  if (shown.project === slug) {
+    if (window.location.hash !== hash) window.location.hash = hash;
+    return;
+  }
+  window.location.assign(`/p/${encodeURIComponent(shown.project)}${hash}`);
+}
+
 export function useBoard(slug: string): BoardStore {
   const [board, setBoard] = useState<BoardState | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [connected, setConnected] = useState(false);
   const [statuses, setStatuses] = useState<Record<number, MoveStatus>>({});
   const version = useRef(-1);
+  // The first `shown` the page hears is one it was not asked for: it was
+  // raised before this page existed, or before it reconnected.
+  const shown = useRef<number | null>(null);
 
   const refresh = useCallback(async () => {
     try {
@@ -55,10 +79,12 @@ export function useBoard(slug: string): BoardStore {
     const source = new EventSource(streamUrl(slug));
     source.addEventListener("board", (event: MessageEvent<string>) => {
       const data: unknown = JSON.parse(event.data);
-      if (typeof data === "object" && data !== null && "version" in data) {
-        const v = (data as { version: unknown }).version;
-        if (typeof v === "number" && v !== version.current) void refresh();
-      }
+      if (!isBoardEvent(data)) return;
+      if (data.version !== version.current) void refresh();
+      const asked = data.shown ?? null;
+      const heard = shown.current;
+      shown.current = asked === null ? heard : asked.id;
+      if (asked !== null && heard !== null && asked.id !== heard) showCard(slug, asked);
     });
     // A reconnect — the server restarted, the page slept — forgets the version
     // it knew, so the first message re-reads the board exactly once: a new

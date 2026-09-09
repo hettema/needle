@@ -57,6 +57,10 @@ class AuditKind(StrEnum):
     TITLE = "title"
     """A cold reading of the card's title landed: placeable, or not, with
     the reader's words (card #74, item 3)."""
+    TOLD = "told"
+    """The owner was told on his screen — a card the machine moved out of
+    Executing, or a running card that started waiting on him — with the
+    popup's words, or why it could not be raised (card #41, item 2)."""
 
 
 class AuditEntry(BaseModel):
