@@ -4,7 +4,8 @@
 **Reviewer:** the building session (Claude Fable 5.1, background lane, moved once by the runtime mid-build from hrclaude to a slot with headroom) read the done-means; a reader of the other make (Codex, `codex exec -s read-only`, reasoning effort high, run in the lane's checkout with the commits' patches) read the seams and the boundaries cold. Its answers are kept verbatim in the building session's scratchpad (`codex-pass2.md` onward) and are quoted below where they bear.
 **Diff range:** 01cb588 (the trunk at the lane's birth) to the lane's tip on `card-83-the-work-runs-where-the-horsepow` — the feature commit 1a9138e and the fixes that follow it.
 **What this record covers:** the half of the plan the fixture can prove — item 4's fixture clauses and item 5's readers — built before the rented machine exists. The live halves of items 1–5 are the resuming session's, and this record continues then; it is not the close's record yet.
-**Findings so far:** 28 across five reading passes — 22 fixed, of which 19 re-read as resolved by the reader who found them, 26 re-read as partial and fixed again (its re-read is the sixth pass) and 27 fixed in these words; 3 no change with the reason written (3 closed by 19, 4, 8); and partials that stand as verification gaps (5, 6, 11, 13, 15, 17 and 8's transport), each named in its disposition with what a test would have to show.
+**Findings so far:** 28 across six reading passes — 24 fixed (of which 15 re-read as resolved by the reader who found them: 7, 9, 10, 14, 18, 20 on the third pass; 12, 16, 19, 21, 22, 24, 25 on the fourth; 28 on the fifth; 26 on the sixth; and 1, 2, 23 and 27 fixed by the writer without a re-read of their own — 27 is this line), 4 no change with the reason written (3, closed by 19; 4; 8; 17), and seven partials that stand as verification gaps (5, 6, 11, 13, 15, 17 and 8's transport), each named in its disposition with what a test would have to show.
+**Where the loop stopped, and by which rule:** the sixth pass found nothing new in the work; the last violation of a promise was found on the fourth pass (26) and its fix re-read as resolved on the sixth. Under the rule the three lanes proposed to the owner on 2026-09-09 (a next full pass is owed only after a live or behaviour finding inside the change), the loop would have ended after the fourth pass with the same code.
 
 ## The passes
 
@@ -17,6 +18,8 @@
 4. **The third pass's fixes, read cold (Codex, on 692ce02).** 22, 24, 25, 12, 16, 19 and 21 resolved; 8 stands as written; 23, 5, 6, 11, 13, 15 and 17 partial as their dispositions say; two new, 26–27 below, and "fold blocked" on both. Both fixed in the next commit, with 23's remaining half (28).
 
 5. **The fourth pass's fixes, read cold (Codex, on 0c7daaf).** 28 resolved, proved through the serializer, the parser, the room and the typed reply; 26 partial — a windowless session older than a day may still run and the store cannot know — and 27 partial on two counts still wrong. No new finding. Both fixed in the next commit: the removal reads the one list, and the counts are the dispositions' own.
+
+6. **The fifth pass's fix, read cold (Codex, on fa26e8e).** 26 resolved through six branch probes; 27 still off — the head line said 22 fixed and 3 unchanged against 24 and 4 in the dispositions — and no new finding. The head line above is now counted from the dispositions, by the writer, once; the reader's word on it is not asked again (the rule the three lanes put to the owner that evening).
 
 ## Dispositions
 
