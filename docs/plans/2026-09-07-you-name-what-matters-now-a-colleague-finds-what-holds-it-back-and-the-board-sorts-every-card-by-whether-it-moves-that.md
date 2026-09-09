@@ -127,8 +127,9 @@ and says which.
 ### 3. A reader of the other make checks the diagnosis before the ruling is offered
 When a proposed focus lands, the reading loop (`api/dial.py`, the loop that
 dispatches plan 59's readings) calls a colleague of the other make through
-`needle call` with the document, the sources it cites and the project's
-intent, and waits on `needle wait`; the answer lands as one typed result on
+`needle call`, in a fresh thread of its own and never the slot's warm one
+(the ruling of 2026-09-09 below), with the document, the sources it cites
+and the project's intent, and waits on `needle wait`; the answer lands as one typed result on
 the focus — stands, does not stand, cannot tell — with one line, bound to the
 document's fingerprint, in `domain/triage.py`'s neighbourhood with its own
 type and never a second reader of defects. The strip shows the reading beside
@@ -144,8 +145,10 @@ ratchet that holds one reader per kind still passes.
 ### 4. Every open card is read against the chosen focus, and the reading says how likely it is to work
 The reading loop selects, besides a defect's mark, every open card on a
 project with a chosen focus that has no reading since the focus was chosen
-or the card's document changed, oldest first, one per beat, and lands one
-typed result: the class — helps remove this limit, protects progress, does
+or the card's document changed, oldest first, one per beat, hands it to
+the make that did not write the diagnosis through the call channel of
+item 3 and never through the checkout seat (the ruling of 2026-09-09
+below), and lands one typed result: the class — helps remove this limit, protects progress, does
 not address this limit, needs evidence — one sentence of why that cites the
 card's document and the diagnosis, and for the first class a likelihood in
 one word (high, medium, low) with its reason, bound to both fingerprints.
@@ -156,8 +159,8 @@ never its aspiration; a plan whose intent does not say what it moves lands
 either fingerprint changes and is redone; a card blocked by a Sequencing hold
 keeps its class and shows the hold beside it, since impact and readiness are
 two facts. Nothing under `api/dial.py` or `board/dial.py` reads the class
-to choose work: a ratchet refuses the import. Done means: on the fixture, a
-chosen focus gets every open card read once; an edited card is read again
+to choose work: a ratchet refuses the import. Done means: on the fixture with the fake Codex worker, a
+chosen focus gets every open card read once, each in a thread of its own; an edited card is read again
 and only it; a renamed focus stales all; the four classes and three words
 parse and any other word is refused at the verb that lands them; a reading
 session's actor cannot move a card or write a rank (the door refuses it);
@@ -323,6 +326,25 @@ failing test it reports before acting on it.
   one: the evidence supports classes, not precision.
 - **Blocked is a fact beside the class, not a class.** A card can remove
   the limit and still wait on a Sequencing hold. Codex, round two.
+- **The card reader is the make that did not write the diagnosis, and
+  every reading starts a fresh thread.** The owner, 2026-09-09, from the
+  Discuss door (conversation c9686e9c): "multiple views from different
+  models should strengthen the outcome", and the wait and the cost of
+  the other make reading every open card are his to spend. The makes
+  meet in a relay, never in one room: the focus conversation of item 2 is
+  one make with him, the check of item 3 is the other make reading cold,
+  the per-card readings of item 4 are the make that did not write the
+  diagnosis, through the call channel items 3 and 6 already use and never
+  through the checkout seat (`runtime/launch.py::windowless`), which is
+  the diagnosis author's. A call today resumes the slot's most recent
+  thread (`runtime/launch.py::call_codex`, `runtime/codex.py::resume_argv`,
+  read 2026-09-09), so a reading that is cold needs a fresh thread per
+  call: one fix inside this lane, serving items 3, 4 and 6. Rejected: a
+  joint conversation between the makes for the diagnosis — two models in
+  one room converge on the first plausible story and the check becomes a
+  formality; the second view's worth is its independence. Also rejected:
+  naming Codex in the rule — the rule is the seat's independence from
+  the author, and which make earns which seat is what #58 measures.
 - **Needle is the proving ground.** Its board has evidence for "why can't
   Needle do more" today and it is not a business, which tests "any project"
   before Hello Revenue's focus is chosen.
