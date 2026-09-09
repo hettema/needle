@@ -138,7 +138,12 @@ def show(slug: str, number: int) -> str:
     entry = board_entry(slug)
     url = f"{entry.base}/p/{slug}#card-{number}"
     asked = _ask_board(entry.base, slug, number)
-    open_boards = windows.present_under(BOARD_APP_ID.format(host=entry.host.split(":")[0]))
+    prefix = BOARD_APP_ID.format(host=entry.host.split(":")[0])
+    # The window already on the card's project first — no page has to
+    # navigate — else any board of ours, whose page switches project
+    # (live on 2026-09-09 the first window under the prefix was another
+    # project's while the card's own stood beside it).
+    open_boards = windows.present_under(f"{prefix}{slug}-") or windows.present_under(prefix)
     if open_boards:
         address = next(iter(open_boards))
         windows.focus_address(address)

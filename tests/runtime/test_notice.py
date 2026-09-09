@@ -93,16 +93,27 @@ def test_show_asks_the_board_and_focuses_an_open_board_window_whatever_it_shows(
                 "class": "chrome-127.0.0.1__p_other-Profile_5",
                 "initialClass": "chrome-127.0.0.1__p_other-Profile_5",
                 "title": "Other · Needle",
-            }
+            },
+            {
+                "address": "0xboard02",
+                "class": "chrome-127.0.0.1__p_proj-Profile_5",
+                "initialClass": "chrome-127.0.0.1__p_proj-Profile_5",
+                "title": "Harbourmaster · Needle",
+            },
         ],
     )
     said = notice.show("proj", 253)
     assert said == (
         "Showed #253 on proj: the board was asked to show it; focused the board's window "
-        "(0xboard01)."
-    )
-    assert machine_floor.state()["focus_calls"] == ["0xboard01"]
+        "(0xboard02)."
+    ), "the window already on the card's project comes first"
+    assert machine_floor.state()["focus_calls"] == ["0xboard02"]
     assert machine_floor.state()["spawned"] == [], "a window was open, so none was opened"
+
+    # Only another project's board is open: it is focused, and its page switches.
+    machine_floor.update(clients=[machine_floor.state()["clients"][0]], focus_calls=[])
+    assert notice.show("proj", 253).endswith("focused the board's window (0xboard01).")
+    assert machine_floor.state()["focus_calls"] == ["0xboard01"]
 
 
 def test_show_opens_the_desktop_entry_on_the_card_when_no_board_window_is_open(
