@@ -131,7 +131,7 @@ class Remote:
             argv += ["--from", from_slot]
         if tried:
             argv += ["--tried", _tried_argument(tried)]
-        return self._ask(argv, Where, timeout=120.0)
+        return self._ask(argv, Where, timeout=VERB_SECONDS)
 
     def room(self, *, hold: bool) -> Headroom:
         return self._ask(["room", *(["--hold"] if hold else [])], Headroom)
@@ -177,10 +177,12 @@ class Remote:
             argv += ["--tip", tip]
         return set(self._ask(argv, Edited).files)
 
-    def lane_docs(self, checkout: str, candidates: list[str]) -> LaneDocs:
+    def lane_docs(self, checkout: str, candidates: list[str], *, reviews: bool) -> LaneDocs:
         argv = ["lane-docs", checkout]
         for candidate in candidates:
             argv += ["--plan", candidate]
+        if reviews:
+            argv.append("--reviews")
         return self._ask(argv, LaneDocs)
 
     def dispatches(self, cwd: str) -> list[Dispatch] | None:

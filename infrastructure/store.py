@@ -1819,14 +1819,20 @@ class Store:
                     f"{name} still holds the lane of {lanes.project_slug} #{lanes.card_number}; "
                     "fold or remove it first"
                 )
-            slot = session.scalar(select(SessionSlotRow).where(SessionSlotRow.machine == name))
-            if slot is not None:
-                raise StoreRefusal(
-                    f"{name} still holds session records ({slot.session_id[:8]}…); a machine with "
-                    "work on it is not forgotten"
-                )
+            # Session records are history and stay under the name; only a
+            # lane still on the machine is work (Codex's third pass).
             session.delete(row)
             return True
+
+    def lane_paths_by_machine(self) -> dict[str, str]:
+        """Every lane worktree still on disk somewhere, by path, with the
+        machine it was last seen on: what seeds the runtime's routing after
+        a restart (card #83)."""
+        with self._session() as session:
+            rows = session.scalars(
+                select(LaneRow).where(LaneRow.gone_at.is_(None), LaneRow.machine != "")
+            )
+            return {r.path: r.machine for r in rows}
 
     def machines(self) -> list[Machine]:
         with self._session() as session:
@@ -2016,6 +2022,8 @@ class Store:
             row.scope = sighting.scope
             row.boot_id = sighting.boot_id
             row.last_seen = sighting.last_seen
+            if sighting.machine:
+                row.machine = sighting.machine
             if sighting.released_at is not None:
                 row.released_at = sighting.released_at
             if sighting.scoped_at is not None:

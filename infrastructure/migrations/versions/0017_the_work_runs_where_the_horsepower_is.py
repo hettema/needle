@@ -52,9 +52,7 @@ def upgrade() -> None:
     )
     op.create_index("ix_timings_machine", "timings", ["machine", "what"])
     for table in ("session_slots", "sightings", "lanes"):
-        op.add_column(
-            table, sa.Column("machine", sa.String(40), nullable=False, server_default="")
-        )
+        op.add_column(table, sa.Column("machine", sa.String(40), nullable=False, server_default=""))
 
 
 def downgrade() -> None:

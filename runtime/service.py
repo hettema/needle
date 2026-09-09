@@ -220,13 +220,20 @@ class Runtime:
         return launch_.model_copy(update={"placement": placement, "session": session})
 
     def room(
-        self, *, hold: bool = False, owners: dict[str, tuple[str, int]] | None = None
+        self,
+        *,
+        hold: bool = False,
+        owners: dict[str, tuple[str, int]] | None = None,
+        read: set[str] | None = None,
     ) -> Headroom:
         """This machine against the floor: its memory, and what every group
         of ours holds, read by the one rule the head uses. With `hold`,
         every group that stands without the floor as its high mark is given
         it first (card #107), and the reading says which. `owners` names
-        the card each unit is, when the caller (the board's loop) knows."""
+        the card each unit is, when the caller (the board's loop) knows;
+        `read` names the units asked for whether or not the manager lists
+        them — every lane with hands on, by the name it was given at Start
+        (plan 53, item 1)."""
         try:
             units: set[str] | None = set(machine.units_named(launch.SESSION_UNIT_PREFIX))
         except (OSError, machine.Timeout, machine.CommandMissing):
@@ -234,8 +241,8 @@ class Runtime:
         # Every lane with hands on is asked for by the name it was given at
         # Start, whether or not the manager lists it (plan 53, item 1): a
         # scope with no value is not a lane, and the read is what says so.
-        if units is not None and owners:
-            units |= set(owners)
+        if units is not None and read:
+            units |= set(read)
         marked = self.hold_scopes_at(sorted(units), MEMORY_FLOOR_BYTES) if hold and units else []
         held = self.scope_memory(sorted(units)) if units else {}
         named = owners or {}
@@ -258,7 +265,11 @@ class Runtime:
         )
 
     def rooms(
-        self, *, hold: bool = False, owners: dict[str, tuple[str, int]] | None = None
+        self,
+        *,
+        hold: bool = False,
+        owners: dict[str, tuple[str, int]] | None = None,
+        read: set[str] | None = None,
     ) -> list[MachineRoom]:
         """Every machine against the floor this pass, with what the board
         has measured on each: the two-week high-water mark and the day's
@@ -271,7 +282,7 @@ class Runtime:
             room: Headroom | None = None
             why: str | None = None
             if self.is_here(m):
-                room = self.room(hold=hold, owners=owners)
+                room = self.room(hold=hold, owners=owners, read=read)
             else:
                 try:
                     room = self._remote(m).room(hold=hold)
@@ -468,7 +479,9 @@ class Runtime:
         there, and the next read of that machine's sessions shows it."""
         try:
             return self._stamped(chosen, self._remote(chosen).start(request), request.card)
-        except RemoteTimeout as slow:
+        except (RemoteTimeout, machine.Unreachable) as lost:
+            # A deadline passed or the connection dropped: either way what
+            # landed there is unknown until its sessions are read again.
             return Launch(
                 card=request.card,
                 verdict=LaunchVerdict.UNCONFIRMED,
@@ -476,9 +489,9 @@ class Runtime:
                 placement=None,
                 scope=None,
                 attempts=[],
-                reason=f"{chosen.name} did not answer in time; the launch may have landed: {slow}",
+                reason=f"{chosen.name} did not answer; the launch may have landed: {lost}",
             )
-        except _UNREACHABLE as error:
+        except RemoteRefused as error:
             return launch.dead(request.card, [], f"{chosen.name} could not start it: {error}", None)
 
     def start_windowless(self, request: WindowlessStart) -> Launch:
@@ -868,6 +881,11 @@ class Runtime:
         same, and the board remembers which machine each was seen on so its
         edits, its tip and its documents are read there. A machine that
         does not answer keeps the paths it was last seen with."""
+        # The board's own record of where each lane was last seen seeds the
+        # routing, so a restart while a machine is unreachable still reads
+        # its lanes as that machine's (Codex's third pass).
+        for path, name in self.store.lane_paths_by_machine().items():
+            self._lane_machines.setdefault(path, name)
         found = dict(git.worktrees(repo))
         here = self.here().name
         for path in found:
@@ -879,6 +897,7 @@ class Runtime:
                 theirs = self._remote(m).worktrees(repo)
             except _UNREACHABLE as error:
                 log.warning("the checkouts on %s could not be read: %s", m.name, error)
+                self.unread.setdefault(m.name, str(error))
                 theirs = {
                     path: None
                     for path, name in self._lane_machines.items()
@@ -935,15 +954,17 @@ class Runtime:
         except _UNREACHABLE:
             return set()
 
-    def lane_docs(self, checkout: str, candidates: list[str]) -> LaneDocs:
+    def lane_docs(self, checkout: str, candidates: list[str], *, reviews: bool = False) -> LaneDocs:
         """The lane's own copies of its plan (the first of `candidates` that
-        exists, relative to the worktree) and every review record under its
-        docs/reviews/, read on the machine that holds the worktree."""
+        exists, relative to the worktree) and, only when asked, every review
+        record under its docs/reviews/ — the loop asks for those once every
+        item is met (plan 13), never before — read on the machine that
+        holds the worktree."""
         on = self.lane_machine(checkout)
         if self.is_here(on):
-            return read_lane_docs(checkout, candidates)
+            return read_lane_docs(checkout, candidates, reviews=reviews)
         try:
-            return self._remote(on).lane_docs(checkout, candidates)
+            return self._remote(on).lane_docs(checkout, candidates, reviews=reviews)
         except _UNREACHABLE:
             return LaneDocs(plan=None, reviews=[])
 
@@ -1185,10 +1206,10 @@ class Runtime:
         return missing
 
 
-def read_lane_docs(checkout: str, candidates: list[str]) -> LaneDocs:
-    """A lane's plan and review records from its worktree on this machine
-    (plan 13's reads, moved here from the loop so the same read answers over
-    the wire, card #83)."""
+def read_lane_docs(checkout: str, candidates: list[str], *, reviews: bool = False) -> LaneDocs:
+    """A lane's plan and, when asked, its review records from its worktree
+    on this machine (plan 13's reads, moved here from the loop so the same
+    read answers over the wire, card #83)."""
     root = Path(checkout)
     plan: str | None = None
     for candidate in candidates:
@@ -1197,12 +1218,12 @@ def read_lane_docs(checkout: str, candidates: list[str]) -> LaneDocs:
             break
         except OSError:
             continue
-    reviews: list[ReviewText] = []
-    for path in sorted((root / "docs" / "reviews").glob("*.md")):
+    found: list[ReviewText] = []
+    for path in sorted((root / "docs" / "reviews").glob("*.md")) if reviews else []:
         if path.name == "README.md":
             continue
         try:
-            reviews.append(
+            found.append(
                 ReviewText(
                     path=str(path.relative_to(root)),
                     text=path.read_text(encoding="utf-8", errors="replace"),
@@ -1210,4 +1231,4 @@ def read_lane_docs(checkout: str, candidates: list[str]) -> LaneDocs:
             )
         except OSError:
             continue
-    return LaneDocs(plan=plan, reviews=reviews)
+    return LaneDocs(plan=plan, reviews=found)

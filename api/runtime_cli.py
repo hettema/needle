@@ -503,7 +503,9 @@ def edits(runtime: Runtime, args: argparse.Namespace) -> int:
 
 
 def lane_docs(runtime: Runtime, args: argparse.Namespace) -> int:
-    docs = runtime.lane_docs(str(Path(args.checkout).expanduser().resolve()), args.plans or [])
+    docs = runtime.lane_docs(
+        str(Path(args.checkout).expanduser().resolve()), args.plans or [], reviews=args.reviews
+    )
     _emit(
         args,
         docs,
@@ -924,6 +926,7 @@ def register(sub: "argparse._SubParsersAction[argparse.ArgumentParser]") -> None
     p_docs = parser("lane-docs", "a lane's own plan and review records", lane_docs)
     p_docs.add_argument("checkout")
     p_docs.add_argument("--plan", dest="plans", action="append", help="a candidate plan path")
+    p_docs.add_argument("--reviews", action="store_true", help="the review records too")
     p_dispatches = parser("dispatches", "what the sessions in a directory handed out", dispatches)
     p_dispatches.add_argument("cwd")
     p_size = parser("transcript-size", "how large a session's transcript is here", transcript_size)

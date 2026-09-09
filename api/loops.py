@@ -482,13 +482,13 @@ class Loops:
         grows after the beat let it in is seen here before oomd sees it,
         and the head says which lane and how far; the dial's beat and the
         terminal read the machine through this one call."""
-        owners = self._owners()
+        owners = self._names()
         # Every machine is read on every pass (card #83): the rooms place
         # the next card, the head shows each machine, and the day's
         # high-water mark is kept per machine. Every lane's scope carries
         # the floor as its high mark, whoever made the scope (card #107):
         # set where it is missing on every machine, said once on the card.
-        self._rooms = self.runtime.rooms(hold=True, owners=owners)
+        self._rooms = self.runtime.rooms(hold=True, owners=owners, read=set(self._owners()))
         now = clock.now()
         for reading in self._rooms:
             if reading.room is None:
@@ -644,13 +644,19 @@ class Loops:
         machine's floor — a full rented machine is not admitted because the
         laptop has room, nor held because the laptop is full (Codex's
         reading of the second pass)."""
-        rooms = self.runtime.rooms(owners=self._owners())
+        rooms = self.runtime.rooms(owners=self._names(), read=self._owners())
         self._rooms = rooms
         wanted = self.runtime.machine_named(machine_name).name
         reading = next((r for r in rooms if r.machine.name == wanted), None)
         if reading is None or reading.room is None:
             return headroom(None, MEMORY_FLOOR_BYTES, clock.now())
         return reading.room
+
+    def _names(self) -> dict[str, tuple[str, int]]:
+        """Every unit a card's sessions may run under — its lane's, its
+        reading's, its planning's — to the card, so a group the machine
+        lists is named by its card on the head, whatever kind it is."""
+        return {unit: (slug, number) for unit, (slug, number, _) in self._lanes_by_unit().items()}
 
     def _owners(self) -> dict[str, tuple[str, int]]:
         """Every lane with hands on, by the unit it was given at Start: what
@@ -888,6 +894,11 @@ class Loops:
         for number, lane in lanes.items():
             session = lane.session
             if session is None or session.pid is None or session.stale:
+                continue
+            if session.machine in self.runtime.unread:
+                # The row stands from the last read that reached the
+                # machine; a sighting written from it now would be an
+                # observation nobody made (Codex's third pass).
                 continue
             boot = self._current_boot(session.machine)
             if session.session_id in deaths:
@@ -1983,11 +1994,15 @@ class Loops:
         )
         if docs.plan is None:
             return None
+
+        def read_reviews() -> list[tuple[str, str]]:
+            # Read only once every item is met (plan 13): a second read of
+            # the lane's documents, on the machine that holds them.
+            records = self.runtime.lane_docs(lane_path, [], reviews=True).reviews
+            return [(r.path, r.text) for r in records]
+
         return progress_of(
-            docs.plan,
-            plan_stem=document.stem,
-            read_reviews=lambda: [(r.path, r.text) for r in docs.reviews],
-            now=clock.now(),
+            docs.plan, plan_stem=document.stem, read_reviews=read_reviews, now=clock.now()
         )
 
     def _doors(

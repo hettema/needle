@@ -319,9 +319,17 @@ def _gb(byte_count: int) -> str:
 
 
 def _lane_of(scope: ScopeMemory) -> str:
+    """What a group is, in the card's words: its lane, or the reading or
+    planning session the board opened for the card (the unit's own prefix
+    says which, since every group of ours is read now, card #83); the unit
+    itself when no card is known."""
     if scope.card_number is None:
         return scope.unit
-    return f"{scope.project} #{scope.card_number}'s lane"
+    kind = "lane"
+    for word in ("reading", "planning", "triage"):
+        if scope.unit.startswith(f"needle-{word}-"):
+            kind = f"{word} session"
+    return f"{scope.project} #{scope.card_number}'s {kind}"
 
 
 def headroom(

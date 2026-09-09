@@ -538,7 +538,9 @@ def test_a_lanes_worktree_edits_tip_and_documents_are_read_where_the_lane_lives(
     assert tip.tip is not None and tip.birth is not None
     docs = runtime.lane_docs(str(lane), ["docs/plans/p.md"])
     assert docs.plan is not None and "**Met:** y" in docs.plan
-    assert [r.path for r in docs.reviews] == ["docs/reviews/r.md"]
+    assert docs.reviews == [], "the review records are read only once every item is met"
+    records = runtime.lane_docs(str(lane), [], reviews=True).reviews
+    assert [r.path for r in records] == ["docs/reviews/r.md"]
     asked = [" ".join(c["words"]) for c in machine_floor.state()["ssh_calls"][before:]]
     assert any("edits" in a for a in asked) and any("tip" in a for a in asked)
     assert any("lane-docs" in a for a in asked)
@@ -570,8 +572,31 @@ def test_a_machine_with_work_on_it_is_not_forgotten(two_machines, repo: Path, st
         Start(repo=str(repo), card="card-6-busy", brief="go", effort=Gate.HIGH, from_slot=None)
     )
     assert started.session is not None and started.session.machine == "rented"
-    with pytest.raises(StoreRefusal, match="still holds session records"):
+    from domain.lane import LaneRecord
+
+    store.record_lane(
+        LaneRecord(
+            project="p",
+            card_number=6,
+            name="card-6-busy",
+            path=f"{repo}/.claude/worktrees/card-6-busy",
+            branch="card-6-busy",
+            birth=None,
+            tip=None,
+            first_seen=NOW,
+            last_seen=NOW,
+            gone_at=None,
+            folded_at=None,
+            trunk_synced_at=None,
+            main_synced_at=None,
+            machine="rented",
+        )
+    )
+    with pytest.raises(StoreRefusal, match="still holds the lane of p #6"):
         store.remove_machine("rented")
+    # A lane gone from the machine leaves only history, which is not work.
+    store.record_lane(store.lanes("p")[0].model_copy(update={"gone_at": NOW}))
+    assert store.remove_machine("rented")
     # A name the board does not know routes nowhere, never here.
     ghost = runtime.machine_named("moon")
     assert ghost.host is None and not runtime.is_here(ghost)
@@ -601,3 +626,165 @@ def test_machines_json_carries_the_latest_timing_per_step(machine_floor: Floor, 
     rooms = json.loads(capsys.readouterr().out)
     timings = {t["what"]: t["seconds"] for t in rooms[0]["timings"]}
     assert timings == {"pytest": 812.4, "vitest": 14.2}
+
+
+# ── the third pass's fixes (Codex's re-read, 2026-09-09) ─────────────
+
+
+def test_a_colleague_on_another_machine_is_refused_by_name_and_nothing_runs_here(
+    two_machines, repo: Path, machine_floor: Floor
+):
+    runtime, _ = two_machines
+    started = runtime.start(
+        Start(repo=str(repo), card="card-5-far", brief="go", effort=Gate.HIGH, from_slot=None)
+    )
+    assert started.session is not None
+    session = runtime.session(started.session.short_id)
+    launched = len(machine_floor.state()["launch_log"])
+    answer = runtime.call(session, brief="hello?", name="call-1", answer="/tmp/none")
+    assert answer.verdict == LaunchVerdict.DEAD
+    assert answer.reason is not None and "runs on rented" in answer.reason
+    assert len(machine_floor.state()["launch_log"]) == launched, "the laptop's launcher was not run"
+
+
+def test_a_planning_sessions_scope_is_named_as_such_on_the_head():
+    from domain.dial import Meminfo, ScopeMemory, headroom
+
+    room = headroom(
+        Meminfo(available=9 * 1024**3, swap_total=0, swap_free=0, total=16 * 1024**3),
+        5 * 1024**3,
+        NOW,
+        scopes=[
+            ScopeMemory(
+                unit="needle-planning-card-7-example.scope",
+                held=6 * 1024**3,
+                project="proj",
+                card_number=7,
+            )
+        ],
+    )
+    assert room.full and room.sentence is not None
+    assert "proj #7's planning session holds 6.0 GB" in room.sentence
+
+
+def test_a_sighting_keeps_its_machine_up_to_date(store: Store):
+    from domain.ending import Sighting
+
+    def seen(machine: str) -> Sighting:
+        return Sighting(
+            session_id="s-1",
+            project="p",
+            card_number=1,
+            pid=4242,
+            scope=None,
+            boot_id=None,
+            first_seen=NOW,
+            last_seen=NOW,
+            machine=machine,
+        )
+
+    store.record_sighting(seen("laptop"))
+    store.record_sighting(seen("rented"))
+    found = store.sighting("s-1")
+    assert found is not None and found.machine == "rented"
+
+
+def test_the_loop_writes_no_sighting_and_reads_no_boot_for_an_unread_machine(
+    machine_floor: Floor, repo: Path, ground: Path
+):
+    """The loop itself, over the CLI's store: a session on a machine that
+    did not answer this pass leaves its sighting as it was, and a named
+    machine with no boots read is unknown, never this machine's boot."""
+    from api.board_cli import _board
+    from domain.ending import Boot
+    from domain.lane import Lane, LaneState
+
+    other = machine_floor.lay_host("rented")
+    assert main(["machine", "add", "laptop", "--desktop", "--ground", str(ground)]) == 0
+    assert main(["machine", "add", "rented", "--host", "rented"]) == 0
+    store, live, runtime, loops, _ = _board()
+    try:
+        runtime.unread["rented"] = "rented did not answer"
+        session = Session(
+            slot="alpha",
+            config_dir=str(other.config_dir("alpha")),
+            short_id="far00001",
+            session_id="far00001-0000-4000-8000-000000000000",
+            kind=SessionKind.BACKGROUND,
+            name="card-1-far",
+            cwd="/p",
+            worktree=None,
+            state=SessionState.WORKING,
+            recorded="working",
+            detail="",
+            pid=4242,
+            scope="needle-card-1-far.scope",
+            model=None,
+            effort=None,
+            stale=False,
+            wall=None,
+            intent="",
+            created_at=NOW,
+            updated_at=NOW,
+            resumed_from=None,
+            doing=None,
+            machine="rented",
+        )
+        lane = Lane(
+            card_number=1,
+            name="card-1-far",
+            path="/p",
+            state=LaneState.WORKING,
+            sentence="",
+            session=session,
+            question=None,
+            said=None,
+            said_at=None,
+            discussing=[],
+            window_open=False,
+            hands_on_since=NOW,
+            died=None,
+            moved=None,
+            folded=False,
+            trunk_synced=False,
+            main_synced=False,
+            edits=[],
+            declared=[],
+            colliding=None,
+        )
+        loops._sightings("p", {1: lane}, NOW)
+        assert store.sighting(session.session_id) is None
+        loops._boots = {
+            "laptop": [
+                Boot(index=0, boot_id="LAPTOP-BOOT", first_entry=NOW, last_entry=NOW),
+            ]
+        }
+        assert loops._current_boot("rented") is None
+        assert (
+            loops._current_boot("") is not None and loops._current_boot("").boot_id == "LAPTOP-BOOT"
+        )
+    finally:
+        store.close()
+
+
+def test_the_heads_word_is_the_boards_full_only_when_no_machine_has_room(
+    machine_floor: Floor, ground: Path
+):
+    from api.board_cli import _board
+
+    other = machine_floor.lay_host("rented", available_gb=24.0)
+    assert main(["machine", "add", "laptop", "--desktop", "--ground", str(ground)]) == 0
+    assert main(["machine", "add", "rented", "--host", "rented"]) == 0
+    machine_floor.set_memory(available_gb=2.0, swap_free_gb=8.0)
+    store, live, runtime, loops, _ = _board()
+    try:
+        room = loops.headroom_now()
+        assert not room.full and room.sentence is None, "the rented machine has room"
+        assert live.headroom is not None and not live.headroom.full
+        other.set_memory(available_gb=1.5, swap_free_gb=8.0)
+        room = loops.headroom_now()
+        assert room.full and room.sentence is not None
+        assert "2.0 GB available, 5 GB needed" in room.sentence
+        assert "rented: the machine is full: 1.5 GB available, 5 GB needed" in room.sentence
+    finally:
+        store.close()

@@ -227,15 +227,17 @@ def _prove_attached(proof: str, deadline: float) -> None:
 
 
 def look_command(
-    session: Session, placement: Placement, *, size: int | None = None
+    session: Session, placement: Placement, *, size: int | None = None, read_here: bool = True
 ) -> tuple[str, str]:
     """A fresh session in the worktree with the transcript as context, and
     the banner that is its first line. Above the resume limit the transcript
     is named in the brief rather than loaded. `size` is the transcript's
-    size on the machine that holds it; read here when the caller gives
-    none, which is right only for a session on this machine (card #83)."""
+    size on the machine that holds it; read here only when the session is
+    here (`read_here`) and the caller gave none — a size the other machine
+    could not answer stays unknown, and the resume there holds its own rule
+    (card #83)."""
     home = session.worktree or session.cwd
-    if size is None:
+    if size is None and read_here:
         size = machine.transcript_size(home, session.session_id)
     banner = (
         f"Fresh session from the transcript of {session.short_id} ({session.name}) — "
@@ -366,7 +368,7 @@ def open_window(
                 f"{session.short_id} is live nowhere and the rule found no slot for a fresh session"
             )
         kind = kind or WindowKind.LOOK
-        banner, command = look_command(session, look, size=size)
+        banner, command = look_command(session, look, size=size, read_here=via is None)
         fresh = True
         if via is not None:
             tag = f"{session.short_id}-{clock.now().strftime('%H%M%S')}"
