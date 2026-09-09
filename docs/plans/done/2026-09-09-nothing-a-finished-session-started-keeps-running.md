@@ -1,7 +1,7 @@
 # Nothing a finished session started keeps running
 
 **Carries:** docs/slice-suggestions/done/2026-09-09-nothing-a-finished-session-started-keeps-running.md
-**Status:** IN PROGRESS — written and built the same morning by the machine session (omarchy 3e51c668), on the owner's word; its lane is `card-99-nothing-a-finished-session-start`.
+**Status:** SHIPPED — written, built, reviewed (Codex's pass, three findings, all landed) and folded on 2026-09-09 by the machine session (omarchy 3e51c668), on the owner's word; review record `docs/reviews/2026-09-09-nothing-a-finished-session-started-keeps-running.md`.
 **Written:** 2026-09-09, from Dennis, after the laptop spent the morning paging with forty abandoned wait loops from three finished sessions: "Is the defect big enough to make a card? If yes, please create it and execute it so that this gets fixed. Feels like it'll speed up my machine which is a win I want now."
 **Effort gate:** medium — the verbs (list the groups the manager holds, read what each holds, stop one) sit beside `runtime/machine.py::adopt` and `scope_memory`, and the beat's move beside `api/loops.py::_keep_in_scope` and `_release_finished`; the judgment is the test for "nobody home" and its two races (a group just made at Start, a session being moved back into its group), settled in the rulings below.
 **Sequencing:** none. Shares `api/loops.py` with whichever lane is on the beat; the fold settles it.

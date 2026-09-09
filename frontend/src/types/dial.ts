@@ -89,11 +89,25 @@ export interface RailCount {
   total: number;
 }
 
+export interface ScopeHeld {
+  unit: string;
+  pids: number[];
+  commands: Record<string, string>;
+  lineage: Record<string, number[]>;
+}
+
 export interface ScopeMemory {
   unit: string;
   held: number;
   project: string | null;
   card_number: number | null;
+}
+
+export interface ScopeState {
+  unit: string;
+  pids: number[];
+  home: string[];
+  strangers: string[];
 }
 
 export interface Waiting {

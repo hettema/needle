@@ -2,7 +2,7 @@
 
 **Plan:** docs/plans/done/2026-09-09-nothing-a-finished-session-started-keeps-running.md
 **Reviewer:** Codex (session 01a08290, called warm through `needle call` #59) for the independent pass; the build session (Claude Fable 5.1, the machine session on omarchy) for its own cold re-read before and after
-**Diff range:** b63f030 (the plan on `origin/develop`) .. FOLD_TIP (the fold)
+**Diff range:** b63f030 (the plan on `origin/develop`) .. the close commit that carries this record (three commits: the build d72cab7, the review's fixes 11a7ae4, the close)
 **Findings:** 6 — 5 fixed in this lane, 1 a correction to the plan's own promise
 
 ## The passes
@@ -17,9 +17,9 @@ The review runs as a loop (`CLAUDE.md`): each pass one lens, the fixes landed, t
 
 1. [seam] The stop blocked the beat, under the lock every door takes, for as long as the manager needed — a `uvicorn` took the whole stop timeout this morning — FIXED in this lane: `runtime/machine.py::stop_unit` asks with `--no-block`; `runtime/service.py::scope_pids` says when the group is empty.
 2. [seam] Two reads in a row was no settling time, and the count advanced while a guard held — FIXED in this lane (Codex's finding): a window of thirty seconds on the board's clock, both guards on every read, the clock reset when either fails; `test_a_group_nobody_is_home_in_is_ended_after_a_window_and_the_card_says_so_once_it_is_empty` reads inside and past the window.
-3. [truth] A refused stop was suppressed for good and its row claimed a stop — FIXED in this lane (Codex's finding): the refusal is said once, in words that claim nothing, and asked again after another window; the *Stopped* row lands only on the read that finds the group empty; `test_a_refused_stop_is_said_once_in_words_that_claim_nothing_and_asked_again`.
+3. [seam] A refused stop was suppressed for good and its row claimed a stop — FIXED in this lane (Codex's finding): the refusal is said once, in words that claim nothing, and asked again after another window; the *Stopped* row lands only on the read that finds the group empty; `test_a_refused_stop_is_said_once_in_words_that_claim_nothing_and_asked_again`.
 4. [feature] The plan promised cleanup for a session whose turn is done; the code, rightly, protects a session whose process stands — PLAN CORRECTED in this lane (Codex's finding), not the code: the acceptance line and a new ruling say a turn that is done is not a session that is gone, and the item-1 test now reads a `done` session with its process standing through a whole window untouched.
-5. [truth] A read where the manager could not be asked would have counted as an empty group and written a *Stopped* row — FIXED in this lane: `None` waits for a read that can be made. Not exercised on the floor, whose manager fails all or nothing; reasoned from `scope_pids`'s contract.
+5. [seam] A read where the manager could not be asked would have counted as an empty group and written a *Stopped* row — FIXED in this lane: `None` waits for a read that can be made. Not exercised on the floor, whose manager fails all or nothing; reasoned from `scope_pids`'s contract.
 6. [verification] Ownership by ancestry had no test of its own, and neither had refusal, recovery, or a done turn — FIXED in this lane: `tests/board/test_dial.py::test_who_is_home_follows_ancestry_and_names_strangers` and the two api tests above.
 
 ## What was checked
@@ -27,7 +27,7 @@ The review runs as a loop (`CLAUDE.md`): each pass one lens, the fixes landed, t
 - **The manager's own words**, by hand on this laptop: `systemctl --user list-units --type=scope --state=active --plain --no-legend 'needle-*'` prints one line per unit with the name first and nothing for a pattern that matches nothing; `show -p ControlGroup` names the group; `/sys/fs/cgroup<group>/cgroup.procs` lists the pids. `runtime/machine.py::units_named` and `unit_pids` are those three, and their docstrings say so.
 - **That stopping a group ends what it holds**, by hand, three times this morning: #63's (ten processes, 15 ms), #45's (four), and reading #241's uvicorn (killed at the manager's timeout, unit left `failed`, which `adopt` already resets before reusing a name).
 - **The beat and the reader**, by test: `tests/api/test_nothing_a_finished_session_started_keeps_running.py`, two tests, on the floor whose fake manager learned `list-units` and `stop` and whose control-group tree is a directory the floor lays; the floor ratchet reads `machine.cgroup_root()` as one more path under the floor.
-- **The suites:** SUITES_LINE
+- **The suites:** the backend suite, run in chunks because the laptop's memory got low enough for the harness to kill two whole-suite runs (the killed runs left fourteen fake sessions standing, which is this card's class in miniature, and were killed by hand): every chunk green — `tests/board`, `tests/infrastructure`, `tests/ratchets`, `tests/runtime`, and every file under `tests/api` — but one ratchet, `test_every_title_is_in_the_owners_words`, which fails on `origin/develop` itself over a suggestion of 2026-09-08 whose title uses *fold*; outside this change, and the board's own cold reading of titles is what marks it. `tsc --noEmit` clean after `needle types` regenerated `frontend/src/types/dial.ts` for the two new types; `vitest run` (68).
 
 ## What the build learned the plan got wrong
 

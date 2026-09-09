@@ -1,6 +1,6 @@
 # Nothing a finished session started keeps running
 
-**Carried by:** docs/plans/2026-09-09-nothing-a-finished-session-started-keeps-running.md
+**Carried by:** docs/plans/done/2026-09-09-nothing-a-finished-session-started-keeps-running.md — shipped 2026-09-09 as Needle #99
 **Found by:** the machine session on omarchy (3e51c668), 2026-09-09 10:20, asked by the owner why the laptop was struggling with "only one agent building"
 **Kind:** defect
 **Fix:** now — HOW-WE-WORK §12 is the written intent (a session's work runs apart, in its own process group, so one kill takes one lane) and §11's rule that the board never lies while he is away: the board read three sessions as ended while their groups ran on for a day. The fix is one machine fact on the beat beside `api/loops.py::_keep_in_scope` and `_release_finished`, with the verbs in `runtime/machine.py`; it removes the class — every process a session leaves behind, whatever it was waiting for — not the forty found today.
