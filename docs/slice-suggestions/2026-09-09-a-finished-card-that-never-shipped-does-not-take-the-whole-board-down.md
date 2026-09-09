@@ -2,7 +2,7 @@
 
 **Kind:** defect
 **Fix:** now — INTENT says the board reads what runs and shows it; card #75's rule that a face's detail opens with its meaning's word is written and its validator states the bar; the fix is inside the one seam that broke it (the lane's ended sentence and the face's broken word disagreeing) and removes the class: a face that refuses is one card's face, never the project's board.
-**Found by:** the lane on card #41 (docs/plans/2026-09-05-a-card-that-finishes-or-needs-you-stays-on-screen-until-you-dismiss-it.md), in the review's done-means pass — the owner reported Hello Revenue's board answering 500 on 2026-09-09 at 13:16Z, after card #68's fold and restart
+**Found by:** the lane on card #41 (docs/plans/done/2026-09-05-a-card-that-finishes-or-needs-you-stays-on-screen-until-you-dismiss-it.md), in the review's done-means pass — the owner reported Hello Revenue's board answering 500 on 2026-09-09 at 13:16Z, after card #68's fold and restart
 
 ## The intent it breaks
 

@@ -1599,8 +1599,9 @@ class Loops:
         the machine moved out of Executing whose last such move has no
         `told` row after it, and a running card that started waiting on him
         since he was last told. The ring is owed by the record, not by this
-        pass having made the move, so a crash between the two rings at the
-        next reconcile and the same exit read twice rings once."""
+        pass having made the move, so a crash before the `told` row lands
+        rings at the next reconcile, a crash after it loses that one ring,
+        and the same exit read twice rings once."""
         slug = live.project.slug
         now = clock.now()
         for card in cards:
