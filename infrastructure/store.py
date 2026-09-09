@@ -12,7 +12,7 @@ import re
 import sqlite3
 import threading
 import uuid
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 from alembic import command
@@ -1791,6 +1791,12 @@ class Store:
                     )
                 )
                 return
+            if row.pid != sighting.pid or row.boot_id != sighting.boot_id:
+                # A different process under the same id is a new life: the
+                # once-per-life acts and the first sighting start again.
+                row.first_seen = sighting.first_seen
+                row.released_at = None
+                row.scoped_at = None
             row.pid = sighting.pid
             row.scope = sighting.scope
             row.boot_id = sighting.boot_id
@@ -1799,6 +1805,12 @@ class Store:
                 row.released_at = sighting.released_at
             if sighting.scoped_at is not None:
                 row.scoped_at = sighting.scoped_at
+
+    def forget_death(self, session_id: str) -> None:
+        """A session seen alive again has no death: the row a previous
+        life earned is removed, so a new life is named on its own."""
+        with self._session() as session, session.begin():
+            session.execute(delete(DeathRow).where(DeathRow.session_id == session_id))
 
     def sighting(self, session_id: str) -> Sighting | None:
         with self._session() as session:
@@ -1919,11 +1931,29 @@ class Store:
         cause: Cause,
         words: str,
         at: datetime,
+        horizon_seconds: float | None = None,
     ) -> Recovery:
         """The row a launch is preceded by. Refused while one is open on the
         card: two processes, or one process twice across a restart, cannot
-        both launch a replacement for one interruption."""
+        both launch a replacement for one interruption. With a horizon, also
+        refused while an attempt for the same cause started inside it — the
+        one durable claim on the once-per-cause rule, so a reader that
+        counted before another's attempt landed cannot launch a second."""
         with self._session() as session, session.begin():
+            if horizon_seconds is not None:
+                floor = at - timedelta(seconds=horizon_seconds)
+                taken = session.scalars(
+                    select(RecoveryRow).where(
+                        RecoveryRow.project_slug == slug,
+                        RecoveryRow.card_number == number,
+                        RecoveryRow.cause == cause.value,
+                        RecoveryRow.started_at > floor,
+                    )
+                ).first()
+                if taken is not None:
+                    raise StoreRefusal(
+                        f"An attempt for this cause on #{number} started inside the horizon."
+                    )
             row = RecoveryRow(
                 project_slug=slug,
                 card_number=number,

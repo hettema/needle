@@ -20,10 +20,11 @@ from domain.session import Session
 from runtime import handoffs, machine
 
 JOURNAL_LINES = 400
-"""How many lines of a space's journal are read from the life's start: a
-lane's space writes a handful a day, the daemon's a few hundred (every
-window and probe), and a telling line inside the window is what is wanted,
-not the tail."""
+"""How many lines of a space's journal are read when no window bounds it;
+inside a life's window the journal is read whole."""
+_OOM = ("oom", "out of memory")
+"""The lines that say the machine took the memory back; every other
+telling line is an ending of another kind."""
 _TELLING = ("killed", "oom", "out of memory", "signal", "failed", "dumped core")
 """A scope's accounting lines (`Consumed …`, `Deactivated`) are how every scope
 ends and say nothing about why; only these do."""
@@ -142,16 +143,25 @@ def cause_of(
             settled=True,
         )
     life_start = sighting.first_seen if sighting else session.created_at
-    last_alive = sighting.last_seen if sighting else last_activity
+    # The latest evidence of life wins: a sighting may be stale when the
+    # board was not running while the process lived on and wrote.
+    alive_at = [t for t in ((sighting.last_seen if sighting else None), last_activity) if t]
+    last_alive = max(alive_at) if alive_at else None
     # A telling line counts only after the life began *and* after the
     # process was last known alive: a kill the process outlived — the
     # daemon space's kill of 2026-09-05 sits in the journal of every lane
-    # that ran under it, before and after — is not this death's cause.
+    # that ran under it, before and after — is not this death's cause. And
+    # it counts only from the space the process was last seen in, when a
+    # sighting says which; without one, both spaces are read.
     known = [t for t in (life_start, last_alive) if t is not None]
     window = max(known) if known else None
+    lane_unit = units[0] if units else None
+    read_units = (
+        [sighting.scope] if sighting is not None and sighting.scope in units else list(units)
+    )
     telling: list[JournalLine] = []
     if window is not None:
-        for unit in units:
+        for unit in read_units:
             for line in journal_of(unit, since=window):
                 if line.at is None or line.at < window:
                     continue
@@ -161,7 +171,10 @@ def cause_of(
         # Stable, so of two lines at one second the later in the journal wins.
         newest = sorted(telling, key=lambda line: line.at or window)[-1]
         assert newest.at is not None
-        cause = Cause.LANE_KILLED if newest.unit == units[0] else Cause.DAEMON_KILLED
+        if any(t in newest.text.lower() for t in _OOM):
+            cause = Cause.LANE_KILLED if newest.unit == lane_unit else Cause.DAEMON_KILLED
+        else:
+            cause = Cause.KILLED
         return Named(
             cause=cause,
             words=f"{cause.value} at {_when(newest.at)} ({newest.unit}: {newest.text})",
@@ -172,14 +185,19 @@ def cause_of(
     current = next((b for b in boots_seen if b.index == 0), None)
     if last_alive is not None and current is not None:
         held = next((b for b in boots_seen if b.first_entry <= last_alive <= b.last_entry), None)
-        if held is not None and held.index != 0:
+        if (
+            held is not None
+            and held.index != 0
+            and (sighting is None or sighting.boot_id in (None, held.boot_id))
+        ):
             gap = (held.last_entry - last_alive).total_seconds()
             if gap <= BOOT_SLACK_SECONDS:
                 return Named(
                     cause=Cause.BOOT,
                     words=(
-                        f"{Cause.BOOT.value} at {_when(held.last_entry)} and came back at "
-                        f"{_when(current.first_entry)}; the session's last turn is cut at "
+                        f"{Cause.BOOT.value}: the machine's last record before it went down is "
+                        f"at {_when(held.last_entry)}, it came back at "
+                        f"{_when(current.first_entry)}, and the session was alive at "
                         f"{_when(last_alive)}"
                     ),
                     evidence=f"boot {held.boot_id} ended {held.last_entry.isoformat()}; "

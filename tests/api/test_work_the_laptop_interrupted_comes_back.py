@@ -13,6 +13,7 @@ is the store, so a fresh loop over a parked board writes nothing new.
 """
 
 import os
+import time
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
@@ -186,13 +187,13 @@ def test_a_life_from_a_previous_boot_is_the_boots_and_comes_back_with_the_boots_
     reconcile(client)
 
     words = rescued(client)
-    assert len(words) == 1 and words[0].startswith("Brought back after the laptop went down at "), (
+    assert len(words) == 1 and words[0].startswith("Brought back after the laptop went down: "), (
         words
     )
-    assert "and came back at" in words[0] and "the session's last turn is cut at" in words[0]
+    assert "it came back at" in words[0] and "and the session was alive at" in words[0]
     told = launches(machine_floor)[1]["argv"][-1]
     assert told.startswith(
-        "Continue where you stopped. Your last turn was cut: the laptop went down at "
+        "Continue where you stopped. Your last turn was cut: the laptop went down: "
     )
     assert "read your worktree and the card before trusting your memory" in told
     assert "subscription" not in told
@@ -205,6 +206,7 @@ def test_a_recovery_handoff_on_a_surviving_process_is_the_connection_never_a_wal
     launched = begun(client, machine_floor)
     machine_floor.write_handoff(
         launched["session_id"],
+        at=time.time(),
         **{"from": "alpha"},
         account="alpha",
         pid=launched["pid"],
@@ -232,6 +234,7 @@ def test_the_moving_face_reads_the_cause_the_handoff_carries(
     # mid-move; refusing the rule is the simplest hold.
     machine_floor.write_handoff(
         launched["session_id"],
+        at=time.time(),
         **{"from": "alpha"},
         account="nowhere",
         pid=launched["pid"],
@@ -240,7 +243,7 @@ def test_the_moving_face_reads_the_cause_the_handoff_carries(
     )
     reconcile(client)
     moving = detail(client)["lane"]
-    assert moving["state"] == "moving"
+    assert moving["state"] == "moving", rescued(client)
     assert moving["sentence"].startswith(
         "Happening now: the session on it stopped on a dropped connection and the connection is "
         "back; it is being put back to work on nowhere."
@@ -255,7 +258,11 @@ def test_a_second_wall_within_the_hour_parks_until_the_reset_and_the_park_lifts_
 ):
     launched = begun(client, machine_floor)
     machine_floor.write_handoff(
-        launched["session_id"], **{"from": "alpha"}, account="beta", pid=launched["pid"]
+        launched["session_id"],
+        **{"from": "alpha"},
+        account="beta",
+        pid=launched["pid"],
+        at=time.time(),
     )
     reconcile(client)
     assert len(launches(machine_floor)) == 2
@@ -269,6 +276,7 @@ def test_a_second_wall_within_the_hour_parks_until_the_reset_and_the_park_lifts_
     )
     machine_floor.write_handoff(
         moved["session_id"],
+        at=time.time(),
         **{"from": "beta"},
         account="alpha",
         pid=moved["pid"],
@@ -279,8 +287,11 @@ def test_a_second_wall_within_the_hour_parks_until_the_reset_and_the_park_lifts_
     assert len(launches(machine_floor)) == 2, "parked, not thrashed"
     parked = detail(client)
     words = rescued(client)
-    assert words[0].startswith("Waiting to bring it back after its allowance ran out on beta")
-    assert "came back after its allowance ran out once already in the last hour" in words[0]
+    assert words[0].startswith("Waiting to bring it back after its allowance ran out on beta"), (
+        words
+    )
+    assert "tried once already in the last hour after its allowance ran out" in words[0]
+    assert "or an account has room sooner" not in words[0], "the clock alone lifts a repeat"
     assert f"Session (5-hour) on beta comes back at {reset.strftime('%Y-%m-%d %H:%MZ')}" in words[0]
     assert parked["lane"]["state"] == "moving", "the process still stands while it waits"
     reconcile(client)
@@ -359,7 +370,9 @@ def test_twice_the_same_cause_within_the_hour_parks_on_the_clock_and_a_fresh_loo
     assert len(launches(machine_floor)) == 2, "a second death of one cause parks"
     words = rescued(client)
     assert words[0].startswith("Waiting to bring it back after the machine took back its memory")
-    assert "once already in the last hour" in words[0]
+    assert (
+        "the board tried once already in the last hour" in words[0] and "it came back" in words[0]
+    )
     assert "one attempt is made per hour, so it waits until" in words[0]
     park = detail(client)["lane"]["park"]
     assert park is not None and "so it waits until" in park
@@ -458,6 +471,9 @@ def test_a_closed_card_with_no_fold_record_is_finished_and_nothing_resumes(
     assert store.deaths("proj") == {}, "a finished lane gets no death sentence"
     ended = detail(client)["lane"]
     assert ended["state"] == "ended" and ended["died"] is None and ended["park"] is None
+    assert ended["sentence"].startswith(
+        "Nothing for you: its close landed and the session on it ended "
+    )
     assert column_of(client, CARD) == "Executed"
 
 
@@ -498,6 +514,8 @@ def test_a_lane_that_put_a_decision_to_the_owner_is_his_even_when_the_machine_ki
     dead = detail(client)["lane"]
     assert dead["cause"] == Cause.LANE_KILLED.value, "the death is still named truly"
     assert dead["park"] is None and rescued(client) == []
+    assert dead["sentence"].startswith("Your move: decide what it asked and bring it back. ")
+    assert "Nothing can move until you rule." in dead["sentence"]
 
 
 def test_a_handoff_naming_a_finished_lane_expires(
@@ -522,7 +540,11 @@ def test_a_handoff_naming_a_finished_lane_expires(
     capsys.readouterr()
     client.app.state.loops.live.rescan("proj")
     path = machine_floor.write_handoff(
-        launched["session_id"], **{"from": "alpha"}, account="beta", pid=launched["pid"]
+        launched["session_id"],
+        **{"from": "alpha"},
+        account="beta",
+        pid=launched["pid"],
+        at=time.time(),
     )
     reconcile(client)
 

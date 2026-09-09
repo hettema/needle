@@ -9,6 +9,7 @@ import json
 import os
 import shutil
 import subprocess
+import time
 from collections.abc import Iterator
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
@@ -818,7 +819,11 @@ def test_a_lane_that_dies_on_a_limit_is_moved_and_the_card_says_where(
     state["detail"] = "You've reached your Fable limit."
     state_file.write_text(json.dumps(state))
     machine_floor.write_handoff(
-        launched["session_id"], **{"from": "alpha"}, account="beta", pid=launched["pid"]
+        launched["session_id"],
+        **{"from": "alpha"},
+        account="beta",
+        pid=launched["pid"],
+        at=time.time(),
     )
     reconcile(client)
 

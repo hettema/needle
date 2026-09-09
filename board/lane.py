@@ -100,7 +100,8 @@ def is_question(text: str | None) -> bool:
 
 _ASKS_OWNER = re.compile(
     r"\bnothing (?:can move|moves|proceeds|happens) until you\b"
-    r"|\byour (?:ruling|call|decision|word|answer)\b"
+    r"|\b(?:waiting|waits|wait) (?:for|on) your (?:ruling|call|decision|word|answer)\b"
+    r"|\byour (?:ruling|call|decision|answer) is needed\b"
     r"|\buntil you (?:rule|decide|answer|say|confirm)\b",
     re.I,
 )
@@ -438,12 +439,24 @@ def lane_for(card: Card, facts: LaneFacts) -> Lane:
                 f"its work landed on the shared branch and {when}",
                 why="; ".join(landed[1:]) or None,
             )
+        elif close_landed(card):
+            # Finished work: the card's close landed, and the session's
+            # ending is the normal end of it, not a death to show.
+            died, cause = None, None
+            sentence = say(Meaning.QUIET, f"its close landed and {when}")
         elif parked is not None:
             sentence = say(
                 Meaning.QUIET,
                 f"{when} and the board brings it back by itself",
                 why=died,
                 then=parked,
+            )
+        elif asks_owner(said):
+            sentence = say(
+                Meaning.YOURS,
+                "decide what it asked and bring it back",
+                why=f"{when} after putting a decision to you: {last_line(said)}",
+                then="open the card to resume it once you have decided",
             )
         elif on_disk:
             sentence = say(
@@ -642,15 +655,27 @@ def close_is_current(card: Card, history: list[AuditEntry], since: datetime | No
     return _row_written_after(history, RowKind.DELIVERED, since)
 
 
-def owner_decision_outstanding(card: Card) -> str | None:
+def owner_decision_outstanding(
+    card: Card, history: list[AuditEntry], since: datetime | None
+) -> str | None:
     """A decision of the owner's still standing on the card's rows: an ASK
-    or a Q row, or a RULING with no RULED beneath it (plan 68, ruling 7)."""
+    or a Q row, or a RULING with no RULED beneath it (plan 68, ruling 7),
+    written in this life of the lane — a row from a previous life is a
+    question already answered or overtaken, and `since` is None only for
+    a card the board never saw start, whose rows all count."""
     for kind in (RowKind.ASK, RowKind.Q):
         row = next((r for r in card.rows if r.kind == kind), None)
-        if row is not None:
+        if row is not None and (since is None or _row_written_after(history, kind, since)):
             return f"the card carries a {kind.value} row: {first_line(row.text)}"
     ruling = next((r for r in card.rows if r.kind == RowKind.RULING), None)
-    if ruling is not None and not has_row(card, RowKind.RULED):
+    if (
+        ruling is not None
+        and (since is None or _row_written_after(history, RowKind.RULING, since))
+        and not (
+            has_row(card, RowKind.RULED)
+            and (since is None or _row_written_after(history, RowKind.RULED, since))
+        )
+    ):
         return f"the card carries a RULING row nobody has ruled on: {first_line(ruling.text)}"
     return None
 
@@ -671,7 +696,7 @@ def disposition(
         return Disposition.OWNERS, f"it asked you: {last_line(lane.question)}"
     if lane.state == LaneState.ENDED and asks_owner(lane.said):
         return Disposition.OWNERS, f"its last words put a decision to you: {last_line(lane.said)}"
-    outstanding = owner_decision_outstanding(card)
+    outstanding = owner_decision_outstanding(card, history, since)
     if outstanding is not None:
         return Disposition.OWNERS, outstanding
     if owner_moved_out_after(history, since):

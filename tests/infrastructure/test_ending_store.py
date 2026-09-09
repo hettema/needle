@@ -44,6 +44,12 @@ def test_a_sighting_keeps_its_first_time_and_moves_its_last(store):
     assert store.sighting("s1").scoped_at == later, "an act once per life is kept"
     store.record_sighting(_sighting(last_seen=later))
     assert store.sighting("s1").scoped_at == later, "a refresh without the act keeps it"
+    # A different process under the same id is a new life: its first
+    # sighting and its once-per-life acts start again.
+    reborn = later + timedelta(hours=1)
+    store.record_sighting(_sighting(pid=5151, first_seen=reborn, last_seen=reborn))
+    seen = store.sighting("s1")
+    assert seen.pid == 5151 and seen.first_seen == reborn and seen.scoped_at is None
     assert set(store.sightings("proj")) == {"s1"} and store.sightings("other") == {}
 
 
@@ -75,6 +81,8 @@ def test_a_death_is_rewritten_while_unsettled(store):
     assert death.cause == Cause.LANE_KILLED and death.settled
     assert death.evidence.startswith("systemd-oomd killed")
     assert len(store.deaths("proj")) == 1, "one row per session, rewritten"
+    store.forget_death("s1")
+    assert store.deaths("proj") == {}
 
 
 def test_one_park_stands_per_card_and_lifts_once(store):
@@ -137,8 +145,24 @@ def test_one_recovery_is_open_per_card_and_a_closed_one_keeps_its_verdict(store)
         opened.id, verdict="alive", replacement="s2", at=AT + timedelta(seconds=9), note=None
     )
     assert closed.verdict == "alive" and closed.replacement == "s2"
+    with pytest.raises(StoreRefusal, match="inside the horizon"):
+        store.open_recovery(
+            "proj",
+            7,
+            session_id="s2",
+            cause=Cause.LANE_KILLED,
+            words="oom at 10:20",
+            at=AT + timedelta(minutes=20),
+            horizon_seconds=3600,
+        )
     second = store.open_recovery(
-        "proj", 7, session_id="s2", cause=Cause.LANE_KILLED, words="oom at 10:20", at=AT
+        "proj",
+        7,
+        session_id="s2",
+        cause=Cause.LANE_KILLED,
+        words="oom at 11:20",
+        at=AT + timedelta(minutes=80),
+        horizon_seconds=3600,
     )
     assert [r.id for r in store.recoveries("proj", 7)] == [opened.id, second.id]
     assert [r.card_number for r in store.recoveries("proj")] == [7, 8, 7]

@@ -558,9 +558,11 @@ def journal(unit: str, lines: int, *, since: str | None = None) -> list[str]:
     and not only the tail — the daemon space's journal on this laptop runs
     to hundreds of lines a day and a kill four days back is past any tail.
     Empty when the journal cannot be asked, which is only a reason unknown."""
-    argv = [which("journalctl"), "--user", "-u", unit, "-n", str(lines), "--no-pager"]
+    argv = [which("journalctl"), "--user", "-u", unit, "--no-pager"]
     if since is not None:
-        argv += ["--since", since]
+        argv += ["--since", since]  # the interval whole, never a tail of it
+    else:
+        argv += ["-n", str(lines)]
     try:
         done = run([*argv, "-o", "short-iso"], timeout=20)
     except (OSError, Timeout, CommandMissing):

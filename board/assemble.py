@@ -61,7 +61,7 @@ from domain.evidence import EvidenceState, Standing
 from domain.gate import Gate
 from domain.hook import HeardMark
 from domain.lane import HANDS_ON, Doors, Lane, LaneSnapshot, LaneState, StartState
-from domain.meaning import Meaning, say
+from domain.meaning import Meaning, opening_of, say
 from domain.project import Project
 from domain.row import ROW_HALF, Row, RowHalf, RowKind
 from domain.signal import Reading, Signal, SignalKind, WindowlessSession
@@ -581,6 +581,14 @@ def state_of(
             ),
             hint="open to decide",
         )
+    if (
+        lane is not None
+        and lane.state == LaneState.ENDED
+        and opening_of(lane.sentence) is Meaning.YOURS
+    ):
+        # An ended session that put a decision to him (plan 68, ruling 7):
+        # the lane's sentence is his move, and the face says so in amber.
+        return _state("asked you", Meaning.YOURS, detail=lane.sentence, hint="open to decide")
     if lane is not None and lane.state == LaneState.ENDED and _lane_died(card, lane):
         return _state(
             "session died",

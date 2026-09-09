@@ -80,7 +80,10 @@ def test_a_kill_inside_this_life_names_the_space_it_took(machine_floor: Floor):
         f"2026-09-05T20:29:11+0200 DH systemd[1288]: {LANE_UNIT}: Consumed 2min CPU time.",
     )
     last_seen = datetime(2026, 9, 5, 18, 28, 50, tzinfo=UTC)
-    named = name(machine_floor, sighting=sighting(NOW - timedelta(hours=3), last_seen))
+    in_lane_space = sighting(NOW - timedelta(hours=3), last_seen).model_copy(
+        update={"scope": LANE_UNIT}
+    )
+    named = name(machine_floor, sighting=in_lane_space)
     assert named.cause == Cause.LANE_KILLED and named.settled
     assert named.words == (
         "the machine took back its memory at 2026-09-05 18:29Z (needle-card-435-x.scope: "
@@ -90,11 +93,47 @@ def test_a_kill_inside_this_life_names_the_space_it_took(machine_floor: Floor):
     # A kill the process outlived is not its cause: seen alive after it,
     # the death is something later, and nothing else names it.
     outlived = name(
-        machine_floor, sighting=sighting(NOW - timedelta(hours=3), NOW - timedelta(minutes=1))
+        machine_floor,
+        sighting=in_lane_space.model_copy(update={"last_seen": NOW - timedelta(minutes=1)}),
     )
     assert outlived.cause == Cause.UNKNOWN, "seen alive after the kill: not the kill"
     survived = name(machine_floor, last_activity=datetime(2026, 9, 5, 18, 40, tzinfo=UTC))
     assert survived.cause == Cause.UNKNOWN, "active after the kill: not the kill"
+    # A stale sighting with later transcript activity: the latest evidence
+    # of life wins, and the outlived kill is not named.
+    stale = name(
+        machine_floor,
+        sighting=in_lane_space,
+        last_activity=datetime(2026, 9, 5, 18, 40, tzinfo=UTC),
+    )
+    assert stale.cause == Cause.UNKNOWN
+    # A sighting names the space the process ran in: a kill in the other
+    # space is not read for it.
+    machine_floor.write_journal(
+        DAEMON_UNIT,
+        f"2026-09-05T20:29:30+0200 DH systemd[1288]: {DAEMON_UNIT}: systemd-oomd killed 9 "
+        "process(es) in this unit.",
+    )
+    in_lane = name(
+        machine_floor,
+        sighting=sighting(NOW - timedelta(hours=3), last_seen).model_copy(
+            update={"scope": LANE_UNIT}
+        ),
+    )
+    assert in_lane.cause == Cause.LANE_KILLED
+    # A unit that failed for a reason that is not the memory's is an ending
+    # of another kind, never resumed as an oom death.
+    machine_floor.write_journal(
+        LANE_UNIT,
+        f"2026-09-05T20:29:10+0200 DH systemd[1288]: {LANE_UNIT}: Failed with result 'signal'.",
+    )
+    crashed = name(
+        machine_floor,
+        sighting=sighting(NOW - timedelta(hours=3), last_seen).model_copy(
+            update={"scope": LANE_UNIT}
+        ),
+    )
+    assert crashed.cause == Cause.KILLED and "signal" in crashed.words
 
 
 def test_a_kill_older_than_this_life_is_not_its_cause_and_the_daemons_kill_is(
@@ -146,9 +185,18 @@ def test_a_process_alive_when_the_laptop_went_down_died_with_it(machine_floor: F
     )
     assert named.cause == Cause.BOOT and named.settled
     assert named.words == (
-        "the laptop went down at 2026-09-07 16:51Z and came back at 2026-09-07 20:06Z; "
-        "the session's last turn is cut at 2026-09-07 16:51Z"
+        "the laptop went down: the machine's last record before it went down is at "
+        "2026-09-07 16:51Z, it came back at 2026-09-07 20:06Z, and the session was alive at "
+        "2026-09-07 16:51Z"
     )
+    # A sighting in another boot than the one that ended there is not that
+    # boot's casualty, whatever the times say.
+    elsewhere = name(
+        machine_floor,
+        sighting=sighting(last - timedelta(hours=2), last, boot="some-other-boot"),
+        now=datetime(2026, 9, 7, 20, 10, tzinfo=UTC),
+    )
+    assert elsewhere.cause == Cause.UNKNOWN
     # A transcript that last grew at the boot's end says the same for a row
     # nobody sighted (#85's four lanes predate the sightings).
     named = name(machine_floor, last_activity=last, now=datetime(2026, 9, 7, 20, 10, tzinfo=UTC))

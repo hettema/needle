@@ -36,6 +36,10 @@ class Cause(StrEnum):
     STRONGER_MODEL = "the stronger model is back"
     """`claude-acct`'s switch-back: the session ran on the weaker rung and
     the handoff asks for it to come back on the stronger one."""
+    KILLED = "its process was ended by a signal or a crash"
+    """The journal names an ending that is not the memory's — a signal, a
+    core dump, a unit failed for another reason. Not the machine's hand as
+    the plan lists it, so never resumed by the board (finding 4, 2026-09-09)."""
     STOPPED = "it was stopped through its account"
     """`claude stop` ran: the owner's Stop, a verb, or the runtime's release."""
     UNKNOWN = "the cause is not established"
