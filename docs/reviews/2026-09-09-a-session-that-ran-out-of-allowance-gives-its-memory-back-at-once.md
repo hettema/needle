@@ -58,4 +58,8 @@
 
 ## The served board, after the fold
 
-Written at the close.
+Read twice on 2026-09-09, each time after `needle fold` from the lane and `systemctl --user restart needle-serve`.
+
+**17:16, after the first fold (4a0b315).** Every project's board 200. On the board's first passes the six Hello Revenue lanes parked on the floor since 15:15 were stopped one by one ("Stopped a5c9d649 on gmail to give its memory back while it waits for room" on #483, the same line on #416, #419, #426), the room crossed the floor, and two came back within the minute on the account the wall chose ("Brought back after its allowance ran out on gmail … now b64d5552" on #483, on hrclaude; #409 the same); the other four read "coming back" with the wait's words. No session blocked; the room 4.9 GB. #409's scope, adopted by the loop, read `MemoryHigh` 5368709120; #483's, which stood before its session was put back, read infinity — finding 18.
+
+**17:57, after the second fold (7c86faf).** Every project's board 200; every live lane scope (#409, #416, #419, #483) reads 5368709120; #483's card carries "Held needle-card-483-… at the floor (5 GB high mark): the scope stood without it", once; four of the six lanes working on hrclaude, two coming back; no tracebacks in the journal after the restart. The owner had closed Chromium at 16:55 at his own choosing; the room at the second read was 4.9 GB with four lanes running.
