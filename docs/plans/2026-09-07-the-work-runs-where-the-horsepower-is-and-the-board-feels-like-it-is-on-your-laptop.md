@@ -91,11 +91,23 @@ the machine from the laptop's record cloned there, `~/.claude/CLAUDE.md`
 resolves to Needle's HOW-WE-WORK (the one text), `claude-acct` is the
 laptop's script linked with the same `accounts.json` and `roles.json`, and
 `claude-acct init` laid the five slots, every one `NEEDS LOGIN`. The first
-login, `hrclaude`, is the browser-less flow as written: `claude-acct login
-hrclaude` in a multiplexer session there printed the sign-in link and waits
-for a code; the lane opened the link in the laptop's hrclaude Chromium
-profile, and the owner's authorisation and the code are the next step. The
-day's proof begins when the code lands.
+login, `hrclaude`, landed at 22:04Z through the browser-less flow as
+written: `claude-acct login hrclaude` in a multiplexer session there
+printed the sign-in link, the lane opened it in the laptop's hrclaude
+Chromium profile, the owner authorised and pasted the code, and the lane
+typed it into the waiting prompt — the first code, authorised a quarter of
+an hour after its link, was refused with a 400 (they expire in minutes),
+the second, pasted within a minute, was taken. No token file crossed: the
+machine holds its own login for the same subscription. `claude -p` on that
+slot there answered `ok`; the rule there answered the same slot as the
+laptop's does ("Fable headroom on hrclaude, 53% used") once Omarchy's
+allowance collector, which the rule calls and Debian lacks, was carried
+into the machine's record (`docs/collector.md` there). The day's proof is
+the machine record's `login-check`, read by the Loop line below from
+2026-09-10; the laptop's own hrclaude login is the one the owner uses all
+day, so its half of the proof is his ordinary work. What remains of this
+item: the other four slots and Codex, each the same round through the
+laptop's browser, after the day has shown the first pair refreshing apart.
 
 ### 3. The board serves from the machine, and the laptop's address still reaches it
 `needle serve` runs on the rented machine over the one store, moved once at
@@ -345,3 +357,4 @@ mark over the two weeks decides 32 or 64.
 
 Loop: no lane was killed by the system on the rented machine — command uv --project /home/dennis/Work/needle run needle lanes --killed --machine rented --count expect 0 by 2026-10-05 every 1d
 Loop: the memory high-water mark on the rented machine over two weeks — command uv --project /home/dennis/Work/needle run needle where --high-water rented by 2026-10-05 every 1d
+Loop: the slot that logged in on the rented machine through the laptop's browser still answers there a day later, refreshed apart from the laptop's login of the same subscription — command ssh rented login-check hrclaude expect ok by 2026-09-12 every 1d
