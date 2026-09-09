@@ -63,8 +63,19 @@ recorded in its tool: a file under `/etc` is a root-owned copy checked by
 content, never a link, because sudo refused the linked sudoers file ("is
 owned by uid 1001, should be 0") and locked the work user out until root
 put a copy back. Its `machine check` printed `no drift` at 21:55Z. The
-head's two machines are the fold's: `needle machine add` runs against the
-served board once this lane's code is on the trunk.
+head's two machines: after the fold (origin/develop ec5b7bc, 2026-09-10
+00:0xZ, dist rebuilt, needle-serve restarted, the shared store at 0017)
+`needle machine add laptop --desktop --ground ~/Work/omarchy-machine` and
+`needle machine add rented --host rented` registered both, and the served
+board's head answered `laptop (here) 6.0 GB available, rented 30.4 GB
+available` with the loop reading the rented machine over real ssh on every
+pass and, once its clone was levelled to the fold, no complaint in the
+journal. Every clause holds; **Met** in that reading. One thing the
+evening taught, for item 3: the other machine's `needle` is its clone's,
+so a fold that changes the wire is not live there until that clone is
+levelled and `uv sync` run — the first pass after the fold read `needle
+room` refused with a usage line, loud on the head, until `git pull` there;
+the board's own `sync` should level every machine's clone at a fold.
 
 ### 2. Each subscription logs in once on the machine, and the laptop's browser answers
 Every Claude slot and Codex log in on the rented machine through the
@@ -163,7 +174,16 @@ Only once the board and its store serve from that machine (item 3) is a
 lane there a lane like any other; until then the live half of this item is
 the wire — both machines registered, the head naming both, the loop
 reading the rented machine every pass over real `ssh`, the Start preview
-choosing it for a Hello Revenue card — which the fold's evening reads.
+choosing it for a Hello Revenue card — which the fold's evening read: with
+both registered, Hello Revenue #121's Start door read `Start · hrclaude on
+rented`, placed by the rented machine's room (30.4 GB) and its own rule
+(hrclaude, 53% of Fable used, the same subscription reading as the
+laptop's), and Needle #81's the same. Because that Start would have put a
+lane on a machine with no board to write to, the rented machine was taken
+off the board again the same minute (`needle machine rm rented`, the
+removal guards passing: nothing live on it) and the board places every
+card on the laptop as before; item 3 registers it again. The card's WAITS
+row says so.
 
 ### 5. The measure exists before the move
 The machine's memory high-water mark, the count of lanes killed by the
@@ -196,12 +216,15 @@ finding: three attempts at `uv run pytest -q` in the main checkout that
 evening — the hand's, and two of the lane's own — were each killed by the
 memory killer or the harness while two other lanes ran their suites, the
 last with the lane's whole process group (48 processes at 22:03Z), on a
-laptop reading 2 GB available. The number is taken on a quiet laptop by
-the resuming session, once, then twice more, and written with `needle
-machine timing laptop pytest <seconds>` beside the two above, which are
-written at the fold. The laptop's memory high-water mark is the board's
-own reading from the fold on; that evening's sampler read 1.9 GB
-available at its lowest.
+laptop reading 2 GB available — part of which, the evening's last finding,
+was test floors sitting in `/tmp`, a filesystem in memory (filed as a
+defect: `docs/slice-suggestions/2026-09-09-a-suites-test-floors-never-take-the-memory-the-lanes-need.md`).
+The number is taken on a quiet laptop by the resuming session, once, then
+twice more, and written with `needle machine timing laptop pytest
+<seconds>` beside the two above, which were written at the fold (`npm ci
+2.0`, `vitest 11.6`, read back by `needle machines --json`). The laptop's
+memory high-water mark is the board's own reading from the fold on; that
+evening's sampler read 1.9 GB available at its lowest.
 
 ## Terrain
 
