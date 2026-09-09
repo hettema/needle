@@ -245,3 +245,37 @@ class Fixes(BaseModel):
     """Every decision a colleague took off the owner's rail, oldest first,
     with its source, its direction and its fate (plan 59, item 6): the
     sample the loop's cold audit reads."""
+
+
+MEMORY_FLOOR_BYTES = 5 * 1024**3
+"""Below this much available memory, or free swap on a machine that has
+swap, the beat takes nothing. It shipped at 3 GB, because a fix lane peaked
+at 3.1 GB on the dial's first night (Hello Revenue #385, `systemctl show
+MemoryCurrent`, 2026-09-05) and systemd-oomd acts at 90 percent of both
+memory and swap. It rose to 5 GB the same day: forty seconds after the
+board restarted on the floor, oomd killed Hello Revenue #386's lane, whose
+scope peaked at 4.7 GB after the dial had let it in — the plan's loop said
+the floor rises by a killed scope's peak, the reading said so, and the owner
+set 5 GB (the peak with headroom) rather than the rule's 7.7 GB, which would
+have let the dial open little on a 16 GB machine. Since plan 53 the floor
+is read on every pass of the lane loop, not only at the beat, and each
+lane's scope is read beside it: a scope holding as much as the floor is the
+lane the floor was set from, again, and the machine reads full until it
+shrinks or folds — the board stops admitting; it never stops a lane (that
+plan's ruling 1). No code path raises the number; the loop in that plan
+says when the owner should.
+
+On 2026-09-09 the owner handed the number to the colleague ("it's a tech
+thing so you own it"), remembering crashes since it came in. Read that day:
+three kills by the userspace out-of-memory killer since 09-08, each of a
+window he was using at 90 percent of memory and swap, while the floor held
+six walled lanes parked. The floor was never the cause: it gates what the
+board admits and chooses nothing about who is killed. It stays 5 GB — a
+third of a 15.6 GB laptop that runs a browser, an editor and half its swap
+beside the lanes; lower trades idle lanes for a slower machine, not a
+crash. Since card #107 it is also the ceiling of every lane's own space
+(`MemoryHigh` on the scope, `runtime/machine.py::adopt`), so one runaway
+lane is throttled inside its space rather than pushing a window out, and
+a walled lane gives its memory back the moment it waits for room. It lives
+here so the runtime, which cannot import the board, sets the same number
+it reads (the layers ratchet)."""

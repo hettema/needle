@@ -51,7 +51,7 @@ from board.brief import (
     reading_name,
 )
 from board.collision import footprint, verdict
-from board.dial import MEMORY_FLOOR_BYTES, headroom, who_is_home
+from board.dial import headroom, who_is_home
 from board.lane import (
     HANDS_ON,
     HOOK_SLACK_SECONDS,
@@ -84,7 +84,7 @@ from domain.board import MachineState, TrunkState
 from domain.call import Call, CallOutcome
 from domain.card import Actor, Card, Place
 from domain.column import Column
-from domain.dial import Headroom, ScopeMemory, ScopeState
+from domain.dial import MEMORY_FLOOR_BYTES, Headroom, ScopeMemory, ScopeState
 from domain.document import DocumentKind
 from domain.ending import (
     MACHINE_ENDED,
@@ -1033,17 +1033,15 @@ class Loops:
                 continue
             # The gate Start passes, for a hop and a resume alike (item 5,
             # finding 2 of the review): a rung with room and the floor on a
-            # fresh read. A live handoff younger than the horizon names the
-            # rung the wall detector chose at the wall, which is fresher
-            # than the rule's cache about the account that just ran out, so
-            # it is kept; an older one, or a death, asks the rule now.
+            # fresh read. A handoff younger than the horizon names the rung
+            # the wall detector chose at the wall, which is fresher than the
+            # rule's cache about the account that just ran out, so it is
+            # kept whether or not the walled process still stands — the
+            # board itself stops it while it waits for room (card #107); an
+            # older one asks the rule now.
             placement: Placement | None = None
             wall = session.wall
-            young = (
-                wall is not None
-                and (now - wall.at).total_seconds() < RESCUE_HORIZON_SECONDS
-                and session.pid is not None
-            )
+            young = wall is not None and (now - wall.at).total_seconds() < RESCUE_HORIZON_SECONDS
             if not young:
                 placement, note = self._placement()
                 if placement is None:
@@ -1054,6 +1052,8 @@ class Loops:
                     continue
             room = self.headroom_now()
             if room.full:
+                if cause == Cause.WALL and session.pid is not None:
+                    self._give_memory_back(slug, number, session)
                 changed = self._park(slug, number, session, cause, words, now, full=room) or changed
                 continue
             try:
@@ -1216,6 +1216,25 @@ class Loops:
                 f"The wait ended without a resume: the work is {stood.value} ({why}).",
             )
         return acted
+
+    def _give_memory_back(self, slug: str, number: int, session: Session) -> None:
+        """A walled background session has ended its turn with nothing in
+        flight; while the board waits for room it holds only memory, which
+        is part of the room it waits for (card #107: six lanes walled
+        together on 2026-09-09 held 1.1 GB for an hour on a machine 1 GB
+        short of the floor). Stopped through its own slot before the park;
+        the handoff stands, so the ending is named a wall and the lane is
+        brought back on the handoff's rung once the room holds."""
+        stopped = self.runtime.stop(session.short_id)
+        said = (
+            f"Stopped {session.short_id} on {session.slot} to give its memory back while it "
+            "waits for room"
+            if stopped.gone
+            else f"Asked {session.short_id} on {session.slot} to stop, to give its memory back "
+            f"while it waits for room; it had not gone within {stopped.seconds:.0f} s: "
+            f"{stopped.words}"
+        )
+        self.live.note(slug, number, AuditKind.RESCUED, Actor.MACHINE, f"{said}.")
 
     def _park_lifts(self, park: Park, session: Session, now: datetime) -> str | None:
         """Whether the park's end has come, in words when it has (item 3),

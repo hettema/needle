@@ -11,6 +11,7 @@ from pathlib import Path
 
 from fastapi.testclient import TestClient
 
+from domain.dial import MEMORY_FLOOR_BYTES
 from infrastructure.store import Store
 from tests.api import test_doors as doors
 from tests.api.test_dial import TIDE, board, number_of, tick, turn, verify
@@ -121,6 +122,10 @@ def test_a_session_with_hands_on_a_lane_is_put_back_in_its_scope_once_and_the_ca
     assert ["--user", "reset-failed", UNIT] in calls
     adopts = [c for c in machine_floor.state()["busctl_calls"] if UNIT in c]
     assert len(adopts) == 1 and str(os.getpid()) in adopts[0]
+    # The lane's space is capped at the floor (card #107): one property
+    # beside the pids, typed as the manager wants it.
+    tail = adopts[0][adopts[0].index("MemoryHigh") :]
+    assert tail[:3] == ["MemoryHigh", "t", str(MEMORY_FLOOR_BYTES)], adopts[0]
     rows = [h for h in detail(client, 241)["history"] if h["kind"] == "scoped"]
     assert len(rows) == 1
     assert rows[0]["detail"].startswith(

@@ -250,6 +250,74 @@ def test_the_moving_face_reads_the_cause_the_handoff_carries(
     )
 
 
+def test_a_walled_lane_on_a_full_machine_gives_its_memory_back_and_comes_back_on_the_handoffs_rung(
+    client: TestClient, machine_floor: Floor, monkeypatch
+):
+    """Card #107: the walled process is stopped in the pass that parks it,
+    the ending reads as the wall (the handoff stands), and the lane comes
+    back on the account the wall chose once the room has held for a beat."""
+    launched = begun(client, machine_floor)
+    machine_floor.set_memory(available_gb=2.0, swap_free_gb=1.0)
+    wall = dict(
+        **{"from": "alpha"},
+        account="beta",
+        pid=launched["pid"],
+        reason="You've hit your session limit · resets 4:40pm",
+    )
+    machine_floor.write_handoff(launched["session_id"], at=time.time(), **wall)
+    reconcile(client)
+
+    assert len(launches(machine_floor)) == 1, "parked, not launched"
+    assert not Path(f"/proc/{launched['pid']}/status").exists() or _zombie(launched["pid"]), (
+        "the walled process is gone in the same pass"
+    )
+    words = rescued(client)  # newest first: the park note, then the stop before it
+    assert words[1].startswith("Stopped "), words
+    assert "to give its memory back while it waits for room" in words[1], words
+    assert words[0].startswith("Waiting to bring it back after its allowance ran out on alpha"), (
+        words
+    )
+    assert "the machine is full: 2.0 GB available, 1.0 GB swap free, 5 GB needed" in words[0]
+
+    # The next pass names the ending from the standing handoff, and waits on.
+    reconcile(client)
+    parked = detail(client)
+    assert parked["lane"]["state"] == "ended"
+    assert parked["lane"]["cause"] == Cause.WALL.value, parked["lane"]
+    assert parked["lane"]["park"] is not None
+    assert parked["summary"]["state"]["word"] == "coming back"
+    assert len(launches(machine_floor)) == 1
+    assert len(rescued(client)) == len(words), "nothing said twice"
+
+    # Room holds for a beat: relaunched on the rung the wall chose.
+    machine_floor.set_memory(available_gb=16.0, swap_free_gb=8.0)
+    reconcile(client)
+    assert len(launches(machine_floor)) == 1, "the floor has to hold for a beat first"
+    # The floor's hold is an hour on the test floor (`quick`) and the rescue
+    # horizon is an hour too, so the wall is re-stamped to stay young past
+    # the hold; the file's other words are unchanged.
+    held = clock.now() + timedelta(seconds=loops_mod.FLOOR_SECONDS + 1)
+    machine_floor.write_handoff(
+        launched["session_id"], at=(held - timedelta(minutes=5)).timestamp(), **wall
+    )
+    hold_clock(monkeypatch, held)
+    reconcile(client)
+    assert len(launches(machine_floor)) == 2
+    assert launches(machine_floor)[1]["config_dir"] == str(machine_floor.config_dir("beta"))
+    lifted = rescued(client)
+    held = "The wait ended: the machine's memory has held above the floor"
+    assert any(w.startswith(held) for w in lifted)
+    assert any(w.startswith("Brought back after its allowance ran out on alpha") for w in lifted)
+    assert column_of(client, CARD) == "Executing"
+
+
+def _zombie(pid: int) -> bool:
+    try:
+        return "Z" in Path(f"/proc/{pid}/status").read_text().split("State:")[1].split()[0]
+    except (OSError, IndexError):
+        return True
+
+
 # ── the allowance: a park with an end ──────────────────────────────────
 
 

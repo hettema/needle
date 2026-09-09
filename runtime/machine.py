@@ -476,7 +476,7 @@ def reset_failed(unit: str) -> bool:
     return done.returncode == 0
 
 
-def adopt(unit: str, pids: list[int]) -> tuple[bool, str]:
+def adopt(unit: str, pids: list[int], *, memory_high: int | None = None) -> tuple[bool, str]:
     """Put running processes of ours into a transient scope of the user manager.
 
     `StartTransientUnit` with a `PIDs` property is what `systemd-run --scope`
@@ -484,11 +484,21 @@ def adopt(unit: str, pids: list[int]) -> tuple[bool, str]:
     pid of ours, that the process keeps running where it was, and that
     stopping the scope ends it. A unit of that name the manager still holds
     as failed is reset first (verified 2026-09-07: the call is refused
-    otherwise, and lands after the reset). Returns whether the call
-    succeeded and the command's own words.
+    otherwise, and lands after the reset). `memory_high` is the scope's
+    ceiling in bytes (`MemoryHigh`): past it the kernel throttles and
+    reclaims inside the scope and never kills, so a lane that grows presses
+    on itself, not on the windows the owner is using (card #107; verified
+    2026-09-09 on a throwaway scope of this machine's user manager, systemd
+    261: the property lands and `systemctl show -p MemoryHigh` reads it).
+    Returns whether the call succeeded and the command's own words.
     """
     if unit_state(unit) == "failed":
         reset_failed(unit)
+    properties: list[str] = ["PIDs", "au", str(len(pids)), *[str(p) for p in pids]]
+    count = 1
+    if memory_high is not None:
+        properties += ["MemoryHigh", "t", str(memory_high)]
+        count += 1
     argv = [
         which("busctl"),
         "--user",
@@ -500,11 +510,8 @@ def adopt(unit: str, pids: list[int]) -> tuple[bool, str]:
         "ssa(sv)a(sa(sv))",
         unit,
         "fail",
-        "1",
-        "PIDs",
-        "au",
-        str(len(pids)),
-        *[str(p) for p in pids],
+        str(count),
+        *properties,
         "0",
     ]
     done = run(argv, timeout=10)

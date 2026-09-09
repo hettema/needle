@@ -17,6 +17,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from domain.call import Answer
+from domain.dial import MEMORY_FLOOR_BYTES
 from domain.gate import Gate
 from domain.launch import Attempt, Launch, LaunchVerdict, Rescue, Start, Stopped, WindowlessStart
 from domain.session import Session, SessionKind, SessionSlot, SessionState
@@ -289,7 +290,7 @@ def scope_session(slot: Slot | Placement, config_dir: Path, pid: int, card: str)
         pids.append(parent)
     pids += [pid, *machine.descendants_of(pid)]
     try:
-        asked, words = machine.adopt(unit, pids)
+        asked, words = machine.adopt(unit, pids, memory_high=MEMORY_FLOOR_BYTES)
     except machine.CommandMissing as missing:
         return Scoped(unit, False, False, str(missing))
     # `StartTransientUnit` returns a queued job, so the move into the scope
@@ -891,7 +892,9 @@ def codex_lane(store: Store, placement: Placement, request: Start) -> Launch:
         )
     unit = lane_unit(name)
     try:
-        asked, words = machine.adopt(unit, [pid, *machine.descendants_of(pid)])
+        asked, words = machine.adopt(
+            unit, [pid, *machine.descendants_of(pid)], memory_high=MEMORY_FLOOR_BYTES
+        )
     except machine.CommandMissing as missing:
         asked, words = False, str(missing)
     scoped = asked and _in_scope(pid, unit)
@@ -1029,7 +1032,9 @@ def call_codex(store: Store, session: Session, *, brief: str, name: str, answer:
         time.sleep(POLL_SECONDS)
     unit = lane_unit(name)
     try:
-        asked, words = machine.adopt(unit, [pid, *machine.descendants_of(pid)])
+        asked, words = machine.adopt(
+            unit, [pid, *machine.descendants_of(pid)], memory_high=MEMORY_FLOOR_BYTES
+        )
     except machine.CommandMissing as missing:
         asked, words = False, str(missing)
     scoped = asked and _in_scope(pid, unit)
