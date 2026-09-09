@@ -47,10 +47,11 @@ from domain.call import CallOutcome, CallVerdict
 from domain.dial import ScopePids, ScopeState, ScopeStop
 from domain.ending import Ended, Sighting
 from domain.gate import Gate
+from domain.lane import Checkouts, Edited
 from domain.launch import Launch, LaunchVerdict, Start, WindowlessStart
 from domain.machine import Machine, MachineRoom, Timing
 from domain.notice import Notice, Said
-from domain.session import Session
+from domain.session import Session, TranscriptSize
 from domain.slot import Expired, LimitsRead, Rung, rung_words
 from domain.window import WindowKind
 from infrastructure import clock
@@ -470,6 +471,62 @@ def room(runtime: Runtime, args: argparse.Namespace) -> int:
     return 0
 
 
+def worktrees(runtime: Runtime, args: argparse.Namespace) -> int:
+    """Every checkout of a repository on this machine: the wire's read of
+    where a lane's worktree is (card #83)."""
+    found = runtime.worktrees(str(Path(args.repo).expanduser().resolve()))
+    _emit(
+        args,
+        Checkouts(checkouts=found),
+        "\n".join(f"{path}  {branch or '(detached)'}" for path, branch in found.items())
+        or "no checkout",
+    )
+    return 0
+
+
+def tip(runtime: Runtime, args: argparse.Namespace) -> int:
+    found = runtime.lane_tip(
+        str(Path(args.repo).expanduser().resolve()), args.branch, path=args.repo
+    )
+    _emit(args, found, f"{found.tip or 'no tip'} born at {found.birth or 'unknown'}")
+    return 0
+
+
+def edits(runtime: Runtime, args: argparse.Namespace) -> int:
+    checkout = str(Path(args.checkout).expanduser().resolve())
+    if args.lane:
+        files = runtime.lane_files(checkout, birth=args.birth, tip=args.tip)
+    else:
+        files = runtime.edits(checkout)
+    _emit(args, Edited(files=sorted(files)), "\n".join(sorted(files)) or "nothing changed")
+    return 0
+
+
+def lane_docs(runtime: Runtime, args: argparse.Namespace) -> int:
+    docs = runtime.lane_docs(str(Path(args.checkout).expanduser().resolve()), args.plans or [])
+    _emit(
+        args,
+        docs,
+        f"plan: {'found' if docs.plan is not None else 'none'}; {len(docs.reviews)} review records",
+    )
+    return 0
+
+
+def dispatches(runtime: Runtime, args: argparse.Namespace) -> int:
+    found = runtime.dispatches(str(Path(args.cwd).expanduser().resolve()))
+    if found is None:
+        print("null" if args.json else "no transcript ran there")
+        return 0
+    _emit(args, found, "\n".join(f"{d.role}  {d.session_id[:8]}" for d in found) or "none")
+    return 0
+
+
+def transcript_size(runtime: Runtime, args: argparse.Namespace) -> int:
+    size = runtime.transcript_size(runtime.session(args.short))
+    _emit(args, TranscriptSize(size=size), str(size) if size is not None else "no transcript")
+    return 0
+
+
 # ── machines (card #83) ────────────────────────────────────────────────
 
 
@@ -853,6 +910,24 @@ def register(sub: "argparse._SubParsersAction[argparse.ArgumentParser]") -> None
     p_ended.add_argument("short")
 
     parser("boots", "this machine's boots, newest first", boots)
+
+    p_worktrees = parser("worktrees", "every checkout of a repository on this machine", worktrees)
+    p_worktrees.add_argument("repo")
+    p_tip = parser("tip", "a lane branch's tip and birth on this machine", tip)
+    p_tip.add_argument("repo")
+    p_tip.add_argument("branch")
+    p_edits = parser("edits", "what a checkout on this machine has changed", edits)
+    p_edits.add_argument("checkout")
+    p_edits.add_argument("--lane", action="store_true", help="from the lane's birth to its tip")
+    p_edits.add_argument("--birth", help="the commit the lane was born at")
+    p_edits.add_argument("--tip", help="the lane's tip")
+    p_docs = parser("lane-docs", "a lane's own plan and review records", lane_docs)
+    p_docs.add_argument("checkout")
+    p_docs.add_argument("--plan", dest="plans", action="append", help="a candidate plan path")
+    p_dispatches = parser("dispatches", "what the sessions in a directory handed out", dispatches)
+    p_dispatches.add_argument("cwd")
+    p_size = parser("transcript-size", "how large a session's transcript is here", transcript_size)
+    p_size.add_argument("short")
 
     p_limits = parser("limits", "a slot's last limits reading on this machine", limits_read)
     p_limits.add_argument("slot")

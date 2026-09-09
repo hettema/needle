@@ -117,6 +117,7 @@ export interface ScopeState {
   pids: number[];
   home: string[];
   strangers: string[];
+  machine?: string;
 }
 
 export interface ScopeStop {

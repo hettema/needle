@@ -47,3 +47,7 @@ export interface SessionSlot {
   recorded_at: string;
   machine?: string;
 }
+
+export interface TranscriptSize {
+  size: number | null;
+}

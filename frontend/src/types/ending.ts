@@ -77,6 +77,7 @@ export interface Sighting {
   last_seen: string;
   released_at?: string | null;
   scoped_at?: string | null;
+  machine?: string;
 }
 
 export const MACHINE_ENDED: readonly Cause[] = ["its allowance ran out", "the connection came back", "the laptop went down", "the machine took back its account's memory", "the machine took back its memory", "the stronger model is back"];

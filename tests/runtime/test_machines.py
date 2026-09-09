@@ -91,15 +91,36 @@ def _reading(
 # ── the rule, pure ────────────────────────────────────────────────────
 
 
-def test_a_card_in_a_machines_own_record_runs_on_that_machine_even_when_it_is_full():
+def test_a_card_in_a_machines_own_record_runs_on_that_machine_or_nowhere():
     laptop = _machine("laptop", desktop=True, ground="/home/x/laptop-record")
     rented = _machine("rented", host="rented")
-    rooms = [
-        _reading(laptop, _room(1.0, full=True, sentence="the machine is full: 1.0 GB"), here=True),
-        _reading(rented, _room(24.0)),
-    ]
-    chosen, why = choose_machine(rooms, "/home/x/laptop-record")
+    chosen, why = choose_machine(
+        [_reading(laptop, _room(9.0), here=True), _reading(rented, _room(24.0))],
+        "/home/x/laptop-record",
+    )
     assert chosen is laptop and "records" in why
+    # Its ground full is #53's refusal with that machine's numbers, never a
+    # move to the machine with room (Codex's reading, pass 2).
+    full = _room(1.0, full=True, sentence="the machine is full: 1.0 GB available, 5 GB needed")
+    chosen, why = choose_machine(
+        [_reading(laptop, full, here=True), _reading(rented, _room(24.0))], "/home/x/laptop-record"
+    )
+    assert chosen is None and "1.0 GB available, 5 GB needed" in why and "nowhere else" in why
+
+
+def test_the_one_machine_a_board_knows_places_as_before_and_its_start_rechecks_the_floor(
+    machine_floor: Floor, store: Store, repo: Path
+):
+    only = _machine("DH", desktop=True)
+    full = _room(2.0, full=True, sentence="the machine is full: 2.0 GB available, 5 GB needed")
+    chosen, why = choose_machine([_reading(only, full, here=True)], "/p")
+    assert chosen is only, "the door and the start refuse a full machine in their own words"
+    machine_floor.set_memory(available_gb=2.0, swap_free_gb=8.0)
+    started = Runtime(store).start(
+        Start(repo=str(repo), card="card-2-full", brief="go", effort=Gate.HIGH, from_slot=None)
+    )
+    assert started.verdict == LaunchVerdict.DEAD
+    assert started.reason == "the machine is full: 2.0 GB available, 5 GB needed"
 
 
 def test_every_other_card_runs_on_the_horsepower_with_room_then_the_desktop_then_nowhere():
@@ -315,7 +336,10 @@ def test_a_lane_started_from_here_runs_on_the_rented_machine_and_the_board_recor
     assert command.startswith("exec ssh -t rented -- ")
     assert "tmux new-session -A -s needle-lane-card-7-far-away" in command
     assert f"claude attach {started.session.short_id}" in command
-    assert "needle-lane-card-7-far-away" in machine_floor.state()["tmux"]
+    # The multiplexer session exists on the rented machine, and only there.
+    held = machine_floor.state()["tmux"]
+    assert "needle-lane-card-7-far-away" in held[other.machine_id]
+    assert "needle-lane-card-7-far-away" not in held.get(machine_floor.machine_id, {})
 
     # Stopping it goes through the other machine's runtime and is proven there.
     stopped = runtime.stop(started.session.short_id)
@@ -440,3 +464,140 @@ def test_a_group_is_matched_to_a_session_on_its_own_machine_never_by_pid_alone()
     states = who_is_home([laptop_group, rented_group], [session("laptop", 4242)])
     assert [s.home for s in states] == [["s-laptop"], []]
     assert states[1].nobody_home and states[1].strangers == ["sleep 9"]
+    assert [s.machine for s in states] == ["laptop", "rented"]
+
+
+# ── the second pass's fixes (Codex's cold read, 2026-09-09) ──────────
+
+
+def test_a_machine_that_stops_answering_leaves_its_sessions_unread_never_ended(
+    two_machines, repo: Path, machine_floor: Floor
+):
+    runtime, _ = two_machines
+    started = runtime.start(
+        Start(repo=str(repo), card="card-8-unread", brief="go", effort=Gate.HIGH, from_slot=None)
+    )
+    assert started.session is not None
+    runtime.sessions()  # the pass that read it while it answered
+    machine_floor.host_down("rented")
+    rows = {s.short_id: s for s in runtime.sessions()}
+    # The last rows read stand, stamped, with their process; and the
+    # machine is named unread so nothing acts on an ending there.
+    assert rows[started.session.short_id].pid is not None
+    assert rows[started.session.short_id].machine == "rented"
+    assert "rented" in runtime.unread and "did not answer" in runtime.unread["rented"]
+    # No group of an unread machine is offered to the sweep.
+    assert all(group.machine != "rented" for group in runtime.scopes() or [])
+    machine_floor.host_down("rented", False)
+    runtime.sessions()
+    assert "rented" not in runtime.unread
+
+
+def test_a_launch_whose_reply_never_came_is_unconfirmed_not_dead(
+    two_machines, repo: Path, machine_floor: Floor, monkeypatch: pytest.MonkeyPatch
+):
+    from runtime import remote
+
+    runtime, _ = two_machines
+    monkeypatch.setattr(remote, "START_SECONDS", 0.5)
+    hosts = machine_floor.state()["hosts"]
+    hosts["rented"]["env"]["NEEDLE_FAKE_SLOW"] = "3"
+    machine_floor.update(hosts=hosts)
+    started = runtime.start(
+        Start(repo=str(repo), card="card-9-slow", brief="go", effort=Gate.HIGH, from_slot=None)
+    )
+    assert started.verdict == LaunchVerdict.UNCONFIRMED
+    assert started.reason is not None and "may have landed" in started.reason
+
+
+def test_a_lanes_worktree_edits_tip_and_documents_are_read_where_the_lane_lives(
+    two_machines, repo: Path, machine_floor: Floor, tmp_path: Path
+):
+    """The other machine's checkout is this one's, laid out the same, so the
+    proof is the routing: every read of a lane placed on the rented machine
+    goes over the wire, and a lane placed here does not."""
+    from tests.api.test_doors import git
+
+    runtime, _ = two_machines
+    git(repo, "init", "-q", "-b", "develop")
+    git(repo, "commit", "-q", "--allow-empty", "-m", "root")
+    lane = repo / ".claude" / "worktrees" / "card-3-far"
+    git(repo, "worktree", "add", "-q", "-b", "card-3-far", str(lane))
+    (lane / "docs" / "plans").mkdir(parents=True)
+    (lane / "docs" / "plans" / "p.md").write_text("# p\n\n### 1. one\nDone means: x.\n**Met:** y\n")
+    (lane / "docs" / "reviews").mkdir()
+    (lane / "docs" / "reviews" / "r.md").write_text("# r\n\n**Plan:** docs/plans/p.md\n")
+    # Read as the board would: the rented machine answers for its worktrees
+    # and the board remembers which machine each was seen on.
+    found = runtime.worktrees(str(repo))
+    assert str(lane) in found and found[str(lane)] == "card-3-far"
+    runtime._lane_machines[str(lane)] = "rented"
+    before = len(machine_floor.state()["ssh_calls"])
+    assert "docs/" in runtime.edits(str(lane))
+    tip = runtime.lane_tip(str(repo), "card-3-far", path=str(lane))
+    assert tip.tip is not None and tip.birth is not None
+    docs = runtime.lane_docs(str(lane), ["docs/plans/p.md"])
+    assert docs.plan is not None and "**Met:** y" in docs.plan
+    assert [r.path for r in docs.reviews] == ["docs/reviews/r.md"]
+    asked = [" ".join(c["words"]) for c in machine_floor.state()["ssh_calls"][before:]]
+    assert any("edits" in a for a in asked) and any("tip" in a for a in asked)
+    assert any("lane-docs" in a for a in asked)
+    # A lane on this machine is read here, with no wire.
+    runtime._lane_machines[str(lane)] = "laptop"
+    count = len(machine_floor.state()["ssh_calls"])
+    assert runtime.lane_docs(str(lane), ["docs/plans/p.md"]).plan is not None
+    assert len(machine_floor.state()["ssh_calls"]) == count
+
+
+def test_a_fresh_conversation_on_the_rented_machine_gets_its_own_multiplexer_session(
+    two_machines, repo: Path, machine_floor: Floor
+):
+    runtime, other = two_machines
+    first = runtime.discuss(repo=str(repo), card="card-4-talk", brief="hi", effort=None, what="#4")
+    second = runtime.discuss(repo=str(repo), card="card-4-talk", brief="hi", effort=None, what="#4")
+    held = machine_floor.state()["tmux"][other.machine_id]
+    names = [n for n in held if n.startswith("needle-board-discuss-card-4-talk-")]
+    assert len(names) == 2 and names[0] != names[1]
+    assert first[1][:8] in names[0] and second[1][:8] in names[1]
+    assert not any(h.get("attached") for h in held.values()), (
+        "a fresh conversation never reattaches"
+    )
+
+
+def test_a_machine_with_work_on_it_is_not_forgotten(two_machines, repo: Path, store: Store):
+    runtime, _ = two_machines
+    started = runtime.start(
+        Start(repo=str(repo), card="card-6-busy", brief="go", effort=Gate.HIGH, from_slot=None)
+    )
+    assert started.session is not None and started.session.machine == "rented"
+    with pytest.raises(StoreRefusal, match="still holds session records"):
+        store.remove_machine("rented")
+    # A name the board does not know routes nowhere, never here.
+    ghost = runtime.machine_named("moon")
+    assert ghost.host is None and not runtime.is_here(ghost)
+    assert runtime.boots("moon") == [] and runtime.limits("alpha", machine_name="moon") is None
+
+
+def test_the_days_mark_only_ever_goes_down(store: Store):
+    gb = 1024**3
+    assert store.note_high_water("laptop", available=10 * gb, total=16 * gb, at=NOW)
+    assert store.note_high_water("laptop", available=3 * gb, total=16 * gb, at=NOW)
+    # A writer that read 10 before the 3 landed and now writes 7 cannot
+    # raise the mark: the compare is the database's, not the reader's.
+    assert not store.note_high_water("laptop", available=7 * gb, total=16 * gb, at=NOW)
+    mark = store.high_water("laptop")
+    assert mark is not None and mark.least_available == 3 * gb
+
+
+def test_machines_json_carries_the_latest_timing_per_step(machine_floor: Floor, capsys):
+    import json
+
+    assert main(["machine", "add", "laptop", "--desktop"]) == 0
+    assert main(["machine", "timing", "laptop", "pytest", "900"]) == 0
+    assert main(["machine", "timing", "laptop", "pytest", "812.4"]) == 0
+    assert main(["machine", "timing", "laptop", "vitest", "14.2"]) == 0
+    capsys.readouterr()
+    assert main(["machines", "--json"]) == 0
+    rooms = json.loads(capsys.readouterr().out)
+    timings = {t["what"]: t["seconds"] for t in rooms[0]["timings"]}
+    assert timings == {"pytest": 812.4, "vitest": 14.2}

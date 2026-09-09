@@ -26,6 +26,7 @@ export interface MachineRoom {
   why: string | null;
   high_water: HighWater | null;
   killed: number;
+  timings?: Timing[];
 }
 
 export interface Timing {

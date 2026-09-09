@@ -93,6 +93,10 @@ class Sighting(BaseModel):
     scoped_at: datetime | None = None
     """When the loop put this session back in its lane's own space; one
     adoption per life, said once."""
+    machine: str = ""
+    """The machine the process was seen on (card #83), so a death is
+    counted against the machine that took it; empty for a sighting older
+    than the board knowing of more than one."""
 
 
 class Death(BaseModel):

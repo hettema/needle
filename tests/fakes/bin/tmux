@@ -1,9 +1,13 @@
 #!/usr/bin/env python3
 """A stand-in for `tmux` on the test floor (card #83): the multiplexer on
-the other machine. `new-session -A -s NAME …` records the session in
-`$NEEDLE_FAKE_STATE["tmux"]` and runs nothing (the command it would hold
-is recorded beside it); `has-session -t =NAME` answers whether one was
-recorded, as the real one does by exit code."""
+whichever machine runs it, told apart by the machine's identity in its
+environment (`NEEDLE_MACHINE_ID`, set per host by the fake `ssh`), so a
+session made on the rented floor is not found on the laptop's.
+`new-session -s NAME …` records the session under that machine in
+`$NEEDLE_FAKE_STATE["tmux"]` and runs nothing (the command it would hold is
+recorded beside it); without `-A` a name already held is refused, as the
+real one refuses; `has-session -t =NAME` answers whether one was recorded
+there, by exit code."""
 
 import fcntl
 import json
@@ -24,14 +28,20 @@ def main(argv: list[str]) -> int:
     with (STATE.parent / (STATE.name + ".lock")).open("a+") as lock:
         fcntl.flock(lock, fcntl.LOCK_EX)
         blob = json.loads(STATE.read_text(encoding="utf-8"))
-        held = blob.setdefault("tmux", {})
+        held = blob.setdefault("tmux", {}).setdefault(
+            os.environ.get("NEEDLE_MACHINE_ID", "unknown-machine"), {}
+        )
         verb = argv[0] if argv else ""
         if verb == "new-session":
             name = _flag(argv, "-s") or "0"
             command = argv[argv.index(name) + 1 :] if name in argv else []
-            held[name] = {"command": command, "attached": "-A" in argv}
-            STATE.write_text(json.dumps(blob, indent=1), encoding="utf-8")
-            code = 0
+            if name in held and "-A" not in argv:
+                print(f"duplicate session: {name}", file=sys.stderr)
+                code = 1
+            else:
+                held[name] = {"command": command, "attached": "-A" in argv}
+                STATE.write_text(json.dumps(blob, indent=1), encoding="utf-8")
+                code = 0
         elif verb == "has-session":
             wanted = (_flag(argv, "-t") or "").lstrip("=")
             code = 0 if wanted in held else 1

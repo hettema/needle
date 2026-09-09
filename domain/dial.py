@@ -110,6 +110,8 @@ class ScopeState(BaseModel):
     pids: list[int]
     home: list[str]
     strangers: list[str]
+    machine: str = ""
+    """The machine the group is on (card #83): the sweep stops it there."""
 
     @property
     def nobody_home(self) -> bool:

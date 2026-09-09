@@ -1011,6 +1011,7 @@ class Store:
             row.name = record.name
             row.path = record.path
             row.branch = record.branch
+            row.machine = record.machine
             row.birth = record.birth
             row.tip = record.tip
             row.first_seen = record.first_seen
@@ -1802,11 +1803,28 @@ class Store:
 
     def remove_machine(self, name: str) -> bool:
         """Forget a machine; its readings stay under its name. False when
-        no such machine is on the board."""
+        no such machine is on the board. Refused while a lane or a session
+        record still names it: forgetting a machine with work on it would
+        route that work's stops and reads to this machine (Codex's reading
+        of card #83's second pass)."""
         with self._session() as session, session.begin():
             row = session.get(MachineRow, name)
             if row is None:
                 return False
+            lanes = session.scalar(
+                select(LaneRow).where(LaneRow.machine == name, LaneRow.gone_at.is_(None))
+            )
+            if lanes is not None:
+                raise StoreRefusal(
+                    f"{name} still holds the lane of {lanes.project_slug} #{lanes.card_number}; "
+                    "fold or remove it first"
+                )
+            slot = session.scalar(select(SessionSlotRow).where(SessionSlotRow.machine == name))
+            if slot is not None:
+                raise StoreRefusal(
+                    f"{name} still holds session records ({slot.session_id[:8]}…); a machine with "
+                    "work on it is not forgotten"
+                )
             session.delete(row)
             return True
 
@@ -1817,21 +1835,42 @@ class Store:
 
     def note_high_water(self, machine: str, *, available: int, total: int, at: datetime) -> bool:
         """One reading of a machine's memory: kept when it is the day's
-        lowest, else dropped. True when the mark moved."""
+        lowest, else dropped. True when the mark moved. One conditional
+        update, never a read-compare-write: two servers reading the same
+        machine on the same day would otherwise raise the mark back
+        (Codex's reading of card #83's second pass, reproduced in memory)."""
         day = at.astimezone(UTC).date().isoformat()
-        with self._session() as session, session.begin():
-            row = session.get(HighWaterRow, (machine, day))
-            if row is None:
-                session.add(
-                    HighWaterRow(
-                        machine=machine, day=day, least_available=available, total=total, at=at
+        for _ in range(2):
+            with self._session() as session, session.begin():
+                moved = session.execute(
+                    text(
+                        "UPDATE high_water SET least_available = :available, total = :total, "
+                        "at = :at WHERE machine = :machine AND day = :day "
+                        "AND least_available > :available"
+                    ),
+                    {
+                        "available": available,
+                        "total": total,
+                        "at": at.astimezone(UTC).isoformat(),
+                        "machine": machine,
+                        "day": day,
+                    },
+                ).rowcount
+                if moved:
+                    return True
+                if session.get(HighWaterRow, (machine, day)) is not None:
+                    return False
+            try:
+                with self._session() as session, session.begin():
+                    session.add(
+                        HighWaterRow(
+                            machine=machine, day=day, least_available=available, total=total, at=at
+                        )
                     )
-                )
                 return True
-            if available < row.least_available:
-                row.least_available, row.total, row.at = available, total, at
-                return True
-            return False
+            except IntegrityError:
+                continue  # another writer made the day's row first: compare against it
+        return False
 
     def high_water(self, machine: str, *, since: datetime | None = None) -> HighWater | None:
         """The day on which the machine had the least memory available, over
@@ -1888,20 +1927,26 @@ class Store:
                     )
                 )
             )
+            ids = [d.session_id for d in rows]
             slots = {
                 r.session_id: r.machine
                 for r in session.scalars(
-                    select(SessionSlotRow).where(
-                        SessionSlotRow.session_id.in_([d.session_id for d in rows])
-                    )
+                    select(SessionSlotRow).where(SessionSlotRow.session_id.in_(ids))
                 )
+            }
+            seen = {
+                r.session_id: r.machine
+                for r in session.scalars(select(SightingRow).where(SightingRow.session_id.in_(ids)))
             }
         found: list[Death] = []
         for row in rows:
             when = row.last_alive_at or row.named_at
             if when < since:
                 continue
-            where = slots.get(row.session_id) or here
+            # The sighting says where the process was seen; the slot record
+            # where it was started; a record older than either is this
+            # machine's.
+            where = seen.get(row.session_id) or slots.get(row.session_id) or here
             if where == machine:
                 found.append(_death(row))
         return found
@@ -1957,6 +2002,7 @@ class Store:
                         last_seen=sighting.last_seen,
                         released_at=sighting.released_at,
                         scoped_at=sighting.scoped_at,
+                        machine=sighting.machine,
                     )
                 )
                 return
@@ -2719,6 +2765,7 @@ def _lane_record(row: LaneRow) -> LaneRecord:
         folded_at=row.folded_at,
         trunk_synced_at=row.trunk_synced_at,
         main_synced_at=row.main_synced_at,
+        machine=row.machine or "",
     )
 
 
@@ -3216,6 +3263,7 @@ def _sighting(row: SightingRow) -> Sighting:
         last_seen=row.last_seen,
         released_at=row.released_at,
         scoped_at=row.scoped_at,
+        machine=row.machine or "",
     )
 
 

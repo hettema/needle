@@ -1,12 +1,13 @@
 """The work runs where the horsepower is, and the board feels like it is on
 your laptop (card #83).
 
-Three tables and one column. The machines the board knows, one row each,
-registered like a project; the least memory each had available per day,
-which is the mark the plan's loop reads to decide 32 or 64 GB; the build
-timings measured by hand on each machine; and, on the runtime's record of
-where a session runs, which machine it was started on, so a lane the system
-killed is counted against the machine that killed it.
+Three tables and three columns. The machines the board knows, one row
+each, registered like a project; the least memory each had available per
+day, which is the mark the plan's loop reads to decide 32 or 64 GB; the
+build timings measured by hand on each machine; and which machine a
+session was started on, was seen alive on, and a lane's worktree is on —
+so a lane the system killed is counted against the machine that killed it,
+and a lane's edits and documents are read where they are.
 
 Revision ID: 0017
 Revises: 0016
@@ -50,14 +51,16 @@ def upgrade() -> None:
         sa.Column("at", sa.String(32), nullable=False),
     )
     op.create_index("ix_timings_machine", "timings", ["machine", "what"])
-    op.add_column(
-        "session_slots", sa.Column("machine", sa.String(40), nullable=False, server_default="")
-    )
+    for table in ("session_slots", "sightings", "lanes"):
+        op.add_column(
+            table, sa.Column("machine", sa.String(40), nullable=False, server_default="")
+        )
 
 
 def downgrade() -> None:
-    with op.batch_alter_table("session_slots") as batch:
-        batch.drop_column("machine")
+    for table in ("lanes", "sightings", "session_slots"):
+        with op.batch_alter_table(table) as batch:
+            batch.drop_column("machine")
     op.drop_index("ix_timings_machine", table_name="timings")
     op.drop_table("timings")
     op.drop_table("high_water")

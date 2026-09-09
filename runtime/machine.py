@@ -88,11 +88,16 @@ def control_path() -> Path:
 
 
 def remote_argv(host: str, line: str) -> list[str]:
-    """`ssh <host> -- bash -lc '<line>'`. A login shell, because the tools
-    the other machine runs `needle` with — `uv` and the rest of mise's
-    shims — are on the PATH its profile sets, and sshd's own PATH has none
-    of them (exit 127, the reading of 2026-09-05 on the signal reader's
-    login shell)."""
+    """`ssh <host> -- 'bash -lc <line>'`, the command as ONE argument. `ssh`
+    joins its command words with spaces and hands the string to the other
+    side's shell, so `bash`, `-lc` and the line as three words would reach
+    that shell as `bash -lc needle sessions --json`, which runs `needle`
+    alone (Codex's reading of card #83's second pass, and shlex's); the
+    line is quoted once for that shell here. A login shell, because the
+    tools the other machine runs `needle` with — `uv` and the rest of
+    mise's shims — are on the PATH its profile sets, and sshd's own PATH
+    has none of them (exit 127, the reading of 2026-09-05 on the signal
+    reader's login shell)."""
     return [
         which("ssh"),
         *SSH_OPTIONS,
@@ -104,9 +109,7 @@ def remote_argv(host: str, line: str) -> list[str]:
         f"ControlPath={control_path()}",
         host,
         "--",
-        "bash",
-        "-lc",
-        line,
+        shlex.join(["bash", "-lc", line]),
     ]
 
 

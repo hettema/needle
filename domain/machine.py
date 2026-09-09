@@ -90,6 +90,8 @@ class MachineRoom(BaseModel):
     """The highest memory use the board has seen on it, over the loop's window."""
     killed: int
     """Lanes the system killed on it over the loop's window."""
+    timings: list[Timing] = []
+    """The latest measured build time per step on it (the plan's item 5)."""
 
 
 def find_ground(machines: list[Machine], repo: str) -> Machine | None:
@@ -111,8 +113,18 @@ def choose_machine(rooms: list[MachineRoom], repo: str) -> tuple[Machine | None,
     machines = [r.machine for r in rooms]
     ground = find_ground(machines, repo)
     if ground is not None:
+        reading = next(r for r in rooms if r.machine is ground)
+        if reading.room is not None and reading.room.full:
+            # Its own cards run nowhere else, so a full ground is #53's
+            # refusal with that machine's numbers, never a move.
+            return None, (
+                f"{ground.name} is the machine this project records and it is full "
+                f"({reading.room.sentence or 'full'}); its cards run nowhere else"
+            )
         return ground, f"{ground.name} is the machine this project records, so its cards run there"
     if len(rooms) == 1:
+        # One machine places as every board did before this card; its room
+        # is the door's and the start's to refuse, in the words they had.
         only = rooms[0]
         return only.machine, f"{only.machine.name} is the one machine the board knows"
 

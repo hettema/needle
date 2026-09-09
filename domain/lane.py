@@ -70,6 +70,50 @@ class LaneRecord(BaseModel):
     folded_at: datetime | None
     trunk_synced_at: datetime | None
     main_synced_at: datetime | None
+    machine: str = ""
+    """The machine the worktree is on (card #83): where its edits, its
+    tip and its documents are read. Empty for a record older than the
+    board knowing of more than one, which is this machine's."""
+
+
+class Checkouts(BaseModel):
+    """Every checkout of a repository on one machine, path → branch, as the
+    machine answers it over the wire (card #83)."""
+
+    checkouts: dict[str, str | None]
+
+
+class LaneTip(BaseModel):
+    """A lane branch's tip and birth on the machine that holds it (card #83)."""
+
+    tip: str | None
+    birth: str | None
+
+
+class Edited(BaseModel):
+    """The files a checkout has changed, as its machine answers (card #83)."""
+
+    files: list[str]
+
+
+class LaneDocs(BaseModel):
+    """A lane's own copies of the documents the board reads for its
+    progress (plan 13), as the lane's machine answers them over the wire
+    (card #83): the plan's text where it stands, and every review record."""
+
+    plan: str | None
+    """The plan as the worktree carries it, live or under done/; None when
+    neither is there."""
+    reviews: list["ReviewText"]
+    """Every record under the worktree's docs/reviews/."""
+
+
+class ReviewText(BaseModel):
+    """One review record as a lane's worktree carries it."""
+
+    path: str
+    """Relative to the worktree."""
+    text: str
 
 
 class Discussion(BaseModel):

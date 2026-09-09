@@ -15,6 +15,10 @@ export type LaneState = (typeof LANE_STATE_VALUES)[number];
 export const START_STATE_VALUES = ["free", "shares", "waits", "no gate", "nowhere to run", "lane exists", "elsewhere", "unread", "title fails"] as const;
 export type StartState = (typeof START_STATE_VALUES)[number];
 
+export interface Checkouts {
+  checkouts: Record<string, string | null>;
+}
+
 export interface Collision {
   verdict: CollisionVerdict;
   sentence: string;
@@ -69,6 +73,10 @@ export interface Doors {
   signal: Door;
 }
 
+export interface Edited {
+  files: string[];
+}
+
 export interface Lane {
   card_number: number;
   name: string;
@@ -96,6 +104,11 @@ export interface Lane {
   machine?: string | null;
 }
 
+export interface LaneDocs {
+  plan: string | null;
+  reviews: ReviewText[];
+}
+
 export interface LaneRecord {
   project: string;
   card_number: number;
@@ -110,6 +123,7 @@ export interface LaneRecord {
   folded_at: string | null;
   trunk_synced_at: string | null;
   main_synced_at: string | null;
+  machine?: string;
 }
 
 export interface LaneSnapshot {
@@ -117,6 +131,11 @@ export interface LaneSnapshot {
   doors: Record<string, Doors>;
   conversations: Conversation[];
   read_at: string;
+}
+
+export interface LaneTip {
+  tip: string | null;
+  birth: string | null;
 }
 
 export interface Progress {
@@ -136,6 +155,11 @@ export interface Readiness {
   cards: number[];
   files: string[];
   waits: Wait[];
+}
+
+export interface ReviewText {
+  path: string;
+  text: string;
 }
 
 export interface Wait {

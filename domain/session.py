@@ -91,6 +91,13 @@ class Session(BaseModel):
     by a runtime that has not been told its own name."""
 
 
+class TranscriptSize(BaseModel):
+    """How large a session's transcript is on the machine that holds it
+    (card #83); None when there is none."""
+
+    size: int | None
+
+
 class SessionSlot(BaseModel):
     """The runtime's own record of where a session it started runs. Only the
     thing that started or moved a session knows; everything else reads this."""

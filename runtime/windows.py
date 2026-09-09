@@ -172,22 +172,31 @@ TMUX_PREFIX = "needle-"
 name, so the proof reads the same word the compositor's app-id carries."""
 
 
-def tmux_name(kind: WindowKind, card: str) -> str:
-    return TMUX_PREFIX + app_id_for(kind, card)[len(APP_ID_PREFIX) :]
+def tmux_name(kind: WindowKind, card: str, tag: str = "") -> str:
+    """The multiplexer session's name: the window's own for a viewer into a
+    lane (one per lane, reattached after a drop), and that plus a tag of
+    its own for a fresh conversation, so a second Discuss on a card never
+    lands in the first one's still-live session (Codex's reading of card
+    #83's second pass)."""
+    base = TMUX_PREFIX + app_id_for(kind, card)[len(APP_ID_PREFIX) :]
+    return f"{base}-{tag}" if tag else base
 
 
-def via_tmux(via: Machine, name: str, command: str) -> str:
+def via_tmux(via: Machine, name: str, command: str, *, reattach: bool) -> str:
     """The desktop's terminal command for a session on another machine
-    (card #83, item 4): `ssh -t` to that machine and, there, attach to — or
-    make — the multiplexer session named for the window, running `command`
-    inside it. The multiplexer is what makes the tunnel's drop a viewer's
-    end and never the session's: a laptop that sleeps loses the terminal,
-    and `-A` gives it the same session back. Quoted twice on purpose: once
+    (card #83, item 4): `ssh -t` to that machine and, there, make the
+    multiplexer session named for the window, running `command` inside it.
+    The multiplexer is what makes the tunnel's drop a viewer's end and never
+    the session's: a laptop that sleeps loses the terminal. A viewer into a
+    lane reattaches (`-A`) to the session it had; a fresh conversation
+    never does — its name is its own, and a name already held is refused
+    by the multiplexer, loud in the terminal. Quoted twice on purpose: once
     for the other machine's shell, which `ssh` hands the line to whole, and
     once for the desktop's, which reads the launcher's `bash -lc` string."""
     if via.host is None:
         raise WindowRefused(f"{via.name} has no host the desktop can reach it by")
-    remote = shlex.join(["tmux", "new-session", "-A", "-s", name, "bash", "-lc", command])
+    flags = ["-A"] if reattach else []
+    remote = shlex.join(["tmux", "new-session", *flags, "-s", name, "bash", "-lc", command])
     return f"exec ssh -t {shlex.quote(via.host)} -- {shlex.quote(remote)}"
 
 
@@ -217,12 +226,17 @@ def _prove_attached(proof: str, deadline: float) -> None:
     )
 
 
-def look_command(session: Session, placement: Placement) -> tuple[str, str]:
+def look_command(
+    session: Session, placement: Placement, *, size: int | None = None
+) -> tuple[str, str]:
     """A fresh session in the worktree with the transcript as context, and
     the banner that is its first line. Above the resume limit the transcript
-    is named in the brief rather than loaded."""
+    is named in the brief rather than loaded. `size` is the transcript's
+    size on the machine that holds it; read here when the caller gives
+    none, which is right only for a session on this machine (card #83)."""
     home = session.worktree or session.cwd
-    size = machine.transcript_size(home, session.session_id)
+    if size is None:
+        size = machine.transcript_size(home, session.session_id)
     banner = (
         f"Fresh session from the transcript of {session.short_id} ({session.name}) — "
         f"{rung_words(placement.model, placement.slot)}. Closing this "
@@ -319,10 +333,12 @@ def open_window(
     look: Placement | None,
     host: str | None = None,
     via: Machine | None = None,
+    size: int | None = None,
 ) -> Opened:
     """A window into the session on the desktop (`host` when the desktop is
     another machine), attached over the tunnel to a session on `via` when
-    the session runs on a machine that is not the desktop (card #83)."""
+    the session runs on a machine that is not the desktop (card #83);
+    `size` is the transcript's size where the session lives, for a Look."""
     reconcile(store, host=host)
     already = store.windows(session.session_id, open_only=True)
     if already:
@@ -343,17 +359,18 @@ def open_window(
         kind = kind or WindowKind.LANE
         command, banner, fresh = attach_command(session), None, False
         if via is not None:
-            command = via_tmux(via, tmux_name(kind, card), command)
+            command = via_tmux(via, tmux_name(kind, card), command, reattach=True)
     else:
         if look is None:
             raise WindowRefused(
                 f"{session.short_id} is live nowhere and the rule found no slot for a fresh session"
             )
         kind = kind or WindowKind.LOOK
-        banner, command = look_command(session, look)
+        banner, command = look_command(session, look, size=size)
         fresh = True
         if via is not None:
-            command = via_tmux(via, tmux_name(kind, card), command)
+            tag = f"{session.short_id}-{clock.now().strftime('%H%M%S')}"
+            command = via_tmux(via, tmux_name(kind, card, tag), command, reattach=False)
     return open_fresh(
         store,
         session_id=session.session_id,
@@ -363,5 +380,12 @@ def open_window(
         banner=banner,
         fresh=fresh,
         host=host,
-        proof=None if via is None else f"{via.host}\t{tmux_name(kind, card)}",
+        proof=None if via is None else f"{via.host}\t{_tmux_name_in(command)}",
     )
+
+
+def _tmux_name_in(command: str) -> str:
+    """The multiplexer session a `via_tmux` command names: read back from
+    the command so the proof asks for exactly what the terminal made."""
+    words = shlex.split(shlex.split(command)[-1])
+    return words[words.index("-s") + 1]

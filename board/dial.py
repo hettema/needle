@@ -262,7 +262,13 @@ def who_is_home(held: Sequence[ScopeHeld], sessions: Sequence[Session]) -> list[
         home = sorted({who for who in owner.values() if who is not None})
         strangers = [_head(scope.commands.get(p, "")) for p in scope.pids if owner[p] is None]
         states.append(
-            ScopeState(unit=scope.unit, pids=list(scope.pids), home=home, strangers=strangers)
+            ScopeState(
+                unit=scope.unit,
+                pids=list(scope.pids),
+                home=home,
+                strangers=strangers,
+                machine=scope.machine,
+            )
         )
     return states
 

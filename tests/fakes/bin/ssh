@@ -12,6 +12,7 @@ fakes are already first on PATH. Every call is recorded in `ssh_calls`."""
 import fcntl
 import json
 import os
+import shlex
 import subprocess
 import sys
 from pathlib import Path
@@ -67,16 +68,31 @@ def main(argv: list[str]) -> int:
         print(f"ssh: connect to host {host} port 22: Connection refused", file=sys.stderr)
         return UNREACHABLE
     env = {**os.environ, **laid.get("env", {})}
-    if words[:2] == ["bash", "-lc"] and len(words) == 3:
-        line = words[2]
+    # As the real `ssh` does: the command words are joined with spaces and
+    # the other side's shell parses the string — so a runtime that hands
+    # `bash -lc <line>` as three words is caught here, as it would be there.
+    line = " ".join(words)
+    parsed = shlex.split(line)
+    if parsed[:2] == ["bash", "-lc"] and len(parsed) == 3:
+        script = parsed[2]
+    elif parsed[:1] == ["bash"]:
+        print(f"fake ssh: the other side's shell would run {parsed!r}", file=sys.stderr)
+        return 127
     else:
-        line = " ".join(words)
+        script = line  # a plain command line, as a terminal's `ssh -t host -- tmux …` sends
     # The one file the door reads from the other machine at registration:
     # its identity, which on the floor is the host's own variable.
-    if line.strip() == "cat /etc/machine-id":
-        print(env.get("NEEDLE_MACHINE_ID", ""))
+    if script.strip() == "cat /etc/machine-id":
+        print(env.get("NEEDLE_MACHINE_ID", ""), file=sys.stdout)
         return 0
-    done = subprocess.run(["bash", "-c", line], env=env, check=False)
+    # A host laid slow answers late: what a stalled machine does to a deadline.
+    if env.get("NEEDLE_FAKE_SLOW"):
+        import time
+
+        time.sleep(float(env["NEEDLE_FAKE_SLOW"]))
+    # `-l` is dropped on purpose: a login shell would read this laptop's
+    # profile, which puts mise's real `claude` ahead of the stand-ins.
+    done = subprocess.run(["bash", "-c", script], env=env, check=False)
     return done.returncode
 
 

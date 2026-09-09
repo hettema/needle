@@ -81,7 +81,6 @@ from board.triage import already_ruled
 from board.word import compose, notes_word
 from domain.audit import AuditEntry, AuditKind
 from domain.board import MachineState, TrunkState
-from domain.machine import MachineRoom
 from domain.call import Call, CallOutcome
 from domain.card import Actor, Card, Place
 from domain.column import Column
@@ -111,6 +110,7 @@ from domain.lane import (
     Wait,
 )
 from domain.launch import LaunchVerdict, WindowlessStart
+from domain.machine import MachineRoom
 from domain.notice import Moment, Notice
 from domain.session import Session, SessionKind, SessionState
 from domain.signal import SessionWork, Signal, SignalKind, WindowlessSession
@@ -236,16 +236,17 @@ class Loops:
         self._lock = asyncio.Lock()
         self._tasks: list[asyncio.Task[None]] = []
         self._stop = asyncio.Event()
-        self._nobody_home: dict[str, datetime] = {}
-        """Groups found with nobody home and both guards holding, by unit,
-        and since when (card #99): the manager is asked to end one only
-        after `SWEEP_SECONDS` of such reads, and the clock starts again the
-        moment either guard fails."""
-        self._ending: dict[str, tuple[ScopeState, datetime]] = {}
+        self._nobody_home: dict[tuple[str, str], datetime] = {}
+        """Groups found with nobody home and both guards holding, by machine
+        and unit, and since when (card #99): the manager is asked to end
+        one only after `SWEEP_SECONDS` of such reads, and the clock starts
+        again the moment either guard fails. Keyed by the machine too since
+        card #83: the same unit name on two machines is two groups."""
+        self._ending: dict[tuple[str, str], tuple[ScopeState, datetime]] = {}
         """Groups the manager was asked to end, with what each held and when
         it was asked: the card is told only once the group is empty, and
         the manager is asked again if it is not after another window."""
-        self._sweep_said: set[str] = set()
+        self._sweep_said: set[tuple[str, str]] = set()
         """Groups whose refused stop was said on the card, once."""
         self._boots: dict[str, list[Boot]] = {}
         """Each machine's boots as the pass read them, by the board's name
@@ -259,8 +260,6 @@ class Loops:
         self._rooms: list[MachineRoom] = []
         """Every machine against the floor as the last read saw it (card
         #83): what places work between passes, and what the head shows."""
-        self._unit_machine: dict[str, str] = {}
-        """Which machine each group of ours was last read on, by unit."""
         self._parties: dict[tuple[str, int], set[str]] = {}
         """Per lane, the notes its card names: read with the plan's
         footprint, once per beat, so the word never reads a plan."""
@@ -483,7 +482,7 @@ class Loops:
         grows after the beat let it in is seen here before oomd sees it,
         and the head says which lane and how far; the dial's beat and the
         terminal read the machine through this one call."""
-        owners = {unit: (slug, number) for unit, (slug, number, _) in self._lanes_by_unit().items()}
+        owners = self._owners()
         # Every machine is read on every pass (card #83): the rooms place
         # the next card, the head shows each machine, and the day's
         # high-water mark is kept per machine. Every lane's scope carries
@@ -525,6 +524,19 @@ class Loops:
             if here is not None and here.room is not None
             else headroom(None, MEMORY_FLOOR_BYTES, now)
         )
+        # The head's word is the board's: full only when no machine has
+        # room, since that is when the beat takes nothing; the sentence
+        # names each full machine so the dial's refusal and its rule agree
+        # (Codex's reading of card #83's second pass).
+        others = [r for r in self._rooms if not r.here]
+        if room.full and any(r.room is not None and not r.room.full for r in others):
+            room = room.model_copy(update={"full": False, "sentence": None})
+        elif room.full and others:
+            said = [room.sentence or "full"] + [
+                f"{r.machine.name}: {r.room.sentence if r.room is not None else 'did not answer'}"
+                for r in others
+            ]
+            room = room.model_copy(update={"sentence": "; ".join(said)})
         self.live.set_headroom(room)
         return room
 
@@ -552,51 +564,56 @@ class Loops:
         held = self.runtime.scopes()
         if held is None:
             return
-        self._unit_machine.update({group.unit: group.machine for group in held})
         states = who_is_home(held, self.runtime.sessions())
         owners = self._lanes_by_unit()
         now = clock.now()
-        for unit, (state, asked_at) in list(self._ending.items()):
-            still = self.runtime.scope_pids(unit, machine_name=self._unit_machine.get(unit, ""))
+        for key, (state, asked_at) in list(self._ending.items()):
+            machine_name, unit = key
+            still = self.runtime.scope_pids(unit, machine_name=machine_name)
             if still is None:
                 continue  # the manager could not be asked: nothing is established
             if still:
                 if (now - asked_at).total_seconds() >= SWEEP_SECONDS:
-                    self.runtime.stop_scope(unit, machine_name=self._unit_machine.get(unit, ""))
-                    self._ending[unit] = (state, now)
+                    self.runtime.stop_scope(unit, machine_name=machine_name)
+                    self._ending[key] = (state, now)
                 continue
-            del self._ending[unit]
-            self._nobody_home.pop(unit, None)
-            self._sweep_said.discard(unit)
+            del self._ending[key]
+            self._nobody_home.pop(key, None)
+            self._sweep_said.discard(key)
             self._say_swept(owners.get(unit), unit, self._what_it_held(state, "Stopped"))
-        eligible: dict[str, ScopeState] = {}
+        eligible: dict[tuple[str, str], ScopeState] = {}
         for state in states:
             owner = owners.get(state.unit)
+            # The owner is alive only where the group is: a lane's session
+            # on the laptop does not keep a like-named group on the rented
+            # machine (Codex's reading of card #83's second pass).
             owner_alive = (
-                owner is not None and owner[2].session is not None and bool(owner[2].session.pid)
+                owner is not None
+                and owner[2].session is not None
+                and bool(owner[2].session.pid)
+                and owner[2].session.machine == state.machine
             )
             if state.nobody_home and not owner_alive:
-                eligible[state.unit] = state
-        for unit in list(self._nobody_home):
-            if unit not in eligible:
-                del self._nobody_home[unit]
-                self._sweep_said.discard(unit)
-        for unit, state in eligible.items():
-            if unit in self._ending:
+                eligible[(state.machine, state.unit)] = state
+        for key in list(self._nobody_home):
+            if key not in eligible:
+                del self._nobody_home[key]
+                self._sweep_said.discard(key)
+        for key, state in eligible.items():
+            if key in self._ending:
                 continue
-            since = self._nobody_home.setdefault(unit, now)
+            machine_name, unit = key
+            since = self._nobody_home.setdefault(key, now)
             if (now - since).total_seconds() < SWEEP_SECONDS:
                 continue
-            taken, words = self.runtime.stop_scope(
-                unit, machine_name=self._unit_machine.get(unit, "")
-            )
+            taken, words = self.runtime.stop_scope(unit, machine_name=machine_name)
             if taken:
-                self._ending[unit] = (state, now)
+                self._ending[key] = (state, now)
                 continue
-            self._nobody_home[unit] = now
-            if unit in self._sweep_said:
+            self._nobody_home[key] = now
+            if key in self._sweep_said:
                 continue
-            self._sweep_said.add(unit)
+            self._sweep_said.add(key)
             self._say_swept(
                 owners.get(unit),
                 unit,
@@ -620,6 +637,32 @@ class Loops:
             log.info("%s (%s names no card on any board)", said, unit)
             return
         self.live.note(owner[0], owner[1], AuditKind.STOPPED, Actor.MACHINE, said)
+
+    def _room_of(self, machine_name: str) -> Headroom:
+        """The room of the machine a session runs on, read fresh (card #83):
+        a lane comes back where its worktree is, so its admission is that
+        machine's floor — a full rented machine is not admitted because the
+        laptop has room, nor held because the laptop is full (Codex's
+        reading of the second pass)."""
+        rooms = self.runtime.rooms(owners=self._owners())
+        self._rooms = rooms
+        wanted = self.runtime.machine_named(machine_name).name
+        reading = next((r for r in rooms if r.machine.name == wanted), None)
+        if reading is None or reading.room is None:
+            return headroom(None, MEMORY_FLOOR_BYTES, clock.now())
+        return reading.room
+
+    def _owners(self) -> dict[str, tuple[str, int]]:
+        """Every lane with hands on, by the unit it was given at Start: what
+        the room reads by name and holds at the floor (plan 53, card #107)."""
+        found: dict[str, tuple[str, int]] = {}
+        for slug, live in self.live.projects.items():
+            if live.snapshot is None:
+                continue
+            for number, lane in live.snapshot.lanes.items():
+                if lane.state in HANDS_ON:
+                    found[launch.lane_unit(lane.name)] = (slug, number)
+        return found
 
     def _repo_of(self, session: Session) -> str | None:
         """The registered project a session works in, by its directory."""
@@ -827,8 +870,13 @@ class Loops:
     def _current_boot(self, machine_name: str = "") -> Boot | None:
         """The boot a machine is in now, by the board's name for it; an
         unnamed row's machine is this one (card #83)."""
-        boots = self._boots.get(machine_name) or self._boots.get(self.runtime.here().name, [])
-        return next((b for b in boots if b.index == 0), None)
+        if not machine_name:
+            machine_name = self.runtime.here().name
+        # A named machine with no boots read is unknown, never this
+        # machine's boot: a sighting stamped with the wrong boot would name
+        # a death "the laptop went down" that was nothing of the kind
+        # (Codex's reading of card #83's second pass).
+        return next((b for b in self._boots.get(machine_name, []) if b.index == 0), None)
 
     def _sightings(self, slug: str, lanes: dict[int, Lane], now: datetime) -> None:
         """Every session with a live process in a lane, seen on this pass
@@ -854,6 +902,7 @@ class Loops:
                     boot_id=boot.boot_id if boot is not None else None,
                     first_seen=now,
                     last_seen=now,
+                    machine=session.machine,
                 )
             )
 
@@ -886,7 +935,7 @@ class Loops:
             session = lane.session
             if lane.state != LaneState.ENDED or session is None or session.pid is not None:
                 continue
-            if lane.card_number in closed:
+            if lane.card_number in closed or session.machine in self.runtime.unread:
                 continue
             death = deaths.get(session.session_id)
             if death is not None and (
@@ -941,7 +990,8 @@ class Loops:
             if number is None:
                 continue
             record = records.get(number)
-            tip = self.runtime.branch_tip(project_path, branch) if branch else None
+            on = self.runtime.lane_machine(path).name
+            tip = self.runtime.branch_tip(project_path, branch, path=path) if branch else None
             if record is None:
                 record = LaneRecord(
                     project=slug,
@@ -957,6 +1007,7 @@ class Loops:
                     folded_at=None,
                     trunk_synced_at=None,
                     main_synced_at=None,
+                    machine=on,
                 )
             else:
                 record = record.model_copy(
@@ -967,11 +1018,15 @@ class Loops:
                         "tip": tip or record.tip,
                         "last_seen": now,
                         "gone_at": None,
+                        "machine": on,
                     }
                 )
             records[number] = record
         for number, record in list(records.items()):
-            if record.path not in worktrees and record.gone_at is None:
+            # A worktree on a machine whose sessions are unread is unread,
+            # not gone: the disk that wins is the disk that was read.
+            unread = record.machine in self.runtime.unread
+            if record.path not in worktrees and record.gone_at is None and not unread:
                 record = record.model_copy(update={"gone_at": now})
             if record.folded_at is None and record.tip:
                 folded = self.runtime.lane_folded(
@@ -1038,6 +1093,8 @@ class Loops:
                 self._settle_recovery(slug, number, in_flight, lane, now)
                 continue
             park = parks.get(number)
+            if session.machine in self.runtime.unread:
+                continue  # unread is not ended: nothing is brought back or parked
             interruption = self._interruption(lane, session, events)
             if interruption is None and park is None and session.wall is None:
                 continue
@@ -1118,7 +1175,7 @@ class Loops:
                         or changed
                     )
                     continue
-            room = self.headroom_now()
+            room = self._room_of(session.machine)
             if room.full:
                 # The park is the claim, written once by whichever process
                 # gets there first, and the stop follows it: a server that
@@ -1366,7 +1423,7 @@ class Loops:
         if park.waits_on == "clock":
             return None
         if park.waits_on == "floor":
-            room = self.headroom_now()
+            room = self._room_of(session.machine)
             if room.full:
                 if park.held_since is not None:
                     store.hold_park(park.id, None)
@@ -1688,6 +1745,7 @@ class Loops:
             if (
                 session is None
                 or session.pid is None
+                or session.machine in self.runtime.unread
                 or session.kind != SessionKind.BACKGROUND
                 or record is None
                 or record.folded_at is None
@@ -1920,35 +1978,16 @@ class Loops:
         document = live.index.find(card.link.kind, card.link.stem)
         if document is None:
             return None
-        root = Path(lane_path)
-        text: str | None = None
-        for candidate in (document.path, f"docs/plans/done/{document.stem}.md"):
-            try:
-                text = (root / candidate).read_text(encoding="utf-8", errors="replace")
-                break
-            except OSError:
-                continue
-        if text is None:
+        docs = self.runtime.lane_docs(
+            lane_path, [document.path, f"docs/plans/done/{document.stem}.md"]
+        )
+        if docs.plan is None:
             return None
-
-        def read_reviews() -> list[tuple[str, str]]:
-            records: list[tuple[str, str]] = []
-            for path in sorted((root / "docs" / "reviews").glob("*.md")):
-                if path.name == "README.md":
-                    continue
-                try:
-                    records.append(
-                        (
-                            str(path.relative_to(root)),
-                            path.read_text(encoding="utf-8", errors="replace"),
-                        )
-                    )
-                except OSError:
-                    continue
-            return records
-
         return progress_of(
-            text, plan_stem=document.stem, read_reviews=read_reviews, now=clock.now()
+            docs.plan,
+            plan_stem=document.stem,
+            read_reviews=lambda: [(r.path, r.text) for r in docs.reviews],
+            now=clock.now(),
         )
 
     def _doors(

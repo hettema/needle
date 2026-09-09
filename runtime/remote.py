@@ -23,17 +23,24 @@ from pydantic import BaseModel, ValidationError
 
 from domain.dial import Headroom, ScopeHeld, ScopePids, ScopeStop
 from domain.ending import Boot, Ended, Named, Sighting
+from domain.handout import Dispatch
+from domain.lane import Checkouts, Edited, LaneDocs, LaneTip
 from domain.launch import Launch, Rescoped, Start, Stopped, WindowlessStart
 from domain.machine import Machine
 from domain.notice import Notice, Said, Told
-from domain.session import Session
+from domain.session import Session, TranscriptSize
 from domain.slot import Expired, Limits, LimitsRead, Rung, Where
 from runtime import machine
 
 T = TypeVar("T", bound=BaseModel)
 
+READ_SECONDS = 20.0
+"""A read answers in a second; twenty bounds what a stalled machine can
+hold the board's beat for, per read (Codex's reading of card #83's second
+pass: the beat holds the door lock, so every remote read is a bound on
+the doors)."""
 VERB_SECONDS = 60.0
-"""A verb that walks the ladder can take a minute; a read answers in a second."""
+"""A verb that walks the ladder can take a minute."""
 START_SECONDS = 240.0
 """A start observes the launch for a while before it answers (the walk's
 verify window per rung, and there may be several rungs)."""
@@ -43,6 +50,12 @@ class RemoteRefused(Exception):
     """The other machine answered, and not with the value asked for: its
     `needle` is missing, refused the verb, or printed something that is not
     the shape. The words say which."""
+
+
+class RemoteTimeout(RemoteRefused):
+    """The other machine did not answer within the deadline. What it did is
+    unknown — a launch may have landed there — so a caller says unconfirmed,
+    never dead (Codex's reading of card #83's second pass)."""
 
 
 def _tried_argument(tried: list[Rung]) -> str:
@@ -65,7 +78,7 @@ class Remote:
         try:
             done = machine.run_line(host, self._line(argv), timeout=timeout)
         except machine.Timeout as slow:
-            raise RemoteRefused(
+            raise RemoteTimeout(
                 f"{self.machine.name} did not answer `needle {argv[0]}` within {timeout:.0f} s"
             ) from slow
         if done.returncode == 127:
@@ -83,7 +96,7 @@ class Remote:
             )
         return done.stdout
 
-    def _ask(self, argv: list[str], model: type[T], *, timeout: float = VERB_SECONDS) -> T:
+    def _ask(self, argv: list[str], model: type[T], *, timeout: float = READ_SECONDS) -> T:
         text = self._raw([*argv, "--json"], timeout=timeout)
         try:
             return model.model_validate_json(text)
@@ -95,7 +108,7 @@ class Remote:
             ) from wrong
 
     def _ask_list(self, argv: list[str], model: type[T]) -> list[T]:
-        text = self._raw([*argv, "--json"])
+        text = self._raw([*argv, "--json"], timeout=READ_SECONDS)
         try:
             blob = json.loads(text)
             return [model.model_validate(item) for item in blob]
@@ -146,6 +159,45 @@ class Remote:
             argv += ["--sighting", sighting.model_dump_json()]
         return self._ask(argv, Named)
 
+    # ── a lane's ground: its worktree, its edits, its documents ────────
+
+    def worktrees(self, repo: str) -> dict[str, str | None]:
+        return self._ask(["worktrees", repo], Checkouts).checkouts
+
+    def tip(self, repo: str, branch: str) -> LaneTip:
+        return self._ask(["tip", repo, branch], LaneTip)
+
+    def edits(self, checkout: str, *, birth: str | None = None, tip: str | None = None) -> set[str]:
+        argv = ["edits", checkout]
+        if birth is not None or tip is not None:
+            argv.append("--lane")
+        if birth is not None:
+            argv += ["--birth", birth]
+        if tip is not None:
+            argv += ["--tip", tip]
+        return set(self._ask(argv, Edited).files)
+
+    def lane_docs(self, checkout: str, candidates: list[str]) -> LaneDocs:
+        argv = ["lane-docs", checkout]
+        for candidate in candidates:
+            argv += ["--plan", candidate]
+        return self._ask(argv, LaneDocs)
+
+    def dispatches(self, cwd: str) -> list[Dispatch] | None:
+        text = self._raw(["dispatches", cwd, "--json"], timeout=READ_SECONDS)
+        if text.strip() == "null":
+            return None
+        try:
+            return [Dispatch.model_validate(item) for item in json.loads(text)]
+        except (json.JSONDecodeError, ValidationError, TypeError) as wrong:
+            raise RemoteRefused(
+                f"{self.machine.name} answered `needle dispatches` with something that is not a "
+                f"list of Dispatch: {str(wrong)[:200]}"
+            ) from wrong
+
+    def transcript_size(self, short_id: str) -> int | None:
+        return self._ask(["transcript-size", short_id], TranscriptSize).size
+
     # ── acting ─────────────────────────────────────────────────────────
 
     def start(self, request: Start | WindowlessStart) -> Launch:
@@ -166,7 +218,7 @@ class Remote:
 
     def stop(self, short_id: str, *, keep_handoff: bool) -> Stopped:
         argv = ["stop", short_id, *(["--keep-handoff"] if keep_handoff else [])]
-        return self._ask(argv, Stopped, timeout=120.0)
+        return self._ask(argv, Stopped, timeout=VERB_SECONDS)
 
     def move(self, short_id: str, to_slot: str | None) -> Launch:
         argv = ["move", short_id, *(["--to", to_slot] if to_slot else [])]
@@ -193,7 +245,7 @@ class Remote:
         return self._ask(argv, Launch, timeout=START_SECONDS)
 
     def rescope(self, short_id: str, card: str) -> Rescoped:
-        return self._ask(["rescope", short_id, card], Rescoped)
+        return self._ask(["rescope", short_id, card], Rescoped, timeout=VERB_SECONDS)
 
     def stop_scope(self, unit: str) -> ScopeStop:
         return self._ask(["scopes", "--stop", unit], ScopeStop)

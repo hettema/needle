@@ -21,8 +21,9 @@ from domain.dial import MEMORY_FLOOR_BYTES, Headroom, Meminfo, ScopeHeld, ScopeM
 from domain.ending import Boot, Cause, Named, Sighting
 from domain.gate import Gate
 from domain.handout import Dispatch
-from domain.launch import Launch, Rescoped, Rescue, Start, Stopped, WindowlessStart
-from domain.machine import Machine, MachineRoom, choose_machine
+from domain.lane import LaneDocs, LaneTip, ReviewText
+from domain.launch import Launch, LaunchVerdict, Rescoped, Rescue, Start, Stopped, WindowlessStart
+from domain.machine import Machine, MachineRoom, Timing, choose_machine
 from domain.notice import Notice, Told
 from domain.session import Session, SessionKind, SessionSlot
 from domain.signal import Signal
@@ -50,7 +51,7 @@ from runtime import (
     transcripts,
     windows,
 )
-from runtime.remote import Remote, RemoteRefused
+from runtime.remote import Remote, RemoteRefused, RemoteTimeout
 
 log = logging.getLogger("needle.runtime")
 
@@ -91,6 +92,18 @@ class Ambiguous(NoSuchSession):
 class Runtime:
     def __init__(self, store: Store):
         self.store = store
+        self.unread: dict[str, str] = {}
+        """The machines whose sessions the last read could not reach, by
+        name, with the transport's words (card #83): a session on one is
+        unread, never ended, and nothing that acts on an ending — a death
+        named, a lane released, a group swept — acts on it."""
+        self._last_rows: dict[str, list[Session]] = {}
+        """Each other machine's rows as last read, so an unreachable
+        machine's lanes keep their last known state on the face."""
+        self._lane_machines: dict[str, str] = {}
+        """Which machine each worktree was last seen on, by path: what
+        routes a lane's edits, tip and documents to the machine that has
+        them."""
 
     # ── reading ────────────────────────────────────────────────────────
 
@@ -132,7 +145,7 @@ class Runtime:
         return next(m for m in self.machines() if m.machine_id == own)
 
     def is_here(self, m: Machine) -> bool:
-        return m.machine_id == machine.machine_id()
+        return bool(m.machine_id) and m.machine_id == machine.machine_id()
 
     def desktop(self) -> Machine:
         """The machine with the owner's screen: the registered desktop, else
@@ -146,9 +159,30 @@ class Runtime:
         return None if self.is_here(desktop) else desktop.host
 
     def machine_named(self, name: str) -> Machine:
-        """The machine a row names; an empty or unknown name is this one,
-        because every row written before this card was this machine's."""
-        return next((m for m in self.machines() if m.name == name), self.here())
+        """The machine a row names. An empty name is this one, because every
+        row written before this card was this machine's; a name the board
+        no longer knows is a machine with no host — everything routed to it
+        answers unreachable, by that name, and nothing runs here in its
+        stead (Codex's reading of card #83's second pass)."""
+        if not name:
+            return self.here()
+        found = next((m for m in self.machines() if m.name == name), None)
+        if found is not None:
+            return found
+        return Machine(
+            name=name,
+            machine_id="",
+            host=None,
+            desktop=False,
+            ground=None,
+            command=machine.needle_command(),
+            added_at=_EPOCH,
+        )
+
+    def lane_machine(self, path: str) -> Machine:
+        """The machine a worktree was last seen on, by its path; this one
+        when no read has placed it."""
+        return self.machine_named(self._lane_machines.get(path, ""))
 
     def machine_of(self, session: Session) -> Machine:
         return self.machine_named(session.machine)
@@ -194,9 +228,14 @@ class Runtime:
         it first (card #107), and the reading says which. `owners` names
         the card each unit is, when the caller (the board's loop) knows."""
         try:
-            units = machine.units_named(launch.SESSION_UNIT_PREFIX)
+            units: set[str] | None = set(machine.units_named(launch.SESSION_UNIT_PREFIX))
         except (OSError, machine.Timeout, machine.CommandMissing):
             units = None
+        # Every lane with hands on is asked for by the name it was given at
+        # Start, whether or not the manager lists it (plan 53, item 1): a
+        # scope with no value is not a lane, and the read is what says so.
+        if units is not None and owners:
+            units |= set(owners)
         marked = self.hold_scopes_at(sorted(units), MEMORY_FLOOR_BYTES) if hold and units else []
         held = self.scope_memory(sorted(units)) if units else {}
         named = owners or {}
@@ -238,6 +277,9 @@ class Runtime:
                     room = self._remote(m).room(hold=hold)
                 except _UNREACHABLE as error:
                     why = str(error)
+            latest: dict[str, Timing] = {}
+            for timing in self.store.timings(m.name):
+                latest[timing.what] = timing
             found.append(
                 MachineRoom(
                     machine=m,
@@ -252,6 +294,7 @@ class Runtime:
                             m.name, since=now - timedelta(hours=KILLED_HOURS), here=here.name
                         )
                     ),
+                    timings=sorted(latest.values(), key=lambda t: t.what),
                 )
             )
         return found
@@ -304,11 +347,19 @@ class Runtime:
             if self.is_here(m):
                 continue
             try:
-                rows += [
+                read = [
                     r.model_copy(update={"machine": m.name}) for r in self._remote(m).sessions()
                 ]
             except _UNREACHABLE as error:
+                # Unread is not ended: the last rows stand, and the machine
+                # is named unread so nothing acts on an ending there.
                 log.warning("the sessions on %s could not be read: %s", m.name, error)
+                self.unread[m.name] = str(error)
+                rows += self._last_rows.get(m.name, [])
+                continue
+            self.unread.pop(m.name, None)
+            self._last_rows[m.name] = read
+            rows += read
         rows = registry.merge(rows)
         # With no compositor to ask, the windows' state stays as last recorded.
         with contextlib.suppress(windows.WindowRefused):
@@ -396,9 +447,37 @@ class Runtime:
         if chosen is None:
             return launch.dead(request.card, [], why, None)
         if self.is_here(chosen):
+            full = self._full_here()
+            if full is not None:
+                return launch.dead(request.card, [], full, None)
             return self._stamped(chosen, launch.start(self.store, request), request.card)
+        return self._started_elsewhere(chosen, request)
+
+    def _full_here(self) -> str | None:
+        """This machine's room read at the moment of a launch, in the head's
+        words when it is full: the machine a card was placed on rechecks its
+        own floor before it launches, since room consumed between the
+        choice and the launch — or a start asked of it directly — is not
+        the chooser's to know (Codex's reading of card #83's second pass)."""
+        room = self.room()
+        return room.sentence if room.full else None
+
+    def _started_elsewhere(self, chosen: Machine, request: Start | WindowlessStart) -> Launch:
+        """A start on another machine, as the board records it. A reply that
+        never came is unconfirmed, not dead: the launch may have landed
+        there, and the next read of that machine's sessions shows it."""
         try:
             return self._stamped(chosen, self._remote(chosen).start(request), request.card)
+        except RemoteTimeout as slow:
+            return Launch(
+                card=request.card,
+                verdict=LaunchVerdict.UNCONFIRMED,
+                session=None,
+                placement=None,
+                scope=None,
+                attempts=[],
+                reason=f"{chosen.name} did not answer in time; the launch may have landed: {slow}",
+            )
         except _UNREACHABLE as error:
             return launch.dead(request.card, [], f"{chosen.name} could not start it: {error}", None)
 
@@ -412,11 +491,11 @@ class Runtime:
         if chosen is None:
             return launch.dead(request.card, [], why, None)
         if self.is_here(chosen):
+            full = self._full_here()
+            if full is not None:
+                return launch.dead(request.card, [], full, None)
             return self._stamped(chosen, launch.windowless(self.store, request), request.card)
-        try:
-            return self._stamped(chosen, self._remote(chosen).start(request), request.card)
-        except _UNREACHABLE as error:
-            return launch.dead(request.card, [], f"{chosen.name} could not start it: {error}", None)
+        return self._started_elsewhere(chosen, request)
 
     def move(self, ref: str, to_slot: str | None, *, reason: str | None = None) -> Launch:
         session = self.session(ref)
@@ -526,8 +605,10 @@ class Runtime:
         card = record.card if record else session.name
         on = self.machine_of(session)
         look: Placement | None = None
+        size: int | None = None
         if session.pid is None:
             look = self._where_on(on, session.slot, [], cached=False).placement
+            size = self.transcript_size(session)
         # The window opens on the desktop; it attaches over the tunnel when
         # the session's machine is not the desktop (card #83, item 4).
         via = None if on.machine_id == self.desktop().machine_id else on
@@ -539,6 +620,7 @@ class Runtime:
             look=look,
             host=self.desktop_host(),
             via=via,
+            size=size,
         )
 
     def focus(self, ref: str) -> Focused:
@@ -672,6 +754,21 @@ class Runtime:
         if isinstance(session, tuple):
             session_id, cwd = session
             return launch.resume_transcript(self.store, session_id, cwd, brief=brief, name=name)
+        on = self.machine_of(session)
+        if not self.is_here(on):
+            # The note and the answer are files on this machine; a colleague
+            # there cannot read the one or write the other yet, and calling
+            # it through this machine's launcher would act on this machine's
+            # processes and registries (Codex's reading of card #83's second
+            # pass). Refused by name until the call travels (item 4's live
+            # read names it).
+            return launch.dead(
+                session.name,
+                [],
+                f"{session.short_id} runs on {on.name}; a colleague on another machine cannot "
+                "be called from here yet",
+                None,
+            )
         return launch.call(self.store, session, brief=brief, name=name, answer=answer)
 
     def ask(
@@ -741,8 +838,8 @@ class Runtime:
         on = self.machine_named(where.placement.machine)
         proof: str | None = None
         if on.machine_id != self.desktop().machine_id:
-            name = windows.tmux_name(kind, card)
-            command = windows.via_tmux(on, name, command)
+            name = windows.tmux_name(kind, card, session_id[:8])
+            command = windows.via_tmux(on, name, command, reattach=False)
             proof = f"{on.host}\t{name}"
         opened = windows.open_fresh(
             self.store,
@@ -766,24 +863,93 @@ class Runtime:
     # ── git, signals, reasons ──────────────────────────────────────────
 
     def worktrees(self, repo: str) -> dict[str, str | None]:
-        return git.worktrees(repo)
+        """Every checkout of the repository on every machine, path → branch
+        (card #83): the lanes live beside each machine's clone, laid out the
+        same, and the board remembers which machine each was seen on so its
+        edits, its tip and its documents are read there. A machine that
+        does not answer keeps the paths it was last seen with."""
+        found = dict(git.worktrees(repo))
+        here = self.here().name
+        for path in found:
+            self._lane_machines[path] = here
+        for m in self.machines():
+            if self.is_here(m):
+                continue
+            try:
+                theirs = self._remote(m).worktrees(repo)
+            except _UNREACHABLE as error:
+                log.warning("the checkouts on %s could not be read: %s", m.name, error)
+                theirs = {
+                    path: None
+                    for path, name in self._lane_machines.items()
+                    if name == m.name and path not in found
+                }
+            for path, branch in theirs.items():
+                if path in found and self._lane_machines.get(path) == here:
+                    # The main checkout is on both; a lane is on one.
+                    continue
+                found[path] = branch
+                self._lane_machines[path] = m.name
+        return found
+
+    def branch_tip(self, repo: str, branch: str, *, path: str | None = None) -> str | None:
+        """The branch's tip on the machine that holds the worktree named by
+        `path`, else here."""
+        on = self.lane_machine(path) if path else self.here()
+        if self.is_here(on):
+            return git.head_of(repo, branch)
+        try:
+            return self._remote(on).tip(repo, branch).tip
+        except _UNREACHABLE:
+            return None
+
+    def lane_tip(self, repo: str, branch: str, *, path: str) -> LaneTip:
+        """The tip and the birth of a lane's branch where it lives."""
+        on = self.lane_machine(path)
+        if self.is_here(on):
+            return LaneTip(tip=git.head_of(repo, branch), birth=git.branch_birth(repo, branch))
+        try:
+            return self._remote(on).tip(repo, branch)
+        except _UNREACHABLE:
+            return LaneTip(tip=None, birth=None)
 
     def edits(self, checkout: str) -> set[str]:
-        return git.changed_files(checkout)
+        on = self.lane_machine(checkout)
+        if self.is_here(on):
+            return git.changed_files(checkout)
+        try:
+            return self._remote(on).edits(checkout)
+        except _UNREACHABLE:
+            return set()
 
     def lane_files(self, checkout: str, *, birth: str | None, tip: str | None) -> set[str]:
         """Every file a lane touched from its birth to its tip, plus what its
         worktree still holds uncommitted: what the close reads to tell a code
         lane from a docs-only one (plan 11, item 1). Read after the fold, the
         diff against the trunk is empty, so the lane's own birth is the base."""
-        return git.lane_files(checkout, birth=birth, tip=tip)
+        on = self.lane_machine(checkout)
+        if self.is_here(on):
+            return git.lane_files(checkout, birth=birth, tip=tip)
+        try:
+            return self._remote(on).edits(checkout, birth=birth, tip=tip or "HEAD")
+        except _UNREACHABLE:
+            return set()
+
+    def lane_docs(self, checkout: str, candidates: list[str]) -> LaneDocs:
+        """The lane's own copies of its plan (the first of `candidates` that
+        exists, relative to the worktree) and every review record under its
+        docs/reviews/, read on the machine that holds the worktree."""
+        on = self.lane_machine(checkout)
+        if self.is_here(on):
+            return read_lane_docs(checkout, candidates)
+        try:
+            return self._remote(on).lane_docs(checkout, candidates)
+        except _UNREACHABLE:
+            return LaneDocs(plan=None, reviews=[])
 
     def reverted(self, repo: str, tip: str) -> bool:
         """Whether a commit on the trunk says it reverts the lane's tip."""
         return git.reverted(repo, tip)
-
-    def branch_tip(self, repo: str, branch: str) -> str | None:
-        return git.head_of(repo, branch)
 
     def lane_folded(
         self, repo: str, branch: str | None, tip: str | None, birth: str | None
@@ -834,8 +1000,24 @@ class Runtime:
 
     def dispatches(self, cwd: str) -> list[Dispatch] | None:
         """What every session that ran in `cwd` handed out, from its
-        transcripts; None when none exists."""
-        return transcripts.dispatches(cwd)
+        transcripts on the machine that holds the lane; None when none exists."""
+        on = self.lane_machine(cwd)
+        if self.is_here(on):
+            return transcripts.dispatches(cwd)
+        try:
+            return self._remote(on).dispatches(cwd)
+        except _UNREACHABLE:
+            return None
+
+    def transcript_size(self, session: Session) -> int | None:
+        """How large the session's transcript is on the machine that holds it."""
+        on = self.machine_of(session)
+        if self.is_here(on):
+            return machine.transcript_size(session.worktree or session.cwd, session.session_id)
+        try:
+            return self._remote(on).transcript_size(session.short_id)
+        except _UNREACHABLE:
+            return None
 
     def meminfo(self) -> Meminfo | None:
         """The machine's memory right now; None when it cannot be read."""
@@ -894,6 +1076,17 @@ class Runtime:
     def scopes(self) -> list[ScopeHeld] | None:
         """Every process group of ours the manager holds active — the
         prefix every lane's and reading's session is put under at Start —
+        with the pids each holds and their command lines (card #99), on
+        every machine whose sessions the last read reached; None when this
+        machine's manager could not be asked. A machine whose sessions are
+        unread contributes no groups: a group with nobody home is what the
+        beat stops, and nobody-home is not known until the sessions are
+        (Codex's reading of card #83's second pass)."""
+        return self._scopes()
+
+    def _scopes(self) -> list[ScopeHeld] | None:
+        """Every process group of ours the manager holds active — the
+        prefix every lane's and reading's session is put under at Start —
         with the pids each holds and their command lines (card #99); None
         when the manager could not be asked."""
         here = self.here()
@@ -915,7 +1108,7 @@ class Runtime:
         except (OSError, machine.Timeout, machine.CommandMissing):
             return None
         for m in self.machines():
-            if self.is_here(m):
+            if self.is_here(m) or m.name in self.unread:
                 continue
             try:
                 held += [
@@ -990,3 +1183,31 @@ class Runtime:
             except machine.CommandMissing:
                 missing.append(name)
         return missing
+
+
+def read_lane_docs(checkout: str, candidates: list[str]) -> LaneDocs:
+    """A lane's plan and review records from its worktree on this machine
+    (plan 13's reads, moved here from the loop so the same read answers over
+    the wire, card #83)."""
+    root = Path(checkout)
+    plan: str | None = None
+    for candidate in candidates:
+        try:
+            plan = (root / candidate).read_text(encoding="utf-8", errors="replace")
+            break
+        except OSError:
+            continue
+    reviews: list[ReviewText] = []
+    for path in sorted((root / "docs" / "reviews").glob("*.md")):
+        if path.name == "README.md":
+            continue
+        try:
+            reviews.append(
+                ReviewText(
+                    path=str(path.relative_to(root)),
+                    text=path.read_text(encoding="utf-8", errors="replace"),
+                )
+            )
+        except OSError:
+            continue
+    return LaneDocs(plan=plan, reviews=reviews)

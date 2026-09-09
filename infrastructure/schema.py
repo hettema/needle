@@ -253,6 +253,8 @@ class LaneRow(Base):
     folded_at: Mapped[datetime | None] = mapped_column(UtcDateTime, nullable=True)
     trunk_synced_at: Mapped[datetime | None] = mapped_column(UtcDateTime, nullable=True)
     main_synced_at: Mapped[datetime | None] = mapped_column(UtcDateTime, nullable=True)
+    machine: Mapped[str] = mapped_column(String(40), server_default="")
+    """The machine the worktree is on (card #83)."""
 
 
 class HeardRow(Base):
@@ -544,6 +546,8 @@ class SightingRow(Base):
     last_seen: Mapped[datetime] = mapped_column(UtcDateTime)
     released_at: Mapped[datetime | None] = mapped_column(UtcDateTime, nullable=True)
     scoped_at: Mapped[datetime | None] = mapped_column(UtcDateTime, nullable=True)
+    machine: Mapped[str] = mapped_column(String(40), server_default="")
+    """The machine the process was seen on (card #83)."""
 
 
 class DeathRow(Base):
