@@ -190,12 +190,12 @@ class Runtime:
         stopped = launch.stop(session)
         if keep_handoff:
             return stopped
-        if session.wall is not None:
-            handoffs.remove(session.wall)
         # A death the board already named a wall — the board's own stop on
         # the floor writes one — would still be brought back once the room
         # holds; the owner's stop is written over it, settled, so the lane
-        # stays down (Codex's reading of card #107's second pass).
+        # stays down (Codex's reading of card #107's second pass). The
+        # record goes first and the handoff second: a crash between the two
+        # leaves a settled stop the loop honours, never a wall it recovers.
         for project in self.store.projects():
             death = self.store.deaths(project.slug).get(session.session_id)
             if death is not None and death.cause is Cause.WALL:
@@ -210,6 +210,8 @@ class Runtime:
                         }
                     )
                 )
+        if session.wall is not None:
+            handoffs.remove(session.wall)
         return stopped
 
     def window(self, ref: str, kind: WindowKind | None) -> Opened:
