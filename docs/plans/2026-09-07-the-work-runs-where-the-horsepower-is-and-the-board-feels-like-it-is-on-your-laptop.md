@@ -1,7 +1,7 @@
 # The work runs where the horsepower is, and the board feels like it is on your laptop
 
 **Carries:** docs/slice-suggestions/done/2026-09-07-the-work-runs-where-the-horsepower-is-and-the-board-feels-like-it-is-on-your-laptop.md
-**Status:** NEW — planned, not started; the owner placed it at the top of Planned on 2026-09-07 after setting the bound and confirming the flow.
+**Status:** IN FLIGHT — started 2026-09-09 by the lane on card #83. The runtime knows a second machine and proves it on the fixture (item 4's fixture half, item 5's readers); the machine itself is not ordered yet, so items 1–3 and the live halves of 4 and 5 wait on the order, which is the owner's act — the lane ended its first turn on that question with the order written out below under *The order*. The owner opened the Netcup account the same evening.
 **Written:** 2026-09-07, from Dennis: "My intent is to not be limited by horse power from my machine but still interface as if I'm on my machine." The bound: "up to 100 eur/month, cheaper better." On the flow, after the live pricing and a cold read of another make: "For the rest the flow looks good." On the one thing he raised: "how would we deal with captchas and stuff? Anthropic is throwing captchas nowadays" — answered in item 2: the browser step of every login stays on the laptop, so the rented machine never meets a captcha.
 **Effort gate:** high — the mechanics are a machine record in a pattern that exists (`omarchy-machine`), a tunnel, one login per slot, and the runtime's session and window verbs taught a second machine; the judgment is where a lane runs (item 4's rule) and what must never move (the laptop's own cards), and the failure that would be silent — a token refreshed from two machines invalidating one — is what item 2 proves before anything else moves.
 **Sequencing:** after #107 (the owner's word on 2026-09-09, "please sequence 83 to start after this lands": a walled lane gives its memory back and every lane's space carries the floor as its high mark, which the rented machine's admission and its kill count read), #53 (the floor the rented machine's admission rule reuses is #53's, read every beat) and #68 (a lane the machine ended comes back by itself, which on a second machine is the only way a dead lane returns at all — nobody is sitting at it). Items 1 and 2 can land and be proven before either; the runtime items wait.
@@ -97,6 +97,20 @@ its window opens on the laptop, and its fold lands on origin as any lane's
 does; an Omarchy card started the same way runs on the laptop; a card
 started with no headroom anywhere is refused by #53's door with the
 machine's numbers.
+**Deviated:** the fixture half is met and the live half waits on the
+machine. On the floor (`tests/runtime/test_machines.py`): a card in the
+laptop's own record starts on the laptop while the rented floor has more
+room; every other card starts on the rented floor through its own
+`needle start` over the stand-in `ssh`, registers there and nowhere else,
+is listed on the one list stamped `rented`, and its window on the desktop
+runs `ssh -t rented -- tmux new-session -A -s needle-lane-<card> …` with
+the multiplexer's word read back as the second half of the proof; both
+floors full is refused with both machines' numbers, and a rented floor
+that does not answer falls back to the laptop with room. The face says
+`on rented` in the lane section only when the board knows more than one
+machine (`board/lane.py`, `LaneFacts.many_machines`). The live clauses —
+a Hello Revenue card from the served board, its fold on origin, an Omarchy
+card on the laptop — are the resuming session's, once item 1 exists.
 
 ### 5. The measure exists before the move
 The machine's memory high-water mark, the count of lanes killed by the
@@ -109,6 +123,106 @@ them.
 Hands out: execution — the three timings on each machine, run three times
 and the median kept; verifies by re-running one of them by hand before the
 number is written.
+**Deviated:** the readers exist and the laptop's numbers are being taken;
+the machine's wait on item 1. The loop's two commands run: `needle lanes
+--killed --machine <name> --count` counts the deaths the board named as
+the memory killer's, against the machine each session's slot record names
+(`infrastructure/store.py::killed_on`), over the last day; `needle where
+--high-water <name>` prints the day the board saw the least memory
+available on that machine over the last two weeks, from a mark the loop
+writes on every pass (`high_water`, one row per machine per day). Build
+timings are written by hand with `needle machine timing <name> <what>
+<seconds>` and read back by `needle machines --json`. The laptop's three
+numbers were handed to the execution role in the first session (three
+runs each of `npm ci`, `vitest run`, `uv run pytest -q` in the main
+checkout, medians kept); the numbers land in this item when the hand's
+report is read, and the resuming session re-runs one by hand first.
+
+## Terrain
+
+What the first session built, for the one that resumes with a machine to
+reach (every path below is in Needle's repository unless said):
+
+- **A machine is a row.** `domain/machine.py` — `Machine` (name, the
+  kernel's `machine_id`, the `host` others reach it by, `desktop`, the
+  `ground` project that is its own record, the `command` that runs
+  `needle` there), `MachineRoom` (what the head shows per machine),
+  `HighWater`, `Timing`, and `choose_machine`, the pure rule of item 4.
+  Registered by `needle machine add NAME [--host H] [--desktop] [--ground
+  PATH]`, which reads the identity from the machine itself (`ssh host cat
+  /etc/machine-id`) so a row is never written for a machine the board
+  cannot reach; `needle machines` lists them with their rooms. The board
+  tells which row is itself by `runtime/machine.py::machine_id`, never by
+  hostname; a board with no rows is a one-machine board whose machine is
+  the desktop, which is every board until now.
+- **Another machine's runtime is asked through its own `needle`.**
+  `runtime/remote.py::Remote` runs `needle <verb> --json` there over `ssh`
+  (`runtime/machine.py::run_line`: `ssh -o BatchMode=yes -o
+  ConnectTimeout=5 <host> -- bash -lc '<command> <verb> --json'`, with a
+  control socket under `$XDG_RUNTIME_DIR` so a pass pays one handshake)
+  and validates the answer into the same domain value the verb answers
+  here. The verbs the wire uses: `sessions`, `where`, `start
+  [--windowless]`, `stop [--keep-handoff]`, `move`, `resume`, `rescope`,
+  `room [--hold]`, `scopes --held|--pids|--stop`, `cause`, `ended`,
+  `boots`, `limits`, `expire-handoff`, `show`, `tell`. `runtime/service.py`
+  routes every session-, group- and screen-bound call by the machine that
+  holds it (`machine_of`, `desktop`), stamps `Placement.machine` and
+  `Session.machine`, and copies each remote answer into the board's own
+  store (`_stamped`), since the other machine's `needle` writes only its
+  own ledger.
+- **The screen is the desktop's.** `runtime/windows.py` functions take
+  `host=`; a window into a session on another machine is `via_tmux`: the
+  desktop's terminal runs `ssh -t <host> -- tmux new-session -A -s
+  needle-<kind>-<card> bash -lc '<attach>'`, and the proof is the
+  compositor's window plus `tmux has-session` on that machine
+  (`tmux_has`). `tell` and `show` go through the desktop's own `needle`
+  when the board runs elsewhere (item 3's territory, written, unproven
+  live).
+- **The loop reads every machine on every pass.** `api/loops.py::
+  headroom_now` reads `Runtime.rooms(hold=True)`, sets the floor's high
+  mark on every machine's lane scopes, writes the day's high-water mark
+  per machine, and gives the head `MachineState.machines`; `_placement`
+  is per project (`repo=`), `_boots` per machine, the sweep stops a group
+  on the machine it was read on, deaths are named by the machine's own
+  journal (`needle cause` there). The dial's beat is held only when no
+  machine has room (`api/dial.py::_full`).
+- **The floor stands in for the second machine.** `tests/floor.py::
+  Floor.lay_host(name)` lays a second floor under the first's root with
+  its own slots, registries, memory, store and machine id, reached by the
+  stand-in `tests/fakes/bin/ssh` under `name` (exit 255 for a host never
+  laid, or after `host_down`); `tests/fakes/bin/tmux` records sessions;
+  the launcher stand-in runs an `exec ssh -t …` attach so the
+  multiplexer's half of the proof is read. `needle` on the other floor is
+  the venv's own script. Migration 0017: `machines`, `high_water`,
+  `timings`, `session_slots.machine`.
+
+**The order** (the owner's act; the pick and the bound are already his):
+Netcup RS 4000 G12 — 12 dedicated cores, 32 GB DDR5 ECC, 1 TB NVMe — at
+the one-month term, in Nuremberg, ex VAT under reverse charge (a
+VAT-registered Swedish buyer; confirmed at order time). Image: Arch Linux
+if Netcup's list offers it, else Debian 12 and the first session installs
+Arch from the rescue system, since the laptop's tooling (`machine
+install`, `claude-acct`, `needle`, mise) is Arch's. At order time or in
+the panel afterwards: the laptop's public key (`~/.ssh/id_ed25519.pub`)
+as the root key. What the resuming session needs from the owner, in one
+message: the server's IPv4 address, whether the key was set (else the
+root password, to be changed on first login), and which image was chosen.
+
+**The first session on the machine** (item 1, in order): `ssh root@<ip>`
+by key; make user `dennis` with the same uid as here (1001) and the same
+home layout (`~/Work/<project>` for every project on the board, cloned
+from origin); install Tailscale on both machines and name the rented one
+`rented`, so `ssh rented` works from the laptop and `ssh laptop` from the
+machine — the reason for Tailscale over an SSH tunnel is recorded under
+Rulings; clone `omarchy-machine`'s pattern into a new repository
+`~/Work/rented-machine` whose `home/` holds what the machine needs
+(`machine install` lays links, `machine check` reads drift, a `revert`
+section says how to take the board back to the laptop), and `needle add`
+it on the board; then `needle machine add rented --host rented` on the
+laptop and `needle machine add laptop --desktop --ground
+~/Work/omarchy-machine`. Item 2 follows: one slot's `claude login` on the
+machine through the browser-less flow, the laptop's browser answering,
+then a day of use on both before the other slots move.
 
 ## Acceptance criteria
 
@@ -136,6 +250,44 @@ number is written.
 - **The laptop's own cards stay on the laptop.** An Omarchy card edits this
   machine; running it elsewhere would edit the wrong machine and report
   success.
+- **Another machine is asked through its own `needle`, never read as
+  files or processes from here** (the lane's ruling, 2026-09-09). The
+  board reads what runs from `/proc`, the registries, the journal and the
+  user manager, none of which cross a wire as files; a runtime on the
+  machine that holds them answers for them, over the typed JSON edge every
+  verb already has. Rejected: mounting the other machine's filesystem and
+  reading it with the same code (a process walk over `/proc` is a round
+  trip per file, and a pid there is not a pid here); a second protocol
+  beside the verbs (two ways to say one thing).
+- **The board's store is the one record; the other machine's `needle`
+  keeps only its own ledger.** A remote `start` or `move` writes where the
+  session runs into that machine's default store, and the board's runtime
+  copies the answer into the board's store as its own record. Rejected:
+  pointing the other machine's `needle` at the board's store (SQLite over
+  a network filesystem corrupts), and no store there at all (its launcher
+  records where it put a session, and that record is what its own
+  `window` and `stop` read).
+- **A window into a session on another machine goes through a
+  multiplexer there.** The desktop's terminal is `ssh -t` into `tmux
+  new-session -A`, so a dropped tunnel — the laptop's lid — ends the
+  viewer and never the session, and reattaching finds the same session.
+  Rejected: a bare `ssh -t claude attach`, which the lid would end with
+  the attach's own exit.
+- **Tailscale, not an SSH tunnel, once the machine exists** (to prove in
+  item 1). The board on the rented machine must reach the laptop's screen
+  (windows, focus, notifications go to the desktop's own `needle`) and the
+  laptop must reach the board; a single `ssh -R`/`-L` tunnel is one
+  process on the laptop that its sleep kills, and Tailscale gives both
+  machines a stable name in both directions and reconnects itself. If the
+  live proof shows Tailscale cannot be installed or is refused by the
+  provider, the SSH tunnel is the fallback and this ruling is rewritten
+  with why.
+- **On a one-machine board nothing changes on the face.** The machine's
+  name is shown on a lane and on the Start preview only when the board
+  knows more than one machine, and the head lists machines only then;
+  every existing test reads as before. Why: the acceptance says he does
+  not know which machine ran a card unless he looks, and on one machine
+  there is nothing to look at.
 
 ## Deliberately not
 
