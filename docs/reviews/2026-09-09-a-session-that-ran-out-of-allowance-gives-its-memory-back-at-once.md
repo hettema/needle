@@ -1,9 +1,9 @@
 # Review — a session that ran out of allowance gives its memory back at once, so the machine has room to bring it back (card #107)
 
 **Plan:** docs/plans/done/2026-09-09-a-session-that-ran-out-of-allowance-gives-its-memory-back-at-once-so-the-machine-has-room-to-bring-it-back.md
-**Reviewer:** the building session (Claude Fable 5.1, interactive, hrme 89b15944) read the done-means; a reader of the other make (Codex 0.153.4, `codex exec -s read-only`, reasoning effort high, run in the lane's checkout with each commit's patch) read the seams and the boundaries and re-read every fix cold. Its answers are verbatim in `codex-pass1.md`, `codex-pass2.md` and `codex-pass3.md` of the building session's scratchpad and are quoted below where they bear.
+**Reviewer:** the building session (Claude Fable 5.1, interactive, hrme 89b15944) read the done-means; a reader of the other make (Codex 0.153.4, `codex exec -s read-only`, reasoning effort high, run in the lane's checkout with each commit's patch) read the seams and the boundaries and re-read every fix cold. Its answers are verbatim in `codex-pass1.md` to `codex-pass4.md` of the building session's scratchpad and are quoted below where they bear.
 **Diff range:** 74b5bbf (the plan on the trunk) to the lane's tip on `card-107-a-session-that-ran-out-of-allowa` — the feature commit 87f4a56, the fixes 2b8babf and edeafb4, and the close.
-**Findings:** 17 across four reading passes — 13 fixed and re-read, 3 no change with the reason written, 1 filed as a defect in the corpus.
+**Findings:** 17 across five reading passes — 13 fixed and re-read, 3 no change with the reason written, 1 filed as a defect in the corpus.
 
 ## The passes
 
@@ -11,7 +11,7 @@
 2. **The seams and the done-means, read cold (Codex, on 87f4a56).** Seven findings, 3–9 below: the six real lanes were parked before the rule and would never have been stopped; a limit with no handoff, once stopped, is lost; the stop preceded the park; a hand stop on a walled session was resumed as a wall; a young handoff's rung reused after a long wait; "moving" and "cap" overclaimed. Fixed in 2b8babf.
 3. **The fixed work, read cold again (Codex, on 2b8babf).** Four resolved; five findings new or partial, 10–14 below: the owner's stop after the board's floor stop was still brought back because the stored death said wall; the rung check read only the soonest reset and read an allowance spent with no return time as back; the check hung on a flag a restart forgets; a stop on a standing park left the snapshot a pass behind; two intent paragraphs still promised a cap and a moving face. Fixed in edeafb4. The boundaries lens: "nothing new in layers, process ownership, typed edges, or deferral markers."
 4. **The fixed work, read cold a third time (Codex, on edeafb4).** "New defects introduced by this commit: nothing new beyond those incomplete fixes"; boundaries "nothing new". Two carried items: the owner's stop removed the handoff before writing the death over, so a crash between the two left a wall to recover (17, fixed by the reorder in the next commit); two servers may both stop a standing park's process and both write the line (14, no change with the reason). 
-5. **The reorder, read cold (Codex, on the close commit).** Written below once its answer landed.
+5. **The reorder, read cold (Codex, on 13970d8).** "Finding (3) resolved: the settled STOPPED death now commits before handoff removal, and recovery honors it after restart. nothing new." The clean pass after a pass with findings; the loop ends here.
 
 ## Dispositions
 

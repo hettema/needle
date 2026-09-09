@@ -1,5 +1,6 @@
 # A session that ran out of allowance gives its memory back at once, so the machine has room to bring it back
 
+**Carried by:** docs/plans/done/2026-09-09-a-session-that-ran-out-of-allowance-gives-its-memory-back-at-once-so-the-machine-has-room-to-bring-it-back.md — the plan written the same afternoon at the owner's word ("1. yes"), built and folded on 2026-09-09 by the session that filed this
 **Kind:** defect
 **Fix:** now — the intent is written (HOW-WE-WORK §11: a move that follows a machine fact is the machine's; the archived plan "a full machine admits nothing new and a lane that comes back is one lane", whose floor exists so that lanes flow without crashing the machine; and the owner's own words on 2026-09-09 15:40, "I want sessions to flow when they can without crashing the system, and I do want the sessions that have been building and are now stuck to get going again"); the fix stays inside the lane loop's rescue pass (`api/loops.py`, the park on the floor after a wall) and the runtime's stop; it removes the class — every walled session that waits for room while holding it — not the six lanes below.
 **Found by:** the owner, 2026-09-09 15:24, from the walled window of Hello Revenue #456 ("It looks like session 9a7c49a7 is stuck"), and the session that read it
