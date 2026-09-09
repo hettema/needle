@@ -544,7 +544,9 @@ def conversations_alive(
             continue
         first = records[0]
         numbers = sorted({r.card_number for r in records if r.card_number is not None})
-        if first.kind == WindowKind.IDEA or not numbers:
+        if first.kind == WindowKind.FOCUS:
+            what = "Focus"
+        elif first.kind == WindowKind.IDEA or not numbers:
             what = "Idea"
         elif first.kind == WindowKind.PLAN:
             what = "Plan " + ", ".join(f"#{n}" for n in numbers)
@@ -557,6 +559,7 @@ def conversations_alive(
                 card_number=first.card_number,
                 what=what,
                 started_at=first.started_at,
+                kind=first.kind,
             )
         )
     return sorted(alive, key=lambda c: c.started_at)

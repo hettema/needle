@@ -133,17 +133,39 @@ export function groupSlots(
   return { slots, rankNext: rank };
 }
 
-export type LensKind = "rank" | "age" | "gate" | "triage";
+export type LensKind = "rank" | "age" | "gate" | "triage" | "leverage";
 
 const GATE_ORDER: Record<string, number> = { xhigh: 0, high: 1, medium: 2, low: 3 };
 
 /** A lens, never a write: sorting changes what you see and never the stored order. */
 export function throughLens(cards: readonly CardSummary[], lens: LensKind): CardSummary[] {
-  if (lens === "rank" || lens === "triage") return [...cards];
+  if (lens === "rank" || lens === "triage" || lens === "leverage") return [...cards];
   const sorted = [...cards];
   if (lens === "age") sorted.sort((a, b) => (a.age_date < b.age_date ? -1 : a.age_date > b.age_date ? 1 : 0));
   if (lens === "gate") sorted.sort((a, b) => (GATE_ORDER[a.gate ?? ""] ?? 9) - (GATE_ORDER[b.gate ?? ""] ?? 9));
   return sorted;
+}
+
+/**
+ * The board as the chosen focus would arrange it (card #87, item 5): the
+ * columns rebuilt from the backend's one arrangement, every card looked up
+ * by number, so the page applies the answer and never computes an order of
+ * its own. With no available order the columns come back as they are.
+ */
+export function leverageColumns(board: BoardState): ColumnView[] {
+  if (!board.leverage.available) return board.columns;
+  const cards = new Map<number, CardSummary>();
+  for (const column of board.columns) for (const group of column.groups) for (const card of group.cards) cards.set(card.number, card);
+  return board.columns.map((column) => {
+    const arranged = board.leverage.columns.find((c) => c.column === column.definition.column);
+    if (!arranged) return column;
+    const groups: GroupView[] = arranged.groups.map((g) => ({
+      name: g.name,
+      rail: g.rail,
+      cards: g.numbers.map((n) => cards.get(n)).filter((c): c is CardSummary => c !== undefined),
+    }));
+    return { ...column, groups, count: groups.reduce((n, g) => n + g.cards.length, 0) };
+  });
 }
 
 export function groupId(column: Column, group: string | null): string {

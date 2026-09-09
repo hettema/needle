@@ -8,6 +8,7 @@ import type { CardState, ClaimCount, FoldedCard } from "../../types/board";
 import { OPENING, type Meaning } from "../../types/meaning";
 import type { Column } from "../../types/column";
 import type { DialState } from "../../types/dial";
+import type { CardLeverage, FocusState, FocusStrip, Leverage, ProposedMove } from "../../types/focus";
 import type { DocumentState, Fix, Item, Review, SuggestionKind } from "../../types/document";
 import type { Progress } from "../../types/lane";
 import type { Standing } from "../../types/evidence";
@@ -1253,5 +1254,248 @@ export function List({ items }: { items: string[] }) {
         <li key={item}>{item}</li>
       ))}
     </ul>
+  );
+}
+
+
+// ── the focus strip and the leverage lens (card #87) ──────────────────
+
+const FOCUS_MEANING: Record<FocusState, Meaning> = {
+  "no focus": "quiet",
+  "outcome only": "quiet",
+  talking: "live",
+  "ended without": "quiet",
+  proposed: "yours",
+  chosen: "quiet",
+  paused: "broken",
+};
+/** Which of the five things each strip state says: a proposal is his move,
+ * a conversation is happening now, a paused order is evidence that broke,
+ * and a chosen focus is never painted proven — acceptance earns no green. */
+
+/**
+ * The strip under the project head, above the columns, visible under every
+ * lens (card #87, item 5): which focus the board is sorted on, how many
+ * cards are read, and whether anything queued removes the limit. The
+ * sentence is the board's; the page paints its meaning and offers the three
+ * doors the board says are open. It expands in place to the document's
+ * evidence, measures and history.
+ */
+export function FocusBar({
+  strip,
+  onTalk,
+  onChoose,
+  onPropose,
+  onPutBack,
+  disabled,
+  said,
+}: {
+  strip: FocusStrip;
+  onTalk: (text: string) => void;
+  onChoose: () => void;
+  onPropose: () => void;
+  onPutBack: () => void;
+  disabled: boolean;
+  said: string | null;
+}) {
+  const [open, setOpen] = useState(false);
+  const meaning = FOCUS_MEANING[strip.state];
+  const document = strip.document;
+  return (
+    <section className="focus" aria-label="The focus" data-state={strip.state} data-meaning={meaning}>
+      <div className="focus-line">
+        <span className="focus-say">{strip.sentence}</span>
+        {strip.what_matters && strip.state !== "outcome only" ? (
+          <span className="focus-two">
+            <b>What matters now:</b> {strip.what_matters}
+            {strip.what_holds ? (
+              <>
+                {" · "}
+                <b>What holds it back:</b> {strip.what_holds}
+              </>
+            ) : null}
+          </span>
+        ) : null}
+        {strip.check ? (
+          <span className="focus-check" title={strip.check.line}>
+            a reader of the other kind says it <b>{strip.check.verdict}</b>: {strip.check.line}
+          </span>
+        ) : strip.checking ? (
+          <span className="focus-check" data-meaning="live">
+            a reader of the other kind is checking the diagnosis
+          </span>
+        ) : strip.check_note ? (
+          <span className="focus-check">no second reading landed: {strip.check_note}</span>
+        ) : null}
+        {strip.coverage ? (
+          <span className="focus-cover" title={`${strip.coverage.unread} unread · ${strip.coverage.needs_evidence} need evidence · ${strip.coverage.stale} stale · ${strip.coverage.reading} being read`}>
+            {strip.coverage.line}
+            {strip.coverage.unread || strip.coverage.needs_evidence || strip.coverage.stale ? (
+              <span className="focus-counts">
+                {" · "}
+                {strip.coverage.unread} unread · {strip.coverage.needs_evidence} need evidence · {strip.coverage.stale} stale
+              </span>
+            ) : null}
+          </span>
+        ) : null}
+        <span className="focus-acts">
+          {strip.choose.offered ? (
+            <button type="button" className="btn" onClick={onChoose} disabled={disabled} title={strip.choose.why}>
+              Use this focus
+            </button>
+          ) : null}
+          {strip.state === "proposed" ? (
+            <button type="button" className="btn ghost" onClick={() => onTalk("")} disabled={disabled || !strip.talk.offered} title={strip.talk.why}>
+              Keep discussing
+            </button>
+          ) : null}
+          {strip.propose.offered ? (
+            <button type="button" className="btn ghost" onClick={onPropose} disabled={disabled} title={strip.propose.why}>
+              Propose moves
+            </button>
+          ) : null}
+          {strip.put_back_offered ? (
+            <button type="button" className="btn ghost" onClick={onPutBack} disabled={disabled} title="Every card of the last accepted order goes back where it was, with your name on each move">
+              Put it back
+            </button>
+          ) : null}
+          {strip.state === "no focus" || strip.state === "ended without" || strip.state === "outcome only" ? (
+            <FocusDoor onOpen={onTalk} disabled={disabled || !strip.talk.offered} why={strip.talk.why} />
+          ) : null}
+          {document ? (
+            <button type="button" className="tool" onClick={() => setOpen((v) => !v)} aria-expanded={open}>
+              {open ? "less" : "more"}
+            </button>
+          ) : null}
+        </span>
+        {said ? <span className="said">{said}</span> : null}
+      </div>
+      {open && document ? (
+        <div className="focus-more">
+          <StatLines>
+            <StatLine k="document" v={<PathText>{document.path} · {document.fingerprint}</PathText>} />
+            {document.outcome.line ? <StatLine k="outcome measure" v={document.outcome.line} /> : null}
+            {document.bottleneck.line ? <StatLine k="bottleneck measure" v={document.bottleneck.line} /> : null}
+            {document.evidence ? <StatLine k="evidence" v={<Inline text={document.evidence} />} /> : null}
+            {document.rival ? <StatLine k="rival" v={<Inline text={document.rival} />} /> : null}
+            {document.recheck.line ? <StatLine k="recheck" v={document.recheck.line} /> : null}
+            {document.proposed ? <StatLine k="proposed" v={document.proposed} /> : null}
+            {document.doubts.map((doubt) => (
+              <StatLine key={doubt} k="cannot be chosen" v={<Inline text={doubt} />} />
+            ))}
+            {strip.ruling ? <StatLine k="chosen" v={`${strip.ruling.chosen_at} at ${strip.ruling.fingerprint}`} /> : null}
+            {strip.measures.map((m) => (
+              <StatLine key={m.side} k={`${m.side}${m.baseline ? " (baseline)" : ""}`} v={`${m.words} — ${m.at}`} />
+            ))}
+            {strip.recheck ? <StatLine k="recheck said" v={`${strip.recheck.outcome}: ${strip.recheck.words}`} /> : null}
+            {strip.accepted ? <StatLine k="order accepted" v={`${strip.accepted.at}: ${strip.accepted.moves.length} moves${strip.accepted.note ? ` (${strip.accepted.note})` : ""}`} /> : null}
+          </StatLines>
+        </div>
+      ) : null}
+    </section>
+  );
+}
+
+/** The Focus door: "What needs to change?" and "Talk it through" (card #87, item 2). */
+export function FocusDoor({ onOpen, disabled, why }: { onOpen: (text: string) => void; disabled: boolean; why: string }) {
+  return (
+    <form
+      className="focus-door"
+      title={why}
+      onSubmit={(e) => {
+        e.preventDefault();
+        const field = e.currentTarget.elements.namedItem("focus") as HTMLInputElement | null;
+        onOpen(field?.value.trim() ?? "");
+        if (field) field.value = "";
+      }}
+    >
+      <span className="focus-ask">What needs to change?</span>
+      <input name="focus" type="text" aria-label="What needs to change?" title="One line: the outcome you want, in your words; the conversation sharpens it and finds what holds it back" disabled={disabled} autoComplete="off" />
+      <button type="submit" className="btn" disabled={disabled}>
+        Talk it through
+      </button>
+    </form>
+  );
+}
+
+/**
+ * The bar under the Leverage lens: every move the focus proposes, each
+ * ticked at will, and the one act — "Accept this order" — with the count.
+ * The board applies only the ticked moves, with his name on each (card
+ * #87, item 5); an unticked one is not proposed again until its ground
+ * changes.
+ */
+export function AcceptBar({
+  moves,
+  ticked,
+  onTick,
+  onAccept,
+  disabled,
+  said,
+  unavailable,
+}: {
+  moves: readonly ProposedMove[];
+  ticked: ReadonlySet<number>;
+  onTick: (number: number, on: boolean) => void;
+  onAccept: () => void;
+  disabled: boolean;
+  said: string | null;
+  unavailable: string | null;
+}) {
+  if (unavailable !== null) {
+    return (
+      <section className="accept" aria-label="Leverage order unavailable">
+        <span className="accept-n">Leverage order unavailable: {unavailable}</span>
+      </section>
+    );
+  }
+  return (
+    <section className="accept" aria-label={`${moves.length} moves proposed`}>
+      <span className="accept-n">
+        <b>{moves.length}</b> move{moves.length === 1 ? "" : "s"} proposed · the columns are shown as the focus would arrange them; nothing is stored until you accept
+      </span>
+      <span className="accept-moves" role="list">
+        {moves.map((move) => (
+          <label key={move.number} className="accept-move" role="listitem" title={move.why}>
+            <input type="checkbox" checked={ticked.has(move.number)} onChange={(e) => onTick(move.number, e.target.checked)} aria-label={`Move #${move.number} to ${move.to_place.column}`} />
+            <span className="cid">#{move.number}</span> {move.from_place.column} → {move.to_place.column}
+          </label>
+        ))}
+      </span>
+      {moves.length ? (
+        <button type="button" className="btn" onClick={onAccept} disabled={disabled || ticked.size === 0}>
+          Accept this order ({ticked.size})
+        </button>
+      ) : null}
+      {said ? <span className="said">{said}</span> : null}
+    </section>
+  );
+}
+
+const LEVERAGE_WORD: Record<Leverage, string> = {
+  "helps remove this limit": "helps remove this limit",
+  "protects progress": "protects progress",
+  "does not address this limit": "does not address this limit",
+  "needs evidence": "needs evidence",
+};
+
+/**
+ * What a card says under the Leverage lens (card #87, item 4): its class in
+ * one of the four plain phrases with its likelihood, the reading's sentence
+ * in the one shape, the hold beside it, and where it is moving from when
+ * the focus would move it. Never a colour: a class is a fact, not a claim.
+ */
+export function LeverageMark({ leverage, move }: { leverage: CardLeverage | null; move: ProposedMove | null }) {
+  const word = leverage === null ? "no focus" : leverage.state === "read" && leverage.leverage ? LEVERAGE_WORD[leverage.leverage] : leverage.state === "reading" ? "being read" : leverage.state === "stale" ? "stale" : "unread";
+  return (
+    <div className="leverage" role="note" data-leverage={word} {...(leverage?.state === "reading" ? { "data-meaning": "live" as const } : {})}>
+      <span className="lv-word">
+        {word}
+        {leverage?.likelihood ? ` · ${leverage.likelihood}` : ""}
+        {leverage?.hold ? ` · waits on ${leverage.hold}` : ""}
+      </span>
+      {move ? <span className="lv-move">moving from {move.from_place.column}</span> : null}
+      {leverage ? <span className="lv-say">{leverage.sentence}</span> : null}
+    </div>
   );
 }

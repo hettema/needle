@@ -98,8 +98,11 @@ class Conversation(BaseModel):
     slot: str
     card_number: int | None
     what: str
-    """`Idea`, `#N` for a card's Discuss, or `Plan #N, #M` for a plan-writing conversation."""
+    """`Idea`, `Focus`, `#N` for a card's Discuss, or `Plan #N, #M` for a
+    plan-writing conversation."""
     started_at: datetime
+    kind: WindowKind = WindowKind.DISCUSS
+    """The door it came through, so the strip finds its own conversation (card #87)."""
 
 
 class Progress(BaseModel):

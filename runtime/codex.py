@@ -28,7 +28,7 @@ card's lane, beside the one that calls a worker warm.
 import json
 import re
 from dataclasses import dataclass
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 from domain.gate import Gate
@@ -323,6 +323,50 @@ def resume_argv(session_id: str, *, brief: str, answer: str, schema: str) -> lis
         session_id,
         brief,
     ]
+
+
+def ask_argv(cwd: str, *, brief: str, answer: str, schema: str, effort: Gate) -> list[str]:
+    """`codex exec -s read-only -C <cwd> -c model_reasoning_effort=<effort>
+    --skip-git-repo-check -o <answer> --output-schema <schema> <brief>`: a
+    fresh thread for a cold reading (card #87), never `resume`. Read-only
+    because a reading judges and writes nothing but its last message,
+    which Codex writes outside the sandbox; the project's checkout as the
+    working directory so the reading can open the files the documents
+    cite."""
+    return [
+        machine.which("codex"),
+        "exec",
+        "-s",
+        "read-only",
+        "-C",
+        cwd,
+        "-c",
+        f"model_reasoning_effort={REASONING[effort]}",
+        "--skip-git-repo-check",
+        "-o",
+        answer,
+        "--output-schema",
+        schema,
+        brief,
+    ]
+
+
+def fresh_since(cwd: str, since: float) -> Session | None:
+    """The worker rollout a fresh `codex exec` in `cwd` wrote after
+    `since`, newest first, as a row: how an ask that answered before the
+    observation window closed is still followed to its session."""
+    stamp = datetime.fromtimestamp(since, UTC)
+    candidates = [
+        r
+        for r in rollouts()
+        if is_worker(r)
+        and (r.started_at or r.updated_at) >= stamp - timedelta(seconds=2)
+        and Path(r.cwd).resolve() == Path(cwd).resolve()
+    ]
+    if not candidates:
+        return None
+    newest = candidates[-1]
+    return row_of(newest, processes().get(newest.session_id))
 
 
 def schema_path(answer: str) -> Path:

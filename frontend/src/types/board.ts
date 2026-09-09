@@ -6,6 +6,7 @@ import type { CorpusSummary } from "./corpus";
 import type { DialState } from "./dial";
 import type { Document, DocumentRef, DocumentState, Fix, SuggestionKind } from "./document";
 import type { Standing } from "./evidence";
+import type { Arrangement, CardLeverage, FocusStrip } from "./focus";
 import type { Gate } from "./gate";
 import type { Handouts } from "./handout";
 import type { HeardMark } from "./hook";
@@ -54,6 +55,8 @@ export interface BoardState {
   verdicts: VerdictLine[];
   conversations: Conversation[];
   watercooler: WatercoolerLine[];
+  focus: FocusStrip;
+  leverage: Arrangement;
 }
 
 export interface CardDetail {
@@ -117,6 +120,7 @@ export interface CardSummary {
   triaging: WindowlessSession | null;
   triage: Triage | null;
   title_reading: TitleReading | null;
+  leverage?: CardLeverage | null;
 }
 
 export interface ClaimCount {

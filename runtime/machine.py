@@ -233,43 +233,59 @@ def spawn(argv: list[str], *, env: dict[str, str] | None = None, wait: bool = Tr
 
 def detach(argv: list[str], *, cwd: str | Path, log: Path) -> int:
     """Start a process the runtime watches by pid and never pipes to or
-    waits on: a called Codex worker (plan 57, item 2). Forked twice so it
-    is init's child, not ours — a worker that outlives the command that
-    called it is nobody's zombie, and nothing the caller does ends it.
-    What it prints goes to `log`, so a death has its words and a live
-    worker never blocks on a full pipe. Answers the worker's pid; a
-    command that cannot be executed is a worker that ends at once with
-    the error in the log, which the caller reads as a death. A fork, so
-    only a single-threaded caller (the command line) may use it; the
-    board's server never calls a colleague."""
-    reader, writer = os.pipe()
-    pid = os.fork()
-    if pid == 0:  # the intermediate: leaves the session, hands the pid over, exits
-        os.close(reader)
-        os.setsid()
-        grandchild = os.fork()
-        if grandchild == 0:
-            os.close(writer)
-            try:
-                sink = os.open(log, os.O_WRONLY | os.O_APPEND | os.O_CREAT, 0o644)
-                quiet = os.open(os.devnull, os.O_RDONLY)
-                os.dup2(quiet, 0)
-                os.dup2(sink, 1)
-                os.dup2(sink, 2)
-                os.chdir(cwd)
-                os.execvp(argv[0], argv)
-            except OSError as error:
-                os.write(2, f"could not run {argv[0]}: {error}\n".encode())
-            os._exit(127)
-        os.write(writer, str(grandchild).encode())
-        os._exit(0)
-    os.close(writer)
-    handed = os.read(reader, 32)
-    os.close(reader)
-    os.waitpid(pid, 0)
-    if not handed.isdigit():
-        raise OSError(f"the launcher for {argv[0]} handed back no pid")
-    return int(handed)
+    waits on: a called Codex worker (plan 57, item 2), or a cold reading
+    in a fresh thread (card #87). Its own process group, so nothing that
+    reaches the caller's group ends it and a caller that exits leaves it
+    running; what it prints goes to `log`, so a death has its words and a
+    live worker never blocks on a full pipe. Answers the pid; a command
+    that cannot be executed is an OSError here.
+
+    Once a double fork that reparented the worker to init, which only a
+    single-threaded caller may do: the board's server is a threaded
+    process and, since card #87, asks a colleague from the reading loop's
+    beat, so the child is spawned without a fork of our own. A finished
+    child is a zombie until reaped; the pids are kept and reaped on the
+    next detach, so a long-running board holds no more of them than the
+    readings it opened since its last. The shell shim is only a `cd`: the
+    spawn cannot change directory itself, and `exec` keeps the pid the
+    caller watches. A group and not a session because this platform's
+    spawn refuses `setsid` as unavailable (read 2026-09-09), and the
+    caller has no controlling terminal to lose."""
+    _reap()
+    sink = os.open(log, os.O_WRONLY | os.O_APPEND | os.O_CREAT, 0o644)
+    try:
+        pid = os.posix_spawn(
+            "/bin/sh",
+            ["sh", "-c", 'cd -- "$0" && exec "$@"', str(cwd), *argv],
+            os.environ.copy(),
+            file_actions=[
+                (os.POSIX_SPAWN_OPEN, 0, os.devnull, os.O_RDONLY, 0),
+                (os.POSIX_SPAWN_DUP2, sink, 1),
+                (os.POSIX_SPAWN_DUP2, sink, 2),
+            ],
+            setpgroup=0,
+        )
+    finally:
+        os.close(sink)
+    _detached.append(pid)
+    return pid
+
+
+_detached: list[int] = []
+"""The processes `detach` started and has not yet seen end."""
+
+
+def _reap() -> None:
+    """Collect every detached child that has exited, and forget it."""
+    still: list[int] = []
+    for pid in _detached:
+        try:
+            done, _ = os.waitpid(pid, os.WNOHANG)
+        except ChildProcessError:
+            continue
+        if done == 0:
+            still.append(pid)
+    _detached[:] = still
 
 
 def terminate(pid: int) -> None:

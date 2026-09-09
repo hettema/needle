@@ -20,10 +20,12 @@ from pydantic import BaseModel
 
 from api.dial import Dial
 from api.doors import DoorFailed, DoorRefused, Doors
+from api.focus import Focus
 from api.loops import Loops
 from domain.board import BoardState, CardDetail, ProjectFile
 from domain.card import Move, RowRecord
 from domain.dial import DialState, Fixes
+from domain.focus import FocusStrip
 from domain.hook import HookEvent, HookPosted, Word
 from domain.lane import DoorResult
 from domain.notice import Shown
@@ -69,6 +71,21 @@ class DialBody(BaseModel):
     on: bool
     lanes: int
     """How many fix lanes may run at once, across the whole board (plan 11, item 3)."""
+
+
+class FocusBody(BaseModel):
+    text: str = ""
+    """The owner's line, typed into the Focus door: what needs to change."""
+
+
+class AcceptBody(BaseModel):
+    numbers: list[int]
+    """The proposed moves he ticked, by card; the rest are left unticked."""
+
+
+class StartBody(BaseModel):
+    lens: str | None = None
+    """The lens the page was under at the click (card #87): a trace on the history."""
 
 
 class HooksReceived(BaseModel):
@@ -120,16 +137,20 @@ def create_app(store: Store | None = None, *, dist: Path | None = FRONTEND_DIST)
         loops = Loops(live, runtime)
         doors = Doors(live, runtime, loops)
         dial = Dial(live, runtime, loops, doors)
+        focus = Focus(live, runtime, loops, doors)
         app.state.live = live
         app.state.loops = loops
         app.state.doors = doors
         app.state.dial = dial
+        app.state.focus = focus
         await loops.start()
         await loops.first_read()
         await dial.run()
+        await focus.run()
         try:
             yield
         finally:
+            await focus.stop()
             await dial.stop()
             await loops.stop()
             await live.stop()
@@ -212,8 +233,11 @@ def create_app(store: Store | None = None, *, dist: Path | None = FRONTEND_DIST)
             raise StoreFailure(f"The store refused: {type(error).__name__}: {error}") from error
 
     @app.post("/api/projects/{slug}/cards/{number}/start", response_model=DoorResult)
-    async def start(slug: str, number: int, request: Request) -> DoorResult:
-        return await through_door(request, slug, lambda doors: doors.start(slug, number))
+    async def start(
+        slug: str, number: int, request: Request, body: StartBody | None = None
+    ) -> DoorResult:
+        lens = body.lens if body is not None else None
+        return await through_door(request, slug, lambda doors: doors.start(slug, number, lens=lens))
 
     @app.post("/api/projects/{slug}/cards/{number}/answer", response_model=DoorResult)
     async def answer(slug: str, number: int, body: Answer, request: Request) -> DoorResult:
@@ -275,6 +299,39 @@ def create_app(store: Store | None = None, *, dist: Path | None = FRONTEND_DIST)
         doors: Doors = request.app.state.doors
         async with loops.lock:
             return await asyncio.to_thread(doors.accept_class, slug, body.evidence_class)
+
+    @app.get("/api/projects/{slug}/focus", response_model=FocusStrip)
+    async def focus(slug: str, request: Request) -> FocusStrip:
+        """The strip as the page shows it (card #87): the same object `needle focus` prints."""
+        live = await live_for(request, slug)
+        return live.focus_of(slug)[0]
+
+    @app.post("/api/projects/{slug}/focus", response_model=DoorResult)
+    async def talk_focus(slug: str, body: FocusBody, request: Request) -> DoorResult:
+        """The Focus door: a conversation that sharpens what matters now (card #87, item 2)."""
+        return await through_door(request, slug, lambda doors: doors.focus(slug, body.text))
+
+    @app.post("/api/projects/{slug}/focus/propose", response_model=DoorResult)
+    async def propose_moves(slug: str, request: Request) -> DoorResult:
+        """ "Propose moves": the same conversation, asked what else could move the limit."""
+        return await through_door(request, slug, lambda doors: doors.focus(slug, None, moves=True))
+
+    @app.post("/api/projects/{slug}/focus/choose", response_model=DoorResult)
+    async def choose_focus(slug: str, request: Request) -> DoorResult:
+        """ "Use this focus": the owner's ruling, bound to the document's fingerprint."""
+        return await through_door(request, slug, lambda doors: doors.choose_focus(slug))
+
+    @app.post("/api/projects/{slug}/leverage/accept", response_model=DoorResult)
+    async def accept_order(slug: str, body: AcceptBody, request: Request) -> DoorResult:
+        """ "Accept this order": the ticked moves through the move door, with his name."""
+        return await through_door(
+            request, slug, lambda doors: doors.accept_order(slug, body.numbers)
+        )
+
+    @app.post("/api/projects/{slug}/leverage/put-back", response_model=DoorResult)
+    async def put_back(slug: str, request: Request) -> DoorResult:
+        """ "Put it back": every card of the last acceptance to its recorded place."""
+        return await through_door(request, slug, lambda doors: doors.put_back(slug))
 
     @app.post("/api/dial", response_model=DialState)
     async def turn_dial(body: DialBody, request: Request) -> DialState:

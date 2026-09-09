@@ -760,3 +760,55 @@ button.chip:focus-visible { outline: 2px solid var(--ink); outline-offset: 1px; 
 .corpus { font-family: var(--mono); font-size: 11px; color: var(--ink-3); letter-spacing: .03em; }
 .corpus b { color: var(--ink-2); font-weight: 500; }
 .off[data-meaning] { color: var(--meaning); font-weight: 500; }
+
+/* ── the focus strip and the leverage lens (card #87) ────────────────── */
+/* Under the project head, above the columns, under every lens: which focus
+ * the board is sorted on. Its border takes the state's meaning — a proposal
+ * is his move, a conversation is happening now, a paused order broke — and
+ * a chosen focus is quiet: acceptance earns no green. */
+
+.focus {
+  margin: 12px 20px 0; border: 1px solid var(--line-2); border-radius: var(--r-card);
+  background: var(--surface); font-size: 12.5px; color: var(--ink);
+}
+.focus[data-meaning="yours"], .focus[data-meaning="live"], .focus[data-meaning="broken"] { border-color: var(--meaning); }
+.focus-line { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; padding: 8px 13px; }
+.focus-say { font-weight: 600; color: var(--meaning); }
+.focus[data-meaning="quiet"] .focus-say { color: var(--ink); }
+.focus-two { color: var(--ink-2); }
+.focus-two b { color: var(--ink); font-weight: 600; }
+.focus-check { font-family: var(--mono); font-size: 10.5px; color: var(--ink-3); }
+.focus-check[data-meaning] { color: var(--meaning); }
+.focus-check b { font-weight: 600; color: var(--ink-2); }
+.focus-cover { font-family: var(--mono); font-size: 10.5px; color: var(--ink-2); }
+.focus-counts { color: var(--ink-3); }
+.focus-acts { margin-left: auto; display: flex; align-items: center; gap: 6px; }
+.focus .said { flex-basis: 100%; font-family: var(--mono); font-size: 10px; color: var(--ink-2); }
+.focus-more { border-top: 1px solid var(--line); padding: 8px 13px 10px; }
+.focus-door { display: inline-flex; align-items: center; gap: 6px; }
+.focus-door .focus-ask { font-size: 12px; color: var(--ink-2); }
+.focus-door input {
+  font: inherit; font-size: 12px; padding: 3px 7px; border: 1px solid var(--line-2);
+  border-radius: var(--r-ctrl); background: var(--surface); color: var(--ink); width: 240px;
+}
+.focus-door input:focus-visible { outline: 2px solid var(--ink); outline-offset: 1px; }
+
+.accept {
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+  margin: 12px 20px 0; padding: 8px 13px; border-radius: var(--r-card);
+  border: 1px solid var(--line-2); background: var(--surface-2); font-size: 12.5px; color: var(--ink);
+}
+.accept .accept-n b { font-weight: 700; }
+.accept-moves { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.accept-move { display: inline-flex; align-items: center; gap: 5px; font-family: var(--mono); font-size: 11px; color: var(--ink-2); cursor: pointer; }
+.accept-move input { margin: 0; width: 13px; height: 13px; accent-color: var(--ink); cursor: pointer; }
+.accept .said { font-family: var(--mono); font-size: 10px; color: var(--ink-2); flex-basis: 100%; }
+
+/* The card under the lens: its class in one plain phrase, the reading's
+ * sentence, and where it is moving from. Monospace and quiet — a class is
+ * a fact about the focus, never a claim on him. */
+.leverage { margin-top: 7px; padding-top: 6px; border-top: 1px dotted var(--line); font-size: 11.5px; line-height: 1.4; }
+.leverage .lv-word { font-family: var(--mono); font-size: 10.5px; letter-spacing: .04em; color: var(--ink); }
+.leverage[data-meaning] .lv-word { color: var(--meaning); }
+.leverage .lv-move { margin-left: 8px; font-family: var(--mono); font-size: 10px; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-3); }
+.leverage .lv-say { display: block; margin-top: 3px; color: var(--ink-2); }

@@ -19,9 +19,26 @@ from collections.abc import Awaitable, Callable
 from datetime import datetime
 from pathlib import Path
 
-from board.assemble import assemble_board, assemble_detail, folded_under
+from board.assemble import (
+    assemble_board,
+    assemble_detail,
+    card_gate,
+    document_of,
+    folded_under,
+    watch_signal,
+)
 from board.dial import dial_state, held_lanes
+from board.focus import (
+    READ_COLUMNS,
+    card_leverage,
+    coverage_of,
+    is_chosen,
+    paused_why,
+    strip_of,
+    unavailable_why,
+)
 from board.lane import nothing_read
+from board.leverage import Judged, arrange, wake_line
 from board.reconcile import Effects, reconcile
 from board.triage import Sources
 from domain.audit import AuditKind
@@ -32,12 +49,22 @@ from domain.corpus import CorpusIndex
 from domain.dial import DialState, Headroom
 from domain.document import DocumentKind, SuggestionKind
 from domain.evidence import Evidence
+from domain.focus import (
+    Arrangement,
+    CardLeverage,
+    FocusStrip,
+    Leverage,
+    LeverageState,
+    MeasureReading,
+    ReadingKind,
+)
 from domain.lane import Doors, Lane, LaneSnapshot
 from domain.notice import Shown
 from domain.project import Project
 from domain.row import Row
-from domain.signal import SessionWork
+from domain.signal import SessionWork, SignalKind
 from domain.watercooler import WatercoolerLine
+from domain.window import WindowKind
 from infrastructure import clock
 from infrastructure.corpus import scan, watch
 from infrastructure.store import Store, StoreRefusal
@@ -295,6 +322,7 @@ class Live:
 
     def board(self, slug: str) -> BoardState:
         live = self._live(slug)
+        focus, leverages, leverage = self.focus_of(slug)
         return assemble_board(
             project=live.project,
             layout=self.store.layout(slug),
@@ -317,7 +345,159 @@ class Live:
             sources=self.sources(slug),
             dial=self.dial_state(),
             title_readings=self.store.latest_title_readings(slug),
+            focus=focus,
+            leverage=leverage,
+            leverages=leverages,
         )
+
+    def focus_of(self, slug: str) -> tuple[FocusStrip, dict[int, CardLeverage], Arrangement]:
+        """The project's focus as the strip shows it, every card's standing
+        against it, and the board as the focus would arrange it (card #87):
+        one read of the store's facts, derived by the pure functions in
+        `board/focus.py` and `board/leverage.py`, so the page, the verb and
+        the API read one answer."""
+        live = self._live(slug)
+        store = self.store
+        now = self.now()
+        document = live.index.focus
+        ruling = store.focus_ruling(slug)
+        snapshot = live.snapshot
+        conversations = snapshot.conversations if snapshot is not None else []
+        conversation = next((c for c in conversations if c.kind == WindowKind.FOCUS), None)
+        talked_before = any(d.kind == WindowKind.FOCUS for d in store.discussions(slug))
+        calls = store.focus_calls(slug)
+        open_calls = [c for c in calls if c.ended_at is None]
+        check = None
+        checking = False
+        check_note = None
+        recheck = store.focus_recheck(slug)
+        measures: list[MeasureReading] = []
+        if document is not None:
+            check = store.focus_check(slug, document.fingerprint)
+            checks = [
+                c
+                for c in calls
+                if c.kind == ReadingKind.CHECK and c.fingerprint == document.fingerprint
+            ]
+            checking = any(c.ended_at is None for c in checks)
+            if check is None and not checking and checks and not checks[-1].landed:
+                check_note = checks[-1].note or "the reading ended without an answer"
+            latest: dict[str, MeasureReading] = {}
+            for reading in store.measure_readings(slug, document.fingerprint):
+                latest[reading.side.value] = reading
+            measures = sorted(latest.values(), key=lambda m: m.side.value)
+        chosen = is_chosen(document, ruling)
+        cards = [c for c in store.cards(slug) if c.folded_into is None]
+        leverages: dict[int, CardLeverage] = {}
+        judged: dict[int, Judged] = {}
+        accepted = None
+        put_back_offered = False
+        if chosen:
+            assert document is not None and ruling is not None
+            readings = store.latest_leverage_readings(slug)
+            reading_open = {c.card_number for c in open_calls if c.kind == ReadingKind.CARD}
+            doors = snapshot.doors if snapshot is not None else {}
+            last_readings = store.last_readings(slug)
+            documents = {c.number: document_of(c, live.index) for c in cards}
+            for card in cards:
+                doc = documents[card.number]
+                shipped = card.place.column in (Column.EXECUTED, Column.DONE)
+                if doc is None or (doc.archived and not shipped):
+                    # A card behind an archived document off the shipped
+                    # columns is nobody's to read: the loop skips it too.
+                    continue
+                found = doors.get(card.number)
+                waits = found.readiness.waits if found is not None else []
+                held = [w.label for w in waits if not w.shipped]
+                leverages[card.number] = card_leverage(
+                    readings.get(card.number),
+                    document.fingerprint,
+                    doc,
+                    reading_open=card.number in reading_open,
+                    hold=", ".join(held) if held else None,
+                )
+            unblocks: dict[int, int] = {}
+            for card in cards:
+                lv = leverages.get(card.number)
+                doc = documents[card.number]
+                if (
+                    lv is None
+                    or doc is None
+                    or lv.state != LeverageState.READ
+                    or lv.leverage != Leverage.HELPS_REMOVE
+                ):
+                    continue
+                for named in doc.sequenced:
+                    if named.words is None:
+                        unblocks[named.number] = unblocks.get(named.number, 0) + 1
+            for card in cards:
+                doc = documents[card.number]
+                signal, _ = watch_signal(card)
+                last = last_readings.get(card.number)
+                judged[card.number] = Judged(
+                    number=card.number,
+                    place=card.place,
+                    gate=card_gate(card, doc),
+                    kind=doc.kind if doc is not None else None,
+                    suggestion_kind=doc.suggestion_kind if doc is not None else None,
+                    document_fingerprint=doc.fingerprint if doc is not None else None,
+                    leverage=leverages.get(card.number),
+                    unblocks=unblocks.get(card.number, 0),
+                    owner_signal=signal is not None and signal.kind == SignalKind.OWNER,
+                    last_read=last.at if last is not None else None,
+                )
+            accepted = store.latest_acceptance(slug)
+            if accepted is not None and accepted.put_back_at is None:
+                own = (f"(batch {accepted.id},", f"(batch {accepted.id})")
+                by_hand = [
+                    m
+                    for m in store.owner_moves_since(slug, accepted.at)
+                    if not any(mark in m.detail for mark in own)
+                ]
+                put_back_offered = (
+                    not by_hand and accepted.focus_fingerprint == document.fingerprint
+                )
+                if not put_back_offered:
+                    # A hand move retired it: there is no old state any more.
+                    accepted = None
+            else:
+                accepted = None
+        paused = paused_why(document, ruling, recheck, now) if chosen else None
+        arrangement = arrange(
+            store.layout(slug),
+            judged,
+            focus_fingerprint=document.fingerprint if document is not None else "",
+            declines=store.declines(slug),
+            wake=wake_line(
+                document.recheck.signal.what if document.recheck.signal else None,
+                document.recheck.line,
+            )
+            if document is not None
+            else None,
+            available=chosen and paused is None,
+            why=None,
+        )
+        places = {c.number: c.place for c in cards}
+        shown = {n: lv for n, lv in leverages.items() if places[n].column in READ_COLUMNS}
+        strip = strip_of(
+            document=document,
+            ruling=ruling,
+            check=check,
+            checking=checking,
+            check_note=check_note,
+            conversation=conversation,
+            talked_before=talked_before,
+            coverage=coverage_of(places, shown) if chosen else None,
+            moves_proposed=len(arrangement.moves),
+            accepted=accepted,
+            put_back_offered=put_back_offered,
+            recheck=recheck,
+            measures=measures,
+            now=now,
+        )
+        if not arrangement.available:
+            arrangement = arrangement.model_copy(update={"why": unavailable_why(strip)})
+        return strip, leverages, arrangement
 
     def dial_state(self) -> DialState:
         """The dial with the fix lanes live against its number, the planned
@@ -388,6 +568,7 @@ class Live:
             triage=self.store.triage(slug, number),
             sources=self.sources(slug),
             title_reading=self.store.latest_title_readings(slug).get(number),
+            leverage=self.focus_of(slug)[1].get(number),
         )
 
     def lane_and_doors(self, slug: str, card: Card) -> tuple[Lane | None, Doors]:

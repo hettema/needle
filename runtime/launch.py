@@ -1060,6 +1060,129 @@ def call_codex(store: Store, session: Session, *, brief: str, name: str, answer:
     )
 
 
+ASK_SECONDS = CODEX_LANE_SECONDS
+"""How long a fresh Codex thread's process must live before the ask is
+called alive: the lane's window, for the lane's reason — a fresh `codex
+exec` writes its rollout after it has authenticated and loaded the
+doctrine chain."""
+
+
+def ask_codex(
+    store: Store,
+    *,
+    cwd: str,
+    name: str,
+    brief: str,
+    answer: str,
+    schema: str,
+    effort: Gate,
+) -> Launch:
+    """Ask a colleague of the other make in a fresh thread (card #87): a
+    cold reading with no share of any earlier thread's context, held to
+    the answer's own schema, sandboxed read-only in the project's
+    checkout, and verified the way a called worker is — the process is
+    there past the observation window, or it ended and said why, or it
+    ended with the answer written, which is a fast reply.
+
+    Why a fresh thread and not `call`: a call resumes the slot's most
+    recent thread (`call_codex`), which is the right shape for a colleague
+    with the thread in its head and the wrong one for a reading whose
+    worth is its independence (the plan's ruling of 2026-09-09). `schema`
+    is the JSON schema Codex holds the last message to, written by the
+    caller beside the answer."""
+    if not brief.strip():
+        return dead(name, [], "an empty brief asks nobody", None)
+    log = codex.log_path(answer)
+    try:
+        argv = codex.ask_argv(cwd, brief=brief, answer=answer, schema=schema, effort=effort)
+    except machine.CommandMissing as missing:
+        return dead(name, [], str(missing), None)
+    since = time.time()
+    try:
+        log.parent.mkdir(parents=True, exist_ok=True)
+        pid = machine.detach(argv, cwd=cwd, log=log)
+    except OSError as error:
+        return dead(name, [], f"`codex exec` could not run: {error}", None)
+    born = machine.process_start(pid)
+    while True:
+        elapsed = time.time() - since
+        if not machine.process_alive(pid, born):
+            session = codex.fresh_since(cwd, since)
+            if _answered(answer, since):
+                attempt = Attempt(
+                    rung=CODEX_RUNG,
+                    verdict=LaunchVerdict.ALIVE,
+                    short_id=session.short_id if session else None,
+                    reason=f"answered within {elapsed:.1f} s",
+                    seconds=round(elapsed, 2),
+                )
+                return Launch(
+                    card=name,
+                    verdict=LaunchVerdict.ALIVE,
+                    session=session,
+                    placement=None,
+                    scope=None,
+                    attempts=[attempt],
+                    reason=f"already answered, {elapsed:.1f} s after the ask",
+                )
+            words = _last_words(log)
+            reason = f"`codex exec` ended {elapsed:.1f} s after the ask without an answer" + (
+                f": {words}" if words else ""
+            )
+            attempt = Attempt(
+                rung=CODEX_RUNG,
+                verdict=LaunchVerdict.DEAD,
+                short_id=session.short_id if session else None,
+                reason=reason,
+                seconds=round(elapsed, 2),
+            )
+            return dead(name, [attempt], reason, None)
+        if elapsed >= ASK_SECONDS:
+            break
+        time.sleep(POLL_SECONDS)
+    session = _codex_lane_row(pid, cwd) or codex.fresh_since(cwd, since)
+    if session is None:
+        machine.terminate(pid)
+        return dead(
+            name,
+            [],
+            f"the process lived {time.time() - since:.1f} s but wrote no session of its own in "
+            f"{machine.codex_sessions_root()}, so the board has nothing to follow",
+            None,
+        )
+    unit = lane_unit(name)
+    try:
+        asked, words = machine.adopt(unit, [pid, *machine.descendants_of(pid)])
+    except machine.CommandMissing as missing:
+        asked, words = False, str(missing)
+    scoped = asked and _in_scope(pid, unit)
+    store.record_session_slot(
+        SessionSlot(
+            session_id=session.session_id,
+            slot=codex.SLOT,
+            card=name,
+            scope=unit,
+            recorded_at=clock.now(),
+        )
+    )
+    attempt = Attempt(
+        rung=CODEX_RUNG,
+        verdict=LaunchVerdict.ALIVE,
+        short_id=session.short_id,
+        reason=None,
+        seconds=round(time.time() - since, 2),
+    )
+    return Launch(
+        card=name,
+        verdict=LaunchVerdict.ALIVE,
+        session=session,
+        placement=None,
+        scope=unit if scoped else None,
+        attempts=[attempt],
+        reason=None if scoped else f"running, but not in its own space on the machine: {words}",
+    )
+
+
 def _codex_row(session: Session) -> Session:
     """The worker's row as the one list reads it now, with its process."""
     rows = codex.find(session.session_id)

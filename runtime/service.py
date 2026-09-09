@@ -271,6 +271,29 @@ class Runtime:
             return launch.resume_transcript(self.store, session_id, cwd, brief=brief, name=name)
         return launch.call(self.store, session, brief=brief, name=name, answer=answer)
 
+    def ask(
+        self,
+        *,
+        cwd: str,
+        name: str,
+        brief: str,
+        answer: str,
+        schema: str,
+        effort: Gate,
+    ) -> Launch:
+        """Ask a colleague of the other make in a fresh thread (card #87):
+        a cold reading held to `schema`, whose last message Codex writes to
+        `answer`. Never a resume — the reading's worth is its independence."""
+        return launch.ask_codex(
+            self.store,
+            cwd=cwd,
+            name=name,
+            brief=brief,
+            answer=answer,
+            schema=schema,
+            effort=effort,
+        )
+
     def judge_call(self, call: Call, sessions: list[Session] | None = None) -> CallVerdict | None:
         """One reading of a call against the one list and its answer file:
         what `needle wait` and the loop both make (plan 17, item 2)."""

@@ -128,7 +128,16 @@
                 "planning": null,
                 "triaging": null,
                 "triage": null,
-                "title_reading": null
+                "title_reading": null,
+                "leverage": {
+                  "state": "unread",
+                  "leverage": null,
+                  "likelihood": null,
+                  "words": null,
+                  "sentence": "Nothing for you: this card has not been read against the focus yet. It keeps its place until a reading lands.",
+                  "hold": null,
+                  "read_at": null
+                }
               },
               {
                 "number": 267,
@@ -179,7 +188,16 @@
                 "planning": null,
                 "triaging": null,
                 "triage": null,
-                "title_reading": null
+                "title_reading": null,
+                "leverage": {
+                  "state": "unread",
+                  "leverage": null,
+                  "likelihood": null,
+                  "words": null,
+                  "sentence": "Nothing for you: this card has not been read against the focus yet. It keeps its place until a reading lands.",
+                  "hold": null,
+                  "read_at": null
+                }
               }
             ],
             "rail": true
@@ -229,7 +247,16 @@
                 "planning": null,
                 "triaging": null,
                 "triage": null,
-                "title_reading": null
+                "title_reading": null,
+                "leverage": {
+                  "state": "unread",
+                  "leverage": null,
+                  "likelihood": null,
+                  "words": null,
+                  "sentence": "Nothing for you: this card has not been read against the focus yet. It keeps its place until a reading lands.",
+                  "hold": null,
+                  "read_at": null
+                }
               },
               {
                 "number": 242,
@@ -273,7 +300,16 @@
                 "planning": null,
                 "triaging": null,
                 "triage": null,
-                "title_reading": null
+                "title_reading": null,
+                "leverage": {
+                  "state": "unread",
+                  "leverage": null,
+                  "likelihood": null,
+                  "words": null,
+                  "sentence": "Nothing for you: this card has not been read against the focus yet. It keeps its place until a reading lands.",
+                  "hold": null,
+                  "read_at": null
+                }
               },
               {
                 "number": 120,
@@ -319,7 +355,8 @@
                 "planning": null,
                 "triaging": null,
                 "triage": null,
-                "title_reading": null
+                "title_reading": null,
+                "leverage": null
               }
             ],
             "rail": false
@@ -376,7 +413,8 @@
                 "planning": null,
                 "triaging": null,
                 "triage": null,
-                "title_reading": null
+                "title_reading": null,
+                "leverage": null
               }
             ],
             "rail": false
@@ -426,7 +464,16 @@
                 "planning": null,
                 "triaging": null,
                 "triage": null,
-                "title_reading": null
+                "title_reading": null,
+                "leverage": {
+                  "state": "unread",
+                  "leverage": null,
+                  "likelihood": null,
+                  "words": null,
+                  "sentence": "Nothing for you: this card has not been read against the focus yet. It keeps its place until a reading lands.",
+                  "hold": null,
+                  "read_at": null
+                }
               },
               {
                 "number": 264,
@@ -470,7 +517,16 @@
                 "planning": null,
                 "triaging": null,
                 "triage": null,
-                "title_reading": null
+                "title_reading": null,
+                "leverage": {
+                  "state": "unread",
+                  "leverage": null,
+                  "likelihood": null,
+                  "words": null,
+                  "sentence": "Nothing for you: this card has not been read against the focus yet. It keeps its place until a reading lands.",
+                  "hold": null,
+                  "read_at": null
+                }
               },
               {
                 "number": 265,
@@ -514,7 +570,16 @@
                 "planning": null,
                 "triaging": null,
                 "triage": null,
-                "title_reading": null
+                "title_reading": null,
+                "leverage": {
+                  "state": "unread",
+                  "leverage": null,
+                  "likelihood": null,
+                  "words": null,
+                  "sentence": "Nothing for you: this card has not been read against the focus yet. It keeps its place until a reading lands.",
+                  "hold": null,
+                  "read_at": null
+                }
               },
               {
                 "number": 266,
@@ -558,7 +623,16 @@
                 "planning": null,
                 "triaging": null,
                 "triage": null,
-                "title_reading": null
+                "title_reading": null,
+                "leverage": {
+                  "state": "unread",
+                  "leverage": null,
+                  "likelihood": null,
+                  "words": null,
+                  "sentence": "Nothing for you: this card has not been read against the focus yet. It keeps its place until a reading lands.",
+                  "hold": null,
+                  "read_at": null
+                }
               }
             ],
             "rail": false
@@ -627,7 +701,16 @@
                 "planning": null,
                 "triaging": null,
                 "triage": null,
-                "title_reading": null
+                "title_reading": null,
+                "leverage": {
+                  "state": "read",
+                  "leverage": "helps remove this limit",
+                  "likelihood": "low",
+                  "words": "a berth let sooner is invoiced sooner, if it is invoiced",
+                  "sentence": "Nothing for you: it helps remove this limit (low likelihood). A berth let sooner is invoiced sooner, if it is invoiced.",
+                  "hold": null,
+                  "read_at": "2026-09-04T08:30:00Z"
+                }
               }
             ],
             "rail": false
@@ -679,7 +762,16 @@
                 "planning": null,
                 "triaging": null,
                 "triage": null,
-                "title_reading": null
+                "title_reading": null,
+                "leverage": {
+                  "state": "read",
+                  "leverage": "needs evidence",
+                  "likelihood": null,
+                  "words": "the plan does not say what showing the price moves",
+                  "sentence": "Nothing for you: it needs evidence. The plan does not say what showing the price moves.",
+                  "hold": null,
+                  "read_at": "2026-09-04T08:30:00Z"
+                }
               }
             ],
             "rail": false
@@ -731,7 +823,16 @@
                 "planning": null,
                 "triaging": null,
                 "triage": null,
-                "title_reading": null
+                "title_reading": null,
+                "leverage": {
+                  "state": "unread",
+                  "leverage": null,
+                  "likelihood": null,
+                  "words": null,
+                  "sentence": "Nothing for you: this card has not been read against the focus yet. It keeps its place until a reading lands.",
+                  "hold": null,
+                  "read_at": null
+                }
               }
             ],
             "rail": false
@@ -781,7 +882,16 @@
                 "planning": null,
                 "triaging": null,
                 "triage": null,
-                "title_reading": null
+                "title_reading": null,
+                "leverage": {
+                  "state": "unread",
+                  "leverage": null,
+                  "likelihood": null,
+                  "words": null,
+                  "sentence": "Nothing for you: this card has not been read against the focus yet. It keeps its place until a reading lands.",
+                  "hold": null,
+                  "read_at": null
+                }
               },
               {
                 "number": 268,
@@ -825,7 +935,16 @@
                 "planning": null,
                 "triaging": null,
                 "triage": null,
-                "title_reading": null
+                "title_reading": null,
+                "leverage": {
+                  "state": "unread",
+                  "leverage": null,
+                  "likelihood": null,
+                  "words": null,
+                  "sentence": "Nothing for you: this card has not been read against the focus yet. It keeps its place until a reading lands.",
+                  "hold": null,
+                  "read_at": null
+                }
               }
             ],
             "rail": false
@@ -892,7 +1011,16 @@
                 "planning": null,
                 "triaging": null,
                 "triage": null,
-                "title_reading": null
+                "title_reading": null,
+                "leverage": {
+                  "state": "read",
+                  "leverage": "helps remove this limit",
+                  "likelihood": "high",
+                  "words": "it bills the reading the invoice waits on",
+                  "sentence": "Nothing for you: it helps remove this limit (high likelihood). It bills the reading the invoice waits on.",
+                  "hold": null,
+                  "read_at": "2026-09-04T08:30:00Z"
+                }
               },
               {
                 "number": 241,
@@ -936,7 +1064,16 @@
                 "planning": null,
                 "triaging": null,
                 "triage": null,
-                "title_reading": null
+                "title_reading": null,
+                "leverage": {
+                  "state": "read",
+                  "leverage": "protects progress",
+                  "likelihood": null,
+                  "words": "a gate code before arrival keeps a paid berth usable",
+                  "sentence": "Nothing for you: it protects progress. A gate code before arrival keeps a paid berth usable.",
+                  "hold": null,
+                  "read_at": "2026-09-04T08:30:00Z"
+                }
               },
               {
                 "number": 228,
@@ -980,7 +1117,8 @@
                 "planning": null,
                 "triaging": null,
                 "triage": null,
-                "title_reading": null
+                "title_reading": null,
+                "leverage": null
               },
               {
                 "number": 237,
@@ -1024,7 +1162,16 @@
                 "planning": null,
                 "triaging": null,
                 "triage": null,
-                "title_reading": null
+                "title_reading": null,
+                "leverage": {
+                  "state": "unread",
+                  "leverage": null,
+                  "likelihood": null,
+                  "words": null,
+                  "sentence": "Nothing for you: this card has not been read against the focus yet. It keeps its place until a reading lands.",
+                  "hold": null,
+                  "read_at": null
+                }
               },
               {
                 "number": 174,
@@ -1070,7 +1217,16 @@
                 "planning": null,
                 "triaging": null,
                 "triage": null,
-                "title_reading": null
+                "title_reading": null,
+                "leverage": {
+                  "state": "read",
+                  "leverage": "does not address this limit",
+                  "likelihood": null,
+                  "words": "the office file's size does not delay an invoice",
+                  "sentence": "Nothing for you: it does not address this limit. The office file's size does not delay an invoice.",
+                  "hold": null,
+                  "read_at": "2026-09-04T08:30:00Z"
+                }
               }
             ],
             "rail": false
@@ -1137,7 +1293,8 @@
                 "planning": null,
                 "triaging": null,
                 "triage": null,
-                "title_reading": null
+                "title_reading": null,
+                "leverage": null
               },
               {
                 "number": 223,
@@ -1181,7 +1338,16 @@
                 "planning": null,
                 "triaging": null,
                 "triage": null,
-                "title_reading": null
+                "title_reading": null,
+                "leverage": {
+                  "state": "unread",
+                  "leverage": null,
+                  "likelihood": null,
+                  "words": null,
+                  "sentence": "Nothing for you: this card has not been read against the focus yet. It keeps its place until a reading lands.",
+                  "hold": null,
+                  "read_at": null
+                }
               }
             ],
             "rail": false
@@ -1257,7 +1423,16 @@
                 "planning": null,
                 "triaging": null,
                 "triage": null,
-                "title_reading": null
+                "title_reading": null,
+                "leverage": {
+                  "state": "unread",
+                  "leverage": null,
+                  "likelihood": null,
+                  "words": null,
+                  "sentence": "Nothing for you: this card has not been read against the focus yet. It keeps its place until a reading lands.",
+                  "hold": null,
+                  "read_at": null
+                }
               },
               {
                 "number": 147,
@@ -1311,7 +1486,8 @@
                 "planning": null,
                 "triaging": null,
                 "triage": null,
-                "title_reading": null
+                "title_reading": null,
+                "leverage": null
               }
             ],
             "rail": false
@@ -1370,7 +1546,16 @@
                 "planning": null,
                 "triaging": null,
                 "triage": null,
-                "title_reading": null
+                "title_reading": null,
+                "leverage": {
+                  "state": "unread",
+                  "leverage": null,
+                  "likelihood": null,
+                  "words": null,
+                  "sentence": "Nothing for you: this card has not been read against the focus yet. It keeps its place until a reading lands.",
+                  "hold": null,
+                  "read_at": null
+                }
               }
             ],
             "rail": false
@@ -1429,7 +1614,8 @@
                 "planning": null,
                 "triaging": null,
                 "triage": null,
-                "title_reading": null
+                "title_reading": null,
+                "leverage": null
               }
             ],
             "rail": false
@@ -1498,7 +1684,16 @@
                 "planning": null,
                 "triaging": null,
                 "triage": null,
-                "title_reading": null
+                "title_reading": null,
+                "leverage": {
+                  "state": "unread",
+                  "leverage": null,
+                  "likelihood": null,
+                  "words": null,
+                  "sentence": "Nothing for you: this card has not been read against the focus yet. It keeps its place until a reading lands.",
+                  "hold": null,
+                  "read_at": null
+                }
               }
             ],
             "rail": false
@@ -1589,7 +1784,8 @@
                 "planning": null,
                 "triaging": null,
                 "triage": null,
-                "title_reading": null
+                "title_reading": null,
+                "leverage": null
               }
             ],
             "rail": false
@@ -1602,7 +1798,318 @@
     "asks": [],
     "verdicts": [],
     "conversations": [],
-    "watercooler": []
+    "watercooler": [],
+    "focus": {
+      "state": "chosen",
+      "sentence": "Focus chosen · 5 of 20 cards assessed · 2 moves proposed",
+      "what_matters": "Every season berth is paid before the boat arrives",
+      "what_holds": "The invoice leaves the office late, because the meter readings it waits on arrive as text the office drops",
+      "document": {
+        "path": "docs/FOCUS.md",
+        "fingerprint": "1ea764d04ad0ba3e",
+        "title": "Every season berth is paid before the boat arrives",
+        "what_matters": "Every season berth is paid before the boat arrives",
+        "outcome": {
+          "line": "season berths paid before arrival, by count — command grep -c paid office/season.log expect >= 40 by 2026-10-31 every 7d",
+          "signal": {
+            "what": "season berths paid before arrival, by count",
+            "kind": "command",
+            "target": "grep -c paid office/season.log",
+            "expect": ">= 40",
+            "due": "2026-10-31",
+            "every_hours": 168.0
+          },
+          "note": null
+        },
+        "what_holds": "The invoice leaves the office late, because the meter readings it waits on arrive as text the office drops",
+        "bottleneck": {
+          "line": "invoices sent within a day of the reading — command grep -c \"sent within a day\" office/invoices.log expect >= 30 by 2026-10-31 every 7d",
+          "signal": {
+            "what": "invoices sent within a day of the reading",
+            "kind": "command",
+            "target": "grep -c \"sent within a day\" office/invoices.log",
+            "expect": ">= 30",
+            "due": "2026-10-31",
+            "every_hours": 168.0
+          },
+          "note": null
+        },
+        "evidence": "docs/plans/2026-09-03-every-metered-kilowatt-is-billed.md (every reading since 5 July dropped); docs/plans/done/2026-06-15-the-first-invoice-leaves-the-office.md (the invoice waits on the last reading)",
+        "rival": "skippers pay late because the price is not shown before booking (docs/plans/2026-09-02-the-skipper-sees-the-price-before-the-berth.md); separated by the office log — the late invoices are the ones with no reading, not the ones with no price",
+        "recheck": {
+          "line": "the diagnosis is read again against both measures — session harbourmaster by 2026-10-15",
+          "signal": {
+            "what": "the diagnosis is read again against both measures",
+            "kind": "session",
+            "target": "harbourmaster",
+            "expect": null,
+            "due": "2026-10-15",
+            "every_hours": 24.0
+          },
+          "note": null
+        },
+        "proposed": "conversation 9a3c1e7f, 2026-09-04",
+        "doubts": [],
+        "read_at": "2026-09-04T08:30:00Z"
+      },
+      "ruling": {
+        "id": 1,
+        "project": "harbourmaster",
+        "fingerprint": "1ea764d04ad0ba3e",
+        "what_matters": "Every season berth is paid before the boat arrives",
+        "chosen_at": "2026-09-04T08:30:00Z"
+      },
+      "check": {
+        "id": 1,
+        "project": "harbourmaster",
+        "fingerprint": "1ea764d04ad0ba3e",
+        "at": "2026-09-04T08:30:00Z",
+        "verdict": "stands",
+        "line": "the office log shows the late invoices are the ones with no reading",
+        "how_known": null,
+        "session_id": null
+      },
+      "checking": false,
+      "check_note": null,
+      "conversation": null,
+      "coverage": {
+        "assessed": 5,
+        "total": 20,
+        "unread": 15,
+        "needs_evidence": 1,
+        "stale": 0,
+        "reading": 0,
+        "queued_helping": 1,
+        "line": "1 queued card helps remove this limit"
+      },
+      "moves_proposed": 2,
+      "accepted": null,
+      "put_back_offered": false,
+      "paused": null,
+      "recheck_due": "2026-10-15",
+      "recheck": null,
+      "measures": [],
+      "talk": {
+        "offered": true,
+        "label": "Talk it through",
+        "why": "Nothing for you: press it and a conversation opens to sharpen what matters now and find what holds it back."
+      },
+      "choose": {
+        "offered": false,
+        "label": "Use this focus",
+        "why": "Nothing for you: this focus is chosen already."
+      },
+      "propose": {
+        "offered": true,
+        "label": "Propose moves",
+        "why": "Nothing for you: press it and the conversation proposes what else could move this limit, each as a suggestion on your word."
+      }
+    },
+    "leverage": {
+      "available": true,
+      "why": null,
+      "columns": [
+        {
+          "column": "Backlog",
+          "groups": [
+            {
+              "name": "Defects",
+              "rail": true,
+              "numbers": [
+                232,
+                267
+              ]
+            },
+            {
+              "name": "Next to plan",
+              "rail": false,
+              "numbers": [
+                252,
+                242,
+                120
+              ]
+            },
+            {
+              "name": "Season opening",
+              "rail": false,
+              "numbers": []
+            },
+            {
+              "name": "Skipper-facing quality",
+              "rail": false,
+              "numbers": [
+                105
+              ]
+            },
+            {
+              "name": null,
+              "rail": false,
+              "numbers": [
+                263,
+                264,
+                265,
+                266
+              ]
+            }
+          ]
+        },
+        {
+          "column": "Planned",
+          "groups": [
+            {
+              "name": "Season opening",
+              "rail": false,
+              "numbers": []
+            },
+            {
+              "name": "Skipper-facing quality",
+              "rail": false,
+              "numbers": [
+                109
+              ]
+            },
+            {
+              "name": "Trust — from the winter review",
+              "rail": false,
+              "numbers": [
+                172
+              ]
+            },
+            {
+              "name": null,
+              "rail": false,
+              "numbers": [
+                262,
+                268
+              ]
+            }
+          ]
+        },
+        {
+          "column": "Up next",
+          "groups": [
+            {
+              "name": null,
+              "rail": false,
+              "numbers": [
+                253,
+                196,
+                241,
+                228,
+                237
+              ]
+            }
+          ]
+        },
+        {
+          "column": "Executing",
+          "groups": [
+            {
+              "name": null,
+              "rail": false,
+              "numbers": [
+                259,
+                223
+              ]
+            }
+          ]
+        },
+        {
+          "column": "Decision moment",
+          "groups": [
+            {
+              "name": null,
+              "rail": false,
+              "numbers": [
+                219,
+                147
+              ]
+            },
+            {
+              "name": "Rulings that unblock lanes",
+              "rail": false,
+              "numbers": [
+                139
+              ]
+            },
+            {
+              "name": "Actions & sign-offs elsewhere",
+              "rail": false,
+              "numbers": [
+                149
+              ]
+            }
+          ]
+        },
+        {
+          "column": "Executed",
+          "groups": [
+            {
+              "name": null,
+              "rail": false,
+              "numbers": [
+                134
+              ]
+            }
+          ]
+        },
+        {
+          "column": "Done",
+          "groups": [
+            {
+              "name": null,
+              "rail": false,
+              "numbers": []
+            }
+          ]
+        },
+        {
+          "column": "Not now",
+          "groups": [
+            {
+              "name": null,
+              "rail": false,
+              "numbers": [
+                201,
+                174
+              ]
+            }
+          ]
+        }
+      ],
+      "moves": [
+        {
+          "number": 174,
+          "from_place": {
+            "column": "Up next",
+            "group": null,
+            "position": 4
+          },
+          "to_place": {
+            "column": "Not now",
+            "group": null,
+            "position": 1
+          },
+          "why": "does not address this limit: the office file's size does not delay an invoice",
+          "wake": "WATCH: wake when the diagnosis is read again against both measures — the diagnosis is read again against both measures — session harbourmaster by 2026-10-15"
+        },
+        {
+          "number": 196,
+          "from_place": {
+            "column": "Planned",
+            "group": "Season opening",
+            "position": 0
+          },
+          "to_place": {
+            "column": "Up next",
+            "group": null,
+            "position": 1
+          },
+          "why": "helps remove this limit, low likelihood: a berth let sooner is invoiced sooner, if it is invoiced",
+          "wake": null
+        }
+      ]
+    }
   },
   "details": {
     "232": {
@@ -1690,7 +2197,16 @@
         "planning": null,
         "triaging": null,
         "triage": null,
-        "title_reading": null
+        "title_reading": null,
+        "leverage": {
+          "state": "unread",
+          "leverage": null,
+          "likelihood": null,
+          "words": null,
+          "sentence": "Nothing for you: this card has not been read against the focus yet. It keeps its place until a reading lands.",
+          "hold": null,
+          "read_at": null
+        }
       },
       "brief": [
         {
@@ -1961,7 +2477,16 @@
         "planning": null,
         "triaging": null,
         "triage": null,
-        "title_reading": null
+        "title_reading": null,
+        "leverage": {
+          "state": "unread",
+          "leverage": null,
+          "likelihood": null,
+          "words": null,
+          "sentence": "Nothing for you: this card has not been read against the focus yet. It keeps its place until a reading lands.",
+          "hold": null,
+          "read_at": null
+        }
       },
       "brief": [],
       "record": [],
@@ -2211,7 +2736,16 @@
         "planning": null,
         "triaging": null,
         "triage": null,
-        "title_reading": null
+        "title_reading": null,
+        "leverage": {
+          "state": "unread",
+          "leverage": null,
+          "likelihood": null,
+          "words": null,
+          "sentence": "Nothing for you: this card has not been read against the focus yet. It keeps its place until a reading lands.",
+          "hold": null,
+          "read_at": null
+        }
       },
       "brief": [
         {
@@ -2469,7 +3003,16 @@
         "planning": null,
         "triaging": null,
         "triage": null,
-        "title_reading": null
+        "title_reading": null,
+        "leverage": {
+          "state": "unread",
+          "leverage": null,
+          "likelihood": null,
+          "words": null,
+          "sentence": "Nothing for you: this card has not been read against the focus yet. It keeps its place until a reading lands.",
+          "hold": null,
+          "read_at": null
+        }
       },
       "brief": [
         {
@@ -2721,7 +3264,8 @@
         "planning": null,
         "triaging": null,
         "triage": null,
-        "title_reading": null
+        "title_reading": null,
+        "leverage": null
       },
       "brief": [],
       "record": [],
@@ -2927,7 +3471,8 @@
         "planning": null,
         "triaging": null,
         "triage": null,
-        "title_reading": null
+        "title_reading": null,
+        "leverage": null
       },
       "brief": [],
       "record": [],
@@ -3120,7 +3665,16 @@
         "planning": null,
         "triaging": null,
         "triage": null,
-        "title_reading": null
+        "title_reading": null,
+        "leverage": {
+          "state": "unread",
+          "leverage": null,
+          "likelihood": null,
+          "words": null,
+          "sentence": "Nothing for you: this card has not been read against the focus yet. It keeps its place until a reading lands.",
+          "hold": null,
+          "read_at": null
+        }
       },
       "brief": [],
       "record": [],
@@ -3345,7 +3899,16 @@
         "planning": null,
         "triaging": null,
         "triage": null,
-        "title_reading": null
+        "title_reading": null,
+        "leverage": {
+          "state": "unread",
+          "leverage": null,
+          "likelihood": null,
+          "words": null,
+          "sentence": "Nothing for you: this card has not been read against the focus yet. It keeps its place until a reading lands.",
+          "hold": null,
+          "read_at": null
+        }
       },
       "brief": [],
       "record": [],
@@ -3570,7 +4133,16 @@
         "planning": null,
         "triaging": null,
         "triage": null,
-        "title_reading": null
+        "title_reading": null,
+        "leverage": {
+          "state": "unread",
+          "leverage": null,
+          "likelihood": null,
+          "words": null,
+          "sentence": "Nothing for you: this card has not been read against the focus yet. It keeps its place until a reading lands.",
+          "hold": null,
+          "read_at": null
+        }
       },
       "brief": [],
       "record": [],
@@ -3795,7 +4367,16 @@
         "planning": null,
         "triaging": null,
         "triage": null,
-        "title_reading": null
+        "title_reading": null,
+        "leverage": {
+          "state": "unread",
+          "leverage": null,
+          "likelihood": null,
+          "words": null,
+          "sentence": "Nothing for you: this card has not been read against the focus yet. It keeps its place until a reading lands.",
+          "hold": null,
+          "read_at": null
+        }
       },
       "brief": [],
       "record": [],
@@ -4037,7 +4618,16 @@
         "planning": null,
         "triaging": null,
         "triage": null,
-        "title_reading": null
+        "title_reading": null,
+        "leverage": {
+          "state": "read",
+          "leverage": "helps remove this limit",
+          "likelihood": "low",
+          "words": "a berth let sooner is invoiced sooner, if it is invoiced",
+          "sentence": "Nothing for you: it helps remove this limit (low likelihood). A berth let sooner is invoiced sooner, if it is invoiced.",
+          "hold": null,
+          "read_at": "2026-09-04T08:30:00Z"
+        }
       },
       "brief": [
         {
@@ -4312,7 +4902,16 @@
         "planning": null,
         "triaging": null,
         "triage": null,
-        "title_reading": null
+        "title_reading": null,
+        "leverage": {
+          "state": "read",
+          "leverage": "needs evidence",
+          "likelihood": null,
+          "words": "the plan does not say what showing the price moves",
+          "sentence": "Nothing for you: it needs evidence. The plan does not say what showing the price moves.",
+          "hold": null,
+          "read_at": "2026-09-04T08:30:00Z"
+        }
       },
       "brief": [
         {
@@ -4582,7 +5181,16 @@
         "planning": null,
         "triaging": null,
         "triage": null,
-        "title_reading": null
+        "title_reading": null,
+        "leverage": {
+          "state": "unread",
+          "leverage": null,
+          "likelihood": null,
+          "words": null,
+          "sentence": "Nothing for you: this card has not been read against the focus yet. It keeps its place until a reading lands.",
+          "hold": null,
+          "read_at": null
+        }
       },
       "brief": [
         {
@@ -4839,7 +5447,16 @@
         "planning": null,
         "triaging": null,
         "triage": null,
-        "title_reading": null
+        "title_reading": null,
+        "leverage": {
+          "state": "unread",
+          "leverage": null,
+          "likelihood": null,
+          "words": null,
+          "sentence": "Nothing for you: this card has not been read against the focus yet. It keeps its place until a reading lands.",
+          "hold": null,
+          "read_at": null
+        }
       },
       "brief": [],
       "record": [],
@@ -5076,7 +5693,16 @@
         "planning": null,
         "triaging": null,
         "triage": null,
-        "title_reading": null
+        "title_reading": null,
+        "leverage": {
+          "state": "unread",
+          "leverage": null,
+          "likelihood": null,
+          "words": null,
+          "sentence": "Nothing for you: this card has not been read against the focus yet. It keeps its place until a reading lands.",
+          "hold": null,
+          "read_at": null
+        }
       },
       "brief": [],
       "record": [],
@@ -5359,7 +5985,16 @@
         "planning": null,
         "triaging": null,
         "triage": null,
-        "title_reading": null
+        "title_reading": null,
+        "leverage": {
+          "state": "read",
+          "leverage": "helps remove this limit",
+          "likelihood": "high",
+          "words": "it bills the reading the invoice waits on",
+          "sentence": "Nothing for you: it helps remove this limit (high likelihood). It bills the reading the invoice waits on.",
+          "hold": null,
+          "read_at": "2026-09-04T08:30:00Z"
+        }
       },
       "brief": [
         {
@@ -5645,7 +6280,16 @@
         "planning": null,
         "triaging": null,
         "triage": null,
-        "title_reading": null
+        "title_reading": null,
+        "leverage": {
+          "state": "read",
+          "leverage": "protects progress",
+          "likelihood": null,
+          "words": "a gate code before arrival keeps a paid berth usable",
+          "sentence": "Nothing for you: it protects progress. A gate code before arrival keeps a paid berth usable.",
+          "hold": null,
+          "read_at": "2026-09-04T08:30:00Z"
+        }
       },
       "brief": [
         {
@@ -5924,7 +6568,8 @@
         "planning": null,
         "triaging": null,
         "triage": null,
-        "title_reading": null
+        "title_reading": null,
+        "leverage": null
       },
       "brief": [
         {
@@ -6147,7 +6792,16 @@
         "planning": null,
         "triaging": null,
         "triage": null,
-        "title_reading": null
+        "title_reading": null,
+        "leverage": {
+          "state": "unread",
+          "leverage": null,
+          "likelihood": null,
+          "words": null,
+          "sentence": "Nothing for you: this card has not been read against the focus yet. It keeps its place until a reading lands.",
+          "hold": null,
+          "read_at": null
+        }
       },
       "brief": [
         {
@@ -6447,7 +7101,16 @@
         "planning": null,
         "triaging": null,
         "triage": null,
-        "title_reading": null
+        "title_reading": null,
+        "leverage": {
+          "state": "read",
+          "leverage": "does not address this limit",
+          "likelihood": null,
+          "words": "the office file's size does not delay an invoice",
+          "sentence": "Nothing for you: it does not address this limit. The office file's size does not delay an invoice.",
+          "hold": null,
+          "read_at": "2026-09-04T08:30:00Z"
+        }
       },
       "brief": [
         {
@@ -6766,7 +7429,8 @@
         "planning": null,
         "triaging": null,
         "triage": null,
-        "title_reading": null
+        "title_reading": null,
+        "leverage": null
       },
       "brief": [
         {
@@ -7049,7 +7713,16 @@
         "planning": null,
         "triaging": null,
         "triage": null,
-        "title_reading": null
+        "title_reading": null,
+        "leverage": {
+          "state": "unread",
+          "leverage": null,
+          "likelihood": null,
+          "words": null,
+          "sentence": "Nothing for you: this card has not been read against the focus yet. It keeps its place until a reading lands.",
+          "hold": null,
+          "read_at": null
+        }
       },
       "brief": [
         {
@@ -7334,7 +8007,16 @@
         "planning": null,
         "triaging": null,
         "triage": null,
-        "title_reading": null
+        "title_reading": null,
+        "leverage": {
+          "state": "unread",
+          "leverage": null,
+          "likelihood": null,
+          "words": null,
+          "sentence": "Nothing for you: this card has not been read against the focus yet. It keeps its place until a reading lands.",
+          "hold": null,
+          "read_at": null
+        }
       },
       "brief": [
         {
@@ -7623,7 +8305,8 @@
         "planning": null,
         "triaging": null,
         "triage": null,
-        "title_reading": null
+        "title_reading": null,
+        "leverage": null
       },
       "brief": [
         {
@@ -7857,7 +8540,16 @@
         "planning": null,
         "triaging": null,
         "triage": null,
-        "title_reading": null
+        "title_reading": null,
+        "leverage": {
+          "state": "unread",
+          "leverage": null,
+          "likelihood": null,
+          "words": null,
+          "sentence": "Nothing for you: this card has not been read against the focus yet. It keeps its place until a reading lands.",
+          "hold": null,
+          "read_at": null
+        }
       },
       "brief": [
         {
@@ -8135,7 +8827,8 @@
         "planning": null,
         "triaging": null,
         "triage": null,
-        "title_reading": null
+        "title_reading": null,
+        "leverage": null
       },
       "brief": [
         {
@@ -8359,7 +9052,16 @@
         "planning": null,
         "triaging": null,
         "triage": null,
-        "title_reading": null
+        "title_reading": null,
+        "leverage": {
+          "state": "unread",
+          "leverage": null,
+          "likelihood": null,
+          "words": null,
+          "sentence": "Nothing for you: this card has not been read against the focus yet. It keeps its place until a reading lands.",
+          "hold": null,
+          "read_at": null
+        }
       },
       "brief": [],
       "record": [
@@ -8629,7 +9331,8 @@
         "planning": null,
         "triaging": null,
         "triage": null,
-        "title_reading": null
+        "title_reading": null,
+        "leverage": null
       },
       "brief": [],
       "record": [
@@ -8820,7 +9523,8 @@
         "planning": null,
         "triaging": null,
         "triage": null,
-        "title_reading": null
+        "title_reading": null,
+        "leverage": null
       }
     },
     {
@@ -8872,7 +9576,8 @@
         "planning": null,
         "triaging": null,
         "triage": null,
-        "title_reading": null
+        "title_reading": null,
+        "leverage": null
       }
     },
     {
@@ -8919,7 +9624,8 @@
         "planning": null,
         "triaging": null,
         "triage": null,
-        "title_reading": null
+        "title_reading": null,
+        "leverage": null
       }
     },
     {
@@ -8966,7 +9672,8 @@
         "planning": null,
         "triaging": null,
         "triage": null,
-        "title_reading": null
+        "title_reading": null,
+        "leverage": null
       }
     },
     {
@@ -9013,7 +9720,8 @@
         "planning": null,
         "triaging": null,
         "triage": null,
-        "title_reading": null
+        "title_reading": null,
+        "leverage": null
       }
     },
     {
@@ -9067,7 +9775,8 @@
         "planning": null,
         "triaging": null,
         "triage": null,
-        "title_reading": null
+        "title_reading": null,
+        "leverage": null
       }
     },
     {
@@ -9121,7 +9830,8 @@
         "planning": null,
         "triaging": null,
         "triage": null,
-        "title_reading": null
+        "title_reading": null,
+        "leverage": null
       }
     },
     {
@@ -9180,7 +9890,8 @@
         "planning": null,
         "triaging": null,
         "triage": null,
-        "title_reading": null
+        "title_reading": null,
+        "leverage": null
       }
     },
     {
@@ -9230,7 +9941,8 @@
         "planning": null,
         "triaging": null,
         "triage": null,
-        "title_reading": null
+        "title_reading": null,
+        "leverage": null
       }
     },
     {
@@ -9279,7 +9991,8 @@
         "planning": null,
         "triaging": null,
         "triage": null,
-        "title_reading": null
+        "title_reading": null,
+        "leverage": null
       }
     },
     {
@@ -9328,7 +10041,8 @@
         "planning": null,
         "triaging": null,
         "triage": null,
-        "title_reading": null
+        "title_reading": null,
+        "leverage": null
       }
     },
     {
@@ -9382,7 +10096,8 @@
         "planning": null,
         "triaging": null,
         "triage": null,
-        "title_reading": null
+        "title_reading": null,
+        "leverage": null
       }
     },
     {
@@ -9432,7 +10147,8 @@
         "planning": null,
         "triaging": null,
         "triage": null,
-        "title_reading": null
+        "title_reading": null,
+        "leverage": null
       }
     },
     {
@@ -9482,7 +10198,8 @@
         "planning": null,
         "triaging": null,
         "triage": null,
-        "title_reading": null
+        "title_reading": null,
+        "leverage": null
       }
     },
     {
@@ -9539,7 +10256,8 @@
         "planning": null,
         "triaging": null,
         "triage": null,
-        "title_reading": null
+        "title_reading": null,
+        "leverage": null
       }
     },
     {
@@ -9600,7 +10318,8 @@
         "planning": null,
         "triaging": null,
         "triage": null,
-        "title_reading": null
+        "title_reading": null,
+        "leverage": null
       }
     },
     {
@@ -9652,7 +10371,8 @@
         "planning": null,
         "triaging": null,
         "triage": null,
-        "title_reading": null
+        "title_reading": null,
+        "leverage": null
       }
     },
     {
@@ -9702,7 +10422,8 @@
         "planning": null,
         "triaging": null,
         "triage": null,
-        "title_reading": null
+        "title_reading": null,
+        "leverage": null
       }
     },
     {
@@ -9749,7 +10470,8 @@
         "planning": null,
         "triaging": null,
         "triage": null,
-        "title_reading": null
+        "title_reading": null,
+        "leverage": null
       }
     },
     {
@@ -9814,7 +10536,8 @@
         },
         "triaging": null,
         "triage": null,
-        "title_reading": null
+        "title_reading": null,
+        "leverage": null
       }
     },
     {
@@ -9879,7 +10602,8 @@
           "ended_at": null
         },
         "triage": null,
-        "title_reading": null
+        "title_reading": null,
+        "leverage": null
       }
     },
     {
@@ -9956,7 +10680,8 @@
           "document_fingerprint": "f1x7ur3f1n6erpr",
           "session_id": "dddd0001-0000-4000-8000-000000000000"
         },
-        "title_reading": null
+        "title_reading": null,
+        "leverage": null
       }
     }
   ],

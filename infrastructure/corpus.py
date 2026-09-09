@@ -12,9 +12,11 @@ from pathlib import Path
 
 from watchfiles import Change, awatch
 
+from board.focus import FOCUS_PATH, parse_focus
 from board.parse import parse_document
 from domain.corpus import CorpusIndex
 from domain.document import Document, DocumentKind
+from domain.focus import FocusDocument
 
 FOLDERS: list[tuple[DocumentKind, str, bool]] = [
     (DocumentKind.PLAN, "docs/plans", False),
@@ -60,13 +62,25 @@ def scan(root: Path, read_at: datetime) -> CorpusIndex:
             if file.name.upper() == "README.MD":
                 continue
             documents.append(read_document(root, kind, folder, archived, file, read_at))
-    return CorpusIndex(documents=documents, read_at=read_at)
+    return CorpusIndex(documents=documents, focus=read_focus(root, read_at), read_at=read_at)
+
+
+def read_focus(root: Path, read_at: datetime) -> FocusDocument | None:
+    """The project's focus document, when it has one (card #87, item 1):
+    the same reader on the same beat as the plans, so a focus that lands is
+    on the strip the way a plan that lands is a card."""
+    file = root / FOCUS_PATH
+    if not file.is_file():
+        return None
+    text = file.read_text(encoding="utf-8", errors="replace")
+    return parse_focus(text, path=FOCUS_PATH, read_at=read_at)
 
 
 def in_corpus(root: Path, path: str) -> bool:
     """Whether a changed path is one the board reads: a markdown file directly
-    in one of the four folders, or one of the folders themselves appearing or
-    going. Anything else under docs/ is noise the watcher does not rescan for."""
+    in one of the four folders, one of the folders themselves appearing or
+    going, or the project's focus document (card #87). Anything else under
+    docs/ is noise the watcher does not rescan for."""
     changed = Path(path)
     relative = None
     for base in (root, root.resolve()):
@@ -75,6 +89,8 @@ def in_corpus(root: Path, path: str) -> bool:
             break
     if relative is None:
         return False
+    if relative.as_posix() == FOCUS_PATH:
+        return True
     for _, folder, _ in FOLDERS:
         folder_parts = Path(folder).parts
         if relative.parts == folder_parts:

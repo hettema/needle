@@ -12,6 +12,7 @@ from domain.corpus import CorpusSummary
 from domain.dial import DialState
 from domain.document import Document, DocumentRef, DocumentState, Fix, SuggestionKind
 from domain.evidence import Standing
+from domain.focus import Arrangement, CardLeverage, FocusStrip
 from domain.gate import Gate
 from domain.handout import Handouts
 from domain.hook import HeardMark
@@ -234,6 +235,10 @@ class CardSummary(BaseModel):
     """The latest cold reading of the card's title and essence (card #74,
     item 3); None while none has landed. A failing one is on the face and
     holds Start closed until a reading passes."""
+    leverage: CardLeverage | None = None
+    """Where the card stands against the project's chosen focus (card #87,
+    item 4): its class, its likelihood and the reading's sentence; None
+    while the project has no chosen focus."""
 
 
 class GroupView(BaseModel):
@@ -339,6 +344,12 @@ class BoardState(BaseModel):
     """Every conversation alive right now, as the rail lists them (plan 07, item 1)."""
     watercooler: list[WatercoolerLine]
     """The project's watercooler, newest last; the page shows its last line on every live card."""
+    focus: FocusStrip
+    """The project's focus as the strip shows it (card #87): what the board
+    is sorted on, how many cards are read, and whether anything queued
+    removes the limit."""
+    leverage: Arrangement
+    """The board as the chosen focus would arrange it, or why it cannot be."""
 
 
 class ProjectFile(BaseModel):

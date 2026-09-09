@@ -1,5 +1,6 @@
 import { useState } from "react";
 import type { ColumnView } from "../types/board";
+import type { ProposedMove } from "../types/focus";
 import { ColumnBox, ColumnHead, ColumnNote, ColumnTop, Definition, MoreRow, RailGroup, Stack, Tool } from "../components/ui";
 import type { MoveStatus } from "../state/board";
 import { GroupBlock } from "./GroupBlock";
@@ -18,6 +19,7 @@ export interface ColumnBlockProps {
   statuses: Record<number, MoveStatus>;
   unfurled: boolean;
   selected: ReadonlySet<number>;
+  moves: ReadonlyMap<number, ProposedMove>;
   onUnfurl: () => void;
   onFurl: () => void;
   onOpen: (number: number | null) => void;
@@ -27,7 +29,7 @@ export interface ColumnBlockProps {
   onSelect: (number: number, picked: boolean) => void;
 }
 
-export function ColumnBlock({ column, index, total, lens, lift, open, focused, statuses, unfurled, selected, onUnfurl, onFurl, onOpen, onRetry, onFocus, onMoveTo, onSelect }: ColumnBlockProps) {
+export function ColumnBlock({ column, index, total, lens, lift, open, focused, statuses, unfurled, selected, moves, onUnfurl, onFurl, onOpen, onRetry, onFocus, onMoveTo, onSelect }: ColumnBlockProps) {
   const name = column.definition.column;
   const wide = open !== null && column.groups.some((g) => g.cards.some((c) => c.number === open));
   const draggable = lens === "rank";
@@ -88,7 +90,9 @@ export function ColumnBlock({ column, index, total, lens, lift, open, focused, s
               focused={focused}
               statuses={statuses}
               draggable={draggable}
+              lens={lens}
               selected={selected}
+              moves={moves}
               onOpen={onOpen}
               onRetry={onRetry}
               onFocus={onFocus}

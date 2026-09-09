@@ -3,6 +3,7 @@
 import type { BoardState, CardDetail, ProjectFile } from "./types/board";
 import type { Move, Place } from "./types/card";
 import type { DialState } from "./types/dial";
+import type { FocusStrip } from "./types/focus";
 import type { DoorResult } from "./types/lane";
 import type { Project } from "./types/project";
 import type { EvidenceClass, VerdictsRuled } from "./types/verdict";
@@ -108,6 +109,44 @@ export function turnDial(on: boolean, lanes: number): Promise<DialState> {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ on, lanes }),
   });
+}
+
+/** The strip as the board shows it (card #87): the same object `needle strip` prints. */
+export function getFocus(slug: string): Promise<FocusStrip> {
+  return call<FocusStrip>(`/api/projects/${encodeURIComponent(slug)}/focus`);
+}
+
+/** The Focus door: a conversation that sharpens what matters now and finds what holds it back (card #87, item 2). */
+export function openFocus(slug: string, text: string): Promise<DoorResult> {
+  return call<DoorResult>(`/api/projects/${encodeURIComponent(slug)}/focus`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ text }),
+  });
+}
+
+/** "Propose moves": the same conversation, asked what else could move the limit. */
+export function proposeMoves(slug: string): Promise<DoorResult> {
+  return call<DoorResult>(`/api/projects/${encodeURIComponent(slug)}/focus/propose`, { method: "POST" });
+}
+
+/** "Use this focus": the owner's ruling, bound to the document's fingerprint (card #87, item 1). */
+export function chooseFocus(slug: string): Promise<DoorResult> {
+  return call<DoorResult>(`/api/projects/${encodeURIComponent(slug)}/focus/choose`, { method: "POST" });
+}
+
+/** "Accept this order": the ticked moves through the move door, with the owner's name on each (card #87, item 5). */
+export function acceptOrder(slug: string, numbers: number[]): Promise<DoorResult> {
+  return call<DoorResult>(`/api/projects/${encodeURIComponent(slug)}/leverage/accept`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ numbers }),
+  });
+}
+
+/** "Put it back": every card of the last acceptance to its recorded place. */
+export function putBack(slug: string): Promise<DoorResult> {
+  return call<DoorResult>(`/api/projects/${encodeURIComponent(slug)}/leverage/put-back`, { method: "POST" });
 }
 
 export function streamUrl(slug: string): string {

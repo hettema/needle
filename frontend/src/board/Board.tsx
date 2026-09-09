@@ -5,15 +5,15 @@ import type { Place } from "../types/card";
 import type { Claim } from "../types/board";
 import type { Column } from "../types/column";
 import type { Project } from "../types/project";
-import { openDoor, openIdea, openPlan, turnDial } from "../api";
-import { AppHead, AskList, AskRow, BoardStrip, Breakdown, CardShell, CorpusLine, DialControl, Fact, HeadFrame, HeadTools, IdeaDoor, Lens, List, Notice, Off, ProjectSwitcher, Rail, Strong, Sub, TalkList, TalkRow, TogetherBar, Word, Wordmark, Words } from "../components/ui";
+import { acceptOrder, chooseFocus, openDoor, openFocus, openIdea, openPlan, proposeMoves, putBack, turnDial } from "../api";
+import { AcceptBar, AppHead, AskList, AskRow, BoardStrip, Breakdown, CardShell, CorpusLine, DialControl, Fact, FocusBar, HeadFrame, HeadTools, IdeaDoor, Lens, List, Notice, Off, ProjectSwitcher, Rail, Strong, Sub, TalkList, TalkRow, TogetherBar, Word, Wordmark, Words } from "../components/ui";
 import type { BoardStore } from "../state/board";
 import { CardBody } from "./CardView";
 import { ColumnBlock, FOLD_AT } from "./ColumnBlock";
 import { LiftContext, type LiftController } from "./LiftContext";
 import { ProjectContext } from "./ProjectContext";
 import { Triage } from "./Triage";
-import { samePlace, stepTarget, targetInGroup, type LensKind, type Lift, type StepKey } from "./dnd";
+import { leverageColumns, samePlace, stepTarget, targetInGroup, type LensKind, type Lift, type StepKey } from "./dnd";
 import { WORDS, claimsOf, counted, keeps, lines, type Filter, type WordKey } from "./filter";
 import { ago } from "./time";
 
@@ -24,6 +24,7 @@ const LENSES: readonly { value: LensKind; label: string }[] = [
   { value: "age", label: "Age" },
   { value: "gate", label: "Gate" },
   { value: "triage", label: "Triage" },
+  { value: "leverage", label: "Leverage" },
 ];
 
 function cardFromHash(): number | null {
@@ -71,6 +72,11 @@ export function Board({ slug, store, projects, onSwitch }: { slug: string; store
   const [selected, setSelected] = useState<Set<number>>(new Set());
   const [planning, setPlanning] = useState(false);
   const [planSaid, setPlanSaid] = useState<string | null>(null);
+  // The focus strip's doors and the leverage lens's one act (card #87).
+  const [focusBusy, setFocusBusy] = useState(false);
+  const [focusSaid, setFocusSaid] = useState<string | null>(null);
+  const [unticked, setUnticked] = useState<Set<number>>(new Set());
+  const [acceptSaid, setAcceptSaid] = useState<string | null>(null);
   const pointerY = useRef(0);
   const liftRef = useRef<Lift | null>(null);
   liftRef.current = lift;
@@ -264,6 +270,47 @@ export function Board({ slug, store, projects, onSwitch }: { slug: string; store
     }
   }, [slug, selected]);
 
+  // Every door on the strip answers with what it did, or fails by name; the board is re-read after.
+  const throughFocus = useCallback(
+    async (work: () => Promise<{ said: string }>, failed: string) => {
+      setFocusBusy(true);
+      setFocusSaid("Opening…");
+      try {
+        const result = await work();
+        setFocusSaid(result.said);
+      } catch (e) {
+        setFocusSaid(`${failed}: ${e instanceof Error ? e.message : String(e)}`);
+      } finally {
+        setFocusBusy(false);
+        await store.refresh();
+      }
+    },
+    [store],
+  );
+  const talkFocus = useCallback((text: string) => void throughFocus(() => openFocus(slug, text), "Focus did not open"), [slug, throughFocus]);
+  const useThisFocus = useCallback(() => void throughFocus(() => chooseFocus(slug), "The focus was not chosen"), [slug, throughFocus]);
+  const proposeTheMoves = useCallback(() => void throughFocus(() => proposeMoves(slug), "Propose moves did not open"), [slug, throughFocus]);
+  const putItBack = useCallback(() => void throughFocus(() => putBack(slug), "Put it back did not land"), [slug, throughFocus]);
+
+  // "Accept this order": the ticked moves and nothing else, through the one
+  // move door with the owner as the mover; the page stores nothing itself.
+  const acceptTheOrder = useCallback(async () => {
+    const proposed = board?.leverage.moves.map((m) => m.number) ?? [];
+    const numbers = proposed.filter((n) => !unticked.has(n)).sort((a, b) => a - b);
+    setFocusBusy(true);
+    setAcceptSaid("Accepting…");
+    try {
+      const result = await acceptOrder(slug, numbers);
+      setAcceptSaid(result.said);
+      setUnticked(new Set());
+    } catch (e) {
+      setAcceptSaid(`Accept did not land: ${e instanceof Error ? e.message : String(e)}`);
+    } finally {
+      setFocusBusy(false);
+      await store.refresh();
+    }
+  }, [slug, board, unticked, store]);
+
   if (!board) {
     return (
       <>
@@ -311,6 +358,12 @@ export function Board({ slug, store, projects, onSwitch }: { slug: string; store
   // the batched signals, the conversations alive, the documents with no card.
   const on = (claim: Claim) => filter !== null && (filter.claim === claim || (filter.claim === null && lines(attention, filter.word).some((l) => l.claim === claim)));
   const failed = Object.values(store.statuses).filter((st) => st.kind === "failed").length;
+  // Under the Leverage lens the columns are the backend's one arrangement,
+  // and every proposed move is ticked until he unticks it.
+  const arranged = lens === "leverage" ? leverageColumns(board) : null;
+  const moves = new Map(board.leverage.moves.map((m) => [m.number, m]));
+  const ticked = new Set(board.leverage.moves.map((m) => m.number).filter((n) => !unticked.has(n)));
+  const columnsShown = arranged ?? shown;
 
   return (
     <ProjectContext.Provider value={{ slug, path: board.project.path, heard }}>
@@ -364,6 +417,25 @@ export function Board({ slug, store, projects, onSwitch }: { slug: string; store
         </Breakdown>
       ) : null}
       </HeadFrame>
+      <FocusBar strip={board.focus} onTalk={talkFocus} onChoose={useThisFocus} onPropose={proposeTheMoves} onPutBack={putItBack} disabled={focusBusy} said={focusSaid} />
+      {lens === "leverage" ? (
+        <AcceptBar
+          moves={board.leverage.moves}
+          ticked={ticked}
+          onTick={(number, on) =>
+            setUnticked((s) => {
+              const next = new Set(s);
+              if (on) next.delete(number);
+              else next.add(number);
+              return next;
+            })
+          }
+          onAccept={() => void acceptTheOrder()}
+          disabled={focusBusy}
+          said={acceptSaid}
+          unavailable={board.leverage.available ? null : board.leverage.why}
+        />
+      ) : null}
       {on("signal asking") && board.asks.length ? (
         <AskList title={`${board.asks.length} shipped card${board.asks.length === 1 ? "" : "s"} wait${board.asks.length === 1 ? "s" : ""} on your reading — only you can read these signals, or a session read them and could not tell`}>
           {board.asks.map((a) => (
@@ -393,7 +465,7 @@ export function Board({ slug, store, projects, onSwitch }: { slug: string; store
       ) : (
       <DndContext sensors={sensors} collisionDetection={collision} onDragStart={onDragStart} onDragMove={onDragMove} onDragEnd={onDragEnd} onDragCancel={() => controller.cancel()}>
         <BoardStrip>
-          {shown.map((column, index) =>
+          {columnsShown.map((column, index) =>
             furled.has(column.definition.column) ? (
               <Rail
                 key={column.definition.column}
@@ -412,7 +484,7 @@ export function Board({ slug, store, projects, onSwitch }: { slug: string; store
                 key={column.definition.column}
                 column={column}
                 index={index}
-                total={shown.length}
+                total={columnsShown.length}
                 lens={lens}
                 lift={lift}
                 open={open}
@@ -420,6 +492,7 @@ export function Board({ slug, store, projects, onSwitch }: { slug: string; store
                 statuses={store.statuses}
                 unfurled={unfurledMore.has(column.definition.column)}
                 selected={selected}
+                moves={moves}
                 onUnfurl={() => unfurlMore(column.definition.column)}
                 onFurl={() => setFurled((f) => new Set(f).add(column.definition.column))}
                 onOpen={setOpen}

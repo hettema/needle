@@ -28,7 +28,7 @@ from board.reconcile import PROMOTED_FROM, Effects
 from board.signals import read_or_decline
 from domain.audit import AuditEntry, AuditKind
 from domain.board import TrunkState
-from domain.call import Call
+from domain.call import Call, HowKnown
 from domain.card import Actor, Card, CardOrigin, DocumentLink, Place, RowRecord
 from domain.column import COLUMN_DEFINITIONS, DEFECTS_RAIL, DEFECTS_RAIL_POSITION, Column
 from domain.dial import Dial, DialChange, Filer, FixLane, FixStage, RailCount
@@ -36,6 +36,23 @@ from domain.document import DOCUMENT_FOLDER, DocumentKind, DocumentRef, Suggesti
 from domain.ending import Cause, Death, Park, Recovery, Sighting
 from domain.entrance import Entrance
 from domain.evidence import Evidence
+from domain.focus import (
+    Acceptance,
+    AcceptedMove,
+    Decline,
+    FocusCall,
+    FocusCheck,
+    FocusRecheck,
+    FocusRuling,
+    FocusVerdict,
+    Leverage,
+    LeverageReading,
+    Likelihood,
+    MeasureReading,
+    MeasureSide,
+    ReadingKind,
+    RecheckOutcome,
+)
 from domain.gate import Gate
 from domain.hook import HeardMark, HookEvent, HookKind, HookPosted
 from domain.lane import Discussion, LaneRecord
@@ -67,12 +84,20 @@ from infrastructure.schema import (
     DialRow,
     DiscussionRow,
     FixLaneRow,
+    FocusCallRow,
+    FocusCheckRow,
+    FocusMeasureRow,
+    FocusRecheckRow,
+    FocusRulingRow,
     GroupRow,
     HeardNoteRow,
     HeardRow,
     HookEventRow,
     LaneRow,
     ParkRow,
+    LeverageBatchRow,
+    LeverageDeclineRow,
+    LeverageReadingRow,
     ProjectRow,
     RailAtOnRow,
     ReadingRow,
@@ -2033,6 +2058,380 @@ class Store:
             if row is not None and row.closed_at is None:
                 row.closed_at = at
 
+    # ── a project's focus, and every card against it (card #87) ───────
+
+    def record_focus_ruling(
+        self, slug: str, *, fingerprint: str, what_matters: str, at: datetime
+    ) -> FocusRuling:
+        """The owner's click: use this document, at this fingerprint. Never
+        replaced — a history, like the dial's turns — and the newest stands."""
+        with self._session() as session, session.begin():
+            if session.get(ProjectRow, slug) is None:
+                raise StoreRefusal(f'No project "{slug}" is on the board.')
+            row = FocusRulingRow(
+                project_slug=slug, fingerprint=fingerprint, what_matters=what_matters, chosen_at=at
+            )
+            session.add(row)
+            session.flush()
+            return _focus_ruling(row)
+
+    def focus_ruling(self, slug: str) -> FocusRuling | None:
+        with self._session() as session:
+            row = session.scalars(
+                select(FocusRulingRow)
+                .where(FocusRulingRow.project_slug == slug)
+                .order_by(FocusRulingRow.id.desc())
+            ).first()
+            return _focus_ruling(row) if row is not None else None
+
+    def focus_rulings(self, slug: str) -> list[FocusRuling]:
+        with self._session() as session:
+            rows = session.scalars(
+                select(FocusRulingRow)
+                .where(FocusRulingRow.project_slug == slug)
+                .order_by(FocusRulingRow.id)
+            )
+            return [_focus_ruling(r) for r in rows]
+
+    def record_focus_check(
+        self,
+        slug: str,
+        *,
+        fingerprint: str,
+        at: datetime,
+        verdict: FocusVerdict,
+        line: str,
+        how_known: HowKnown | None,
+        session_id: str | None,
+    ) -> FocusCheck:
+        with self._session() as session, session.begin():
+            row = FocusCheckRow(
+                project_slug=slug,
+                fingerprint=fingerprint,
+                at=at,
+                verdict=verdict.value,
+                line=line,
+                how_known=how_known.value if how_known is not None else None,
+                session_id=session_id,
+            )
+            session.add(row)
+            session.flush()
+            return _focus_check(row)
+
+    def focus_checks(self, slug: str) -> list[FocusCheck]:
+        with self._session() as session:
+            rows = session.scalars(
+                select(FocusCheckRow)
+                .where(FocusCheckRow.project_slug == slug)
+                .order_by(FocusCheckRow.id)
+            )
+            return [_focus_check(r) for r in rows]
+
+    def focus_check(self, slug: str, fingerprint: str) -> FocusCheck | None:
+        """The newest reading of this document, by its fingerprint: a
+        re-edited document has none until it is read again."""
+        with self._session() as session:
+            row = session.scalars(
+                select(FocusCheckRow)
+                .where(FocusCheckRow.project_slug == slug, FocusCheckRow.fingerprint == fingerprint)
+                .order_by(FocusCheckRow.id.desc())
+            ).first()
+            return _focus_check(row) if row is not None else None
+
+    def record_focus_recheck(
+        self,
+        slug: str,
+        *,
+        fingerprint: str,
+        at: datetime,
+        outcome: RecheckOutcome,
+        words: str,
+        session_id: str | None,
+    ) -> FocusRecheck:
+        with self._session() as session, session.begin():
+            row = FocusRecheckRow(
+                project_slug=slug,
+                fingerprint=fingerprint,
+                at=at,
+                outcome=outcome.value,
+                words=words,
+                session_id=session_id,
+            )
+            session.add(row)
+            session.flush()
+            return _focus_recheck(row)
+
+    def focus_recheck(self, slug: str) -> FocusRecheck | None:
+        """The newest recheck on the project, whatever document it read;
+        the reader matches the fingerprint."""
+        with self._session() as session:
+            row = session.scalars(
+                select(FocusRecheckRow)
+                .where(FocusRecheckRow.project_slug == slug)
+                .order_by(FocusRecheckRow.id.desc())
+            ).first()
+            return _focus_recheck(row) if row is not None else None
+
+    def focus_rechecks(self, slug: str) -> list[FocusRecheck]:
+        with self._session() as session:
+            rows = session.scalars(
+                select(FocusRecheckRow)
+                .where(FocusRecheckRow.project_slug == slug)
+                .order_by(FocusRecheckRow.id)
+            )
+            return [_focus_recheck(r) for r in rows]
+
+    def record_measure_reading(
+        self,
+        slug: str,
+        *,
+        fingerprint: str,
+        side: MeasureSide,
+        at: datetime,
+        delivered: bool | None,
+        words: str,
+    ) -> MeasureReading:
+        """One reading of one measure; the first on this document and side
+        is the baseline every later one is read against."""
+        with self._session() as session, session.begin():
+            first = (
+                session.scalar(
+                    select(FocusMeasureRow.id).where(
+                        FocusMeasureRow.project_slug == slug,
+                        FocusMeasureRow.fingerprint == fingerprint,
+                        FocusMeasureRow.side == side.value,
+                    )
+                )
+                is None
+            )
+            row = FocusMeasureRow(
+                project_slug=slug,
+                fingerprint=fingerprint,
+                side=side.value,
+                at=at,
+                delivered=delivered,
+                words=words,
+                baseline=first,
+            )
+            session.add(row)
+            session.flush()
+            return _measure_reading(row)
+
+    def measure_readings(self, slug: str, fingerprint: str) -> list[MeasureReading]:
+        with self._session() as session:
+            rows = session.scalars(
+                select(FocusMeasureRow)
+                .where(
+                    FocusMeasureRow.project_slug == slug,
+                    FocusMeasureRow.fingerprint == fingerprint,
+                )
+                .order_by(FocusMeasureRow.id)
+            )
+            return [_measure_reading(r) for r in rows]
+
+    def open_focus_call(
+        self,
+        slug: str,
+        *,
+        kind: ReadingKind,
+        card_number: int | None,
+        fingerprint: str,
+        document_fingerprint: str | None,
+        call_id: int | None,
+        session_id: str | None,
+        at: datetime,
+        ended: str | None = None,
+    ) -> FocusCall:
+        """A call the loop made, open until its answer lands or it dies;
+        `ended` records a call that never came alive as ended at once."""
+        with self._session() as session, session.begin():
+            row = FocusCallRow(
+                project_slug=slug,
+                kind=kind.value,
+                card_number=card_number,
+                fingerprint=fingerprint,
+                document_fingerprint=document_fingerprint,
+                call_id=call_id,
+                session_id=session_id,
+                opened_at=at,
+                ended_at=at if ended is not None else None,
+                landed=False,
+                note=ended,
+            )
+            session.add(row)
+            session.flush()
+            return _focus_call(row)
+
+    def end_focus_call(
+        self, focus_call_id: int, at: datetime, *, landed: bool, note: str | None
+    ) -> None:
+        with self._session() as session, session.begin():
+            row = session.get(FocusCallRow, focus_call_id)
+            if row is not None and row.ended_at is None:
+                row.ended_at = at
+                row.landed = landed
+                row.note = note
+
+    def focus_calls(
+        self, slug: str, *, kind: ReadingKind | None = None, open_only: bool = False
+    ) -> list[FocusCall]:
+        with self._session() as session:
+            query = select(FocusCallRow).where(FocusCallRow.project_slug == slug)
+            if kind is not None:
+                query = query.where(FocusCallRow.kind == kind.value)
+            if open_only:
+                query = query.where(FocusCallRow.ended_at.is_(None))
+            return [_focus_call(r) for r in session.scalars(query.order_by(FocusCallRow.id))]
+
+    def record_leverage_reading(
+        self,
+        slug: str,
+        number: int,
+        *,
+        at: datetime,
+        leverage: Leverage,
+        likelihood: Likelihood | None,
+        words: str,
+        focus_fingerprint: str,
+        document_fingerprint: str,
+        session_id: str | None,
+    ) -> LeverageReading:
+        """One reading of one card against the focus, kept whole and never
+        replaced."""
+        with self._session() as session, session.begin():
+            if session.get(CardRow, (slug, number)) is None:
+                raise StoreRefusal(f"There is no card #{number} on this board.")
+            row = LeverageReadingRow(
+                project_slug=slug,
+                card_number=number,
+                at=at,
+                leverage=leverage.value,
+                likelihood=likelihood.value if likelihood is not None else None,
+                words=words,
+                focus_fingerprint=focus_fingerprint,
+                document_fingerprint=document_fingerprint,
+                session_id=session_id,
+            )
+            session.add(row)
+            session.flush()
+            return _leverage_reading(row)
+
+    def leverage_readings(self, slug: str, number: int | None = None) -> list[LeverageReading]:
+        with self._session() as session:
+            query = select(LeverageReadingRow).where(LeverageReadingRow.project_slug == slug)
+            if number is not None:
+                query = query.where(LeverageReadingRow.card_number == number)
+            return [
+                _leverage_reading(r) for r in session.scalars(query.order_by(LeverageReadingRow.id))
+            ]
+
+    def latest_leverage_readings(self, slug: str) -> dict[int, LeverageReading]:
+        """The newest reading on each card: what the lens reads."""
+        latest: dict[int, LeverageReading] = {}
+        for reading in self.leverage_readings(slug):
+            latest[reading.card_number] = reading
+        return latest
+
+    def record_acceptance(
+        self,
+        slug: str,
+        *,
+        at: datetime,
+        focus_fingerprint: str,
+        moves: list[AcceptedMove],
+        note: str | None,
+    ) -> Acceptance:
+        with self._session() as session, session.begin():
+            row = LeverageBatchRow(
+                project_slug=slug,
+                at=at,
+                focus_fingerprint=focus_fingerprint,
+                moves=[m.model_dump(mode="json") for m in moves],
+                put_back_at=None,
+                note=note,
+            )
+            session.add(row)
+            session.flush()
+            return _acceptance(row)
+
+    def note_acceptance(self, acceptance_id: int, note: str | None) -> None:
+        with self._session() as session, session.begin():
+            row = session.get(LeverageBatchRow, acceptance_id)
+            if row is not None:
+                row.note = note
+
+    def put_back_acceptance(self, acceptance_id: int, at: datetime) -> None:
+        with self._session() as session, session.begin():
+            row = session.get(LeverageBatchRow, acceptance_id)
+            if row is not None and row.put_back_at is None:
+                row.put_back_at = at
+
+    def acceptances(self, slug: str) -> list[Acceptance]:
+        with self._session() as session:
+            rows = session.scalars(
+                select(LeverageBatchRow)
+                .where(LeverageBatchRow.project_slug == slug)
+                .order_by(LeverageBatchRow.id)
+            )
+            return [_acceptance(r) for r in rows]
+
+    def latest_acceptance(self, slug: str) -> Acceptance | None:
+        with self._session() as session:
+            row = session.scalars(
+                select(LeverageBatchRow)
+                .where(LeverageBatchRow.project_slug == slug)
+                .order_by(LeverageBatchRow.id.desc())
+            ).first()
+            return _acceptance(row) if row is not None else None
+
+    def record_decline(
+        self,
+        slug: str,
+        number: int,
+        *,
+        focus_fingerprint: str,
+        document_fingerprint: str,
+        leverage: Leverage,
+        at: datetime,
+    ) -> Decline:
+        with self._session() as session, session.begin():
+            row = LeverageDeclineRow(
+                project_slug=slug,
+                card_number=number,
+                focus_fingerprint=focus_fingerprint,
+                document_fingerprint=document_fingerprint,
+                leverage=leverage.value,
+                at=at,
+            )
+            session.add(row)
+            session.flush()
+            return _decline(row)
+
+    def declines(self, slug: str) -> list[Decline]:
+        with self._session() as session:
+            rows = session.scalars(
+                select(LeverageDeclineRow)
+                .where(LeverageDeclineRow.project_slug == slug)
+                .order_by(LeverageDeclineRow.id)
+            )
+            return [_decline(r) for r in rows]
+
+    def owner_moves_since(self, slug: str, since: datetime) -> list[AuditEntry]:
+        """Every move the owner made on the project after `since`: how the
+        board knows a hand move retired an acceptance's put-back."""
+        with self._session() as session:
+            rows = session.scalars(
+                select(AuditRow)
+                .where(
+                    AuditRow.project_slug == slug,
+                    AuditRow.kind == AuditKind.MOVED.value,
+                    AuditRow.actor == Actor.OWNER.value,
+                    AuditRow.at > since,
+                )
+                .order_by(AuditRow.id)
+            )
+            return [_audit_entry(r) for r in rows]
+
 
 # ── helpers ────────────────────────────────────────────────────────────
 
@@ -2366,6 +2765,10 @@ def _move(
             )
     if to.group is None:
         _landing_group(session, slug, to.column)
+    elif to.column == Column.BACKLOG and to.group == DEFECTS_RAIL:
+        # A defect pulled back from Not now lands on the rail, which a
+        # Backlog with no other defect may not have yet (card #87, item 5).
+        _landing_group(session, slug, to.column, rail=True)
     layout = _layout(session, slug)
     try:
         result = apply_move(layout, number, to)
@@ -2693,4 +3096,106 @@ def _recovery(row: RecoveryRow) -> Recovery:
         verdict=row.verdict,
         ended_at=row.ended_at,
         note=row.note,
+    )
+def _focus_ruling(row: FocusRulingRow) -> FocusRuling:
+    return FocusRuling(
+        id=row.id,
+        project=row.project_slug,
+        fingerprint=row.fingerprint,
+        what_matters=row.what_matters,
+        chosen_at=row.chosen_at,
+    )
+
+
+def _focus_check(row: FocusCheckRow) -> FocusCheck:
+    return FocusCheck(
+        id=row.id,
+        project=row.project_slug,
+        fingerprint=row.fingerprint,
+        at=row.at,
+        verdict=FocusVerdict(row.verdict),
+        line=row.line,
+        how_known=HowKnown(row.how_known) if row.how_known else None,
+        session_id=row.session_id,
+    )
+
+
+def _focus_recheck(row: FocusRecheckRow) -> FocusRecheck:
+    return FocusRecheck(
+        id=row.id,
+        project=row.project_slug,
+        fingerprint=row.fingerprint,
+        at=row.at,
+        outcome=RecheckOutcome(row.outcome),
+        words=row.words,
+        session_id=row.session_id,
+    )
+
+
+def _measure_reading(row: FocusMeasureRow) -> MeasureReading:
+    return MeasureReading(
+        id=row.id,
+        project=row.project_slug,
+        fingerprint=row.fingerprint,
+        side=MeasureSide(row.side),
+        at=row.at,
+        delivered=row.delivered,
+        words=row.words,
+        baseline=row.baseline,
+    )
+
+
+def _focus_call(row: FocusCallRow) -> FocusCall:
+    return FocusCall(
+        id=row.id,
+        project=row.project_slug,
+        kind=ReadingKind(row.kind),
+        card_number=row.card_number,
+        fingerprint=row.fingerprint,
+        document_fingerprint=row.document_fingerprint,
+        call_id=row.call_id,
+        session_id=row.session_id,
+        opened_at=row.opened_at,
+        ended_at=row.ended_at,
+        landed=row.landed,
+        note=row.note,
+    )
+
+
+def _leverage_reading(row: LeverageReadingRow) -> LeverageReading:
+    return LeverageReading(
+        id=row.id,
+        project=row.project_slug,
+        card_number=row.card_number,
+        at=row.at,
+        leverage=Leverage(row.leverage),
+        likelihood=Likelihood(row.likelihood) if row.likelihood else None,
+        words=row.words,
+        focus_fingerprint=row.focus_fingerprint,
+        document_fingerprint=row.document_fingerprint,
+        session_id=row.session_id,
+    )
+
+
+def _acceptance(row: LeverageBatchRow) -> Acceptance:
+    return Acceptance(
+        id=row.id,
+        project=row.project_slug,
+        at=row.at,
+        focus_fingerprint=row.focus_fingerprint,
+        moves=[AcceptedMove.model_validate(m) for m in row.moves],
+        put_back_at=row.put_back_at,
+        note=row.note,
+    )
+
+
+def _decline(row: LeverageDeclineRow) -> Decline:
+    return Decline(
+        id=row.id,
+        project=row.project_slug,
+        card_number=row.card_number,
+        focus_fingerprint=row.focus_fingerprint,
+        document_fingerprint=row.document_fingerprint,
+        leverage=Leverage(row.leverage),
+        at=row.at,
     )

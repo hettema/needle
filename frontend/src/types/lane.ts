@@ -28,6 +28,7 @@ export interface Conversation {
   card_number: number | null;
   what: string;
   started_at: string;
+  kind?: WindowKind;
 }
 
 export interface Discussion {

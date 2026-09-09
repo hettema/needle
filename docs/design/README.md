@@ -54,6 +54,7 @@ copy only as the record of what was signed.
 | `2026-09-03-the-card.html` | Slice 01, comp 2: the expanded card — the five sections, before the work and after it. |
 | `2026-09-04-the-colour-language/` | Slice 27, a canvas: the five-word colour language, the head, the board at rest, the collapsed card in every state, the open card, the triage lens. |
 | `2026-09-05-how-far-a-running-card-has-come/` | Slice 13, a canvas: the collapsed card in every progress state, the Executing column at its real width, the open card's items with their stance, the open card in its review loop. Signed 2026-09-05. |
+| `2026-09-09-the-focus-strip-and-the-leverage-lens.html` | Card #87: the focus strip in every state, the board as the chosen focus would arrange it with the two proposed moves marked, the accept bar with its count and the put-back, on Harbourmaster's data through the real derivation. Written before the build; not signed — the lane ran unattended and the calls it asks are listed at its foot. |
 
 Open them in a browser. Both carry a **Notes** toggle that pins each judged
 call to the place on the page it lives, and a **Dark** toggle, because the

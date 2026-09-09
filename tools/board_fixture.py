@@ -47,6 +47,7 @@ from domain.column import Column  # noqa: E402
 from domain.corpus import CorpusIndex  # noqa: E402
 from domain.document import Document, DocumentKind, Fix, FixMark, SuggestionKind  # noqa: E402
 from domain.evidence import Evidence  # noqa: E402
+from domain.focus import FocusVerdict, Leverage, Likelihood  # noqa: E402
 from domain.gate import Gate  # noqa: E402
 from domain.hook import HookEvent, HookKind  # noqa: E402
 from domain.lane import Collision, CollisionVerdict, Progress, Wait  # noqa: E402
@@ -601,6 +602,65 @@ def snapshot() -> dict[str, object]:
             MachineState(missing=[], roles=["top", "downgrade", "execution", "search"])
         )
 
+        # A focus chosen on the fixture's own document, checked by the other
+        # kind and read against a few cards, so the snapshot carries the
+        # strip in its chosen state and an arrangement with moves in it.
+        focus = live.projects[project.slug].index.focus
+        assert focus is not None and focus.complete, "the fixture's FOCUS.md reads whole"
+        store.record_focus_check(
+            project.slug,
+            fingerprint=focus.fingerprint,
+            at=NOW,
+            verdict=FocusVerdict.STANDS,
+            line="the office log shows the late invoices are the ones with no reading",
+            how_known=None,
+            session_id=None,
+        )
+        store.record_focus_ruling(
+            project.slug,
+            fingerprint=focus.fingerprint,
+            what_matters=focus.what_matters or "",
+            at=NOW,
+        )
+        readings = {
+            253: (
+                Leverage.HELPS_REMOVE,
+                Likelihood.HIGH,
+                "it bills the reading the invoice waits on",
+            ),
+            196: (
+                Leverage.HELPS_REMOVE,
+                Likelihood.LOW,
+                "a berth let sooner is invoiced sooner, if it is invoiced",
+            ),
+            174: (
+                Leverage.DOES_NOT_ADDRESS,
+                None,
+                "the office file's size does not delay an invoice",
+            ),
+            241: (Leverage.PROTECTS, None, "a gate code before arrival keeps a paid berth usable"),
+            109: (
+                Leverage.NEEDS_EVIDENCE,
+                None,
+                "the plan does not say what showing the price moves",
+            ),
+        }
+        for number, (leverage, likelihood, words) in readings.items():
+            card = store.card(project.slug, number)
+            assert card is not None and card.link is not None
+            document = live.projects[project.slug].index.find(card.link.kind, card.link.stem)
+            assert document is not None
+            store.record_leverage_reading(
+                project.slug,
+                number,
+                at=NOW,
+                leverage=leverage,
+                likelihood=likelihood,
+                words=words,
+                focus_fingerprint=focus.fingerprint,
+                document_fingerprint=document.fingerprint,
+                session_id=None,
+            )
         board = live.board(project.slug)
         board.project = board.project.model_copy(update={"path": SHOWN_PATH})
         numbers = [c.number for col in board.columns for g in col.groups for c in g.cards]

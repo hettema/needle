@@ -1,9 +1,10 @@
 import { useDroppable } from "@dnd-kit/core";
 import type { ColumnView, GroupView } from "../types/board";
+import type { ProposedMove } from "../types/focus";
 import { DropGap, GroupBody, GroupHead } from "../components/ui";
 import type { MoveStatus } from "../state/board";
 import { CardView } from "./CardView";
-import { groupId, type Lift, type Slot } from "./dnd";
+import { groupId, type LensKind, type Lift, type Slot } from "./dnd";
 
 export interface GroupBlockProps {
   column: ColumnView;
@@ -14,7 +15,9 @@ export interface GroupBlockProps {
   focused: number | null;
   statuses: Record<number, MoveStatus>;
   draggable: boolean;
+  lens: LensKind;
   selected: ReadonlySet<number>;
+  moves: ReadonlyMap<number, ProposedMove>;
   onOpen: (number: number | null) => void;
   onRetry: (number: number) => void;
   onFocus: (number: number | null) => void;
@@ -24,7 +27,7 @@ export interface GroupBlockProps {
 
 const IDLE: MoveStatus = { kind: "idle" };
 
-export function GroupBlock({ column, group, slots, open, focused, statuses, draggable, selected, onOpen, onRetry, onFocus, onMoveTo, onSelect }: GroupBlockProps) {
+export function GroupBlock({ column, group, slots, open, focused, statuses, draggable, lens, selected, moves, onOpen, onRetry, onFocus, onMoveTo, onSelect }: GroupBlockProps) {
   const id = groupId(column.definition.column, group.name);
   const { setNodeRef } = useDroppable({ id, data: { column: column.definition.column, group: group.name } });
   return (
@@ -42,6 +45,8 @@ export function GroupBlock({ column, group, slots, open, focused, statuses, drag
               open={open === slot.card.number}
               status={statuses[slot.card.number] ?? IDLE}
               draggable={draggable}
+              lens={lens}
+              move={moves.get(slot.card.number) ?? null}
               focused={focused === slot.card.number}
               selected={selected.has(slot.card.number)}
               selecting={selected.size > 0}

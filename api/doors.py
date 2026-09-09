@@ -11,10 +11,12 @@ import uuid
 from pathlib import Path
 
 from api.loops import Loops
-from board.assemble import is_trigger_card
+from board.assemble import document_of, is_trigger_card
 from board.brief import (
+    FOCUS_EXCERPT,
     corpus_lane_name,
     filing_rule,
+    focus_brief,
     lane_name,
     lane_path,
     needle_command,
@@ -22,6 +24,7 @@ from board.brief import (
     render,
     watercooler_text,
 )
+from board.focus import FOCUS_PATH, is_chosen
 from board.handouts import handouts_row
 from board.lane import HANDS_ON
 from board.signals import GRAMMAR, read_or_decline, where_after, where_after_finding
@@ -29,16 +32,27 @@ from board.title import title_fingerprint
 from board.triage import routing_now, triaged_row
 from domain.audit import AuditKind
 from domain.board import CardDetail
+from domain.call import HowKnown
 from domain.card import Actor, Card, Place
 from domain.column import Column
 from domain.document import DocumentKind, SuggestionKind
 from domain.evidence import Evidence, EvidenceState
+from domain.focus import (
+    MACHINE_READ_KINDS,
+    AcceptedMove,
+    FocusVerdict,
+    Leverage,
+    Likelihood,
+    MeasureSide,
+    ReadingKind,
+    RecheckOutcome,
+)
 from domain.gate import Gate
-from domain.lane import CollisionVerdict, DoorResult, Lane, LaneRecord, LaneState
+from domain.lane import CollisionVerdict, Conversation, DoorResult, Lane, LaneRecord, LaneState
 from domain.launch import LaunchVerdict, Start
 from domain.project import Project
 from domain.row import Row, RowKind
-from domain.signal import Finding, SessionWork
+from domain.signal import Finding, SessionWork, SignalKind
 from domain.slot import rung_words
 from domain.triage import (
     CorpusLane,
@@ -271,13 +285,18 @@ class Doors:
         )
         return text
 
-    def start(self, slug: str, number: int, *, actor: Actor = Actor.OWNER) -> DoorResult:
+    def start(
+        self, slug: str, number: int, *, actor: Actor = Actor.OWNER, lens: str | None = None
+    ) -> DoorResult:
         """Start the card's lane where the rule says. `actor` is whose move
         it is: the owner's click through the page or his terminal, or the
         machine's under the dial — his standing ruling applied by the board
         (plan 11, item 4), which the card's history then says. One door:
         shared ground opens it with the ground in its label, and there is
-        nothing left to override (INTENT.md lesson 4)."""
+        nothing left to override (INTENT.md lesson 4). `lens` is the lens the
+        page was under at the click, so the history carries a trace the
+        loop of card #87 reads instead of his memory: the lens in use and,
+        under Leverage, the class the card was read as."""
         detail = self._detail(slug, number)
         doors = detail.doors
         project = self.live.projects[slug].project
@@ -331,6 +350,12 @@ class Doors:
         said += f", in {launch.scope}" if launch.scope else f" ({launch.reason})"
         if actor == Actor.MACHINE:
             said += "; started by the dial"
+        if lens:
+            said += f"; under the {lens} lens"
+            leverage = detail.summary.leverage
+            if leverage is not None and leverage.leverage is not None:
+                chance = f" ({leverage.likelihood.value})" if leverage.likelihood else ""
+                said += f", read as {leverage.leverage.value}{chance}"
         if shares is not None:
             said += f"; {shares.sentence[0].lower()}{shares.sentence[1:]}"
         self.live.note(slug, number, AuditKind.STARTED, actor, said)
@@ -1059,6 +1084,483 @@ class Doors:
             f"in {name}; it writes the corpus and nothing else",
         )
         return opened
+
+    # ── a project's focus (card #87) ───────────────────────────────────
+
+    def _focus_conversation(self, slug: str) -> Conversation | None:
+        live = self.live.projects[slug]
+        conversations = live.snapshot.conversations if live.snapshot is not None else []
+        return next((c for c in conversations if c.kind == WindowKind.FOCUS), None)
+
+    def _intent_text(self, project: Project) -> str | None:
+        file = Path(project.path) / "docs" / "INTENT.md"
+        if not file.is_file():
+            return None
+        text = file.read_text(encoding="utf-8", errors="replace")
+        return text if len(text) <= FOCUS_EXCERPT else text[:FOCUS_EXCERPT] + "\n… (truncated)"
+
+    def focus_text(self, project: Project) -> str | None:
+        file = Path(project.path) / FOCUS_PATH
+        if not file.is_file():
+            return None
+        return file.read_text(encoding="utf-8", errors="replace")
+
+    def focus(self, slug: str, first_line: str | None, *, moves: bool = False) -> DoorResult:
+        """The Focus door (card #87, item 2): a conversation in the
+        project's checkout that sharpens what matters now and finds what
+        holds it back, and writes `docs/FOCUS.md` on his yes; with `moves`,
+        the same conversation proposes what else could move the limit.
+        Refused while one is already alive for the project, saying which."""
+        alive = self._focus_conversation(slug)
+        if alive is not None:
+            raise DoorRefused(
+                f"A focus conversation is already open for this project: {alive.short_id} on "
+                f"{alive.slot}. Talk there, or close it first."
+            )
+        project = self.live.projects[slug].project
+        strip, _, _ = self.live.focus_of(slug)
+        if moves and not strip.propose.offered:
+            raise DoorRefused(strip.propose.why)
+        session_id = str(uuid.uuid4())
+        today = clock.now().date().isoformat()
+        brief = focus_brief(
+            project,
+            session_id,
+            first_line,
+            today,
+            intent_text=self._intent_text(project),
+            focus_text=self.focus_text(project),
+            coverage_line=strip.coverage.line if strip.coverage is not None else None,
+            moves=moves,
+        )
+        try:
+            opened, session_id, placement = self.runtime.discuss(
+                repo=project.path,
+                card=slug,
+                brief=brief,
+                effort=DISCUSS_EFFORT,
+                what=f"The focus of {project.name}",
+                kind=WindowKind.FOCUS,
+                session_id=session_id,
+            )
+        except WindowRefused as refusal:
+            raise DoorFailed(f"Focus did not open: {refusal}") from refusal
+        self.live.store.record_discussion(
+            slug, None, session_id, placement.slot, clock.now(), kind=WindowKind.FOCUS
+        )
+        self.live.bump()
+        self.loops.reconcile_now()
+        return DoorResult(
+            door="focus",
+            said=(
+                f"Talking in {opened.window.app_id}, "
+                f"{rung_words(placement.model, placement.slot)}; a conversation about "
+                f"{'what else could move this limit' if moves else 'what matters now'} "
+                f"({session_id[:8]}), never hands on a tree. What it writes into docs/FOCUS.md "
+                "is proposed on the strip; the click is yours."
+            ),
+        )
+
+    def choose_focus(self, slug: str) -> DoorResult:
+        """The owner's click (card #87, item 1): use this document, at this
+        fingerprint. The ruling is stored against the document as it stands
+        and the two measures are read once as the baseline (item 6); an
+        edit after the click is a new proposal, never an inherited ruling."""
+        project = self.live.projects[slug].project
+        strip, _, _ = self.live.focus_of(slug)
+        if not strip.choose.offered:
+            raise DoorRefused(strip.choose.why)
+        document = strip.document
+        assert document is not None and document.what_matters is not None
+        now = clock.now()
+        read: list[str] = []
+        for side, measure in (
+            (MeasureSide.OUTCOME, document.outcome),
+            (MeasureSide.BOTTLENECK, document.bottleneck),
+        ):
+            signal = measure.signal
+            if signal is None:
+                raise DoorRefused(
+                    f"The {side.value}'s measure cannot be read: {measure.note}; fix the line in "
+                    f"{document.path} first."
+                )
+            if signal.kind in MACHINE_READ_KINDS:
+                delivered, words = self.runtime.read_signal(signal, project.path)
+            else:
+                delivered, words = (
+                    None,
+                    (
+                        "only you can read it; the recheck asks you"
+                        if signal.kind == SignalKind.OWNER
+                        else "read by the recheck's reader, not by the board"
+                    ),
+                )
+            self.live.store.record_measure_reading(
+                slug,
+                fingerprint=document.fingerprint,
+                side=side,
+                at=now,
+                delivered=delivered,
+                words=words,
+            )
+            read.append(f"{side.value}: {words}")
+        ruling = self.live.store.record_focus_ruling(
+            slug,
+            fingerprint=document.fingerprint,
+            what_matters=document.what_matters,
+            at=now,
+        )
+        self.live.bump()
+        self.loops.reconcile_now()
+        return DoorResult(
+            door="focus",
+            said=(
+                f"Focus chosen at {document.fingerprint} ({ruling.chosen_at.isoformat()}): "
+                f"{document.what_matters}. Baseline read — {'; '.join(read)}. Every open card "
+                "is now read against it, one per beat."
+            ),
+        )
+
+    def _end_focus_calls(
+        self, slug: str, kind: ReadingKind, *, card_number: int | None, fingerprint: str | None
+    ) -> str | None:
+        """End the open call(s) of this kind as landed; answers the session
+        that made the reading, when one was open."""
+        session_id: str | None = None
+        now = clock.now()
+        for call in self.live.store.focus_calls(slug, kind=kind, open_only=True):
+            if card_number is not None and call.card_number != card_number:
+                continue
+            if fingerprint is not None and call.fingerprint != fingerprint:
+                continue
+            self.live.store.end_focus_call(call.id, now, landed=True, note=None)
+            session_id = session_id or call.session_id
+        return session_id
+
+    def focus_check(
+        self,
+        slug: str,
+        *,
+        verdict: FocusVerdict,
+        line: str,
+        how_known: HowKnown | None,
+        session_id: str | None,
+        read: str | None = None,
+    ) -> DoorResult:
+        """A reader of the other make's verdict on the proposed focus (card
+        #87, item 3), bound to the document as it stands now. `read` is the
+        fingerprint the reading was opened on: a verdict about yesterday's
+        text is refused rather than bound to today's."""
+        line = line.strip()
+        if not line:
+            raise DoorRefused("A verdict without its line records nothing; say why in a sentence.")
+        document = self.live.projects[slug].index.focus
+        if document is None:
+            raise DoorRefused("No focus document is written for this project; nothing to check.")
+        if read is not None and read != document.fingerprint:
+            raise DoorRefused(
+                f"The focus document changed since this reading ({read} is now "
+                f"{document.fingerprint}); it is read again."
+            )
+        if not document.complete:
+            raise DoorRefused(
+                "The focus document cannot be read whole, so a verdict on it binds to nothing: "
+                + "; ".join(document.doubts)
+            )
+        opened = self._end_focus_calls(
+            slug, ReadingKind.CHECK, card_number=None, fingerprint=document.fingerprint
+        )
+        record = self.live.store.record_focus_check(
+            slug,
+            fingerprint=document.fingerprint,
+            at=clock.now(),
+            verdict=verdict,
+            line=line,
+            how_known=how_known,
+            session_id=session_id or opened,
+        )
+        self.live.bump()
+        return DoorResult(
+            door="focus-check",
+            said=(
+                f"The diagnosis {record.verdict.value}: {record.line} "
+                f"(bound to {record.fingerprint})"
+            ),
+        )
+
+    def leverage(
+        self,
+        slug: str,
+        number: int,
+        *,
+        leverage: Leverage,
+        likelihood: Likelihood | None,
+        why: str,
+        session_id: str | None,
+        read: tuple[str, str] | None = None,
+    ) -> DoorResult:
+        """One card's reading against the chosen focus (card #87, item 4):
+        the class, the likelihood with the first class only, one sentence
+        of why, bound to both fingerprints. This door moves nothing and
+        writes no rank: a reading judges, and only his click arranges."""
+        why = why.strip()
+        if not why:
+            raise DoorRefused("A reading without its sentence records nothing; say why.")
+        live = self.live.projects[slug]
+        focus = live.index.focus
+        ruling = self.live.store.focus_ruling(slug)
+        if not is_chosen(focus, ruling):
+            raise DoorRefused(
+                "This project has no chosen focus, so a card cannot be read against one."
+            )
+        assert focus is not None
+        if leverage == Leverage.HELPS_REMOVE and likelihood is None:
+            raise DoorRefused(
+                "A card that helps remove the limit says how likely it is to work: "
+                "--likelihood high, medium or low."
+            )
+        if leverage != Leverage.HELPS_REMOVE and likelihood is not None:
+            raise DoorRefused(f"A likelihood goes only with `{Leverage.HELPS_REMOVE.value}`.")
+        card = self.live.card(slug, number)
+        document = document_of(card, live.index)
+        if document is None:
+            raise DoorRefused(f"#{number} has no document behind it; a reading judges a document.")
+        if read is not None and read != (focus.fingerprint, document.fingerprint):
+            raise DoorRefused(
+                f"The focus or #{number}'s document changed since this reading; it is read again."
+            )
+        opened = self._end_focus_calls(
+            slug, ReadingKind.CARD, card_number=number, fingerprint=focus.fingerprint
+        )
+        record = self.live.store.record_leverage_reading(
+            slug,
+            number,
+            at=clock.now(),
+            leverage=leverage,
+            likelihood=likelihood,
+            words=why,
+            focus_fingerprint=focus.fingerprint,
+            document_fingerprint=document.fingerprint,
+            session_id=session_id or opened,
+        )
+        chance = f" ({record.likelihood.value})" if record.likelihood else ""
+        self.live.note(
+            slug,
+            number,
+            AuditKind.LEVERAGE,
+            Actor.SESSION,
+            f"Read against the focus: {record.leverage.value}{chance} — {record.words}",
+        )
+        return DoorResult(
+            door="leverage",
+            said=f"#{number} read as {record.leverage.value}{chance}: {record.words}",
+        )
+
+    def focus_recheck(
+        self,
+        slug: str,
+        *,
+        outcome: RecheckOutcome,
+        words: str,
+        session_id: str | None,
+        read: str | None = None,
+    ) -> DoorResult:
+        """The scheduled recheck's word (card #87, item 6): which link broke,
+        or none. A failed recheck pauses the leverage order by itself; it
+        never replaces the focus."""
+        words = words.strip()
+        if not words:
+            raise DoorRefused("A recheck without its words records nothing.")
+        live = self.live.projects[slug]
+        focus = live.index.focus
+        ruling = self.live.store.focus_ruling(slug)
+        if not is_chosen(focus, ruling):
+            raise DoorRefused("This project has no chosen focus to recheck.")
+        assert focus is not None
+        if read is not None and read != focus.fingerprint:
+            raise DoorRefused(
+                f"The focus document changed since this recheck ({read} is now "
+                f"{focus.fingerprint}); it is read again."
+            )
+        opened = self._end_focus_calls(
+            slug, ReadingKind.RECHECK, card_number=None, fingerprint=focus.fingerprint
+        )
+        record = self.live.store.record_focus_recheck(
+            slug,
+            fingerprint=focus.fingerprint,
+            at=clock.now(),
+            outcome=outcome,
+            words=words,
+            session_id=session_id or opened,
+        )
+        self.live.bump()
+        strip, _, _ = self.live.focus_of(slug)
+        return DoorResult(
+            door="focus-recheck",
+            said=f"The recheck says {record.outcome.value}: {record.words}. {strip.sentence}",
+        )
+
+    def accept_order(self, slug: str, numbers: list[int]) -> DoorResult:
+        """ "Accept this order" (card #87, item 5): every ticked move through
+        the one move door with the owner as the mover, the focus's
+        fingerprint and the card's class as the reason on each history, and
+        the whole batch as one record carrying every card's place before
+        the move. An unticked move is recorded so it is not proposed again
+        until its ground changes. Never starts a lane, never turns the
+        dial, never changes a gate."""
+        strip, leverages, arrangement = self.live.focus_of(slug)
+        if not arrangement.available:
+            raise DoorRefused(f"Leverage order unavailable: {arrangement.why}")
+        assert strip.document is not None
+        proposed = {m.number: m for m in arrangement.moves}
+        unknown = [n for n in numbers if n not in proposed]
+        if unknown:
+            raise DoorRefused(
+                "Not proposed by the leverage order: " + ", ".join(f"#{n}" for n in unknown)
+            )
+        if not arrangement.moves:
+            raise DoorRefused("The leverage order proposes no move; there is nothing to accept.")
+        ticked = [proposed[n] for n in numbers]
+        unticked = [m for m in arrangement.moves if m.number not in set(numbers)]
+        live = self.live.projects[slug]
+        now = clock.now()
+        fingerprint = strip.document.fingerprint
+        for move in unticked:
+            lv = leverages.get(move.number)
+            card = self.live.card(slug, move.number)
+            document = document_of(card, live.index)
+            if lv is None or lv.leverage is None or document is None:
+                continue
+            self.live.store.record_decline(
+                slug,
+                move.number,
+                focus_fingerprint=fingerprint,
+                document_fingerprint=document.fingerprint,
+                leverage=lv.leverage,
+                at=now,
+            )
+        if not ticked:
+            self.live.bump()
+            return DoorResult(
+                door="leverage-accept",
+                said=f"Nothing accepted; {len(unticked)} move{'' if len(unticked) == 1 else 's'} "
+                "left unticked and not proposed again until their ground changes.",
+            )
+        batch = self.live.store.record_acceptance(
+            slug,
+            at=now,
+            focus_fingerprint=fingerprint,
+            moves=[
+                AcceptedMove(
+                    number=m.number, from_place=m.from_place, to_place=m.to_place, why=m.why
+                )
+                for m in ticked
+            ],
+            note=None,
+        )
+        refused: list[str] = []
+        moved = 0
+        # Each target group's final order is the arrangement's, filtered to
+        # the cards that will stand there: the ones already there and the
+        # ones he ticked. A card's position is its index in that order.
+        by_number = {c.number: c for c in self.live.store.cards(slug)}
+        leaving = {m.number for m in ticked}
+        for arranged in arrangement.columns:
+            for group in arranged.groups:
+                # An unticked card stays where it is and keeps its place in
+                # the order; only a ticked one leaves its group.
+                here = {
+                    n
+                    for n, c in by_number.items()
+                    if c.place.column == arranged.column
+                    and c.place.group == group.name
+                    and n not in leaving
+                }
+                arriving = [
+                    m
+                    for m in ticked
+                    if (m.to_place.column, m.to_place.group) == (arranged.column, group.name)
+                ]
+                if not arriving:
+                    continue
+                present = here | {m.number for m in arriving}
+                order = [n for n in group.numbers if n in present]
+                for move in arriving:
+                    position = order.index(move.number) if move.number in order else len(order)
+                    detail = (
+                        f"accepted the leverage order (batch {batch.id}, focus "
+                        f"{fingerprint}): {move.why}"
+                        + (f"; wakes when {move.wake}" if move.wake else "")
+                    )
+                    try:
+                        self.live.move(
+                            slug,
+                            move.number,
+                            Place(column=arranged.column, group=group.name, position=position),
+                            actor=Actor.OWNER,
+                            detail=detail,
+                        )
+                        moved += 1
+                    except StoreRefusal as refusal:
+                        refused.append(f"#{move.number}: {refusal}")
+        if refused:
+            self.live.store.note_acceptance(batch.id, "refused — " + "; ".join(refused))
+        self.live.bump()
+        self.loops.reconcile_now()
+        return DoorResult(
+            door="leverage-accept",
+            said=(
+                f"Order accepted (batch {batch.id}): {moved} of {len(ticked)} moves made"
+                + (f"; refused: {'; '.join(refused)}" if refused else "")
+                + (
+                    f"; {len(unticked)} left unticked and not proposed again until their ground "
+                    "changes"
+                    if unticked
+                    else ""
+                )
+                + ". Put it back is offered until you move a card by hand."
+            ),
+        )
+
+    def put_back(self, slug: str) -> DoorResult:
+        """ "Put it back" (card #87, item 5): every card of the last
+        acceptance to its recorded place, through the same door, with his
+        name and the batch as the reason. Retired by a hand move after the
+        acceptance, since there is no old state any more."""
+        strip, _, _ = self.live.focus_of(slug)
+        accepted = strip.accepted
+        if accepted is None or not strip.put_back_offered:
+            raise DoorRefused(
+                "Nothing to put back: no accepted order stands, or you moved a card by hand "
+                "since, and there is no old state any more."
+            )
+        refused: list[str] = []
+        restored = 0
+        # Each place was recorded before any move; putting the lower positions
+        # of a column back first rebuilds it as it was.
+        for move in sorted(
+            accepted.moves, key=lambda m: (m.from_place.column.value, m.from_place.position)
+        ):
+            try:
+                self.live.move(
+                    slug,
+                    move.number,
+                    move.from_place,
+                    actor=Actor.OWNER,
+                    detail=f"put back where it was before the leverage order (batch {accepted.id})",
+                )
+                restored += 1
+            except StoreRefusal as refusal:
+                refused.append(f"#{move.number}: {refusal}")
+        self.live.store.put_back_acceptance(accepted.id, clock.now())
+        self.live.bump()
+        self.loops.reconcile_now()
+        return DoorResult(
+            door="leverage-put-back",
+            said=f"Put back (batch {accepted.id}): {restored} of {len(accepted.moves)} restored"
+            + (f"; refused: {'; '.join(refused)}" if refused else "")
+            + ".",
+        )
 
     # ── a session's close ──────────────────────────────────────────────
 

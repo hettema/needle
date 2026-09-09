@@ -158,8 +158,10 @@ def _date_from_stem(stem: str) -> date | None:
         return None
 
 
-def _head_fields(text: str) -> list[HeadField]:
-    """`**Key:** value` lines before the first section, continuation lines joined."""
+def head_fields_of(text: str) -> list[HeadField]:
+    """`**Key:** value` lines before the first section, continuation lines
+    joined: the one head reader every document the board reads goes
+    through, a plan's, a suggestion's and a project's focus (card #87)."""
     fields: list[HeadField] = []
     for line in text.split("\n"):
         if line.startswith("## ") or line.strip() == "---":
@@ -647,7 +649,7 @@ def plan_stem_of(record_text: str) -> str | None:
     the head alone: how a lane's record is told from the others before any
     of them is parsed whole (thirteen records cost 7 ms parsed, under 1 ms
     matched by head)."""
-    match = _PLAN_STEM.search(_field(_head_fields(record_text), "Plan") or "")
+    match = _PLAN_STEM.search(_field(head_fields_of(record_text), "Plan") or "")
     return match.group(1) if match else None
 
 
@@ -658,7 +660,7 @@ def review_of(text: str, path: str) -> Review:
     `## The passes` — clean when it says nothing new — and each entry under
     `## Dispositions` as FIXED, NO CHANGE or filed. A record without a
     section simply has none of that section's counts."""
-    fields = _head_fields(text)
+    fields = head_fields_of(text)
     plan_stem = plan_stem_of(text)
     findings_line = _field(fields, "Findings") or ""
     count = _INTEGER.search(findings_line)
@@ -737,7 +739,7 @@ def parse_document(
     stem = stem_of(path.rsplit("/", 1)[-1])
     h1 = _H1.search(text)
     title = " ".join(h1.group(1).split()) if h1 else _title_from_stem(stem)
-    fields = _head_fields(text)
+    fields = head_fields_of(text)
     status = _field(fields, "Status")
     status_word = None
     if status:

@@ -20,6 +20,7 @@ import json
 import os
 import sys
 import time
+import uuid
 from datetime import UTC, datetime
 from pathlib import Path
 
@@ -141,32 +142,55 @@ def _first_positional(args: list[str]) -> str | None:
 
 def lane(args: list[str]) -> int:
     """`codex exec -s workspace-write -C <worktree> [-m M] [-c ...] <brief>`:
-    a card's lane (card #63). The fake records the argv whole so a test can
+    a card's lane (card #63) — or, with `-o` and `--output-schema`, a cold
+    reading in a fresh thread (card #87), which is a lane's launch shape
+    with an answer to write. The fake records the argv whole so a test can
     read the sandbox, the writable roots, the model and the reasoning level
     the runtime asked for, then follows the scripted fate — `linger` writes
     the rollout Codex would write and stays at work, which is what a lane
     that took looks like from outside; anything else ends at once, which is
-    what a lane that did not looks like.
+    what a lane that did not looks like. A fresh reading follows a resume's
+    fates instead: `answer` writes `text` to the `-o` file after `after`
+    seconds and exits, `silent` exits with nothing, `fail` exits 1, `linger`
+    stays at work.
     """
     cwd = None
     model = None
+    answer = None
+    schema = None
     for i, arg in enumerate(args):
         if arg in ("-C", "--cd") and i + 1 < len(args):
             cwd = args[i + 1]
         elif arg in ("-m", "--model") and i + 1 < len(args):
             model = args[i + 1]
+        elif arg in ("-o", "--output-last-message") and i + 1 < len(args):
+            answer = args[i + 1]
+        elif arg == "--output-schema" and i + 1 < len(args):
+            schema = args[i + 1]
     prompt = args[-1] if args else ""
-    fate = _locked(lambda blob: blob["codex"].pop(0) if blob.get("codex") else {"then": "linger"})
+    fresh = answer is not None
+    default = "answer" if fresh else "linger"
+    fate = _locked(lambda blob: blob["codex"].pop(0) if blob.get("codex") else {"then": default})
     _locked(
-        lambda blob: blob.setdefault("codex_lanes", []).append(
-            {"argv": args, "cwd": cwd, "model": model, "prompt": prompt, "fate": fate}
+        lambda blob: blob.setdefault("codex_lanes" if not fresh else "codex_log", []).append(
+            {"argv": args, "cwd": cwd, "model": model, "prompt": prompt, "fate": fate,
+             "answer": answer, "schema": schema, "fresh": fresh, "id": None}
         )
     )
-    then = fate.get("then", "linger")
-    if then != "linger":
+    then = fate.get("then", default)
+    if schema is not None:
+        try:
+            json.loads(Path(schema).read_text(encoding="utf-8"))
+        except (OSError, ValueError) as error:
+            print(f"Output schema file {schema} is not valid JSON: {error}", file=sys.stderr)
+            return 1
+    if then == "fail" or (then != "linger" and not fresh):
         print(fate.get("stderr", "error: the lane could not start"), file=sys.stderr)
         return 1
-    session_id = fate.get("session_id", "01a08000-0000-7000-8000-000000000001")
+    session_id = fate.get("session_id") or (
+        str(uuid.uuid4()) if fresh else "01a08000-0000-7000-8000-000000000001"
+    )
+    _locked(lambda blob: blob["codex_log"][-1].__setitem__("id", session_id) if fresh else None)
     folder = HOME / "sessions" / "2026" / "09" / "08"
     folder.mkdir(parents=True, exist_ok=True)
     rollout = folder / f"rollout-2026-09-08T09-00-00-{session_id}.jsonl"
@@ -191,6 +215,14 @@ def lane(args: list[str]) -> int:
     with rollout.open("a", encoding="utf-8") as f:
         f.write(json.dumps(meta) + "\n")
     _append(rollout, "event_msg", {"type": "task_started", "turn_id": "lane"})
+    if fresh and then != "linger":
+        time.sleep(float(fate.get("after", 0.3)))
+        text = "" if then == "silent" else fate.get("text", "the answer, from the fake worker")
+        _append(rollout, "event_msg", {"type": "task_complete", "turn_id": "lane"})
+        if answer is not None and text:
+            Path(answer).write_text(text, encoding="utf-8")
+        print(text)
+        return 0
     pid = os.getpid()
     _locked(lambda blob: blob.setdefault("pids", []).append([pid, _proc_start(pid)]))
     # A lane's argv carries no rollout id — `codex exec` takes a brief, not a

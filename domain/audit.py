@@ -61,6 +61,9 @@ class AuditKind(StrEnum):
     """The owner was told on his screen — a card the machine moved out of
     Executing, or a running card that started waiting on him — with the
     popup's words, or why it could not be raised (card #41, item 2)."""
+    LEVERAGE = "leverage"
+    """A reading of the card against the project's chosen focus landed:
+    its class, its likelihood and the reader's sentence (card #87, item 4)."""
 
 
 class AuditEntry(BaseModel):

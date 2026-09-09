@@ -42,9 +42,11 @@ from board.dial import Filer
 from board.lane import has_row
 from board.verdicts import CLOSED, VerdictUnreadable, machine_verdict, parse_verdict, render_verdict
 from domain.audit import AuditKind
+from domain.call import HowKnown
 from domain.card import Actor
 from domain.column import Column
 from domain.document import DocumentKind, SuggestionKind
+from domain.focus import FocusState, FocusStrip, FocusVerdict, Leverage, Likelihood, RecheckOutcome
 from domain.lane import HANDS_ON, LaneState
 from domain.row import Row, RowKind
 from domain.signal import Finding
@@ -58,7 +60,14 @@ from runtime.git import GitFailed, arm_hooks_path, corpus_renames
 from runtime.service import Runtime
 
 DEFAULT_URL = "http://127.0.0.1:8480"
-HOOK_EVENTS = ("SessionStart", "Stop", "SessionEnd", "StopFailure", "PostToolUse", "UserPromptSubmit")
+HOOK_EVENTS = (
+    "SessionStart",
+    "Stop",
+    "SessionEnd",
+    "StopFailure",
+    "PostToolUse",
+    "UserPromptSubmit",
+)
 HOOK_SCRIPT = REPO_ROOT / "hooks" / "needle_hook.py"
 READ_EVENTS = ("PostToolUse", "UserPromptSubmit")
 """The two events on which the hook reads something into the session rather
@@ -483,7 +492,10 @@ def _arm_git_hooks(repo: Path) -> int:
     if was == str(hooks):
         print(f"git already runs {repo.name}'s hooks from {hooks}")
     else:
-        print(f"armed {repo.name}'s git hooks: core.hooksPath = {hooks}" + (f" (was {was})" if was else ""))
+        print(
+            f"armed {repo.name}'s git hooks: core.hooksPath = {hooks}"
+            + (f" (was {was})" if was else "")
+        )
     return 0
 
 
@@ -756,13 +768,172 @@ def retire(
     survivor, and the retired number keeps one line saying where it went."""
     why = args.why.strip()
     if not why:
-        print("a retirement says why: needle retire SLUG N --into M \"…\"", file=sys.stderr)
+        print('a retirement says why: needle retire SLUG N --into M "…"', file=sys.stderr)
         return 1
     survivor = live.retire(args.slug, args.number, args.into, why)
     print(
         f"#{args.number} retired into #{args.into} ({survivor.title}); its history and rows "
         "read there now"
     )
+    return 0
+
+
+# ── a project's focus (card #87) ───────────────────────────────────────
+
+
+def _strip_words(strip: FocusStrip) -> str:
+    """The strip in the words the page shows, for a terminal."""
+    lines = [strip.sentence]
+    if strip.what_matters:
+        lines.append(f"  what matters now: {strip.what_matters}")
+    if strip.what_holds:
+        lines.append(f"  what holds it back: {strip.what_holds}")
+    document = strip.document
+    if document is not None:
+        lines.append(f"  document: {document.path} at {document.fingerprint}")
+        for doubt in document.doubts:
+            lines.append(f"  cannot be chosen: {doubt}")
+    if strip.ruling is not None:
+        chosen = "chosen" if strip.state in (FocusState.CHOSEN, FocusState.PAUSED) else "ruled"
+        lines.append(
+            f"  {chosen}: {strip.ruling.fingerprint} on {strip.ruling.chosen_at.isoformat()}"
+        )
+    if strip.check is not None:
+        lines.append(f"  the other kind says it {strip.check.verdict.value}: {strip.check.line}")
+    elif strip.checking:
+        lines.append("  a reader of the other kind is checking the diagnosis")
+    elif strip.check_note:
+        lines.append(f"  no second reading: {strip.check_note}")
+    if strip.conversation is not None:
+        lines.append(f"  conversation: {strip.conversation.short_id} on {strip.conversation.slot}")
+    if strip.coverage is not None:
+        c = strip.coverage
+        lines.append(
+            f"  {c.assessed} of {c.total} cards assessed; {c.unread} unread, "
+            f"{c.needs_evidence} need evidence, {c.stale} stale, {c.reading} being read; "
+            f"{strip.moves_proposed} moves proposed"
+        )
+        lines.append(f"  {c.line}")
+    for reading in strip.measures:
+        lines.append(
+            f"  {reading.side.value}: {reading.words}"
+            + (" (baseline)" if reading.baseline else "")
+            + f" — {reading.at.isoformat(timespec='minutes')}"
+        )
+    if strip.recheck_due is not None:
+        lines.append(f"  recheck due {strip.recheck_due.isoformat()}")
+    if strip.recheck is not None:
+        lines.append(f"  recheck said {strip.recheck.outcome.value}: {strip.recheck.words}")
+    if strip.accepted is not None:
+        lines.append(
+            f"  order accepted {strip.accepted.at.isoformat(timespec='minutes')}: "
+            f"{len(strip.accepted.moves)} moves"
+            + ("; put it back is offered" if strip.put_back_offered else "")
+        )
+    if strip.paused:
+        lines.append(f"  paused: {strip.paused}")
+    for door in (strip.talk, strip.choose, strip.propose):
+        lines.append(f"  {door.label}: {'offered' if door.offered else 'closed'} — {door.why}")
+    return "\n".join(lines)
+
+
+def focus(
+    args: argparse.Namespace, live: Live, runtime: Runtime, loops: Loops, doors: Doors
+) -> int:
+    """The strip from the terminal (card #87, item 1): the same object the
+    page reads, as words or as JSON. `--unbound --count` is the loop's
+    trace: how many projects show a chosen focus with no ruling bound to
+    its document — zero by construction, and counted rather than trusted."""
+    loops.reconcile_now()
+    if args.unbound:
+        unbound = 0
+        for slug in live.projects:
+            strip = live.focus_of(slug)[0]
+            if strip.state in (FocusState.CHOSEN, FocusState.PAUSED) and (
+                strip.document is None
+                or strip.ruling is None
+                or strip.document.fingerprint != strip.ruling.fingerprint
+            ):
+                unbound += 1
+        print(unbound if args.count else f"{unbound} focus shown as chosen with no bound ruling")
+        return 0
+    if args.slug is None:
+        print("name a project, or --unbound --count", file=sys.stderr)
+        return 1
+    if args.slug not in live.projects:
+        print(f'no project "{args.slug}" is on the board', file=sys.stderr)
+        return 1
+    if args.choose:
+        print(doors.choose_focus(args.slug).said)
+        return 0
+    strip, _, arrangement = live.focus_of(args.slug)
+    if args.json:
+        print(strip.model_dump_json(indent=1))
+        return 0
+    print(_strip_words(strip))
+    if arrangement.available:
+        for move in arrangement.moves:
+            print(
+                f"  move #{move.number}: {move.from_place.column.value} → "
+                f"{move.to_place.column.value} — {move.why}"
+            )
+    else:
+        print(f"  Leverage order unavailable: {arrangement.why}")
+    return 0
+
+
+def focus_check(
+    args: argparse.Namespace, live: Live, runtime: Runtime, loops: Loops, doors: Doors
+) -> int:
+    """A reader of the other kind's verdict on the proposed focus (card #87, item 3)."""
+    result = doors.focus_check(
+        args.slug,
+        verdict=FocusVerdict(args.verdict),
+        line=args.line,
+        how_known=HowKnown(args.how_known) if args.how_known else None,
+        session_id=None,
+    )
+    print(result.said)
+    return 0
+
+
+def leverage(
+    args: argparse.Namespace, live: Live, runtime: Runtime, loops: Loops, doors: Doors
+) -> int:
+    """One card's reading against the chosen focus (card #87, item 4): the
+    verb that lands the four classes and the three words, and refuses any
+    other word before it reaches the record."""
+    result = doors.leverage(
+        args.slug,
+        args.number,
+        leverage=Leverage(args.leverage),
+        likelihood=Likelihood(args.likelihood) if args.likelihood else None,
+        why=args.why,
+        session_id=None,
+    )
+    print(result.said)
+    return 0
+
+
+def focus_recheck(
+    args: argparse.Namespace, live: Live, runtime: Runtime, loops: Loops, doors: Doors
+) -> int:
+    """The scheduled recheck's word (card #87, item 6)."""
+    result = doors.focus_recheck(
+        args.slug, outcome=RecheckOutcome(args.outcome), words=args.words, session_id=None
+    )
+    print(result.said)
+    return 0
+
+
+def leverage_accept(
+    args: argparse.Namespace, live: Live, runtime: Runtime, loops: Loops, doors: Doors
+) -> int:
+    """ "Accept this order" from the terminal, or "Put it back" (card #87, item 5)."""
+    if args.put_back:
+        print(doors.put_back(args.slug).said)
+        return 0
+    print(doors.accept_order(args.slug, args.numbers).said)
     return 0
 
 
@@ -930,3 +1101,62 @@ def register(sub: "argparse._SubParsersAction[argparse.ArgumentParser]") -> None
     )
     p_fixes.add_argument("slug", help="a project's slug, or all")
     p_fixes.set_defaults(run=_with_board(fixes))
+
+    # `focus` is the runtime's verb for bringing a session's window forward
+    # (api/runtime_cli.py), so a project's focus prints under the name of
+    # the surface that shows it.
+    p_focus = sub.add_parser(
+        "strip",
+        help="a project's focus as the strip shows it; --json the typed shape; "
+        "--choose the owner's click; --unbound --count the loop's trace",
+    )
+    p_focus.add_argument("slug", nargs="?")
+    p_focus.add_argument("--json", action="store_true", help="the typed shape the page reads")
+    p_focus.add_argument(
+        "--choose", action="store_true", help='"Use this focus", from the terminal'
+    )
+    p_focus.add_argument(
+        "--unbound", action="store_true", help="projects shown chosen with no bound ruling"
+    )
+    p_focus.add_argument("--count", action="store_true", help="print the number alone")
+    p_focus.set_defaults(run=_with_board(focus))
+
+    p_check = sub.add_parser(
+        "focus-check", help="a cold reading's verdict on a project's proposed focus"
+    )
+    p_check.add_argument("slug")
+    p_check.add_argument("verdict", choices=[v.value for v in FocusVerdict])
+    p_check.add_argument("line", help="one sentence saying why, naming the weakest link")
+    p_check.add_argument("--how-known", choices=[h.value for h in HowKnown])
+    p_check.set_defaults(run=_with_board(focus_check))
+
+    p_leverage = sub.add_parser(
+        "leverage", help="one card's reading against the chosen focus: its class and why"
+    )
+    p_leverage.add_argument("slug")
+    p_leverage.add_argument("number", type=int)
+    p_leverage.add_argument("leverage", choices=[lv.value for lv in Leverage])
+    p_leverage.add_argument("why", help="one sentence citing the card's document and the diagnosis")
+    p_leverage.add_argument(
+        "--likelihood",
+        choices=[lk.value for lk in Likelihood],
+        help="how likely it is to work; with helps remove this limit only",
+    )
+    p_leverage.set_defaults(run=_with_board(leverage))
+
+    p_recheck = sub.add_parser(
+        "focus-recheck", help="the scheduled recheck's word on a chosen focus"
+    )
+    p_recheck.add_argument("slug")
+    p_recheck.add_argument("outcome", choices=[o.value for o in RecheckOutcome])
+    p_recheck.add_argument("words", help="one sentence, with the numbers")
+    p_recheck.set_defaults(run=_with_board(focus_recheck))
+
+    p_accept = sub.add_parser(
+        "leverage-accept",
+        help="accept the leverage order's moves for these cards, or --put-back the last",
+    )
+    p_accept.add_argument("slug")
+    p_accept.add_argument("numbers", type=int, nargs="*", help="the cards whose moves are ticked")
+    p_accept.add_argument("--put-back", action="store_true")
+    p_accept.set_defaults(run=_with_board(leverage_accept))

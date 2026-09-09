@@ -662,3 +662,215 @@ def ruling_brief(
         "Your turn ends with the push and one plain sentence after it. Ask the owner nothing: "
         "nobody is reading this window."
     )
+
+
+# ── a project's focus (card #87) ───────────────────────────────────────
+
+FOCUS_EXCERPT = 12000
+"""How much of a project's intent document a focus brief carries: the
+whole of Needle's and Hello Revenue's, and the head of a longer one."""
+
+
+def focus_brief(
+    project: Project,
+    session_id: str,
+    first_line: str | None,
+    today: str,
+    *,
+    intent_text: str | None,
+    focus_text: str | None,
+    coverage_line: str | None,
+    moves: bool,
+) -> str:
+    """What a focus conversation opens with (card #87, item 2): the
+    owner's exact words, the project's intent and current focus if any,
+    the instruction to sharpen the outcome into a sentence with a number
+    first and then find what limits it, and the one document it may
+    write. With `moves`, the same conversation is asked to propose what
+    else could move the limit, each written as a suggestion on his word,
+    because the strip's coverage line says nothing queued removes it."""
+    short = session_id[:8]
+    asked = (
+        f'He typed this into the door: "{first_line.strip()}" — that is his opening line and '
+        "the outcome he wants; answer it."
+        if first_line and first_line.strip()
+        else "He typed nothing into the door: ask him, in one line, what needs to change."
+    )
+    intent = (
+        f"--- the project's intent (docs/INTENT.md) ---\n{intent_text}\n--- ends ---"
+        if intent_text
+        else "The project has no docs/INTENT.md; its plans' intents are the intent."
+    )
+    current = (
+        f"--- the current focus document (docs/FOCUS.md) ---\n{focus_text}\n--- ends ---"
+        if focus_text
+        else "No focus document exists yet."
+    )
+    if moves:
+        purpose = (
+            "The board's coverage line says: "
+            f"{coverage_line or 'nothing queued is evidenced to remove this limit'}. "
+            "Walk the way Hormozi does once the limit is named: what else could be done, at "
+            "what cost, in what time, with what likelihood — three to five moves, each one "
+            "sentence with its cost, time and likelihood beside it, drawn from this project's "
+            "own evidence. Backbrief them in plain sentences and ask which he wants. Write "
+            "each he names as a suggestion into docs/slice-suggestions/ headed\n"
+            "  **Kind:** idea\n"
+            f"  **Found by:** the owner, from the board's Focus door on {today} "
+            f"(conversation {short})\n"
+            "  **Cost:** <cost> · **Time:** <time> · **Likelihood:** <high|medium|low>\n"
+            "with a section headed `## The intent it breaks` saying, in his words, what the "
+            "project loses while the limit stands. Each is a card by the next read and is "
+            "judged under the lens like any other. Write nothing he did not name, commit each "
+            "in this checkout on develop with a body saying what prompted it, and push."
+        )
+    else:
+        purpose = (
+            "First sharpen what matters now into one sentence with a number: the outcome in "
+            "his words and the measure that would show it, in the WATCH grammar "
+            "(`<what> — url|file|command|session|owner <target> [expect <value>] by "
+            "<YYYY-MM-DD> [every <N>h|<N>d]`). Then find what limits it: walk the six Ms where "
+            "they fit (metrics, market, model, manpower, money, and the one the project itself "
+            "names), over this project's own evidence — its plans, its signals, its record on "
+            "the board — and land on one diagnosis, one sentence, with its own measure the "
+            "same way; a rival explanation and the cheapest observation that tells the two "
+            "apart; and the recheck, a WATCH line naming when the diagnosis is due to be read "
+            "again. Missing evidence is a named unknown, never an invented bottleneck. Your "
+            "backbrief is two or three plain sentences: the outcome and its number, the "
+            "diagnosis, what would show it wrong. On his yes, write docs/FOCUS.md with exactly "
+            "this head and nothing the board does not need:\n"
+            "  # <the outcome in five words>\n"
+            "  **What matters now:** <the outcome> — <its measure in the WATCH grammar>\n"
+            "  **What holds it back:** <the diagnosis> — <its measure in the WATCH grammar>\n"
+            "  **Evidence:** <what the diagnosis stands on, with paths>\n"
+            "  **Rival:** <the explanation rejected, and the observation that separates them>\n"
+            "  **Recheck:** <a WATCH line: when the diagnosis is read again>\n"
+            f"  **Proposed:** conversation {short}, {today}\n"
+            "then the reasoning as prose under `## Why`, with the M it lands on named there. "
+            "Commit the document in this checkout on develop with a body that says what "
+            "prompted it, push it, and write nothing else. A reader of the other kind then "
+            "checks the diagnosis cold, and the board offers him the ruling: the click is "
+            "his, never yours."
+        )
+    return (
+        f"The focus of {project.name} ({project.path}), opened from the board's Focus door on "
+        f"{today}. A conversation, never hands on any tree: no worktree, no lane, no Start.\n\n"
+        f"{asked}\n\n{intent}\n\n{current}\n\n{purpose}\n\n"
+        "Your FIRST message is two or three short plain sentences — no headers, no file paths. "
+        "Challenge what he typed where it deserves it: the outcome may not be the one the "
+        "intent serves, and the first plausible limit is usually not the binding one."
+    )
+
+
+THE_LEVERAGE_RULE = (
+    "Judge what the card's document would move if it shipped, never its aspiration: a plan "
+    "whose intent does not say what it moves is `needs evidence`, which is a finding on the "
+    "plan and not on the focus."
+)
+"""The one rule every per-card reading applies (card #87, item 4), carried
+verbatim so two readers apply one rule."""
+
+
+def check_brief(
+    project: Project,
+    today: str,
+    *,
+    focus_text: str,
+    intent_text: str | None,
+    sources: list[str],
+) -> str:
+    """What the cold check of a proposed focus opens with (card #87, item
+    3): the document, the sources it cites as this board could read them,
+    and the project's intent. It asks one question — does the diagnosis
+    stand on its evidence? — and answers in the shape asked, in a fresh
+    thread with no share of the writer's context."""
+    intent = (
+        f"--- the project's intent (docs/INTENT.md) ---\n{intent_text}\n--- ends ---"
+        if intent_text
+        else "The project has no docs/INTENT.md."
+    )
+    cited = "\n\n".join(sources) if sources else "(the document cites no path the board could read)"
+    return (
+        f"A cold reading of a proposed focus for {project.name} ({project.path}), {today}. A "
+        "colleague wrote this diagnosis in conversation with the owner; you have no share of "
+        "that conversation and must not go looking for one. Read only what is below and the "
+        "files it cites.\n\n"
+        f"--- the proposed focus (docs/FOCUS.md) ---\n{focus_text}\n--- ends ---\n\n"
+        f"--- the sources it cites, as the board read them ---\n{cited}\n--- ends ---\n\n"
+        f"{intent}\n\n"
+        "Your one question: does the diagnosis stand on the evidence it cites? Test the causal "
+        "chain — that the limit named is what holds the outcome back, that the rival is "
+        "genuinely rejected by the observation named, and that the two measures would show "
+        "the diagnosis wrong if it is. Not whether the outcome is the right priority: that is "
+        "his. Answer as your final message in the shape the output schema asks: `verdict` "
+        "(stands, does not stand, cannot tell), `line` (one sentence saying why, naming the "
+        "weakest link), `how_known` (checked, recalled or inferred) and `sources` (what you "
+        "read). Edit nothing, run nothing that writes, ask nobody: nobody is reading this."
+    )
+
+
+def leverage_brief(
+    detail: CardDetail,
+    project: Project,
+    today: str,
+    *,
+    focus_text: str,
+    document_text: str,
+) -> str:
+    """What a per-card reading opens with (card #87, item 4): the focus
+    document whole, the card's document whole, and the rule that the
+    reading judges what the plan would move and never its aspiration."""
+    card = detail.card
+    return (
+        f"A reading of #{card.number} against {project.name}'s chosen focus ({project.path}), "
+        f"{today}, in a thread of your own with no share of the diagnosis writer's context.\n\n"
+        + render(detail, project)
+        + f"\n\n--- the chosen focus (docs/FOCUS.md) ---\n{focus_text}\n--- ends ---"
+        f"\n\n--- the card's document ({detail.summary.document_path}) ---\n{document_text}\n"
+        "--- ends ---\n\n"
+        f"The rule: {THE_LEVERAGE_RULE}\n\n"
+        "Land one class: `helps remove this limit` (the work would move the bottleneck's "
+        "measure), `protects progress` (it keeps what moves the outcome from breaking), `does "
+        "not address this limit`, or `needs evidence`. With `helps remove this limit`, one "
+        "likelihood word — high, medium, low — with its reason; with any other class, no "
+        "likelihood. Answer as your final message in the shape the output schema asks: "
+        "`leverage`, `likelihood`, `why` (one sentence citing the card's document and the "
+        "diagnosis), `how_known` and `sources`. You judge; you never move a card, write a rank "
+        "or start anything, and the board would refuse it if you tried. Edit nothing, ask "
+        "nobody: nobody is reading this."
+    )
+
+
+def recheck_brief(
+    project: Project,
+    today: str,
+    *,
+    focus_text: str,
+    outcome_readings: str,
+    bottleneck_readings: str,
+    shipped: str,
+) -> str:
+    """What the scheduled recheck opens with (card #87, item 6): the
+    document, both measures' readings from the baseline on, and the
+    helps-remove cards that shipped since the ruling. It lands which link
+    broke, or none; it never chooses another priority."""
+    return (
+        f"The scheduled recheck of {project.name}'s focus ({project.path}), {today}, in a "
+        "thread of your own.\n\n"
+        f"--- the chosen focus (docs/FOCUS.md) ---\n{focus_text}\n--- ends ---\n\n"
+        f"The outcome's measure, read since the ruling (baseline first):\n{outcome_readings}\n\n"
+        "The bottleneck's measure, read since the ruling (baseline first):\n"
+        f"{bottleneck_readings}\n\n"
+        f"The cards read as helping remove the limit that shipped since the ruling:\n{shipped}\n\n"
+        "Read both measures against the diagnosis's prediction — that moving the bottleneck's "
+        "measure moves the outcome's — and land one word: `holds` (both move as predicted, or "
+        "nothing has moved yet and the evidence is still current); `diagnosis challenged` (the "
+        "bottleneck measure improved and the outcome did not); `work not linked` (the work "
+        "shipped and the bottleneck measure has not improved); `expired` (the evidence the "
+        "diagnosis cites is no longer current). A measure only the owner or a session can "
+        "read, read it yourself from the project's record where you can, and say `holds` with "
+        "the unknown named where you cannot. Answer as your final message in the shape the "
+        "output schema asks: `outcome`, `words` (one sentence, with the numbers), `how_known` "
+        "and `sources`. Never say which priority to choose instead: replacing the focus is "
+        "his ruling. Edit nothing, ask nobody: nobody is reading this."
+    )

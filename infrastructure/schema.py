@@ -622,3 +622,142 @@ class RecoveryRow(Base):
     verdict: Mapped[str | None] = mapped_column(String(20), nullable=True)
     ended_at: Mapped[datetime | None] = mapped_column(UtcDateTime, nullable=True)
     note: Mapped[str | None] = mapped_column(Text, nullable=True)
+class FocusRulingRow(Base):
+    """The owner's click on a project's focus (card #87, item 1): the
+    document's fingerprint and when he chose it. One ruling stands at a
+    time — the newest — and the history is kept like the dial's turns."""
+
+    __tablename__ = "focus_rulings"
+    __table_args__ = (Index("ix_focus_rulings_project", "project_slug"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    project_slug: Mapped[str] = mapped_column(String(80))
+    fingerprint: Mapped[str] = mapped_column(String(64))
+    what_matters: Mapped[str] = mapped_column(Text)
+    chosen_at: Mapped[datetime] = mapped_column(UtcDateTime)
+
+
+class FocusCheckRow(Base):
+    """A reader of the other make's verdict on a proposed focus (card #87,
+    item 3), bound to the document it read."""
+
+    __tablename__ = "focus_checks"
+    __table_args__ = (Index("ix_focus_checks_project", "project_slug"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    project_slug: Mapped[str] = mapped_column(String(80))
+    fingerprint: Mapped[str] = mapped_column(String(64))
+    at: Mapped[datetime] = mapped_column(UtcDateTime)
+    verdict: Mapped[str] = mapped_column(String(20))
+    line: Mapped[str] = mapped_column(Text)
+    how_known: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    session_id: Mapped[str | None] = mapped_column(String(36), nullable=True)
+
+
+class FocusRecheckRow(Base):
+    """The scheduled reading of the two measures against the diagnosis
+    (card #87, item 6): which link broke, or none."""
+
+    __tablename__ = "focus_rechecks"
+    __table_args__ = (Index("ix_focus_rechecks_project", "project_slug"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    project_slug: Mapped[str] = mapped_column(String(80))
+    fingerprint: Mapped[str] = mapped_column(String(64))
+    at: Mapped[datetime] = mapped_column(UtcDateTime)
+    outcome: Mapped[str] = mapped_column(String(30))
+    words: Mapped[str] = mapped_column(Text)
+    session_id: Mapped[str | None] = mapped_column(String(36), nullable=True)
+
+
+class FocusMeasureRow(Base):
+    """One machine reading of one of a focus's two measures; the first per
+    fingerprint and side is the baseline (card #87, item 6)."""
+
+    __tablename__ = "focus_measures"
+    __table_args__ = (Index("ix_focus_measures_project", "project_slug", "fingerprint"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    project_slug: Mapped[str] = mapped_column(String(80))
+    fingerprint: Mapped[str] = mapped_column(String(64))
+    side: Mapped[str] = mapped_column(String(20))
+    at: Mapped[datetime] = mapped_column(UtcDateTime)
+    delivered: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
+    words: Mapped[str] = mapped_column(Text)
+    baseline: Mapped[bool] = mapped_column(Boolean)
+
+
+class FocusCallRow(Base):
+    """A call the focus loop made to a colleague of the other make, in a
+    fresh thread: the check of a proposal, a card's reading, the recheck
+    (card #87). The record of readings in flight and of readings that
+    died, so the loop opens one at a time and stops after the cap."""
+
+    __tablename__ = "focus_calls"
+    __table_args__ = (Index("ix_focus_calls_project", "project_slug"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    project_slug: Mapped[str] = mapped_column(String(80))
+    kind: Mapped[str] = mapped_column(String(20))
+    card_number: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    fingerprint: Mapped[str] = mapped_column(String(64))
+    document_fingerprint: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    call_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    session_id: Mapped[str | None] = mapped_column(String(36), nullable=True)
+    opened_at: Mapped[datetime] = mapped_column(UtcDateTime)
+    ended_at: Mapped[datetime | None] = mapped_column(UtcDateTime, nullable=True)
+    landed: Mapped[bool] = mapped_column(Boolean)
+    note: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+
+class LeverageReadingRow(Base):
+    """One reading of one card against the chosen focus (card #87, item
+    4), bound to both fingerprints. Never replaced: a history, so the loop
+    can read how a card's class moved as its document did."""
+
+    __tablename__ = "leverage_readings"
+    __table_args__ = (Index("ix_leverage_readings_card", "project_slug", "card_number"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    project_slug: Mapped[str] = mapped_column(String(80))
+    card_number: Mapped[int] = mapped_column(Integer)
+    at: Mapped[datetime] = mapped_column(UtcDateTime)
+    leverage: Mapped[str] = mapped_column(String(40))
+    likelihood: Mapped[str | None] = mapped_column(String(10), nullable=True)
+    words: Mapped[str] = mapped_column(Text)
+    focus_fingerprint: Mapped[str] = mapped_column(String(64))
+    document_fingerprint: Mapped[str] = mapped_column(String(64))
+    session_id: Mapped[str | None] = mapped_column(String(36), nullable=True)
+
+
+class LeverageBatchRow(Base):
+    """One click of "Accept this order" (card #87, item 5): every move it
+    made with each card's place before it, as one record, so one click
+    puts every one of them back."""
+
+    __tablename__ = "leverage_batches"
+    __table_args__ = (Index("ix_leverage_batches_project", "project_slug"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    project_slug: Mapped[str] = mapped_column(String(80))
+    at: Mapped[datetime] = mapped_column(UtcDateTime)
+    focus_fingerprint: Mapped[str] = mapped_column(String(64))
+    moves: Mapped[list[dict[str, object]]] = mapped_column(JSON)
+    put_back_at: Mapped[datetime | None] = mapped_column(UtcDateTime, nullable=True)
+    note: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+
+class LeverageDeclineRow(Base):
+    """A proposed move the owner left unticked: not proposed again until
+    the focus, the card's document or its class changes (card #87, item 5)."""
+
+    __tablename__ = "leverage_declines"
+    __table_args__ = (Index("ix_leverage_declines_card", "project_slug", "card_number"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    project_slug: Mapped[str] = mapped_column(String(80))
+    card_number: Mapped[int] = mapped_column(Integer)
+    focus_fingerprint: Mapped[str] = mapped_column(String(64))
+    document_fingerprint: Mapped[str] = mapped_column(String(64))
+    leverage: Mapped[str] = mapped_column(String(40))
+    at: Mapped[datetime] = mapped_column(UtcDateTime)

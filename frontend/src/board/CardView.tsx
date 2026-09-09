@@ -2,9 +2,11 @@ import { useState, type KeyboardEvent, type MouseEvent, type PointerEventHandler
 import { useDraggable } from "@dnd-kit/core";
 import { openDoor, openPlan } from "../api";
 import type { CardSummary, FaceDoor } from "../types/board";
+import type { ProposedMove } from "../types/focus";
 import { HANDS_ON } from "../types/lane";
-import { Button, CardShell, CardTitle, CardTop, Carries, Chip, Cid, Essence, FailNote, Grow, Heard, HowFar, KbdHint, Kind, Pick, Pickable, Said, StandingMark, StateLine, StateSentence, type DragProps } from "../components/ui";
+import { Button, CardShell, CardTitle, CardTop, Carries, Chip, Cid, Essence, FailNote, Grow, Heard, HowFar, KbdHint, Kind, LeverageMark, Pick, Pickable, Said, StandingMark, StateLine, StateSentence, type DragProps } from "../components/ui";
 import type { MoveStatus } from "../state/board";
+import type { LensKind } from "./dnd";
 import { useLift } from "./LiftContext";
 import { OpenCard } from "./OpenCard";
 import { useProject } from "./ProjectContext";
@@ -15,6 +17,8 @@ export interface CardViewProps {
   open: boolean;
   status: MoveStatus;
   draggable: boolean;
+  lens: LensKind;
+  move: ProposedMove | null;
   focused: boolean;
   selected: boolean;
   selecting: boolean;
@@ -31,7 +35,7 @@ export interface CardViewProps {
  * card's primary act — and the page only decides its shape: filled for the
  * primary, outlined otherwise, never a colour.
  */
-function FaceDoorButton({ number, door, onOpen }: { number: number; door: FaceDoor; onOpen: (number: number | null) => void }) {
+function FaceDoorButton({ number, door, onOpen, lens }: { number: number; door: FaceDoor; onOpen: (number: number | null) => void; lens: LensKind }) {
   const { slug } = useProject();
   const [busy, setBusy] = useState(false);
   const [said, setSaid] = useState<{ text: string; bad: boolean } | null>(null);
@@ -49,7 +53,14 @@ function FaceDoorButton({ number, door, onOpen }: { number: number; door: FaceDo
     setBusy(true);
     setSaid({ text: `${door.label}…`, bad: false });
     try {
-      const result = name === "plan" ? await openPlan(slug, [number]) : await openDoor(slug, number, name);
+      // A Start under the Leverage lens says so on the history: the loop of
+      // card #87 reads the lens in use and the class shown at each click.
+      const result =
+        name === "plan"
+          ? await openPlan(slug, [number])
+          : name === "start" && lens === "leverage"
+            ? await openDoor(slug, number, name, { lens: "Leverage" })
+            : await openDoor(slug, number, name);
       setSaid({ text: result.said, bad: false });
     } catch (e) {
       setSaid({ text: `${door.label} did not open: ${e instanceof Error ? e.message : String(e)}`, bad: true });
@@ -84,7 +95,7 @@ function Together({ card, selected, selecting, onSelect }: { card: CardSummary; 
   );
 }
 
-export function CardBody({ card, open, onOpen, onClose, selected = false, selecting = false, onSelect }: { card: CardSummary; open: boolean; onOpen?: ((number: number | null) => void) | undefined; onClose?: (() => void) | undefined; selected?: boolean; selecting?: boolean; onSelect?: ((number: number, picked: boolean) => void) | undefined }) {
+export function CardBody({ card, open, onOpen, onClose, selected = false, selecting = false, onSelect, lens = "rank", move = null }: { card: CardSummary; open: boolean; onOpen?: ((number: number | null) => void) | undefined; onClose?: (() => void) | undefined; selected?: boolean; selecting?: boolean; onSelect?: ((number: number, picked: boolean) => void) | undefined; lens?: LensKind; move?: ProposedMove | null }) {
   const { heard } = useProject();
   const state = card.state;
   return (
@@ -115,11 +126,12 @@ export function CardBody({ card, open, onOpen, onClose, selected = false, select
         <>
           {state.detail ? <Essence said>{state.detail}</Essence> : card.essence ? <Essence>{card.essence}</Essence> : null}
           <Carries cards={card.folded} open={false} />
+          {lens === "leverage" ? <LeverageMark leverage={card.leverage ?? null} move={move} /> : null}
           {card.place.column === "Executing" && card.progress ? <HowFar progress={card.progress} /> : null}
           {HANDS_ON.includes(card.lane_state) && heard ? <Heard who={heard.card_number === null ? "the board" : `#${heard.card_number}`}>{heard.text}</Heard> : null}
           <StateLine state={state}>
             {onSelect ? <Together card={card} selected={selected} selecting={selecting} onSelect={onSelect} /> : null}
-            {state.door && onOpen ? <FaceDoorButton number={card.number} door={state.door} onOpen={onOpen} /> : null}
+            {state.door && onOpen ? <FaceDoorButton number={card.number} door={state.door} onOpen={onOpen} lens={lens} /> : null}
           </StateLine>
         </>
       )}
@@ -127,7 +139,7 @@ export function CardBody({ card, open, onOpen, onClose, selected = false, select
   );
 }
 
-export function CardView({ card, ghost, open, status, draggable, focused, selected, selecting, onOpen, onRetry, onFocus, onMoveTo, onSelect }: CardViewProps) {
+export function CardView({ card, ghost, open, status, draggable, lens, move, focused, selected, selecting, onOpen, onRetry, onFocus, onMoveTo, onSelect }: CardViewProps) {
   const controller = useLift();
   const lifting = controller.lift !== null && controller.lift.number === card.number;
   const { attributes, listeners, setNodeRef } = useDraggable({
@@ -186,7 +198,7 @@ export function CardView({ card, ghost, open, status, draggable, focused, select
       onKeyDown={onKeyDown}
       dragProps={dragProps}
     >
-      <CardBody card={card} open={open} onOpen={onOpen} onClose={() => onOpen(null)} selected={selected} selecting={selecting} onSelect={onSelect} />
+      <CardBody card={card} open={open} onOpen={onOpen} onClose={() => onOpen(null)} selected={selected} selecting={selecting} onSelect={onSelect} lens={lens} move={move} />
       {open ? <OpenCard card={card} onMoveTo={onMoveTo} /> : null}
       {status.kind === "failed" ? <FailNote reason={status.reason} onRetry={() => onRetry(card.number)} /> : null}
       {focused && !open && draggable ? <KbdHint lifted={lifting} /> : null}

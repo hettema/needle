@@ -6,9 +6,10 @@ essence. Deriving rather than copying is what keeps the board true to the
 file with nobody syncing anything.
 """
 
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 
 from board.evidence import standing_for
+from board.focus import strip_of
 from board.handouts import handouts_for
 from board.lane import (
     STARTABLE_COLUMNS,
@@ -17,6 +18,7 @@ from board.lane import (
     placement_from,
     where_of,
 )
+from board.leverage import arrange
 from board.moves import GroupLayout
 from board.reconcile import carried_stems, corpus_path_of, ref
 from board.signals import is_due, past_due, read_or_decline
@@ -58,6 +60,7 @@ from domain.document import (
     SuggestionKind,
 )
 from domain.evidence import EvidenceState, Standing
+from domain.focus import Arrangement, CardLeverage, FocusStrip
 from domain.gate import Gate
 from domain.hook import HeardMark
 from domain.lane import HANDS_ON, Doors, Lane, LaneSnapshot, LaneState, StartState
@@ -926,6 +929,7 @@ def summarize(
     sources: Sources | None = None,
     project_path: str = "",
     title_reading: TitleReading | None = None,
+    leverage: CardLeverage | None = None,
 ) -> CardSummary:
     """`doors` is the card's doors as the loop last read them; before its
     first read they are the closed doors of `nothing_read`. The state line and
@@ -1008,6 +1012,7 @@ def summarize(
         triaging=triaging,
         triage=triage,
         title_reading=title_reading,
+        leverage=leverage,
     )
 
 
@@ -1074,6 +1079,9 @@ def assemble_board(
     sources: Sources | None = None,
     dial: DialState | None = None,
     title_readings: dict[int, TitleReading] | None = None,
+    focus: FocusStrip | None = None,
+    leverage: Arrangement | None = None,
+    leverages: dict[int, CardLeverage] | None = None,
 ) -> BoardState:
     """`snapshot`, `readings`, `trunk` and `machine` are what the loop has
     read; before its first read they are absent and the board says so.
@@ -1087,6 +1095,7 @@ def assemble_board(
     triage_sessions = triage_sessions or {}
     triages = triages or {}
     title_readings = title_readings or {}
+    leverages = leverages or {}
     watercooler = watercooler or []
     placements = placements or {}
     trunk = trunk or TrunkState(level=None, behind=0, note=None, read_at=None)
@@ -1119,6 +1128,7 @@ def assemble_board(
             triage=triages.get(n),
             sources=sources,
             title_reading=title_readings.get(n),
+            leverage=leverages.get(n),
         )
         for n, c in by_number.items()
     }
@@ -1209,6 +1219,40 @@ def assemble_board(
         verdicts=verdicts,
         conversations=conversations,
         watercooler=watercooler,
+        focus=focus if focus is not None else no_focus(),
+        leverage=leverage if leverage is not None else no_leverage(layout),
+    )
+
+
+def no_focus() -> FocusStrip:
+    """The strip before anything is known: no document, no conversation."""
+    return strip_of(
+        document=None,
+        ruling=None,
+        check=None,
+        checking=False,
+        check_note=None,
+        conversation=None,
+        talked_before=False,
+        coverage=None,
+        moves_proposed=0,
+        accepted=None,
+        put_back_offered=False,
+        recheck=None,
+        measures=[],
+        now=datetime.now(UTC),
+    )
+
+
+def no_leverage(layout: list[GroupLayout]) -> Arrangement:
+    return arrange(
+        layout,
+        {},
+        focus_fingerprint="",
+        declines=[],
+        wake=None,
+        available=False,
+        why="no focus is chosen",
     )
 
 
@@ -1232,6 +1276,7 @@ def assemble_detail(
     triage: Triage | None = None,
     sources: Sources | None = None,
     title_reading: TitleReading | None = None,
+    leverage: CardLeverage | None = None,
 ) -> CardDetail:
     """`readings` newest first; `read` is whether the loop has read the
     machine; `folded` the cards folded under this one; `reading` the
@@ -1261,6 +1306,7 @@ def assemble_detail(
             triage=triage,
             sources=sources,
             title_reading=title_reading,
+            leverage=leverage,
         ),
         brief=brief,
         record=record,

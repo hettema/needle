@@ -5,10 +5,13 @@ from datetime import datetime
 from pydantic import BaseModel
 
 from domain.document import Document, DocumentKind
+from domain.focus import FocusDocument
 
 
 class CorpusIndex(BaseModel):
     documents: list[Document]
+    focus: FocusDocument | None = None
+    """The project's focus document, read on the same beat (card #87)."""
     read_at: datetime
 
     def find(self, kind: DocumentKind, stem: str) -> Document | None:

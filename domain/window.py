@@ -26,6 +26,10 @@ class WindowKind(StrEnum):
     PLAN = "board-plan"
     """A plan-writing conversation for one suggestion or several, in the
     project's checkout; the plan it writes carries them (plan 06, item 5)."""
+    FOCUS = "board-focus"
+    """A conversation that sharpens what matters now and finds what holds it
+    back, in the project's checkout; what it writes is `docs/FOCUS.md` and
+    the suggestions the owner names (card #87, item 2)."""
 
 
 class Window(BaseModel):

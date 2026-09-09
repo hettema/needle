@@ -22,6 +22,12 @@ const api = vi.hoisted(() => ({
   openPlan: vi.fn<(slug: string, numbers: number[]) => Promise<DoorResult>>(),
   acceptClass: vi.fn<(slug: string, evidenceClass: EvidenceClass) => Promise<VerdictsRuled>>(),
   turnDial: vi.fn<(on: boolean, lanes: number) => Promise<DialState>>(),
+  getFocus: vi.fn(),
+  openFocus: vi.fn<(slug: string, text: string) => Promise<DoorResult>>(),
+  proposeMoves: vi.fn<(slug: string) => Promise<DoorResult>>(),
+  chooseFocus: vi.fn<(slug: string) => Promise<DoorResult>>(),
+  acceptOrder: vi.fn<(slug: string, numbers: number[]) => Promise<DoorResult>>(),
+  putBack: vi.fn<(slug: string) => Promise<DoorResult>>(),
   streamUrl: (slug: string) => `/api/projects/${slug}/stream`,
 }));
 
@@ -68,6 +74,11 @@ beforeEach(() => {
   api.openPlan.mockReset();
   api.acceptClass.mockReset();
   api.turnDial.mockReset();
+  api.openFocus.mockReset();
+  api.proposeMoves.mockReset();
+  api.chooseFocus.mockReset();
+  api.acceptOrder.mockReset();
+  api.putBack.mockReset();
   window.history.replaceState(null, "", "/");
 });
 
@@ -1265,5 +1276,127 @@ describe("the colour language", () => {
     await userEvent.click(screen.getByRole("button", { name: /^Your move/ }));
     expect(upNextOrder()).toEqual([253, 241, 228, 237, 174]);
     expect(screen.queryByRole("group", { name: /What Your move counts/ })).not.toBeInTheDocument();
+  });
+});
+
+describe("the focus strip and the Leverage lens (card #87)", () => {
+  it("shows the chosen focus on every lens, and the lens shows the board as the focus would arrange it without writing", async () => {
+    await renderBoard();
+    const strip = screen.getByRole("region", { name: "The focus" });
+    expect(strip).toHaveTextContent("Focus chosen · 5 of 20 cards assessed · 2 moves proposed");
+    expect(strip).toHaveTextContent("What matters now: Every season berth is paid before the boat arrives");
+    expect(strip).toHaveTextContent("1 queued card helps remove this limit");
+    expect(strip.dataset["meaning"]).toBe("quiet");
+    expect(within(strip).getByRole("button", { name: "Propose moves" })).toBeEnabled();
+    expect(within(strip).queryByRole("button", { name: "Use this focus" })).toBeNull();
+    expect(upNextOrder()).toEqual([253, 241, 228, 237, 174]);
+
+    await userEvent.click(screen.getByRole("button", { name: "Leverage" }));
+    // #196 (Planned, helps remove, low) is shown in Up next after #253 (high); #174 (does not address) is shown in Not now.
+    expect(upNextOrder()).toEqual([253, 196, 241, 228, 237]);
+    const card = document.querySelector('[data-column="Up next"] article[data-card="253"]') as HTMLElement;
+    expect(card).toHaveTextContent("helps remove this limit · high");
+    expect(card).toHaveTextContent("Nothing for you: it helps remove this limit (high likelihood).");
+    const moving = document.querySelector('[data-column="Up next"] article[data-card="196"]') as HTMLElement;
+    expect(moving).toHaveTextContent("moving from Planned");
+    const bar = screen.getByRole("region", { name: "2 moves proposed" });
+    expect(within(bar).getByRole("checkbox", { name: "Move #196 to Up next" })).toBeChecked();
+    expect(within(bar).getByRole("checkbox", { name: "Move #174 to Not now" })).toBeChecked();
+    expect(within(bar).getByRole("button", { name: "Accept this order (2)" })).toBeEnabled();
+    // A view, never a write: nothing lifts and nothing moves under the lens.
+    act(() => card.focus());
+    fireEvent.keyDown(card, { key: " " });
+    expect(card.className).not.toContain("ghost");
+    expect(api.moveCard).not.toHaveBeenCalled();
+    expect(api.acceptOrder).not.toHaveBeenCalled();
+    await userEvent.click(screen.getByRole("button", { name: "Rank" }));
+    expect(upNextOrder()).toEqual([253, 241, 228, 237, 174]);
+  });
+
+  it("accepts only the ticked moves through the one door, and offers to put them back", async () => {
+    api.acceptOrder.mockResolvedValue({ door: "leverage-accept", said: "Order accepted (batch 1): 1 of 1 moves made" });
+    await renderBoard();
+    await userEvent.click(screen.getByRole("button", { name: "Leverage" }));
+    const bar = screen.getByRole("region", { name: "2 moves proposed" });
+    await userEvent.click(within(bar).getByRole("checkbox", { name: "Move #174 to Not now" }));
+    expect(within(bar).getByRole("button", { name: "Accept this order (1)" })).toBeEnabled();
+    // The board is re-read after the acceptance: the store's answer, never the page's guess.
+    const accepted = board();
+    accepted.focus.put_back_offered = true;
+    accepted.focus.sentence = "Focus chosen · 5 of 20 cards assessed · 1 move proposed · Order accepted 2026-09-04 · Put it back";
+    accepted.leverage = { ...accepted.leverage, moves: accepted.leverage.moves.filter((m) => m.number === 174) };
+    api.getBoard.mockResolvedValue(accepted);
+    await userEvent.click(within(bar).getByRole("button", { name: "Accept this order (1)" }));
+    await waitFor(() => expect(api.acceptOrder).toHaveBeenCalledWith(SLUG, [196]));
+    expect(api.moveCard).not.toHaveBeenCalled();
+    const strip = screen.getByRole("region", { name: "The focus" });
+    await waitFor(() => expect(within(strip).getByRole("button", { name: "Put it back" })).toBeEnabled());
+    expect(strip).toHaveTextContent("Order accepted 2026-09-04 · Put it back");
+    api.putBack.mockResolvedValue({ door: "leverage-put-back", said: "Put back (batch 1): 1 of 1 restored." });
+    await userEvent.click(within(strip).getByRole("button", { name: "Put it back" }));
+    await waitFor(() => expect(api.putBack).toHaveBeenCalledWith(SLUG));
+  });
+
+  it("says why the leverage order is unavailable and keeps his rank, and offers the ruling on a proposed focus", async () => {
+    const proposed = board();
+    proposed.focus.state = "proposed";
+    proposed.focus.sentence = "A focus is ready for your decision";
+    proposed.focus.ruling = null;
+    proposed.focus.coverage = null;
+    proposed.focus.moves_proposed = 0;
+    proposed.focus.choose = { offered: true, label: "Use this focus", why: "Your move: choose this focus, or keep discussing it. A reader of the other make says it stands." };
+    proposed.focus.propose = { offered: false, label: "Propose moves", why: "Nothing for you: moves are proposed against a chosen focus." };
+    proposed.leverage = { available: false, why: "the proposed focus waits for your decision", columns: proposed.leverage.columns, moves: [] };
+    api.getBoard.mockResolvedValue(proposed);
+    api.chooseFocus.mockResolvedValue({ door: "focus", said: "Focus chosen at abc" });
+    await renderBoard();
+    const strip = screen.getByRole("region", { name: "The focus" });
+    expect(strip).toHaveTextContent("A focus is ready for your decision");
+    expect(strip.dataset["meaning"]).toBe("yours");
+    expect(strip).toHaveTextContent("a reader of the other kind says it stands");
+    expect(within(strip).getByRole("button", { name: "Keep discussing" })).toBeEnabled();
+    await userEvent.click(screen.getByRole("button", { name: "Leverage" }));
+    expect(screen.getByRole("region", { name: "Leverage order unavailable" })).toHaveTextContent("Leverage order unavailable: the proposed focus waits for your decision");
+    expect(upNextOrder()).toEqual([253, 241, 228, 237, 174]);
+    await userEvent.click(within(strip).getByRole("button", { name: "Use this focus" }));
+    await waitFor(() => expect(api.chooseFocus).toHaveBeenCalledWith(SLUG));
+    expect(await within(strip).findByText("Focus chosen at abc")).toBeInTheDocument();
+  });
+
+  it("opens the Focus door with the owner's line when no focus is chosen", async () => {
+    const none = board();
+    none.focus.state = "no focus";
+    none.focus.sentence = "No focus chosen";
+    none.focus.what_matters = null;
+    none.focus.what_holds = null;
+    none.focus.document = null;
+    none.focus.ruling = null;
+    none.focus.coverage = null;
+    none.focus.check = null;
+    none.focus.choose = { offered: false, label: "Use this focus", why: "Nothing for you: there is no complete focus document to choose." };
+    none.focus.propose = { offered: false, label: "Propose moves", why: "Nothing for you: moves are proposed against a chosen focus." };
+    none.leverage = { available: false, why: "no focus is chosen", columns: none.leverage.columns, moves: [] };
+    api.getBoard.mockResolvedValue(none);
+    api.openFocus.mockResolvedValue({ door: "focus", said: "Talking in org.omarchy.board-focus-harbourmaster" });
+    await renderBoard();
+    const strip = screen.getByRole("region", { name: "The focus" });
+    expect(strip).toHaveTextContent("No focus chosen");
+    await userEvent.type(within(strip).getByRole("textbox", { name: "What needs to change?" }), "more berths paid before arrival");
+    await userEvent.click(within(strip).getByRole("button", { name: "Talk it through" }));
+    await waitFor(() => expect(api.openFocus).toHaveBeenCalledWith(SLUG, "more berths paid before arrival"));
+    expect(await within(strip).findByText("Talking in org.omarchy.board-focus-harbourmaster")).toBeInTheDocument();
+  });
+
+  it("sends the lens with a Start clicked under Leverage, and nothing else", async () => {
+    const b = board();
+    const mine = cardOf(b, 253);
+    mine.state = { word: "free to start", meaning: "proven", detail: null, loop: null, door: { name: "start", label: "Start", why: "Start · fable on alpha — Proven: press it and a session starts.", primary: true }, hint: null };
+    api.getBoard.mockResolvedValue(b);
+    api.openDoor.mockResolvedValue({ door: "start", said: "Started" });
+    await renderBoard();
+    await userEvent.click(screen.getByRole("button", { name: "Leverage" }));
+    const card = document.querySelector('[data-column="Up next"] article[data-card="253"]') as HTMLElement;
+    await userEvent.click(within(card).getByRole("button", { name: "Start" }));
+    await waitFor(() => expect(api.openDoor).toHaveBeenCalledWith(SLUG, 253, "start", { lens: "Leverage" }));
   });
 });
