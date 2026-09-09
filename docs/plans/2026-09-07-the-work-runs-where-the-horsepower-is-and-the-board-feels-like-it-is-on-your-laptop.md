@@ -154,7 +154,16 @@ that does not answer falls back to the laptop with room. The face says
 `on rented` in the lane section only when the board knows more than one
 machine (`board/lane.py`, `LaneFacts.many_machines`). The live clauses —
 a Hello Revenue card from the served board, its fold on origin, an Omarchy
-card on the laptop — are the resuming session's, once item 1 exists.
+card on the laptop — are the resuming session's, and they come after item
+3, as the plan's order says and the machine's first evening showed why: a
+lane on the rented machine runs, but every `needle` verb it calls there
+(`card`, `row`, `watercooler`, `close`, `fold`) opens that machine's own
+store, and its hooks post to `127.0.0.1:8480`, which is nothing there.
+Only once the board and its store serve from that machine (item 3) is a
+lane there a lane like any other; until then the live half of this item is
+the wire — both machines registered, the head naming both, the loop
+reading the rented machine every pass over real `ssh`, the Start preview
+choosing it for a Hello Revenue card — which the fold's evening reads.
 
 ### 5. The measure exists before the move
 The machine's memory high-water mark, the count of lanes killed by the
