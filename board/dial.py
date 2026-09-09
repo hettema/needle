@@ -31,11 +31,14 @@ from domain.dial import (
     Headroom,
     Meminfo,
     RailCount,
+    ScopeHeld,
     ScopeMemory,
+    ScopeState,
 )
 from domain.document import Document, DocumentKind, FixMark, SuggestionKind
 from domain.lane import HANDS_ON, Lane, LaneState
 from domain.row import RowKind
+from domain.session import Session
 from domain.signal import Reading
 from domain.triage import Routed, Routing, TitleReading
 
@@ -246,6 +249,33 @@ lane the floor was set from, again, and the machine reads full until it
 shrinks or folds — the board stops admitting; it never stops a lane (that
 plan's ruling 1). No code path raises the number; the loop in that plan
 says when the owner should."""
+
+
+def _head(command: str) -> str:
+    return " ".join(command.split()[:2])[:40] or "?"
+
+
+def who_is_home(held: Sequence[ScopeHeld], sessions: Sequence[Session]) -> list[ScopeState]:
+    """Every group of ours against the registry (card #99): a live session
+    whose pid is in the group, or that started something in it, is home,
+    and everything else the group holds is a stranger, named by the head
+    of its command. A group that holds
+    processes and nobody is home in is a finished session's leftovers —
+    forty wait loops from three sessions a day gone, on 2026-09-09 — and
+    is what the beat stops and `needle scopes --stray` lists."""
+    by_pid = {s.pid: s.short_id for s in sessions if s.pid is not None and not s.stale}
+    states: list[ScopeState] = []
+    for scope in held:
+        owner = {
+            pid: next((by_pid[p] for p in (pid, *scope.lineage.get(pid, ())) if p in by_pid), None)
+            for pid in scope.pids
+        }
+        home = sorted({who for who in owner.values() if who is not None})
+        strangers = [_head(scope.commands.get(p, "")) for p in scope.pids if owner[p] is None]
+        states.append(
+            ScopeState(unit=scope.unit, pids=list(scope.pids), home=home, strangers=strangers)
+        )
+    return states
 
 
 def _gb(byte_count: int) -> str:

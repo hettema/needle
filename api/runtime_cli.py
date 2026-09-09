@@ -29,7 +29,9 @@ from pathlib import Path
 
 from pydantic import BaseModel
 
+from board.dial import who_is_home
 from domain.call import CallOutcome, CallVerdict
+from domain.dial import ScopeState
 from domain.gate import Gate
 from domain.launch import Launch, LaunchVerdict, Start
 from domain.session import Session
@@ -183,6 +185,32 @@ def sessions(runtime: Runtime, args: argparse.Namespace) -> int:
     if unreadable and not args.json:
         text += "\n" + "\n".join(f"unreadable handoff file: {p}" for p in unreadable)
     _emit(args, rows, text)
+    return 0
+
+
+def describe_scope(state: ScopeState) -> str:
+    who = ", ".join(state.home) if state.home else "nobody home"
+    count = len(state.pids)
+    held = f"{count} process{'es' if count != 1 else ''}"
+    heads = ", ".join(sorted(set(state.strangers))[:3])
+    return f"{state.unit}  {who}  {held}" + (f" ({heads})" if heads else "")
+
+
+def scopes(runtime: Runtime, args: argparse.Namespace) -> int:
+    """Every process group of ours and who is home in it (card #99): the
+    reading behind the beat's sweep, and the loop's own reader."""
+    held = runtime.scopes()
+    if held is None:
+        print("the user manager could not be asked", file=sys.stderr)
+        return 1
+    states = who_is_home(held, runtime.sessions())
+    if args.stray:
+        states = [s for s in states if s.nobody_home]
+    if args.count:
+        print(len(states))
+        return 0
+    empty = "no group nobody is home in" if args.stray else "no group of ours"
+    _emit(args, states, "\n".join(describe_scope(s) for s in states) or empty)
     return 0
 
 
@@ -440,6 +468,11 @@ def register(sub: "argparse._SubParsersAction[argparse.ArgumentParser]") -> None
         return p
 
     parser("sessions", "every session on this machine, across every slot, as one list", sessions)
+    p_scopes = parser(
+        "scopes", "every process group of ours, who is home in it, and what else it holds", scopes
+    )
+    p_scopes.add_argument("--stray", action="store_true", help="only the groups nobody is home in")
+    p_scopes.add_argument("--count", action="store_true", help="print how many, nothing else")
 
     p_where = parser("where", "where work runs next, as claude-acct's one rule answers it", where)
     p_where.add_argument("--from", dest="from_slot", help="the slot to ask first")

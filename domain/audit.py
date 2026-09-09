@@ -31,6 +31,9 @@ class AuditKind(StrEnum):
     ANSWERED = "answered"
     DISCUSSED = "discussed"
     STOPPED = "stopped"
+    """The machine or the owner ended the lane's session — or, once the
+    session had ended by any road, what it left running in its group
+    (card #99)."""
     RESCUED = "rescued"
     """The runtime moved the lane's session to another rung."""
     SCOPED = "scoped"

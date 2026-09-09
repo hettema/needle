@@ -9,7 +9,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 
 from domain.call import Call, CallVerdict
-from domain.dial import Meminfo
+from domain.dial import Meminfo, ScopeHeld
 from domain.gate import Gate
 from domain.handout import Dispatch
 from domain.launch import Launch, Rescue, Start, Stopped, WindowlessStart
@@ -346,6 +346,30 @@ class Runtime:
         """Put a session with hands on a lane back in the lane's scope
         (plan 53, item 2); the same act as at Start, recorded the same way."""
         return launch.rescope(self.store, session, card)
+
+    def scopes(self) -> list[ScopeHeld] | None:
+        """Every process group of ours the manager holds active — the
+        prefix every lane's and reading's session is put under at Start —
+        with the pids each holds and their command lines (card #99); None
+        when the manager could not be asked."""
+        try:
+            held: list[ScopeHeld] = []
+            for unit in machine.units_named(launch.SESSION_UNIT_PREFIX):
+                pids = machine.unit_pids(unit)
+                commands = {pid: machine.cmdline_of(pid) or "" for pid in pids}
+                lineage = {pid: machine.ancestors_of(pid) for pid in pids}
+                held.append(ScopeHeld(unit=unit, pids=pids, commands=commands, lineage=lineage))
+            return held
+        except (OSError, machine.Timeout, machine.CommandMissing):
+            return None
+
+    def stop_scope(self, unit: str) -> tuple[bool, str]:
+        """End a group of ours and everything in it (card #99): what the
+        beat does to a group nobody is home in."""
+        try:
+            return machine.stop_unit(unit)
+        except (OSError, machine.Timeout, machine.CommandMissing) as error:
+            return False, str(error)
 
     def machine_is_reachable(self) -> list[str]:
         """Which of the commands the runtime needs are missing, by name."""

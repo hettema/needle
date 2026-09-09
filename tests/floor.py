@@ -32,6 +32,7 @@ class Floor:
     meminfo: Path
     codex_home: Path
     state_file: Path
+    cgroup_root: Path
     pids: list[int] = field(default_factory=list)
 
     def config_dir(self, slot: str) -> Path:
@@ -108,6 +109,28 @@ class Floor:
 
     def refuse_best(self, error: str) -> None:
         self.update(best={"error": error})
+
+    def write_scope(self, unit: str, pids: list[int], *, active: bool = True) -> None:
+        """A unit the fake manager holds, and what its control group holds
+        (card #99): `list-units` lists it while active, `show -p
+        ControlGroup` names its group, and `cgroup.procs` there lists the
+        pids. The fake's `stop` marks it inactive and records the unit in
+        `scope_stops`; it ends no process, so a test kills what it planted."""
+        group = f"/app.slice/{unit}"
+        procs = self.cgroup_root / group.lstrip("/") / "cgroup.procs"
+        procs.parent.mkdir(parents=True, exist_ok=True)
+        procs.write_text("".join(f"{pid}\n" for pid in pids), encoding="utf-8")
+
+        def write() -> None:
+            blob = json.loads(self.state_file.read_text(encoding="utf-8"))
+            blob.setdefault("scopes", {})[unit] = {
+                "ActiveState": "active" if active else "inactive",
+                "LoadState": "loaded",
+                "ControlGroup": group,
+            }
+            self.state_file.write_text(json.dumps(blob, indent=1), encoding="utf-8")
+
+        self._locked(write)
 
     def script_launches(self, *fates: dict) -> None:
         self.update(launches=list(fates))
@@ -389,6 +412,8 @@ def lay(root: Path) -> Floor:
     # A machine with room: the dial's memory floor is 5 GB (board/dial.py).
     meminfo = root / "meminfo"
     write_meminfo(meminfo, available_gb=16.0, swap_free_gb=8.0, swap_total_gb=8.0)
+    cgroups = root / "cgroup"
+    cgroups.mkdir()
     state = root / "fake-state.json"
     state.write_text(
         json.dumps(
@@ -407,6 +432,8 @@ def lay(root: Path) -> Floor:
                 "clients": [],
                 "spawned": [],
                 "busctl_calls": [],
+                "scopes": {},
+                "scope_stops": [],
                 "codex": [],
                 "codex_log": [],
                 "windows_open": True,
@@ -427,6 +454,7 @@ def lay(root: Path) -> Floor:
         meminfo=meminfo,
         codex_home=codex_home,
         state_file=state,
+        cgroup_root=cgroups,
     )
 
 
@@ -458,6 +486,7 @@ ENVIRONMENT = {
     "NEEDLE_MEMINFO": "meminfo",
     "NEEDLE_CODEX_HOME": "codex_home",
     "NEEDLE_FAKE_STATE": "state_file",
+    "NEEDLE_CGROUP_ROOT": "cgroup_root",
 }
 """Variable → the floor attribute it points at. `runtime.machine` reads all
-but the last; the fakes read the last."""
+but the fake state; the fakes read that one."""

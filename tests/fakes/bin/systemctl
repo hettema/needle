@@ -1,10 +1,13 @@
 #!/usr/bin/env python3
-"""A stand-in for `systemctl` on the test floor: answers `show` from the
-scope properties the test put in `$NEEDLE_FAKE_STATE["scopes"]`, clears a
-failed scope on `reset-failed`, and records every call so the test can read
-what the runtime asked the user manager."""
+"""A stand-in for `systemctl` on the test floor: answers `show` and
+`list-units` from the scope properties the test put in
+`$NEEDLE_FAKE_STATE["scopes"]`, clears a failed scope on `reset-failed`,
+marks one inactive on `stop` (recording it in `scope_stops`, ending no
+process), and records every call so the test can read what the runtime
+asked the user manager."""
 
 import fcntl
+import fnmatch
 import json
 import os
 import sys
@@ -71,6 +74,41 @@ def _reset_failed(argv: list[str], blob: dict) -> int:
     return 1
 
 
+def _write(blob: dict) -> None:
+    with (STATE.parent / (STATE.name + ".lock")).open("a+") as lock:
+        fcntl.flock(lock, fcntl.LOCK_EX)
+        STATE.write_text(json.dumps(blob, indent=1), encoding="utf-8")
+        fcntl.flock(lock, fcntl.LOCK_UN)
+
+
+def _list_units(argv: list[str], blob: dict) -> int:
+    patterns = [a for a in argv if not a.startswith("-") and a != "list-units"]
+    wanted = next((a.split("=", 1)[1] for a in argv if a.startswith("--state=")), None)
+    for unit, values in blob.get("scopes", {}).items():
+        state = values.get("ActiveState", "inactive")
+        if wanted and state != wanted:
+            continue
+        if patterns and not any(fnmatch.fnmatch(unit, p) for p in patterns):
+            continue
+        sub = "running" if state == "active" else "dead"
+        print(f"{unit} loaded {state} {sub} {unit}")
+    return 0
+
+
+def _stop(argv: list[str], blob: dict) -> int:
+    units = [a for a in argv if not a.startswith("-") and a != "stop"]
+    unit = units[0] if units else ""
+    scope = blob.get("scopes", {}).get(unit)
+    if scope is None or scope.get("ActiveState") != "active":
+        print(f"Failed to stop {unit}: Unit {unit} not loaded.", file=sys.stderr)
+        return 5
+    scope["ActiveState"] = "inactive"
+    scope["LoadState"] = "not-found"
+    blob.setdefault("scope_stops", []).append(unit)
+    _write(blob)
+    return 0
+
+
 def main(argv: list[str]) -> int:
     with (STATE.parent / (STATE.name + ".lock")).open("a+") as lock:
         fcntl.flock(lock, fcntl.LOCK_EX)
@@ -85,6 +123,10 @@ def main(argv: list[str]) -> int:
         return _show(argv, blob)
     if "reset-failed" in argv:
         return _reset_failed(argv, blob)
+    if "list-units" in argv:
+        return _list_units(argv, blob)
+    if "stop" in argv:
+        return _stop(argv, blob)
     print(f"fake systemctl: unsupported: {argv}", file=sys.stderr)
     return 2
 

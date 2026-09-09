@@ -118,6 +118,13 @@ def codex_sessions_root() -> Path:
     return codex_home() / "sessions"
 
 
+def cgroup_root() -> Path:
+    """The control-group tree the user manager keeps its units in: a unit's
+    `ControlGroup` is a path under it, and `cgroup.procs` there lists every
+    process the unit holds (card #99)."""
+    return _path("NEEDLE_CGROUP_ROOT", Path("/sys/fs/cgroup"))
+
+
 def meminfo_path() -> Path:
     """The kernel's memory summary; the floor lays one of its own."""
     return _path("NEEDLE_MEMINFO", PROC / "meminfo")
@@ -279,6 +286,19 @@ def parent_of(pid: int) -> int | None:
     return None if fields is None or len(fields) < 2 else int(fields[1])
 
 
+def ancestors_of(pid: int) -> list[int]:
+    """The process's parents up to init, nearest first; empty once it is
+    gone or already init's child (card #99)."""
+    found: list[int] = []
+    seen = {pid}
+    parent = parent_of(pid)
+    while parent is not None and parent > 1 and parent not in seen:
+        found.append(parent)
+        seen.add(parent)
+        parent = parent_of(parent)
+    return found
+
+
 def children_of(pid: int) -> list[int]:
     found: list[int] = []
     for entry in PROC.iterdir():
@@ -438,6 +458,56 @@ def adopt(unit: str, pids: list[int]) -> tuple[bool, str]:
         "0",
     ]
     done = run(argv, timeout=10)
+    return done.returncode == 0, (done.stderr or done.stdout).strip()
+
+
+def units_named(prefix: str, kind: str = "scope") -> list[str]:
+    """Every active unit of the kind whose name starts with `prefix`, as the
+    user manager lists them (card #99). Verified 2026-09-09 on this
+    machine: the pattern is a glob the manager matches itself, one that
+    matches nothing prints nothing and exits 0, and the unit's name is the
+    first word of each line. Raises `CommandMissing` or `OSError` when the
+    manager cannot be asked, so the caller says so rather than read none."""
+    argv = [
+        which("systemctl"),
+        "--user",
+        "list-units",
+        f"--type={kind}",
+        "--state=active",
+        "--plain",
+        "--no-legend",
+        f"{prefix}*",
+    ]
+    done = run(argv, timeout=20)
+    if done.returncode != 0:
+        raise OSError(f"systemctl list-units failed: {(done.stderr or done.stdout).strip()}")
+    return [line.split()[0] for line in done.stdout.splitlines() if line.strip()]
+
+
+def unit_pids(unit: str) -> list[int]:
+    """Every process the unit holds right now, from its control group's
+    `cgroup.procs` (card #99); none when the manager no longer holds the
+    unit or the group cannot be read. Raises as `show_units` does."""
+    fields = show_units([unit], ["ControlGroup"]).get(unit) or {}
+    path = fields.get("ControlGroup", UNSET)
+    if not path.startswith("/"):
+        return []
+    try:
+        text = (cgroup_root() / path.lstrip("/") / "cgroup.procs").read_text(encoding="utf-8")
+    except OSError:
+        return []
+    return [int(word) for word in text.split() if word.isdigit()]
+
+
+def stop_unit(unit: str) -> tuple[bool, str]:
+    """Stop a unit of ours, which ends every process it holds: what
+    `systemctl --user stop` does to a scope (verified 2026-09-04 for
+    `adopt`, and by hand on two finished lanes' groups on 2026-09-09 —
+    15 ms, every process gone). A unit whose processes had to be killed
+    ends `failed` rather than gone (a leftover uvicorn on 2026-09-09) and
+    `adopt` resets one of those before reusing the name. Returns whether
+    the manager took the stop, and its words."""
+    done = run([which("systemctl"), "--user", "stop", unit], timeout=20)
     return done.returncode == 0, (done.stderr or done.stdout).strip()
 
 

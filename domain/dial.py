@@ -61,6 +61,37 @@ class ScopeMemory(BaseModel):
     card_number: int | None
 
 
+class ScopeHeld(BaseModel):
+    """What one process group of ours holds right now, as the user manager
+    and its control group say (card #99): the unit, every pid in it, each
+    one's command line and ancestry, so who owns it can be read and a group
+    the board stops is named on the card by what was in it."""
+
+    unit: str
+    pids: list[int]
+    commands: dict[int, str]
+    lineage: dict[int, list[int]]
+    """Each pid's ancestors, nearest first: a process a live session started
+    is that session's wherever the session's own pid sits this instant."""
+
+
+class ScopeState(BaseModel):
+    """One group of ours read against the registry (card #99): which live
+    sessions are home in it, by short id, and what else it holds, by the
+    head of each command. Nobody home — processes held, no live session
+    among them — is a finished session's leftovers: what the beat stops
+    and `needle scopes --stray` lists."""
+
+    unit: str
+    pids: list[int]
+    home: list[str]
+    strangers: list[str]
+
+    @property
+    def nobody_home(self) -> bool:
+        return bool(self.pids) and not self.home
+
+
 class Headroom(BaseModel):
     """The board's reading of the machine's memory against the floor (the
     plan "as many lanes as the machine can hold", item 3; read on every
