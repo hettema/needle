@@ -44,6 +44,27 @@ a machine does. Nothing under the laptop's record changes.
 Done means: `machine check` is green on the rented machine; `ssh` from the
 laptop reaches it by a stable name; the machine's repository holds its
 install and its revert; the board's head shows two machines.
+**Deviated:** three of the four clauses hold and the fourth waits for the
+fold; the image is Debian, not Arch. The owner ordered the RS 4000 G12 on
+2026-09-09 (Netcup installed Debian 13 minimal; nothing the runtime needs
+cares, since the tools are mise's and the user manager, `busctl`,
+`journalctl` and `tmux` are Debian's own — reinstalling Arch from the
+rescue system would cost hours and buy nothing; the machine's own record
+carries the ruling). The laptop's key was laid with the emailed root
+password through a terminal driver, the host's ED25519 fingerprint
+matched Netcup's mail first, the root password was rotated and handed to
+the owner once, and ssh is key-only since. Tailscale, as the Rulings said:
+the owner made the tailnet that evening, the server is `rented` on it
+(`rented.tail7a9c05.ts.net`, `100.111.233.23`) and the laptop `dh`, the
+laptop's `ssh rented` reads the tunnel name, and the hostname is `rented`.
+The record is `github.com/hettema/rented-machine`, cloned at
+`~/Work/rented-machine` there, in the laptop's pattern with one difference
+recorded in its tool: a file under `/etc` is a root-owned copy checked by
+content, never a link, because sudo refused the linked sudoers file ("is
+owned by uid 1001, should be 0") and locked the work user out until root
+put a copy back. Its `machine check` printed `no drift` at 21:55Z. The
+head's two machines are the fold's: `needle machine add` runs against the
+served board once this lane's code is on the trunk.
 
 ### 2. Each subscription logs in once on the machine, and the laptop's browser answers
 Every Claude slot and Codex log in on the rented machine through the
@@ -64,6 +85,17 @@ after it, every slot answers a `claude` call on the machine and `codex
 exec` answers there; `claude-acct` on the machine sees the same slots the
 laptop does; the machine's record names the flow and the trap list from
 `docs/claude-multi-subscription.md` that applies.
+In flight (2026-09-09, 21:50Z): what a Claude session shares on the laptop
+— `settings.json`, the agents, skills, hooks and statusline — is linked on
+the machine from the laptop's record cloned there, `~/.claude/CLAUDE.md`
+resolves to Needle's HOW-WE-WORK (the one text), `claude-acct` is the
+laptop's script linked with the same `accounts.json` and `roles.json`, and
+`claude-acct init` laid the five slots, every one `NEEDS LOGIN`. The first
+login, `hrclaude`, is the browser-less flow as written: `claude-acct login
+hrclaude` in a multiplexer session there printed the sign-in link and waits
+for a code; the lane opened the link in the laptop's hrclaude Chromium
+profile, and the owner's authorisation and the code are the next step. The
+day's proof begins when the code lands.
 
 ### 3. The board serves from the machine, and the laptop's address still reaches it
 `needle serve` runs on the rented machine over the one store, moved once at
