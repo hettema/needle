@@ -8,12 +8,15 @@ file with nobody syncing anything.
 
 from datetime import UTC, datetime, timedelta
 
+from pydantic import ValidationError
+
 from board.evidence import standing_for
 from board.focus import strip_of
 from board.handouts import handouts_for
 from board.lane import (
     STARTABLE_COLUMNS,
     ago,
+    close_landed,
     nothing_read,
     placement_from,
     where_of,
@@ -388,13 +391,40 @@ def lane_is_spent(card: Card, lane: Lane) -> bool:
 def _lane_died(card: Card, lane: Lane) -> bool:
     """An ended lane that is broken rather than simply finished. A lane that
     folded is done: its worktree is still on disk and Start says so in one
-    quiet word ("lane exists"). A lane that ended with nothing folded lost the
-    work it was doing, and that is what red is for."""
+    quiet word ("lane exists"). A lane whose card's close landed — the plan
+    archived, DELIVERED written — is finished too, whatever column the card
+    sits in: its sentence says so quietly (card #68), and the face reads the
+    same fact, so the two never disagree (2026-09-09: they did, on three
+    Hello Revenue cards, and the validator took the whole board down). A lane
+    that ended with nothing landed lost the work it was doing, and that is
+    what red is for."""
     return (
         not lane.folded
+        and not close_landed(card)
         and lane.park is None
         and card.place.column not in SHIPPED
         and card.place.column != Column.NOT_NOW
+    )
+
+
+def _refused_face(card: Card, refusal: ValidationError) -> CardState:
+    """A face the validator refused (card #75's bar: the sentence agrees with
+    the colour) is one card's face, never the project's board. The card shows
+    red with the validator's own words, so the disagreement is on the board
+    where it can be read, and every other card is built. Before this, one
+    refused face was a 500 on every read of the project (Hello Revenue,
+    2026-09-09, for two hours after card #68's fold)."""
+    words = "; ".join(str(error["msg"]) for error in refusal.errors())
+    return _state(
+        "face refused",
+        Meaning.BROKEN,
+        detail=say(
+            Meaning.BROKEN,
+            "this card's face could not be built, so what it would say is not shown",
+            why=f"two of its sentences disagree — {words}",
+            then="open the card for its record; the fix is in the board's code, not on the card",
+        ),
+        hint="open to see",
     )
 
 
@@ -949,19 +979,8 @@ def summarize(
     trigger, _ = trigger_signal(document)
     hold = title_hold(title_reading, document)
     defect = document is not None and document.suggestion_kind == SuggestionKind.DEFECT
-    return CardSummary(
-        number=card.number,
-        title=card.title,
-        essence=text,
-        essence_source=source,
-        gate=card_gate(card, document),
-        tags=card.tags,
-        document_state=state,
-        document_path=path,
-        kind=document.suggestion_kind if document is not None else None,
-        fix=document.fix if document is not None else None,
-        routing=routed,
-        state=state_of(
+    try:
+        face = state_of(
             card,
             document_state=state,
             document_path=path,
@@ -979,7 +998,22 @@ def summarize(
             routed=routed,
             hold=hold,
             defect=defect,
-        ),
+        )
+    except ValidationError as refusal:
+        face = _refused_face(card, refusal)
+    return CardSummary(
+        number=card.number,
+        title=card.title,
+        essence=text,
+        essence_source=source,
+        gate=card_gate(card, document),
+        tags=card.tags,
+        document_state=state,
+        document_path=path,
+        kind=document.suggestion_kind if document is not None else None,
+        fix=document.fix if document is not None else None,
+        routing=routed,
+        state=face,
         claims=claims_of(
             card,
             document_state=state,

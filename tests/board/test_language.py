@@ -15,6 +15,7 @@ from domain.document import DocumentKind, DocumentState
 from domain.evidence import Evidence, EvidenceState, Standing
 from domain.hook import HookKind
 from domain.lane import Collision, CollisionVerdict, LaneRecord, LaneState, Wait
+from domain.row import Row, RowKind
 from domain.session import SessionState
 from domain.signal import Reading, SessionWork, WindowlessSession
 from domain.slot import Handoff
@@ -295,6 +296,35 @@ def test_a_lane_that_died_before_the_fold_is_broken_but_after_it_is_the_loop():
         shipped, lane=lane_for(shipped, facts(sessions=[session(pid=None)])), signal=OWNER_SIGNAL
     )
     assert s.word == "loop open · you read it 11 Sep" and s.meaning == Meaning.QUIET
+
+
+def test_an_ended_lane_whose_close_landed_is_finished_wherever_the_card_sits():
+    """Card #68 taught the lane's sentence that a close that landed is the
+    normal end of the work, not a death; the face still said "session died"
+    in red over that quiet sentence, and the validator refused the pair —
+    and with it every read of the project's board (Hello Revenue #219, #246,
+    #253, 2026-09-09). The face reads the same fact as the sentence."""
+    c = card(
+        column=Column.DECISION_MOMENT,
+        archived=True,
+        rows=[Row(kind=RowKind.DELIVERED, text="the plan is archived")],
+    )
+    lane = lane_for(c, facts(sessions=[session(pid=None)], deaths={}))
+    assert lane.state == LaneState.ENDED and not lane.folded
+    assert lane.sentence.startswith("Nothing for you: its close landed")
+    s = state(c, lane=lane)
+    assert (s.word, s.meaning) == ("your move", Meaning.YOURS)
+    assert Claim.LANE_ENDED not in claims_of(
+        c,
+        document_state=DocumentState.ARCHIVED,
+        lane=lane,
+        standing=TRUSTED,
+        signal=None,
+        last=None,
+        reading=None,
+        verdict=None,
+        now=NOW,
+    )
 
 
 def test_a_folded_lane_on_a_shipped_card_gives_way_to_the_loop():

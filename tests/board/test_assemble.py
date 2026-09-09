@@ -10,6 +10,7 @@ from board.assemble import (
 )
 from board.lane import nothing_read
 from board.moves import GroupLayout
+from domain.board import CardState, Meaning
 from domain.card import Card, CardOrigin, DocumentLink, Place
 from domain.column import Column
 from domain.corpus import CorpusIndex
@@ -134,6 +135,33 @@ def test_a_gone_document_still_names_the_path_it_cites():
     summary = summarize(card(link=LINK), index, NOW)
     assert summary.document_state == DocumentState.GONE
     assert summary.document_path == "docs/plans/p1.md"
+
+
+def test_a_face_the_validator_refuses_is_one_red_card_never_the_whole_board(monkeypatch):
+    """Card #75's validator refuses a face whose sentence disagrees with its
+    colour. On 2026-09-09 that refusal, raised inside the assembly, was a 500
+    on every read of Hello Revenue's board for two hours; the refusal is one
+    card's face now, red, with the validator's words on it."""
+
+    def refuse(*args, **kwargs):
+        return CardState(
+            word="session died",
+            meaning=Meaning.BROKEN,
+            detail="Nothing for you: its close landed.",
+            loop=None,
+            door=None,
+            hint=None,
+        )
+
+    monkeypatch.setattr("board.assemble.state_of", refuse)
+    summary = summarize(card(link=LINK), CorpusIndex(documents=[doc()], read_at=NOW), NOW)
+    assert (summary.state.word, summary.state.meaning) == ("face refused", Meaning.BROKEN)
+    assert summary.state.detail is not None
+    assert summary.state.detail.startswith(
+        "Something is wrong: this card's face could not be built"
+    )
+    assert "must open with 'Something is wrong'" in summary.state.detail
+    assert summary.state.hint == "open to see"
 
 
 def test_the_board_always_has_eight_columns_each_with_a_group_and_counts_attention():
