@@ -60,7 +60,15 @@ def test_the_machine_is_read_on_every_pass_and_a_lane_past_the_floor_admits_noth
     # The pass asked the user manager what the lane's scope holds, by the
     # name the lane was given at Start — one call, whether or not the dial
     # is on a beat.
-    assert scope_reads(machine_floor)[-1] == ["--user", "show", "-p", "Id", "-p", "MemoryCurrent", UNIT]
+    assert scope_reads(machine_floor)[-1] == [
+        "--user",
+        "show",
+        "-p",
+        "Id",
+        "-p",
+        "MemoryCurrent",
+        UNIT,
+    ]
     assert board(client)["dial"]["full"] is None, "a scope with no value is not a lane"
     read_so_far = len(scope_reads(machine_floor))
     turn(client, on=True, lanes=2)
@@ -126,7 +134,11 @@ def test_a_session_with_hands_on_a_lane_is_put_back_in_its_scope_once_and_the_ca
     # beside the pids, typed as the manager wants it.
     tail = adopts[0][adopts[0].index("MemoryHigh") :]
     assert tail[:3] == ["MemoryHigh", "t", str(MEMORY_FLOOR_BYTES)], adopts[0]
-    rows = [h for h in detail(client, 241)["history"] if h["kind"] == "scoped"]
+    rows = [
+        h
+        for h in detail(client, 241)["history"]
+        if h["kind"] == "scoped" and h["detail"].startswith("Asked")
+    ]
     assert len(rows) == 1
     assert rows[0]["detail"].startswith(
         f"Asked the machine to put beef0241 back in {UNIT} from "
@@ -139,7 +151,17 @@ def test_a_session_with_hands_on_a_lane_is_put_back_in_its_scope_once_and_the_ca
     reconcile(client)
     reconcile(client)
     assert len([c for c in machine_floor.state()["busctl_calls"] if UNIT in c]) == 1
-    assert len([h for h in detail(client, 241)["history"] if h["kind"] == "scoped"]) == 1
+    scoped = [h for h in detail(client, 241)["history"] if h["kind"] == "scoped"]
+    assert len([h for h in scoped if h["detail"].startswith("Asked")]) == 1
+    # The scope the fake manager holds stood without the floor as its high
+    # mark (card #107): set once through the manager, said once, and read
+    # as held on every pass after.
+    sets = [c for c in machine_floor.state()["systemctl_calls"] if "set-property" in c]
+    assert sets == [
+        ["--user", "set-property", "--runtime", UNIT, f"MemoryHigh={MEMORY_FLOOR_BYTES}"]
+    ]
+    assert len([h for h in scoped if h["detail"].startswith(f"Held {UNIT} at the floor")]) == 1
+    assert machine_floor.state()["scopes"][UNIT]["MemoryHigh"] == str(MEMORY_FLOOR_BYTES)
 
 
 def test_a_move_the_machine_refused_is_said_once_on_the_card(

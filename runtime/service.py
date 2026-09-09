@@ -465,6 +465,14 @@ class Runtime:
         except (OSError, machine.Timeout, machine.CommandMissing):
             return None
 
+    def hold_scopes_at(self, units: list[str], memory_high: int) -> list[str]:
+        """The lane scopes among `units` just given the floor as their high
+        mark (card #107); empty when the manager could not be asked."""
+        try:
+            return machine.hold_scopes_at(units, memory_high)
+        except (OSError, machine.Timeout, machine.CommandMissing):
+            return []
+
     def rescope(self, session: Session, card: str) -> launch.Scoped:
         """Put a session with hands on a lane back in the lane's scope
         (plan 53, item 2); the same act as at Start, recorded the same way."""

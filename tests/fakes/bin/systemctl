@@ -56,6 +56,22 @@ def _show(argv: list[str], blob: dict) -> int:
     return 0
 
 
+def _set_property(argv: list[str], blob: dict) -> int:
+    """`set-property [--runtime] <unit> <Prop>=<Value>`: the value the next
+    `show` answers, as the manager does for a loaded unit."""
+    words = [a for a in argv if not a.startswith("-") and a != "set-property"]
+    unit = words[0] if words else ""
+    scope = blob.get("scopes", {}).get(unit)
+    if scope is None:
+        print(f"Failed to set unit properties on {unit}: Unit {unit} not loaded.", file=sys.stderr)
+        return 1
+    for pair in words[1:]:
+        prop, _, value = pair.partition("=")
+        scope[prop] = value
+    _write(blob)
+    return 0
+
+
 def _reset_failed(argv: list[str], blob: dict) -> int:
     units = [a for a in argv if not a.startswith("-") and a != "reset-failed"]
     unit = units[0] if units else ""
@@ -124,6 +140,8 @@ def main(argv: list[str]) -> int:
     if blob.get("systemctl_fails"):
         print("Failed to connect to bus: No medium found", file=sys.stderr)
         return 1
+    if "set-property" in argv:
+        return _set_property(argv, blob)
     if "show" in argv:
         return _show(argv, blob)
     if "reset-failed" in argv:

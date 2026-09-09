@@ -482,6 +482,19 @@ class Loops:
             for number, lane in live.snapshot.lanes.items():
                 if lane.state in HANDS_ON:
                     units[launch.lane_unit(lane.name)] = (slug, number)
+        # Every lane's scope carries the floor as its high mark, whoever made
+        # the scope (card #107): read here, where every lane's scope is read
+        # anyway, and set where it is missing, said once on the card.
+        for unit in self.runtime.hold_scopes_at(sorted(units), MEMORY_FLOOR_BYTES) if units else []:
+            slug, number = units[unit]
+            self.live.note(
+                slug,
+                number,
+                AuditKind.SCOPED,
+                Actor.MACHINE,
+                f"Held {unit} at the floor ({MEMORY_FLOOR_BYTES // 1024**3} GB high mark): "
+                "the scope stood without it.",
+            )
         held = self.runtime.scope_memory(sorted(units)) if units else {}
         scopes = (
             [

@@ -451,6 +451,34 @@ def scope_memory(units: list[str]) -> dict[str, int]:
     return held
 
 
+def hold_scopes_at(units: list[str], memory_high: int) -> list[str]:
+    """Set `MemoryHigh` on every scope among `units` whose mark is not
+    `memory_high`, with `set-property --runtime` (verified 2026-09-09 on a
+    throwaway scope of this machine's user manager: the property lands on
+    a running scope and reads back). A scope the manager made before the
+    runtime adopted the process, or one that outlived its session and took
+    the next in, keeps the mark it was born with — Hello Revenue #483's
+    read infinity beside #409's 5 GB a minute after card #107's fold — so
+    the mark is read on every pass and set where it is missing. Returns
+    the units set. Raises what `show_units` raises."""
+    fields = show_units(units, ["MemoryHigh"])
+    held: list[str] = []
+    for unit in units:
+        if fields.get(unit, {}).get("MemoryHigh") == str(memory_high):
+            continue
+        argv = [
+            which("systemctl"),
+            "--user",
+            "set-property",
+            "--runtime",
+            unit,
+            f"MemoryHigh={memory_high}",
+        ]
+        if run(argv, timeout=10).returncode == 0:
+            held.append(unit)
+    return held
+
+
 def unit_state(unit: str) -> str | None:
     """The unit's `ActiveState` — `active`, `failed`, `inactive` — or None
     when the manager does not hold it or cannot be asked."""
