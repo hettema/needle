@@ -169,8 +169,8 @@ def test_the_stream_says_the_version_and_a_move_bumps_it(
         return [e.replace(str(loaded), "V").replace(str(loaded + 1), "V+1") for e in seen]
 
     events = asyncio.run(run())
-    assert events[0] == 'event: board\ndata: {"version": V}\n\n'
-    assert events[1] == 'event: board\ndata: {"version": V+1}\n\n'
+    assert events[0] == 'event: board\ndata: {"version": V, "shown": null}\n\n'
+    assert events[1] == 'event: board\ndata: {"version": V+1, "shown": null}\n\n'
 
 
 def test_without_a_built_page_the_root_says_how_to_build_it(client: TestClient):

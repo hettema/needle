@@ -758,7 +758,8 @@ def test_a_lane_that_dies_mid_close_is_doubted_on_the_next_read_until_the_loop_m
 
     assert column_of(client, CARD) == "Executed"
     landed = detail(client)
-    assert landed["history"][0]["evidence"] == "close-landed"
+    moved = next(h for h in landed["history"] if h["kind"] == "moved")
+    assert moved["evidence"] == "close-landed"
     assert landed["summary"]["standing"]["state"] == "held"
     assert claim_count(client.get("/api/projects/proj/board").json(), "doubted") == doubted_before
 
