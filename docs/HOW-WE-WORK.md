@@ -296,19 +296,42 @@ sharing one checkout.
 ## 13. Nothing is done without a review, and a review is a loop
 
 Every completed slice is read again by a reader who was not its author, in
-passes until one finds nothing new, and the ring a finding falls in decides who
-fixes it. For software, the review below is the current form.
+passes that end when the work is shown to hold and not when a reader runs out
+of sentences, and the ring a finding falls in decides who fixes it. For
+software, the review below is the current form.
 
 A code-shipping slice closes with a review record. Each pass reads the work
-through one lens and names its findings with file, line and class; the fixes
-land; the next pass reads the fixed work again, until a pass finds nothing new.
-Lenses in order: the work against its "done means"; the seams — concurrency,
-failure and restart, the truth of what the board shows; the boundaries the
-project's rules name, and among them the claims that stand on nothing. Findings
-fall in three rings: inside the change is fixed and re-read; adjacent is fixed
-when it serves this intent, else filed as a suggestion marked a defect; outside
-is never fixed here, only filed. One clean pass after a pass with findings is
-the floor.
+through one lens and reports everything it finds — file, line, class, ring,
+and a grade: live, latent in behaviour, latent in coverage, cosmetic, or about
+the record; a reader is never told that a finding costs a round. Lenses in
+order: the work against its "done means"; the seams — concurrency, failure and
+restart, the truth of what the board shows; the boundaries the project's rules
+name, and among them the claims that stand on nothing. Findings fall in three
+rings: inside the change is fixed and re-read; adjacent is fixed when it
+serves this intent, else filed as a suggestion marked a defect; outside is
+never fixed here, only filed. A pass and the repairs it causes are a round,
+and every round's repairs are read for completeness by a cold reader of
+another make before they ship — who else calls this, what is the sibling
+case, what list was written by hand — so a round closes when that read says
+complete or its siblings are fixed. A repair reported partial is one of three:
+the cause half removed, or a test that would not catch the regression, either
+of which blocks the fold; or the record's words off, which the writer fixes
+and re-reads alone. The loop owes another full pass only when a round found,
+inside the change, something live or latent in behaviour — a wrong answer on
+a supported input, or a written promise a person meets unmet; a survivor of a
+mutation is such a finding only when the reader shows which promised
+behaviour can now fail, on what input, with no other defence catching it,
+else it is coverage. A round of coverage, cosmetic and record findings is
+repaired, read for completeness, and ends the loop. The promise's boundary is
+settled before the final reading, and a finding outside it is filed, never
+repaired here; a verification gap the record already names is debt with a
+mark, not a finding on re-read. When three passes running find the same
+shape, the next move is a question about the representation to the cold
+reader, not another pass. The floor: one pass clean by this rule after any
+pass that found live or latent behaviour; the suite green at the fold; and a
+stop signal in the record — which rule ended the loop, and the pass on which
+the last live or latent-behaviour finding was made — so the person can see
+whether a review is still paying without reading it.
 
 What makes it hard: each repair creates changed surface that needs review, and
 repairs can introduce new defects; bounding repairs by size can block a
@@ -327,7 +350,14 @@ claims; mechanical checks support that judgment and never replace it.
 defects its own fixes had made, all in the last quarter of twenty-two readings,
 and #456's fixes introduced regressions; a size bound, proposed first, would
 have blocked #456's right repair (Codex's reading, adopted by the owner the
-same day).
+same day); 2026-09-09, three lanes paused before their folds under "until a
+pass finds nothing new" — Needle #83's last two of six passes read the
+record's own arithmetic, Hello Revenue #409's passes 17 to 31 found no wrong
+answer on a supported input, and #456's rounds 20 to 30 found the previous
+round's own siblings — and the owner's ruling that the code is built for AI
+maintenance alone, so held behaviour and written reasons are the bar, and a
+pin that no consequence rides on is not (the three lanes' joint proposal,
+adopted the same day).
 
 ## 14. The close ritual
 

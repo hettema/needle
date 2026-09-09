@@ -58,13 +58,16 @@ ratchet refuses them. Say precisely what is not done instead.
 pass.** A code-shipping slice closes with a review under `docs/reviews/`. The
 review runs in passes: each pass reads the work through one lens, names its
 findings with file and line, the fixes land, and the next pass reads the
-fixed work again — until a pass finds nothing new. The lenses, in order: the
-feature against its plan's "done means"; the seams (concurrency and races,
-failure and restart, the truth of what the board shows); the boundaries this
-file names. The record lists every pass with what it found and what changed.
-One clean pass after a pass with findings is the floor; a review that stopped
-at its first pass is not a review (owner ruling 2026-09-04, from watching a
-nine-pass close on the first board: "review, fix, review again").
+fixed work again. When the loop ends is the one text's §13 and is not
+restated here: a pass owes the next only when its round found live or latent
+behaviour inside the change, every round's repairs get a cold completeness
+read before they ship, and the record carries the stop signal. The lenses,
+in order: the feature against its plan's "done means"; the seams (concurrency
+and races, failure and restart, the truth of what the board shows); the
+boundaries this file names. The record lists every pass with what it found
+and what changed; a review that stopped at its first pass is not a review
+(owner ruling 2026-09-04, from watching a nine-pass close on the first board:
+"review, fix, review again"; the stop rule, 2026-09-09).
 
 Findings fall in three rings, and the ring decides what happens to them (owner
 ruling 2026-09-04). **Inside the change:** fixed in the lane, and the next
