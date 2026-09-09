@@ -74,7 +74,7 @@ flow.
    -p MemoryHigh`) says the floor's number, the floor test records the
    property on the adoption call, and a lane at the mark still reads as
    full on the head with its name, as today.
-   **Met:** `runtime/machine.py::adopt` takes `memory_high` and every lane adoption in `runtime/launch.py` passes `MEMORY_FLOOR_BYTES`; the floor test asserts the property on the adoption call (`tests/api/test_a_full_machine_admits_nothing_new.py`); rehearsed 2026-09-09 15:5x on a throwaway scope of this machine's user manager (systemd 261), where `systemctl --user show -p MemoryHigh` read 5368709120 after the call. The live reading on a real lane is written in the review record's last pass, after the fold and the restart.
+   **Met:** `runtime/machine.py::adopt` takes `memory_high` and every lane adoption in `runtime/launch.py` passes `MEMORY_FLOOR_BYTES`; the floor test asserts the property on the adoption call (`tests/api/test_a_full_machine_admits_nothing_new.py`); rehearsed 2026-09-09 15:5x on a throwaway scope of this machine's user manager (systemd 261), where `systemctl --user show -p MemoryHigh` read 5368709120 after the call. Read live a minute after the fold: Hello Revenue #409's scope, adopted by the loop, read 5368709120; #483's, which stood before its session was put back and took the next in, read infinity — so the loop now reads every lane's scope's mark on every pass and sets it where it is missing (`runtime/machine.py::hold_scopes_at`, from `Loops.headroom_now`, said once on the card); the second live reading, after that fix folded, is in the review record's last section.
 
 3. **The floor's number carries its reason and its loop, and the machine is
    asked to shed lanes first.** The constant's docstring says why 5 GB, in
