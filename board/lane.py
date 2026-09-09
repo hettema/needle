@@ -334,7 +334,7 @@ def lane_for(card: Card, facts: LaneFacts) -> Lane:
                 Meaning.LIVE,
                 what,
                 why=first_line(winner.wall.reason),
-                then="it carries on by itself once it lands",
+                then=parked or "it carries on by itself once it lands",
             )
         elif winner.state == SessionState.WORKING:
             state = LaneState.WORKING
@@ -479,7 +479,7 @@ def lane_for(card: Card, facts: LaneFacts) -> Lane:
         hands_on_since=since if state in HANDS_ON else None,
         died=died,
         cause=cause,
-        park=parked if state == LaneState.ENDED else None,
+        park=parked if state in (LaneState.ENDED, LaneState.MOVING, LaneState.BLOCKED) else None,
         moved=moved,
         folded=folded,
         trunk_synced=trunk_synced,
@@ -676,6 +676,10 @@ def disposition(
         return Disposition.OWNERS, outstanding
     if owner_moved_out_after(history, since):
         return Disposition.OWNERS, "you moved the card out of Executing yourself"
+    if card.place.column == Column.NOT_NOW:
+        return Disposition.OWNERS, "you put the card in Not now"
+    if card.place.column == Column.DECISION_MOMENT:
+        return Disposition.OWNERS, "the card sits in Decision moment, where only you move it"
     return Disposition.UNFINISHED, "no close landed and no question stands on the card"
 
 

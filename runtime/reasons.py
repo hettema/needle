@@ -19,7 +19,11 @@ from domain.ending import Boot, Cause, Named, Sighting
 from domain.session import Session
 from runtime import handoffs, machine
 
-JOURNAL_LINES = 40
+JOURNAL_LINES = 400
+"""How many lines of a space's journal are read from the life's start: a
+lane's space writes a handful a day, the daemon's a few hundred (every
+window and probe), and a telling line inside the window is what is wanted,
+not the tail."""
 _TELLING = ("killed", "oom", "out of memory", "signal", "failed", "dumped core")
 """A scope's accounting lines (`Consumed …`, `Deactivated`) are how every scope
 ends and say nothing about why; only these do."""
@@ -55,10 +59,12 @@ def _stamp(value: str) -> datetime | None:
         return None
 
 
-def journal_of(unit: str) -> list[JournalLine]:
-    """The unit's last lines, each with its time when the line carries one."""
+def journal_of(unit: str, *, since: datetime | None = None) -> list[JournalLine]:
+    """The unit's lines from `since` on, each with its time when the line
+    carries one."""
     lines: list[JournalLine] = []
-    for raw in machine.journal(unit, JOURNAL_LINES):
+    stamp = since.astimezone(UTC).strftime("%Y-%m-%d %H:%M:%S UTC") if since else None
+    for raw in machine.journal(unit, JOURNAL_LINES, since=stamp):
         match = _STAMPED.match(raw)
         if match:
             text = _SYSLOG_HEAD.sub("", match.group(2).strip(), count=1)
@@ -123,22 +129,30 @@ def cause_of(
             last_alive_at=session.wall.at,
             settled=True,
         )
-    if session.recorded == "stopped":
-        said = session.detail if session.detail and session.detail != "stopped" else ""
+    if session.recorded == "stopped" and session.detail in ("", "stopped"):
+        # `claude stop` writes exactly `stopped`; the daemon writes the same
+        # state with its own words for a session it lost ("ended while the
+        # background service was off", Hello Revenue #435), which is a death
+        # it is reporting, not a stop it made — read on for the cause.
         return Named(
             cause=Cause.STOPPED,
-            words=Cause.STOPPED.value + (f": {said}" if said else ""),
-            evidence=f"the registry reads stopped{': ' + said if said else ''}",
+            words=Cause.STOPPED.value,
+            evidence="the registry reads stopped",
             last_alive_at=sighting.last_seen if sighting else last_activity,
             settled=True,
         )
     life_start = sighting.first_seen if sighting else session.created_at
     last_alive = sighting.last_seen if sighting else last_activity
-    window = life_start or last_alive
+    # A telling line counts only after the life began *and* after the
+    # process was last known alive: a kill the process outlived — the
+    # daemon space's kill of 2026-09-05 sits in the journal of every lane
+    # that ran under it, before and after — is not this death's cause.
+    known = [t for t in (life_start, last_alive) if t is not None]
+    window = max(known) if known else None
     telling: list[JournalLine] = []
     if window is not None:
         for unit in units:
-            for line in journal_of(unit):
+            for line in journal_of(unit, since=window):
                 if line.at is None or line.at < window:
                     continue
                 if any(t in line.text.lower() for t in _TELLING):
@@ -181,15 +195,25 @@ def cause_of(
                     f"in a boot that ended {gap / 3600:.1f} h later; {Cause.UNKNOWN.value}"
                 ),
                 evidence=f"boot {held.boot_id} ended {held.last_entry.isoformat()}; "
-                f"last alive {last_alive.isoformat()}",
+                f"last alive {last_alive.isoformat()}"
+                + (
+                    f"; the registry reads {session.recorded}: {session.detail}"
+                    if session.detail
+                    else ""
+                ),
                 last_alive_at=last_alive,
                 settled=True,
             )
     when = f" after its last activity at {_when(last_alive)}" if last_alive else ""
+    registry = (
+        f"the registry reads {session.recorded}: {session.detail}"
+        if session.recorded and session.detail
+        else ""
+    )
     return Named(
         cause=Cause.UNKNOWN,
         words=f"the process disappeared{when}; {Cause.UNKNOWN.value}",
-        evidence="",
+        evidence=registry,
         last_alive_at=last_alive,
         settled=False,
     )

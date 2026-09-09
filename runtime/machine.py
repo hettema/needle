@@ -538,9 +538,7 @@ def boots() -> list[dict[str, object]]:
     `first_entry` and `last_entry` in microseconds since the epoch. Empty
     when there is no journal to ask, which is only a boot unknown."""
     try:
-        done = run(
-            [which("journalctl"), "--list-boots", "-o", "json", "--no-pager"], timeout=20
-        )
+        done = run([which("journalctl"), "--list-boots", "-o", "json", "--no-pager"], timeout=20)
     except (OSError, Timeout, CommandMissing):
         return []
     if done.returncode != 0:
@@ -552,26 +550,19 @@ def boots() -> list[dict[str, object]]:
     return [b for b in listed if isinstance(b, dict)] if isinstance(listed, list) else []
 
 
-def journal(unit: str, lines: int) -> list[str]:
+def journal(unit: str, lines: int, *, since: str | None = None) -> list[str]:
     """The last `lines` of a user unit's journal, each opening with its
     time (`-o short-iso`: `2026-09-05T21:32:51+0200 host systemd[1]: …`),
-    so a reader can place a line inside or outside a session's life.
+    so a reader can place a line inside or outside a session's life; from
+    `since` (an ISO time) on when given, so a life's window is read whole
+    and not only the tail — the daemon space's journal on this laptop runs
+    to hundreds of lines a day and a kill four days back is past any tail.
     Empty when the journal cannot be asked, which is only a reason unknown."""
+    argv = [which("journalctl"), "--user", "-u", unit, "-n", str(lines), "--no-pager"]
+    if since is not None:
+        argv += ["--since", since]
     try:
-        done = run(
-            [
-                which("journalctl"),
-                "--user",
-                "-u",
-                unit,
-                "-n",
-                str(lines),
-                "--no-pager",
-                "-o",
-                "short-iso",
-            ],
-            timeout=20,
-        )
+        done = run([*argv, "-o", "short-iso"], timeout=20)
     except (OSError, Timeout, CommandMissing):
         return []
     if done.returncode != 0:

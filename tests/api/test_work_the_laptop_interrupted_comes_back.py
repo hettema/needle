@@ -281,9 +281,7 @@ def test_a_second_wall_within_the_hour_parks_until_the_reset_and_the_park_lifts_
     words = rescued(client)
     assert words[0].startswith("Waiting to bring it back after its allowance ran out on beta")
     assert "came back after its allowance ran out once already in the last hour" in words[0]
-    assert (
-        f"Session (5-hour) on beta comes back at {reset.strftime('%Y-%m-%d %H:%MZ')}" in words[0]
-    )
+    assert f"Session (5-hour) on beta comes back at {reset.strftime('%Y-%m-%d %H:%MZ')}" in words[0]
     assert parked["lane"]["state"] == "moving", "the process still stands while it waits"
     reconcile(client)
     assert len(rescued(client)) == len(words), "the park note lands once"
@@ -442,6 +440,15 @@ def test_a_closed_card_with_no_fold_record_is_finished_and_nothing_resumes(
     )
     capsys.readouterr()
     client.app.state.loops.live.rescan("proj")
+    # A session that stood down because another owned the close is read
+    # against that card's close, not its own last words (#147, #219, #238).
+    post_hook(
+        client,
+        "Stop",
+        launched["session_id"],
+        lane_path(repo),
+        message="Standing down: the other lane owns this close. Shall I keep the worktree?",
+    )
     oom(machine_floor)
     kill(machine_floor, launched)
     reconcile(client)

@@ -79,15 +79,22 @@ def test_a_kill_inside_this_life_names_the_space_it_took(machine_floor: Floor):
         f"2026-09-05T20:29:10+0200 DH systemd[1288]: {LANE_UNIT}: Failed with result 'oom-kill'.",
         f"2026-09-05T20:29:11+0200 DH systemd[1288]: {LANE_UNIT}: Consumed 2min CPU time.",
     )
-    named = name(
-        machine_floor, sighting=sighting(NOW - timedelta(hours=3), NOW - timedelta(minutes=1))
-    )
+    last_seen = datetime(2026, 9, 5, 18, 28, 50, tzinfo=UTC)
+    named = name(machine_floor, sighting=sighting(NOW - timedelta(hours=3), last_seen))
     assert named.cause == Cause.LANE_KILLED and named.settled
     assert named.words == (
         "the machine took back its memory at 2026-09-05 18:29Z (needle-card-435-x.scope: "
         "needle-card-435-x.scope: Failed with result 'oom-kill'.)"
     )
-    assert named.last_alive_at == NOW - timedelta(minutes=1)
+    assert named.last_alive_at == last_seen
+    # A kill the process outlived is not its cause: seen alive after it,
+    # the death is something later, and nothing else names it.
+    outlived = name(
+        machine_floor, sighting=sighting(NOW - timedelta(hours=3), NOW - timedelta(minutes=1))
+    )
+    assert outlived.cause == Cause.UNKNOWN, "seen alive after the kill: not the kill"
+    survived = name(machine_floor, last_activity=datetime(2026, 9, 5, 18, 40, tzinfo=UTC))
+    assert survived.cause == Cause.UNKNOWN, "active after the kill: not the kill"
 
 
 def test_a_kill_older_than_this_life_is_not_its_cause_and_the_daemons_kill_is(
@@ -184,6 +191,18 @@ def test_a_wall_a_stop_and_nothing(machine_floor: Floor):
         machine_floor, session=session("stopped").model_copy(update={"detail": "stopped"})
     )
     assert stopped.cause == Cause.STOPPED and stopped.words == "it was stopped through its account"
+    # The daemon writes `stopped` with its own words for a session it lost
+    # (#435: "ended while the background service was off"): a death it
+    # reports, not a stop it made, so the cause is read from the machine.
+    lost = name(
+        machine_floor,
+        session=session("stopped").model_copy(
+            update={"detail": "ended while the background service was off"}
+        ),
+        last_activity=NOW - timedelta(minutes=3),
+    )
+    assert lost.cause == Cause.UNKNOWN
+    assert lost.evidence == "the registry reads stopped: ended while the background service was off"
     nothing = name(machine_floor, last_activity=NOW - timedelta(minutes=3))
     assert nothing.cause == Cause.UNKNOWN and not nothing.settled
     assert nothing.words == (

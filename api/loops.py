@@ -107,7 +107,7 @@ from infrastructure import clock
 from infrastructure.live import Live, LiveProject
 from infrastructure.paths import data_dir
 from infrastructure.store import StoreRefusal
-from runtime import discussion, handoffs, launch, limits, machine
+from runtime import codex, discussion, handoffs, launch, limits, machine
 from runtime.service import Runtime
 from runtime.windows import WindowRefused
 
@@ -1060,7 +1060,12 @@ class Loops:
     ) -> tuple[Cause, str] | None:
         """What interrupted this lane, when the machine's hand did: the
         cause and the words the card shows. None for a lane at work, one
-        that ended by its own hand, or one whose ending nothing names."""
+        that ended by its own hand, one whose ending nothing names, and
+        one the runtime cannot resume — the owner's own terminal, or a
+        worker of the other make, which has no transcript to resume from
+        (plan 57): both are named truly on the card and left to him."""
+        if session.kind == SessionKind.INTERACTIVE or session.slot == codex.SLOT:
+            return None
         if lane.state == LaneState.MOVING and session.wall is not None:
             cause = handoffs.cause_of(session.wall)
             reason = (
