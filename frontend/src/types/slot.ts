@@ -17,6 +17,14 @@ export interface Handoff {
   pid: number | null;
   stopped: boolean | null;
   path: string;
+  why?: string;
+}
+
+export interface Limits {
+  slot: string;
+  fetched_at: string;
+  spent: Record<string, number>;
+  resets: Record<string, string>;
 }
 
 export interface Placement {

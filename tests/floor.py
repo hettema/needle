@@ -31,6 +31,7 @@ class Floor:
     discussion: Path
     meminfo: Path
     codex_home: Path
+    acct_cache: Path
     state_file: Path
     cgroup_root: Path
     pids: list[int] = field(default_factory=list)
@@ -134,6 +135,52 @@ class Floor:
 
     def script_launches(self, *fates: dict) -> None:
         self.update(launches=list(fates))
+
+    def write_limits(
+        self, slot: str, *, spent: dict[str, float], resets: dict[str, str], fetched_at: float
+    ) -> Path:
+        """One subscription's last limits reading as `claude-acct cache`
+        writes it (`<cache>/<slot>.json`, read 2026-09-09): the share spent
+        per allowance label and when each comes back."""
+        self.acct_cache.mkdir(parents=True, exist_ok=True)
+        path = self.acct_cache / f"{slot}.json"
+        path.write_text(
+            json.dumps(
+                {
+                    "account": slot,
+                    "email": IDENTITIES.get(slot),
+                    "tier": "Max 20x",
+                    "fetchedAt": fetched_at,
+                    "limits": spent,
+                    "resets": resets,
+                    "auth": "",
+                }
+            ),
+            encoding="utf-8",
+        )
+        return path
+
+    def write_boots(self, *boots: tuple[int, str, str, str]) -> None:
+        """The machine's boots as `journalctl --list-boots -o json` lists
+        them: (index, boot id, first entry, last entry), the times in ISO."""
+        listed = []
+        for index, boot_id, first, last in boots:
+            listed.append(
+                {
+                    "index": index,
+                    "boot_id": boot_id,
+                    "first_entry": int(_epoch(first) * 1_000_000),
+                    "last_entry": int(_epoch(last) * 1_000_000),
+                }
+            )
+        self.update(boots=listed)
+
+    def write_journal(self, unit: str, *lines: str) -> None:
+        """What `journalctl --user -u <unit> -o short-iso` prints: each line
+        given with its stamp in front, as the real journal prints it."""
+        journal = self.state().get("journal") or {}
+        journal[unit] = list(lines)
+        self.update(journal=journal)
 
     # ── the registries, as the machine would have written them ────────
 
@@ -350,6 +397,12 @@ class Floor:
                 continue
 
 
+def _epoch(stamp: str) -> float:
+    from datetime import datetime
+
+    return datetime.fromisoformat(stamp.replace("Z", "+00:00")).timestamp()
+
+
 def is_sleep(pid: int, start: str | None) -> bool:
     """The pid names a live `sleep` whose start time is the recorded one."""
     proc = Path("/proc") / str(pid)
@@ -409,6 +462,8 @@ def lay(root: Path) -> Floor:
     discussion.mkdir()
     codex_home = root / "codex-home"
     (codex_home / "sessions").mkdir(parents=True)
+    acct_cache = root / "acct-cache"
+    acct_cache.mkdir()
     # A machine with room: the dial's memory floor is 5 GB (board/dial.py).
     meminfo = root / "meminfo"
     write_meminfo(meminfo, available_gb=16.0, swap_free_gb=8.0, swap_total_gb=8.0)
@@ -453,6 +508,7 @@ def lay(root: Path) -> Floor:
         discussion=discussion,
         meminfo=meminfo,
         codex_home=codex_home,
+        acct_cache=acct_cache,
         state_file=state,
         cgroup_root=cgroups,
     )
@@ -485,6 +541,7 @@ ENVIRONMENT = {
     "NEEDLE_DISCUSSION_DIR": "discussion",
     "NEEDLE_MEMINFO": "meminfo",
     "NEEDLE_CODEX_HOME": "codex_home",
+    "NEEDLE_ACCT_CACHE": "acct_cache",
     "NEEDLE_FAKE_STATE": "state_file",
     "NEEDLE_CGROUP_ROOT": "cgroup_root",
 }

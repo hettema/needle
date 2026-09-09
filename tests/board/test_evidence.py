@@ -9,6 +9,7 @@ from board.lane import lane_for, placement_from
 from domain.audit import AuditEntry, AuditKind
 from domain.card import Actor, Card, Place
 from domain.column import Column
+from domain.ending import Cause, Death
 from domain.evidence import Evidence, EvidenceState
 from domain.row import Row, RowKind
 from domain.signal import Reading
@@ -79,7 +80,17 @@ def test_a_machine_placement_is_re_tested_against_the_predicate_it_named():
         facts(
             sessions=[session(pid=None)],
             deaths={
-                "aaaa0001-0000-4000-8000-000000000000": "the journal says: Killed process 4242"
+                "aaaa0001-0000-4000-8000-000000000000": Death(
+                    session_id="aaaa0001-0000-4000-8000-000000000000",
+                    project="proj",
+                    card_number=7,
+                    cause=Cause.LANE_KILLED,
+                    words="the journal says: Killed process 4242",
+                    evidence="Killed process 4242",
+                    last_alive_at=NOW,
+                    named_at=NOW,
+                    settled=True,
+                )
             },
         ),
     )

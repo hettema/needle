@@ -1,6 +1,9 @@
 #!/usr/bin/env python3
 """A stand-in for `journalctl` on the test floor: prints the lines the test
-put in `$NEEDLE_FAKE_STATE["journal"]` for the unit named after `-u`."""
+put in `$NEEDLE_FAKE_STATE["journal"]` for the unit named after `-u`, and
+the boots it put in `$NEEDLE_FAKE_STATE["boots"]` for `--list-boots`. Lines
+are printed as given: a test that wants a dated line (`-o short-iso`, the
+runtime's reading since plan 68) writes the stamp in front of it."""
 
 import json
 import os
@@ -12,6 +15,14 @@ STATE = Path(os.environ["NEEDLE_FAKE_STATE"])
 
 def main(argv: list[str]) -> int:
     blob = json.loads(STATE.read_text(encoding="utf-8"))
+    if "--list-boots" in argv:
+        boots = blob.get("boots") or []
+        if "json" in argv:
+            print(json.dumps(boots))
+        else:
+            for boot in boots:
+                print(f"{boot.get('index', 0):>3} {boot.get('boot_id', '')}")
+        return 0
     unit = argv[argv.index("-u") + 1] if "-u" in argv and argv.index("-u") + 1 < len(argv) else ""
     for line in (blob.get("journal") or {}).get(unit, []):
         print(line)

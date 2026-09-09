@@ -388,7 +388,10 @@ def _lane_died(card: Card, lane: Lane) -> bool:
     quiet word ("lane exists"). A lane that ended with nothing folded lost the
     work it was doing, and that is what red is for."""
     return (
-        not lane.folded and card.place.column not in SHIPPED and card.place.column != Column.NOT_NOW
+        not lane.folded
+        and lane.park is None
+        and card.place.column not in SHIPPED
+        and card.place.column != Column.NOT_NOW
     )
 
 
@@ -585,6 +588,10 @@ def state_of(
             detail=lane.sentence,
             hint="open to resume",
         )
+    if lane is not None and lane.state == LaneState.ENDED and lane.park is not None:
+        # The machine's wait, with its end on the face (plan 68, item 3):
+        # nothing is asked of him, and the card says what lifts it.
+        return _state("coming back", Meaning.QUIET, detail=lane.sentence, hint="open to see")
     if hands_on and lane is not None and lane.colliding is not None and lane.colliding.cards:
         return _state(
             f"colliding with {_cards(lane.colliding.cards)}",

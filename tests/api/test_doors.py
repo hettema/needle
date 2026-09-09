@@ -168,9 +168,7 @@ def test_start_says_where_it_will_run_launches_there_and_the_card_enters_executi
 
     said = start(client)
     assert said["door"] == "start" and said["said"].startswith("Started ")
-    assert (
-        ", alpha, at medium, in card-253-every-metered-kilowatt-is-billed" in said["said"]
-    )
+    assert ", alpha, at medium, in card-253-every-metered-kilowatt-is-billed" in said["said"]
 
     launched = machine_floor.state()["launch_log"][0]
     assert (
@@ -332,7 +330,9 @@ def test_a_sequencing_line_naming_a_card_in_flight_holds_start_until_it_ships(
     assert summary_of(client)["state"]["word"] == "waits on #241, #999"
     assert summary_of(client)["state"]["meaning"] == "quiet"
     refused = client.post(f"/api/projects/proj/cards/{CARD}/start", json={})
-    assert refused.status_code == 409 and "this starts by itself once #241" in refused.json()["detail"]
+    assert (
+        refused.status_code == 409 and "this starts by itself once #241" in refused.json()["detail"]
+    )
 
     # The named card ships: the next read opens the door by itself.
     plan.write_text(plan.read_text().replace(", and #999 too.", "."))
@@ -823,10 +823,12 @@ def test_a_lane_that_dies_on_a_limit_is_moved_and_the_card_says_where(
     reconcile(client)
 
     moved = detail(client)
-    assert any(
-        h["kind"] == "rescued" and h["detail"] == "Moved to beta, new window opened."
-        for h in moved["history"]
-    ), [h["detail"] for h in moved["history"]]
+    rescued = [h["detail"] for h in moved["history"] if h["kind"] == "rescued"]
+    assert rescued == [
+        "Brought back after its allowance ran out on alpha (You've reached your Fable limit.): "
+        f"now {moved['lane']['session']['short_id']}, beta, new window opened. Attempt 1 for "
+        "this cause in the last hour; one is made per hour, then it waits."
+    ], rescued
     assert moved["lane"]["session"]["slot"] == "beta"
     assert moved["summary"]["state"]["word"].endswith("beta")
     assert moved["summary"]["state"]["detail"] == (
@@ -837,34 +839,46 @@ def test_a_lane_that_dies_on_a_limit_is_moved_and_the_card_says_where(
     assert len(machine_floor.state()["spawned"]) == 2
 
 
-def test_a_lane_killed_otherwise_carries_the_machines_reason(
+def test_a_lane_killed_otherwise_carries_the_machines_reason_and_comes_back(
     client: TestClient, machine_floor: Floor
 ):
+    """The machine took the lane's memory: the death is named from the
+    journal of the space that held it, dated inside this life, and the
+    board brings the lane back by itself through the gate Start passes
+    (plan 68, items 1 and 5). Before that plan the card sat in Up next with
+    Resume open and nobody awake to press it."""
     start(client)
+    reconcile(client)
     launched = machine_floor.state()["launch_log"][0]
-    machine_floor.update(
-        journal={
-            f"needle-{LANE}.scope": [
-                "claude[4242]: Killed process 4242 (claude) total-vm:9GB oom-kill",
-            ]
-        }
+    stamp = datetime.now(UTC).isoformat()
+    machine_floor.write_journal(
+        f"needle-{LANE}.scope",
+        f"{stamp} DH systemd[919]: claude[4242]: Killed process 4242 (claude) total-vm:9GB "
+        "oom-kill",
     )
     os.kill(launched["pid"], 9)
     (machine_floor.config_dir("alpha") / "sessions" / f"{launched['pid']}.json").unlink()
     reconcile(client)
 
-    dead = detail(client)
-    assert dead["summary"]["lane_state"] == "ended"
-    assert "Killed process 4242 (claude)" in dead["lane"]["died"]
-    assert dead["doors"]["resume"]["offered"] and dead["doors"]["look"]["offered"]
-    assert column_of(client, CARD) == "Up next"
-    board = client.get("/api/projects/proj/board").json()
-    assert claim_count(board, "lane ended") == 1
-
-    resumed = client.post(f"/api/projects/proj/cards/{CARD}/resume")
-    assert resumed.status_code == 200, resumed.text
-    assert resumed.json()["said"].startswith("Resumed as ")
+    back = detail(client)
+    assert back["summary"]["lane_state"] == "working"
     assert column_of(client, CARD) == "Executing"
+    rescued = [h["detail"] for h in back["history"] if h["kind"] == "rescued"]
+    assert len(rescued) == 1 and rescued[0].startswith(
+        "Brought back after the machine took back its memory at "
+    ), rescued
+    assert "Killed process 4242 (claude)" in rescued[0]
+    assert rescued[0].endswith(
+        "Attempt 1 for this cause in the last hour; one is made per hour, then it waits."
+    )
+    second = machine_floor.state()["launch_log"][1]
+    assert second["argv"][second["argv"].index("--resume") + 1] == launched["session_id"]
+    told = second["argv"][-1]
+    assert told.startswith(
+        "Continue where you stopped. Your last turn was cut: the machine took back"
+    )
+    assert "read your worktree and the card before trusting your memory" in told
+    assert "subscription" not in told, "CONTINUE's words are a wall's alone"
 
 
 # ── plan 07: conversations and lanes that know each other ──────────────
@@ -883,9 +897,7 @@ def test_idea_opens_a_conversation_the_rail_lists_and_a_document_it_writes_is_bo
         "/api/projects/proj/idea", json={"text": "should berths be priced by the metre?"}
     )
     assert opened.status_code == 200, opened.text
-    assert opened.json()["said"].startswith(
-        "Talking in org.omarchy.board-idea-proj, alpha"
-    )
+    assert opened.json()["said"].startswith("Talking in org.omarchy.board-idea-proj, alpha")
     spawned = machine_floor.state()["spawned"][0]
     assert spawned["app_id"] == "org.omarchy.board-idea-proj"
     command = spawned["command"][-1]

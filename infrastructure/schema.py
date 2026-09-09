@@ -14,6 +14,7 @@ from sqlalchemy import (
     Text,
     TypeDecorator,
     UniqueConstraint,
+    text,
 )
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
@@ -516,5 +517,108 @@ class CorpusLaneRow(Base):
     session_id: Mapped[str | None] = mapped_column(String(36), nullable=True)
     attempt: Mapped[int] = mapped_column(Integer)
     opened_at: Mapped[datetime] = mapped_column(UtcDateTime)
+    ended_at: Mapped[datetime | None] = mapped_column(UtcDateTime, nullable=True)
+    note: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+
+class SightingRow(Base):
+    """A session seen alive in a lane by the loop's own read of /proc (plan
+    68, item 1): the process, the space and the boot it ran in, and the two
+    once-per-life acts the loop took on it. What a death is named from, and
+    what tells a dead row from a newborn one."""
+
+    __tablename__ = "sightings"
+    __table_args__ = (Index("ix_sightings_card", "project_slug", "card_number"),)
+
+    session_id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    project_slug: Mapped[str] = mapped_column(String(80))
+    card_number: Mapped[int] = mapped_column(Integer)
+    pid: Mapped[int] = mapped_column(Integer)
+    scope: Mapped[str | None] = mapped_column(Text, nullable=True)
+    boot_id: Mapped[str | None] = mapped_column(String(40), nullable=True)
+    first_seen: Mapped[datetime] = mapped_column(UtcDateTime)
+    last_seen: Mapped[datetime] = mapped_column(UtcDateTime)
+    released_at: Mapped[datetime | None] = mapped_column(UtcDateTime, nullable=True)
+    scoped_at: Mapped[datetime | None] = mapped_column(UtcDateTime, nullable=True)
+
+
+class DeathRow(Base):
+    """Why a session's process is gone, as the board established it at the
+    end (plan 68, items 1 and 2). One row per session, rewritten while the
+    cause is not settled and evidence may still arrive."""
+
+    __tablename__ = "deaths"
+    __table_args__ = (Index("ix_deaths_card", "project_slug", "card_number"),)
+
+    session_id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    project_slug: Mapped[str] = mapped_column(String(80))
+    card_number: Mapped[int] = mapped_column(Integer)
+    cause: Mapped[str] = mapped_column(String(60))
+    words: Mapped[str] = mapped_column(Text)
+    evidence: Mapped[str] = mapped_column(Text)
+    last_alive_at: Mapped[datetime | None] = mapped_column(UtcDateTime, nullable=True)
+    named_at: Mapped[datetime] = mapped_column(UtcDateTime)
+    settled: Mapped[bool] = mapped_column(Boolean)
+
+
+class ParkRow(Base):
+    """A lane the board will bring back, and what it waits on (plan 68, item
+    3). At most one standing park per card: the partial unique index refuses
+    a second, which is how the park note lands once across every process
+    that reads the board."""
+
+    __tablename__ = "parks"
+    __table_args__ = (
+        Index("ix_parks_card", "project_slug", "card_number"),
+        Index(
+            "ux_parks_standing",
+            "project_slug",
+            "card_number",
+            unique=True,
+            sqlite_where=text("lifted_at IS NULL"),
+        ),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    project_slug: Mapped[str] = mapped_column(String(80))
+    card_number: Mapped[int] = mapped_column(Integer)
+    session_id: Mapped[str] = mapped_column(String(36))
+    cause: Mapped[str] = mapped_column(String(60))
+    words: Mapped[str] = mapped_column(Text)
+    waits_on: Mapped[str] = mapped_column(String(20))
+    until: Mapped[datetime | None] = mapped_column(UtcDateTime, nullable=True)
+    held_since: Mapped[datetime | None] = mapped_column(UtcDateTime, nullable=True)
+    started_at: Mapped[datetime] = mapped_column(UtcDateTime)
+    lifted_at: Mapped[datetime | None] = mapped_column(UtcDateTime, nullable=True)
+    lifted_words: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+
+class RecoveryRow(Base):
+    """One attempt to bring an interrupted lane back, written before the
+    launch (plan 68, items 2 and 5). At most one open attempt per card: the
+    partial unique index is what keeps one interruption to one live
+    replacement across a crash of the server or a second process."""
+
+    __tablename__ = "recoveries"
+    __table_args__ = (
+        Index("ix_recoveries_card", "project_slug", "card_number"),
+        Index(
+            "ux_recoveries_open",
+            "project_slug",
+            "card_number",
+            unique=True,
+            sqlite_where=text("verdict IS NULL"),
+        ),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    project_slug: Mapped[str] = mapped_column(String(80))
+    card_number: Mapped[int] = mapped_column(Integer)
+    session_id: Mapped[str] = mapped_column(String(36))
+    cause: Mapped[str] = mapped_column(String(60))
+    words: Mapped[str] = mapped_column(Text)
+    started_at: Mapped[datetime] = mapped_column(UtcDateTime)
+    replacement: Mapped[str | None] = mapped_column(String(36), nullable=True)
+    verdict: Mapped[str | None] = mapped_column(String(20), nullable=True)
     ended_at: Mapped[datetime | None] = mapped_column(UtcDateTime, nullable=True)
     note: Mapped[str | None] = mapped_column(Text, nullable=True)

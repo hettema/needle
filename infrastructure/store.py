@@ -19,6 +19,7 @@ from alembic import command
 from alembic.config import Config
 from sqlalchemy import create_engine, delete, event, select, text
 from sqlalchemy.engine import Engine
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, sessionmaker
 
 from board.import_01 import Import01
@@ -32,6 +33,7 @@ from domain.card import Actor, Card, CardOrigin, DocumentLink, Place, RowRecord
 from domain.column import COLUMN_DEFINITIONS, DEFECTS_RAIL, DEFECTS_RAIL_POSITION, Column
 from domain.dial import Dial, DialChange, Filer, FixLane, FixStage, RailCount
 from domain.document import DOCUMENT_FOLDER, DocumentKind, DocumentRef, SuggestionKind
+from domain.ending import Cause, Death, Park, Recovery, Sighting
 from domain.entrance import Entrance
 from domain.evidence import Evidence
 from domain.gate import Gate
@@ -60,6 +62,7 @@ from infrastructure.schema import (
     CardRow,
     CardRowRow,
     CorpusLaneRow,
+    DeathRow,
     DialChangeRow,
     DialRow,
     DiscussionRow,
@@ -69,11 +72,14 @@ from infrastructure.schema import (
     HeardRow,
     HookEventRow,
     LaneRow,
+    ParkRow,
     ProjectRow,
     RailAtOnRow,
     ReadingRow,
+    RecoveryRow,
     RescueRow,
     SessionSlotRow,
+    SightingRow,
     TitleReadingRow,
     TriageRow,
     TrunkRow,
@@ -1761,6 +1767,210 @@ class Store:
             result = session.execute(delete(RescueRow).where(RescueRow.session_id == session_id))
             return int(result.rowcount or 0)
 
+    # ── how a lane's session ended, and what the board does about it (plan 68) ──
+
+    def record_sighting(self, sighting: Sighting) -> None:
+        """A session seen alive in a lane, on this pass. Written once per
+        life and refreshed in place: the first sighting keeps its time, the
+        last moves with every read, and the space and boot follow the read."""
+        with self._session() as session, session.begin():
+            row = session.get(SightingRow, sighting.session_id)
+            if row is None:
+                session.add(
+                    SightingRow(
+                        session_id=sighting.session_id,
+                        project_slug=sighting.project,
+                        card_number=sighting.card_number,
+                        pid=sighting.pid,
+                        scope=sighting.scope,
+                        boot_id=sighting.boot_id,
+                        first_seen=sighting.first_seen,
+                        last_seen=sighting.last_seen,
+                        released_at=sighting.released_at,
+                        scoped_at=sighting.scoped_at,
+                    )
+                )
+                return
+            row.pid = sighting.pid
+            row.scope = sighting.scope
+            row.boot_id = sighting.boot_id
+            row.last_seen = sighting.last_seen
+            if sighting.released_at is not None:
+                row.released_at = sighting.released_at
+            if sighting.scoped_at is not None:
+                row.scoped_at = sighting.scoped_at
+
+    def sighting(self, session_id: str) -> Sighting | None:
+        with self._session() as session:
+            row = session.get(SightingRow, session_id)
+            return None if row is None else _sighting(row)
+
+    def sightings(self, slug: str) -> dict[str, Sighting]:
+        """Every session this project's lanes were seen alive with, by id."""
+        with self._session() as session:
+            rows = session.scalars(select(SightingRow).where(SightingRow.project_slug == slug))
+            return {r.session_id: _sighting(r) for r in rows}
+
+    def record_death(self, death: Death) -> None:
+        """Why a session's process is gone; rewritten in place while the
+        cause was not settled, so a later read that names it revises the
+        epitaph the first read wrote."""
+        with self._session() as session, session.begin():
+            row = session.get(DeathRow, death.session_id)
+            if row is None:
+                session.add(
+                    DeathRow(
+                        session_id=death.session_id,
+                        project_slug=death.project,
+                        card_number=death.card_number,
+                        cause=death.cause.value,
+                        words=death.words,
+                        evidence=death.evidence,
+                        last_alive_at=death.last_alive_at,
+                        named_at=death.named_at,
+                        settled=death.settled,
+                    )
+                )
+                return
+            row.cause = death.cause.value
+            row.words = death.words
+            row.evidence = death.evidence
+            row.last_alive_at = death.last_alive_at
+            row.named_at = death.named_at
+            row.settled = death.settled
+
+    def deaths(self, slug: str) -> dict[str, Death]:
+        with self._session() as session:
+            rows = session.scalars(select(DeathRow).where(DeathRow.project_slug == slug))
+            return {r.session_id: _death(r) for r in rows}
+
+    def open_park(
+        self,
+        slug: str,
+        number: int,
+        *,
+        session_id: str,
+        cause: Cause,
+        words: str,
+        waits_on: str,
+        until: datetime | None,
+        held_since: datetime | None,
+        at: datetime,
+    ) -> Park:
+        """A park on a card's lane. Refused while one stands: the refusal is
+        what makes the park note land once across a restart of the server
+        and across a `needle` command that builds its own loop."""
+        with self._session() as session, session.begin():
+            row = ParkRow(
+                project_slug=slug,
+                card_number=number,
+                session_id=session_id,
+                cause=cause.value,
+                words=words,
+                waits_on=waits_on,
+                until=until,
+                held_since=held_since,
+                started_at=at,
+                lifted_at=None,
+                lifted_words=None,
+            )
+            session.add(row)
+            try:
+                session.flush()
+            except IntegrityError as clash:
+                raise StoreRefusal(f"A park already stands on #{number}.") from clash
+            return _park(row)
+
+    def hold_park(self, park_id: int, held_since: datetime | None) -> Park:
+        """When a memory park's floor was first read satisfied; None when the
+        floor stopped holding and the wait starts over."""
+        with self._session() as session, session.begin():
+            row = session.get(ParkRow, park_id)
+            if row is None:
+                raise StoreRefusal(f"There is no park {park_id}.")
+            row.held_since = held_since
+            session.flush()
+            return _park(row)
+
+    def lift_park(self, park_id: int, at: datetime, words: str) -> Park:
+        with self._session() as session, session.begin():
+            row = session.get(ParkRow, park_id)
+            if row is None:
+                raise StoreRefusal(f"There is no park {park_id}.")
+            row.lifted_at = at
+            row.lifted_words = words
+            session.flush()
+            return _park(row)
+
+    def parks(self, slug: str, *, standing_only: bool = False) -> list[Park]:
+        with self._session() as session:
+            query = select(ParkRow).where(ParkRow.project_slug == slug)
+            if standing_only:
+                query = query.where(ParkRow.lifted_at.is_(None))
+            rows = session.scalars(query.order_by(ParkRow.id))
+            return [_park(r) for r in rows]
+
+    def open_recovery(
+        self,
+        slug: str,
+        number: int,
+        *,
+        session_id: str,
+        cause: Cause,
+        words: str,
+        at: datetime,
+    ) -> Recovery:
+        """The row a launch is preceded by. Refused while one is open on the
+        card: two processes, or one process twice across a restart, cannot
+        both launch a replacement for one interruption."""
+        with self._session() as session, session.begin():
+            row = RecoveryRow(
+                project_slug=slug,
+                card_number=number,
+                session_id=session_id,
+                cause=cause.value,
+                words=words,
+                started_at=at,
+                replacement=None,
+                verdict=None,
+                ended_at=None,
+                note=None,
+            )
+            session.add(row)
+            try:
+                session.flush()
+            except IntegrityError as clash:
+                raise StoreRefusal(f"A recovery is already open on #{number}.") from clash
+            return _recovery(row)
+
+    def close_recovery(
+        self,
+        recovery_id: int,
+        *,
+        verdict: str,
+        replacement: str | None,
+        at: datetime,
+        note: str | None,
+    ) -> Recovery:
+        with self._session() as session, session.begin():
+            row = session.get(RecoveryRow, recovery_id)
+            if row is None:
+                raise StoreRefusal(f"There is no recovery {recovery_id}.")
+            row.verdict = verdict
+            row.replacement = replacement
+            row.ended_at = at
+            row.note = note
+            session.flush()
+            return _recovery(row)
+
+    def recoveries(self, slug: str, number: int | None = None) -> list[Recovery]:
+        with self._session() as session:
+            query = select(RecoveryRow).where(RecoveryRow.project_slug == slug)
+            if number is not None:
+                query = query.where(RecoveryRow.card_number == number)
+            rows = session.scalars(query.order_by(RecoveryRow.id))
+            return [_recovery(r) for r in rows]
+
     def record_window(
         self, session_id: str, kind: WindowKind, app_id: str, address: str, at: datetime
     ) -> Window:
@@ -2392,3 +2602,65 @@ def _audit_entry(row: AuditRow) -> AuditEntry:
 
 def document_ref_path(ref: DocumentRef) -> str:
     return ref.path
+
+
+def _sighting(row: SightingRow) -> Sighting:
+    return Sighting(
+        session_id=row.session_id,
+        project=row.project_slug,
+        card_number=row.card_number,
+        pid=row.pid,
+        scope=row.scope,
+        boot_id=row.boot_id,
+        first_seen=row.first_seen,
+        last_seen=row.last_seen,
+        released_at=row.released_at,
+        scoped_at=row.scoped_at,
+    )
+
+
+def _death(row: DeathRow) -> Death:
+    return Death(
+        session_id=row.session_id,
+        project=row.project_slug,
+        card_number=row.card_number,
+        cause=Cause(row.cause),
+        words=row.words,
+        evidence=row.evidence,
+        last_alive_at=row.last_alive_at,
+        named_at=row.named_at,
+        settled=row.settled,
+    )
+
+
+def _park(row: ParkRow) -> Park:
+    return Park(
+        id=row.id,
+        project=row.project_slug,
+        card_number=row.card_number,
+        session_id=row.session_id,
+        cause=Cause(row.cause),
+        words=row.words,
+        waits_on=row.waits_on,
+        until=row.until,
+        held_since=row.held_since,
+        started_at=row.started_at,
+        lifted_at=row.lifted_at,
+        lifted_words=row.lifted_words,
+    )
+
+
+def _recovery(row: RecoveryRow) -> Recovery:
+    return Recovery(
+        id=row.id,
+        project=row.project_slug,
+        card_number=row.card_number,
+        session_id=row.session_id,
+        cause=Cause(row.cause),
+        words=row.words,
+        started_at=row.started_at,
+        replacement=row.replacement,
+        verdict=row.verdict,
+        ended_at=row.ended_at,
+        note=row.note,
+    )

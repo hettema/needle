@@ -59,6 +59,7 @@ from domain.card import Actor, Card
 from domain.dial import Dial as DialSetting
 from domain.dial import DialState, Fixes, FixLane, FixReport, FixStage, Waiting
 from domain.document import Document, DocumentKind, SuggestionKind
+from domain.ending import MACHINE_ENDED
 from domain.gate import Gate
 from domain.hook import HookKind
 from domain.lane import LaneState
@@ -265,7 +266,7 @@ class Dial:
             open_triage = store.open_windowless_sessions(slug, SessionWork.TRIAGE)
             triages = store.latest_triages(slug)
             sources = self.live.sources(slug)
-            ran = {f.card_number for f in fix_lanes if f.project == slug}
+            ran = self._ran(slug, fix_lanes, snapshot)
             for card, document in rail_defects(store.cards(slug), live.index):
                 routed = routing_for(card, document, triages.get(card.number), sources)
                 assert routed is not None  # a rail defect always routes somewhere
@@ -308,6 +309,21 @@ class Dial:
         for candidate in sorted(unread, key=lambda c: c.age_key):
             self._triage(self.live.projects[candidate.project], candidate)
             return
+
+    def _ran(self, slug: str, fix_lanes: list[FixLane], snapshot) -> set[int]:
+        """The cards the dial took once already, which are the owner's from
+        here — except a card whose lane the machine ended (plan 68, item
+        5): that lane is not yet run, the board brings it back, and the
+        dial keeps its hands off until it has."""
+        ran: set[int] = set()
+        for fix in fix_lanes:
+            if fix.project != slug:
+                continue
+            lane = snapshot.lanes.get(fix.card_number) if snapshot is not None else None
+            if lane is not None and lane.state == LaneState.ENDED and lane.cause in MACHINE_ENDED:
+                continue
+            ran.add(fix.card_number)
+        return ran
 
     def _triaging(self) -> int:
         return sum(
@@ -557,8 +573,7 @@ class Dial:
                 stopped = self.runtime.stop(session.short_id)
                 words = (
                     f"the reading {session.short_id} finished its turn without a result and "
-                    "was stopped"
-                    + ("" if stopped.gone else f" (not gone: {stopped.words})")
+                    "was stopped" + ("" if stopped.gone else f" (not gone: {stopped.words})")
                 )
                 tended = Tended.ENDED
             if tended == Tended.ENDED:
@@ -691,13 +706,15 @@ class Dial:
             self.live.note(slug, card.number, AuditKind.DIAL, Actor.MACHINE, words)
             return
         lane = live.snapshot.lanes.get(card.number) if live.snapshot is not None else None
-        if lane is not None and lane.state == LaneState.ENDED:
+        if lane is not None and lane.state == LaneState.ENDED and lane.cause not in MACHINE_ENDED:
+            # A lane the machine ended is the board's to bring back (plan 68,
+            # item 5), so the dial does not call it ended and does not count
+            # it as run; one that ended by its own work is his from here.
             words = "the fix lane ended with nothing folded" + (
                 f" ({lane.died})" if lane.died else ""
             )
             store.stage_fix_lane(fix.id, FixStage.ENDED, now, note=words)
             self.live.note(slug, card.number, AuditKind.DIAL, Actor.MACHINE, words)
-
 
     # ── the short lanes that write the corpus (items 4 and 5) ──────────
 
@@ -732,9 +749,7 @@ class Dial:
         for other in live.index.documents:
             if other.archived or other.kind != DocumentKind.SUGGESTION:
                 continue
-            line = next(
-                (f.value for f in other.head_fields if f.key.lower() == SPLIT_FROM), None
-            )
+            line = next((f.value for f in other.head_fields if f.key.lower() == SPLIT_FROM), None)
             if line and document.path in line:
                 return other
         return None
@@ -751,9 +766,7 @@ class Dial:
         if document is None:
             return None
         if lane.kind == CorpusLaneKind.RULING:
-            ruled = next(
-                (f.value for f in document.head_fields if f.key.lower() == RULED_BY), None
-            )
+            ruled = next((f.value for f in document.head_fields if f.key.lower() == RULED_BY), None)
             return document if ruled and lane.decision in ruled else None
         return self._split_half(live, document)
 
@@ -1005,7 +1018,7 @@ class Dial:
             triaging = store.open_windowless_sessions(project_slug, SessionWork.TRIAGE)
             triages = store.latest_triages(project_slug)
             sources = self.live.sources(project_slug)
-            ran = {f.card_number for f in fix_lanes if f.project == project_slug}
+            ran = self._ran(project_slug, fix_lanes, snapshot)
             for card, document in rail_defects(store.cards(project_slug), live.index):
                 routed = routing_for(card, document, triages.get(card.number), sources)
                 assert routed is not None
@@ -1079,9 +1092,7 @@ class Dial:
                         words=triage.words,
                         direction=triage.direction,
                         source=(
-                            resolved.note
-                            if resolved is not None
-                            else "the reading named no source"
+                            resolved.note if resolved is not None else "the reading named no source"
                         ),
                         routing=routed.state if routed is not None else Routing.NEEDS_TRIAGE,
                         fate=self._fate(live, card, triage, fix_lanes),
@@ -1119,16 +1130,19 @@ class Dial:
             and pattern.search(d.found_by) is not None
             for d in live.index.documents
         )
-        words = "; ".join(
-            part
-            for part in [
-                f"the dial's fix lane is {stage.value}" if stage is not None else None,
-                "folded" if folded else None,
-                "the fold was reverted" if reverted else None,
-                "a defect was filed against it" if filed else None,
-            ]
-            if part
-        ) or "nothing has been built on it yet"
+        words = (
+            "; ".join(
+                part
+                for part in [
+                    f"the dial's fix lane is {stage.value}" if stage is not None else None,
+                    "folded" if folded else None,
+                    "the fold was reverted" if reverted else None,
+                    "a defect was filed against it" if filed else None,
+                ]
+                if part
+            )
+            or "nothing has been built on it yet"
+        )
         return Fate(
             planned=stage is not None,
             started=stage is not None and stage not in (FixStage.PLANNING,),

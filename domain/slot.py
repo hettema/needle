@@ -24,6 +24,8 @@ from enum import StrEnum
 
 from pydantic import BaseModel
 
+from domain.ending import Cause
+
 
 class Make(StrEnum):
     """The makes this runtime has a launcher for. Not the makes that exist:
@@ -104,6 +106,12 @@ def rung_words(model: str | None, slot: str) -> str:
     return f"{model} on {slot}" if model else slot
 
 
+RECOVERED_WHY = "connection back after a transient death"
+"""`claude-acct recover`'s `why`, verbatim (its line 1803 on 2026-09-09)."""
+STRONGER_MODEL_WHY = "; back on Fable"
+"""How `claude-acct`'s switch-back closes its `why` (line 1690, same day)."""
+
+
 class Handoff(BaseModel):
     """The wall detector's file for a background session, read verbatim.
 
@@ -130,3 +138,39 @@ class Handoff(BaseModel):
     """Whether the hook already stopped the session; None when the file does not say."""
     path: str
     """Where the file is, so a done move can remove it."""
+    why: str = ""
+    """Why the file was written, in `claude-acct`'s own words: the rule's
+    reason for the rung it chose on a wall, `connection back after a
+    transient death` from its recover timer, `…; back on Fable` from its
+    switch-back. Three writers share one file shape (verified 2026-09-09),
+    and this is the field that tells them apart (plan 68, item 3)."""
+
+    @property
+    def cause(self) -> Cause:
+        """What the handoff asks for. The machine's connection recovery and
+        its switch-back to the stronger model write the same background
+        handoff file as a wall, and until plan 68 every one of them moved
+        the lane as "ran out of allowance", and a second within the hour
+        parked it as "hit a limit again". The writer says why in its own
+        field; anything else is the wall detector's."""
+        why = self.why.strip()
+        if why == RECOVERED_WHY:
+            return Cause.RECOVERED
+        if why.endswith(STRONGER_MODEL_WHY):
+            return Cause.STRONGER_MODEL
+        return Cause.WALL
+
+
+class Limits(BaseModel):
+    """One subscription's last limits reading, as `claude-acct` cached it:
+    what share of each allowance is spent and when each comes back (plan
+    68, item 3). Read for a park's end; the rule itself is never
+    re-implemented here."""
+
+    slot: str
+    fetched_at: datetime
+    spent: dict[str, float]
+    """By the allowance's own label (`Fable Weekly`, `Session (5-hour)`), the
+    share used, 1.0 when it is gone."""
+    resets: dict[str, datetime]
+    """By the same label, when the allowance returns, for those that say."""

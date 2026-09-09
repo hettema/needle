@@ -44,6 +44,7 @@ from board.collision import footprint, verdict
 from board.dial import MEMORY_FLOOR_BYTES, headroom, who_is_home
 from board.lane import (
     HANDS_ON,
+    HOOK_SLACK_SECONDS,
     STARTABLE_COLUMNS,
     LaneFacts,
     after_archive,
@@ -51,6 +52,7 @@ from board.lane import (
     close_is_current,
     close_landed,
     conversations_alive,
+    disposition,
     doors_for,
     entered_executing_at,
     exit_for,
@@ -72,9 +74,19 @@ from domain.card import Actor, Card, Place
 from domain.column import Column
 from domain.dial import Headroom, ScopeMemory, ScopeState
 from domain.document import DocumentKind
+from domain.ending import (
+    MACHINE_ENDED,
+    Boot,
+    Cause,
+    Death,
+    Disposition,
+    Park,
+    Recovery,
+    Sighting,
+)
 from domain.evidence import Evidence
 from domain.gate import Gate
-from domain.hook import HookEvent, HookPosted, Word
+from domain.hook import HookEvent, HookKind, HookPosted, Word
 from domain.lane import (
     Collision,
     Doors,
@@ -94,7 +106,8 @@ from domain.window import Window, WindowKind
 from infrastructure import clock
 from infrastructure.live import Live, LiveProject
 from infrastructure.paths import data_dir
-from runtime import discussion, launch, machine
+from infrastructure.store import StoreRefusal
+from runtime import discussion, handoffs, launch, limits, machine
 from runtime.service import Runtime
 from runtime.windows import WindowRefused
 
@@ -108,8 +121,20 @@ TRUNK_SECONDS = 300.0
 PARTY_HORIZON_SECONDS = 86400.0
 """How long a call keeps a lane party to its note and answer (plan 17)."""
 RESCUE_HORIZON_SECONDS = 3600.0
-"""One automatic retry per run-out: a second wall on the same lane within
-this window parks the lane with the reason instead of thrashing."""
+"""One automatic retry per cause: a second interruption of one cause on the
+same lane within this window parks the lane, with the reason and the end
+of the wait, instead of thrashing. The hour is a chosen retry policy set in
+slice 03 (2026-09-04), not evidence that a cause has cleared (plan 68,
+ruling 5): an elapsed hour says nothing about whether the machine's memory
+came back, so a memory park waits on the floor and a wall park on the
+reset, and the hour only bounds how often the board tries. Revisable under
+the plan's loop, which counts repeated failures."""
+RECOVERY_IN_FLIGHT_SECONDS = 120.0
+"""How long an open recovery row is a launch still verifying — `claude --bg`
+may take up to a minute, the verify fifteen seconds, a stop eight — before a
+server that finds it on restart calls the replacement lost (plan 68, item
+2). Inside it the lane is left alone: the replacement is either registered
+already, in which case it is found and recorded, or still coming."""
 WATCH_DEBOUNCE_MS = 400
 READINGS_AT_ONCE = 2
 """Reading sessions alive at once, across every project (plan 09): each is
@@ -169,11 +194,6 @@ class Loops:
         self._lock = asyncio.Lock()
         self._tasks: list[asyncio.Task[None]] = []
         self._stop = asyncio.Event()
-        self._deaths: dict[str, str] = {}
-        self._parked: set[str] = set()
-        self._released: set[str] = set()
-        """Sessions stopped because their lane folded and closed: one stop
-        each, so a stop that did not end the process is said once."""
         self._nobody_home: dict[str, datetime] = {}
         """Groups found with nobody home and both guards holding, by unit,
         and since when (card #99): the manager is asked to end one only
@@ -185,11 +205,12 @@ class Loops:
         the manager is asked again if it is not after another window."""
         self._sweep_said: set[str] = set()
         """Groups whose refused stop was said on the card, once."""
-        self._scoped: set[str] = set()
-        """Sessions the loop put back in their lane's scope (plan 53, item
-        2): one adopt each, so a move the machine refused is said once and
-        not every thirty seconds."""
-        """Session ids whose second wall was parked, so the card is told once."""
+        self._boots: list[Boot] = []
+        """The machine's boots as the pass read them: what a death is dated
+        against. Deaths, parks, releases and adoptions live in the store
+        (plan 68, item 2), never in a set here: card #196 carried one park
+        note seventeen times because each `needle` command and each restart
+        of the server began with an empty head."""
         self._notes: list[Note] = []
         """The machine's watercooler as the last read saw it (plan 17)."""
         self._parties: dict[tuple[str, int], set[str]] = {}
@@ -393,6 +414,7 @@ class Loops:
         windows = self.runtime.open_windows()
         placement, note = self._placement()
         self._notes = self.runtime.notes()
+        self._boots = self.runtime.boots()
         for live in list(self.live.projects.values()):
             try:
                 self._reconcile_project(live, sessions, windows, placement, note)
@@ -651,10 +673,17 @@ class Loops:
         records = self._keep_lane_records(slug, project.path, worktrees, now)
         facts = self._facts(live, sessions, windows, records, worktrees, now)
         lanes = {c.number: lane_for(c, facts) for c in cards}
-        # A rescue moved a session, so the lanes read here are stale until
-        # the re-read below; the scope check waits for the next pass rather
-        # than adopt a pid that is gone (a move scopes its new session).
-        if self._rescue(lanes, slug) or self._keep_in_scope(lanes, slug):
+        self._sightings(slug, lanes, now)
+        if self._name_deaths(slug, cards, lanes, now):
+            facts = self._facts(live, sessions, windows, records, worktrees, now)
+            lanes = {c.number: lane_for(c, facts) for c in cards}
+        # A recovery moved or resumed a session, so the lanes read here are
+        # stale until the re-read below; the scope check waits for the next
+        # pass rather than adopt a pid that is gone (a move scopes its new
+        # session).
+        if self._recover(live, cards, lanes, records, facts.events) or self._keep_in_scope(
+            lanes, slug
+        ):
             sessions = self.runtime.sessions()
             windows = self.runtime.open_windows()
             facts = self._facts(live, sessions, windows, records, worktrees, now)
@@ -687,23 +716,117 @@ class Loops:
             s for s in sessions if s.cwd.startswith(path) or (s.worktree or "").startswith(path)
         ]
         rescues = {s.session_id: self.live.store.rescues(s.session_id) for s in here}
-        for session in here:
-            if session.pid is None and session.session_id not in self._deaths:
-                why = self.runtime.why_ended(session)
-                if why:
-                    self._deaths[session.session_id] = why
+        store = self.live.store
         return LaneFacts(
             project_path=path,
             sessions=sessions,
-            events=self.live.store.hook_events(slug),
-            discussions=self.live.store.discussions(slug),
+            events=store.hook_events(slug),
+            discussions=store.discussions(slug),
             records=records,
             windows=windows,
             rescues=rescues,
-            deaths=dict(self._deaths),
+            deaths=store.deaths(slug),
+            parks={p.card_number: p for p in store.parks(slug, standing_only=True)},
             worktrees=worktrees,
             now=now,
         )
+
+    def _current_boot(self) -> Boot | None:
+        return next((b for b in self._boots if b.index == 0), None)
+
+    def _sightings(self, slug: str, lanes: dict[int, Lane], now: datetime) -> None:
+        """Every session with a live process in a lane, seen on this pass
+        (plan 68, item 1): its process, the space it runs in and the boot
+        it runs in, so its death — a row that had a process and now has
+        none — is named from what actually held it, and a row not yet born
+        is never given an epitaph."""
+        boot = self._current_boot()
+        for number, lane in lanes.items():
+            session = lane.session
+            if session is None or session.pid is None or session.stale:
+                continue
+            self.live.store.record_sighting(
+                Sighting(
+                    session_id=session.session_id,
+                    project=slug,
+                    card_number=number,
+                    pid=session.pid,
+                    scope=session.scope,
+                    boot_id=boot.boot_id if boot is not None else None,
+                    first_seen=now,
+                    last_seen=now,
+                )
+            )
+
+    def _units_of(self, lane: Lane, session: Session) -> list[str]:
+        """The spaces the session may have run in: the lane's own first,
+        the account's daemon space after (a session something resumed by
+        hand lands there)."""
+        return [
+            launch.lane_unit(lane.name),
+            machine.unit_name(launch.DAEMON_UNIT_PREFIX, session.slot),
+        ]
+
+    def _name_deaths(
+        self, slug: str, cards: list[Card], lanes: dict[int, Lane], now: datetime
+    ) -> bool:
+        """Name the death of every ended lane's session at the end, from the
+        evidence that held the process (plan 68, item 1), and revise an
+        epitaph that was not settled while evidence may still arrive. A
+        row with no sighting younger than the verify window is a session
+        being born, not one that died (the 127 ms window that wrote `the
+        registry says: starting…` on a live lane); a lane whose card closed
+        is finished work, and its session's ending is the normal end of
+        that work, not a death to name (item 4). Returns whether any death
+        was written, so the caller re-reads the lanes."""
+        store = self.live.store
+        deaths = store.deaths(slug)
+        closed = {c.number for c in cards if close_landed(c)}
+        changed = False
+        for lane in lanes.values():
+            session = lane.session
+            if lane.state != LaneState.ENDED or session is None or session.pid is not None:
+                continue
+            if lane.card_number in closed:
+                continue
+            death = deaths.get(session.session_id)
+            if death is not None and (
+                death.settled
+                or (now - (death.last_alive_at or death.named_at)).total_seconds()
+                > RESCUE_HORIZON_SECONDS
+            ):
+                continue
+            sighting = store.sighting(session.session_id)
+            if (
+                sighting is None
+                and session.created_at is not None
+                and (now - session.created_at).total_seconds() < launch.VERIFY_SECONDS
+            ):
+                continue
+            named = self.runtime.cause_of(
+                session,
+                units=self._units_of(lane, session),
+                sighting=sighting,
+                boots_seen=self._boots,
+                now=now,
+            )
+            if death is not None and (death.cause, death.words) == (named.cause, named.words):
+                continue
+            store.record_death(
+                Death(
+                    session_id=session.session_id,
+                    project=slug,
+                    card_number=lane.card_number,
+                    cause=named.cause,
+                    words=named.words,
+                    evidence=named.evidence,
+                    last_alive_at=named.last_alive_at,
+                    named_at=death.named_at if death is not None else now,
+                    settled=named.settled,
+                )
+            )
+            changed = True
+        return changed
 
     def _keep_lane_records(
         self, slug: str, project_path: str, worktrees: dict[str, str | None], now: datetime
@@ -768,62 +891,418 @@ class Loops:
             store.record_lane(record)
         return list(records.values())
 
-    def _rescue(self, lanes: dict[int, Lane], slug: str) -> bool:
-        """Act on the wall detector's handoff: move the lane where it names,
-        once per run-out, and say so on the card."""
-        moved_any = False
+    def _recover(
+        self,
+        live: LiveProject,
+        cards: list[Card],
+        lanes: dict[int, Lane],
+        records: list[LaneRecord],
+        events: list[HookEvent],
+    ) -> bool:
+        """Bring back every lane the machine interrupted, once per cause
+        within the horizon, through the gate Start passes; park the rest
+        with an end the board reads (plan 68, items 3 to 5).
+
+        Disposition first (item 4): a lane whose card closed, or whose
+        session put a decision to the owner, is finished or his whatever
+        its row and its handoff say — its handoff expires, its park lifts,
+        and nothing resumes. Then the cause: a handoff on a live session
+        (a wall, the connection back, the stronger model back), a blocked
+        turn its own stop-failure event names as a limit with no handoff,
+        or a death the reader named as the machine's. A cause nothing names
+        is never resumed. The count follows the card and the cause, not the
+        session id, so a replacement's new id is not a fresh budget; a
+        launch that fails counts; a wait before any launch does not. The
+        row is written before the launch, so a server that dies between
+        the two finds it on restart. Returns whether anything moved, so
+        the caller re-reads the machine."""
+        slug = live.project.slug
         store = self.live.store
+        now = clock.now()
+        by_record = {r.card_number: r for r in records}
+        by_card = {c.number: c for c in cards}
+        parks = {p.card_number: p for p in store.parks(slug, standing_only=True)}
+        moved_any = False
+        changed = False
+        """Whether a park was opened or lifted, or a handoff expired: the
+        lanes read before this pass no longer say what the store says, so
+        the caller re-reads them (the park on the face was a pass behind
+        on the floor without this)."""
         for number, lane in lanes.items():
-            session = lane.session
-            if lane.state != LaneState.MOVING or session is None or session.wall is None:
+            session, card = lane.session, by_card.get(number)
+            if session is None or card is None or card.folded_into is not None:
                 continue
-            now = clock.now()
+            attempts = store.recoveries(slug, number)
+            in_flight = next((r for r in attempts if r.verdict is None), None)
+            if in_flight is not None:
+                self._settle_recovery(slug, number, in_flight, now)
+                continue
+            interruption = self._interruption(lane, session, events)
+            park = parks.get(number)
+            if interruption is None:
+                continue
+            cause, words = interruption
+            record = by_record.get(number)
+            history = store.history(slug, number)
+            since = (
+                record.first_seen
+                if record is not None
+                else lane.hands_on_since or entered_executing_at(history)
+            )
+            stood, why_stood = disposition(card, lane, history, since)
+            if stood != Disposition.UNFINISHED:
+                changed = self._leave(slug, number, session, park, stood, why_stood, now) or changed
+                continue
+            if park is not None:
+                lifted = self._park_lifts(park, session, now)
+                if lifted is None:
+                    continue
+                store.lift_park(park.id, now, lifted)
+                self.live.note(
+                    slug, number, AuditKind.RESCUED, Actor.MACHINE, f"The wait ended: {lifted}."
+                )
+                park = None
+                changed = True
             recent = [
                 r
-                for r in store.rescues(session.session_id)
-                if (now - r.at).total_seconds() < RESCUE_HORIZON_SECONDS and launch.on_a_wall(r)
+                for r in attempts
+                if r.cause == cause
+                and abs((now - r.started_at).total_seconds()) < RESCUE_HORIZON_SECONDS
             ]
             if recent:
-                if session.session_id not in self._parked:
-                    self._parked.add(session.session_id)
-                    self.live.note(
-                        slug,
-                        number,
-                        AuditKind.RESCUED,
-                        Actor.MACHINE,
-                        f"Parked: hit a limit again within the hour ({session.wall.reason}); "
-                        "one automatic retry per run-out, so this one is yours (Resume).",
-                    )
+                changed = (
+                    self._park(slug, number, session, cause, words, now, recent=recent) or changed
+                )
                 continue
+            placement: Placement | None = None
+            if lane.state == LaneState.ENDED or session.wall is None:
+                # A resume after a death goes through the gate Start passes:
+                # a rung with room and the floor satisfied on a fresh read
+                # (item 5); a live handoff is one hop to where it names.
+                placement, note = self._placement()
+                if placement is None:
+                    changed = (
+                        self._park(slug, number, session, cause, words, now, nowhere=note)
+                        or changed
+                    )
+                    continue
+                room = self.headroom_now()
+                if room.full:
+                    changed = (
+                        self._park(slug, number, session, cause, words, now, full=room) or changed
+                    )
+                    continue
+            try:
+                row = store.open_recovery(
+                    slug, number, session_id=session.session_id, cause=cause, words=words, at=now
+                )
+            except StoreRefusal:
+                continue  # another process opened one first; it reports
+            count = len([r for r in attempts if r.cause == cause]) + 1
             had_window = lane.window_open
-            result = self.runtime.move(session.short_id, None)
-            if result.verdict != LaunchVerdict.ALIVE or result.session is None:
+            reason = f"brought back by the board: {words}"
+            if lane.state == LaneState.MOVING and session.wall is not None:
+                result = self.runtime.move(session.short_id, None, reason=reason)
+            else:
+                result = self.runtime.resume(
+                    session.short_id,
+                    prompt=None if cause == Cause.WALL else self._resume_words(words),
+                    card=lane.name,
+                    placement=placement,
+                    reason=reason,
+                )
+            alive = result.verdict == LaunchVerdict.ALIVE and result.session is not None
+            store.close_recovery(
+                row.id,
+                verdict=result.verdict.value,
+                replacement=result.session.session_id if alive and result.session else None,
+                at=clock.now(),
+                note=result.reason,
+            )
+            if not alive:
                 self.live.note(
                     slug,
                     number,
                     AuditKind.RESCUED,
                     Actor.MACHINE,
-                    f"The move after the limit failed: {result.reason}",
+                    f"Could not bring it back after {words}: {result.reason}. Attempt {count} "
+                    "for this cause in the last hour; one is made per hour, then it waits.",
                 )
                 continue
             moved_any = True
-            placement = result.placement
-            model = placement.model if placement else result.session.model
-            slot = placement.slot if placement else result.session.slot
-            said = f"Moved to {rung_words(model, slot)}"
+            assert result.session is not None
+            placed = result.placement
+            where = rung_words(placed.model, placed.slot) if placed else result.session.slot
+            said = f"Brought back after {words}: now {result.session.short_id}, {where}"
             if had_window:
                 # The stop ended the attach window (`claude attach` exits with
                 # its session); recording that is not closing one, and the
                 # record has to say so before a new window may open.
-                for window in self.live.store.windows(session.session_id, open_only=True):
-                    self.live.store.window_closed(window.id, clock.now())
+                for window in store.windows(session.session_id, open_only=True):
+                    store.window_closed(window.id, clock.now())
                 try:
                     self.runtime.window(result.session.short_id, WindowKind.LANE)
                     said += ", new window opened"
                 except WindowRefused as refusal:
                     said += f"; the new window did not open: {refusal}"
-            self.live.note(slug, number, AuditKind.RESCUED, Actor.MACHINE, said + ".")
-        return moved_any
+            self.live.note(
+                slug,
+                number,
+                AuditKind.RESCUED,
+                Actor.MACHINE,
+                f"{said}. Attempt {count} for this cause in the last hour; one is made per "
+                "hour, then it waits.",
+            )
+        return moved_any or changed
+
+    def _interruption(
+        self, lane: Lane, session: Session, events: list[HookEvent]
+    ) -> tuple[Cause, str] | None:
+        """What interrupted this lane, when the machine's hand did: the
+        cause and the words the card shows. None for a lane at work, one
+        that ended by its own hand, or one whose ending nothing names."""
+        if lane.state == LaneState.MOVING and session.wall is not None:
+            cause = handoffs.cause_of(session.wall)
+            reason = (
+                session.wall.reason.strip().splitlines()[0] if session.wall.reason.strip() else ""
+            )
+            return cause, f"{cause.value} on {session.slot}" + (f" ({reason})" if reason else "")
+        if lane.state == LaneState.BLOCKED and session.wall is None:
+            limit = self._limit_without_a_handoff(session, events)
+            if limit is not None:
+                return Cause.WALL, f"{Cause.WALL.value} on {session.slot} ({limit})"
+            return None
+        if lane.state == LaneState.ENDED and lane.cause in MACHINE_ENDED and lane.died:
+            return lane.cause, lane.died
+        return None
+
+    def _limit_without_a_handoff(self, session: Session, events: list[HookEvent]) -> str | None:
+        """A turn that died on a limit with nowhere to go: `claude-acct`
+        writes no handoff when no account has room (its "no headroom
+        anywhere" return), so the only trace is the session's own
+        stop-failure event naming the error class (item 3). Read from the
+        event, never from the registry's detail text."""
+        stamp = session.updated_at
+        for event in sorted(events, key=lambda e: -e.id):
+            if event.session_id != session.session_id or event.kind != HookKind.STOP_FAILURE:
+                continue
+            if stamp is not None and event.at < stamp - timedelta(seconds=HOOK_SLACK_SECONDS):
+                return None
+            if event.error == "rate_limit":
+                return (event.message or "").strip().splitlines()[0] if event.message else "a limit"
+            return None
+        return None
+
+    def _resume_words(self, words: str) -> str:
+        """What a session the machine ended is told when it comes back
+        (item 1): the truth, never `CONTINUE`'s "the subscription ran out",
+        which is true of a wall alone (#85's four lanes were told it after a
+        reboot)."""
+        return (
+            f"Continue where you stopped. Your last turn was cut: {words}. Nothing you did "
+            "after your last tool result is on disk, and the clock may have moved: read your "
+            "worktree and the card before trusting your memory of them."
+        )
+
+    def _leave(
+        self,
+        slug: str,
+        number: int,
+        session: Session,
+        park: Park | None,
+        stood: Disposition,
+        why: str,
+        now: datetime,
+    ) -> bool:
+        """A lane that is finished or the owner's: nothing resumes, a
+        handoff naming it expires, and a park on it lifts (items 3 and 4).
+        Said once, because each act removes its own evidence. Answers
+        whether anything was removed."""
+        acted = False
+        if session.wall is not None:
+            acted = True
+            self.runtime.expire_handoff(session.wall)
+            self.live.note(
+                slug,
+                number,
+                AuditKind.RESCUED,
+                Actor.MACHINE,
+                f"A request to move {session.short_id} expired unacted: the work is "
+                f"{stood.value} ({why}).",
+            )
+        if park is not None:
+            acted = True
+            self.live.store.lift_park(park.id, now, f"the work is {stood.value}: {why}")
+            self.live.note(
+                slug,
+                number,
+                AuditKind.RESCUED,
+                Actor.MACHINE,
+                f"The wait ended without a resume: the work is {stood.value} ({why}).",
+            )
+        return acted
+
+    def _park_lifts(self, park: Park, session: Session, now: datetime) -> str | None:
+        """Whether the park's end has come, in words when it has (item 3),
+        by what it waits on: the clock alone for the hour's count; a reset
+        or, sooner, the rule finding room on another account for an
+        allowance; the machine's memory held above the floor for a whole
+        beat; the rule alone for a wait on any account with room."""
+        store = self.live.store
+        if park.until is not None and now >= park.until:
+            return f"the wait ran to its end at {park.until.strftime('%Y-%m-%d %H:%MZ')}"
+        if park.waits_on == "clock":
+            return None
+        if park.waits_on == "floor":
+            room = self.headroom_now()
+            if room.full:
+                if park.held_since is not None:
+                    store.hold_park(park.id, None)
+                return None
+            if park.held_since is None:
+                store.hold_park(park.id, now)
+                return None
+            if (now - park.held_since).total_seconds() >= FLOOR_SECONDS:
+                return "the machine's memory has held above the floor for a whole beat"
+            return None
+        placement, _ = self._placement()
+        if placement is None:
+            return None
+        if park.waits_on == "allowance" and placement.slot == session.slot:
+            return None
+        return f"the rule found room on {placement.slot} ({placement.why})"
+
+    def _park(
+        self,
+        slug: str,
+        number: int,
+        session: Session,
+        cause: Cause,
+        words: str,
+        now: datetime,
+        *,
+        recent: list[Recovery] | None = None,
+        nowhere: str | None = None,
+        full: Headroom | None = None,
+    ) -> bool:
+        """Park the lane with what it waits on and until when, as a machine
+        fact with its evidence (item 3, ruling 3): the allowance's reset
+        from the account's own last reading, the floor's numbers, the
+        account with room the rule has yet to find, or the hour's count.
+        Written once: the store refuses a second standing park, so a
+        restart or a second process says nothing more."""
+        store = self.live.store
+        until: datetime | None = None
+        parts: list[str] = []
+        waits_on = "rule"
+        if recent:
+            waits_on = "clock"
+            oldest = min(r.started_at for r in recent)
+            until = oldest + timedelta(seconds=RESCUE_HORIZON_SECONDS)
+            parts.append(
+                f"it came back after {cause.value} once already in the last hour (at "
+                f"{oldest.strftime('%H:%MZ')}); one attempt is made per hour, so it waits until "
+                f"{until.strftime('%Y-%m-%d %H:%MZ')}"
+            )
+            ahead = [r for r in recent if r.started_at > now]
+            if ahead:
+                parts.append(
+                    f"that attempt is recorded at {ahead[0].started_at.strftime('%H:%MZ')}, "
+                    f"after the clock's {now.strftime('%H:%MZ')}: the clock moved, and the "
+                    "count stands"
+                )
+        if cause == Cause.WALL:
+            reading = self.runtime.limits(session.slot)
+            reset = limits.next_reset(reading) if reading is not None else None
+            if reset is not None:
+                label, when = reset
+                if until is None or when > until:
+                    until = when
+                if not recent:
+                    waits_on = "allowance"
+                parts.append(
+                    f"{label} on {session.slot} comes back at {when.strftime('%Y-%m-%d %H:%MZ')} "
+                    f"(the account's own reading of "
+                    f"{reading.fetched_at.strftime('%H:%MZ') if reading else '?'}), or an account "
+                    "has room sooner"
+                )
+            elif not recent:
+                parts.append(
+                    f"no reading of {session.slot} says when its allowance comes back, so the "
+                    "rule is asked on every pass"
+                )
+        if nowhere is not None:
+            parts.append(f"no account has room to run it ({nowhere}); the rule is asked every pass")
+        if full is not None:
+            waits_on = "floor"
+            parts.append(f"{full.sentence}; it comes back once the room has held for a whole beat")
+        what = "; ".join(parts) or "the rule is asked every pass"
+        try:
+            store.open_park(
+                slug,
+                number,
+                session_id=session.session_id,
+                cause=cause,
+                words=f"it waits: {what}; then it comes back by itself",
+                waits_on=waits_on,
+                until=until,
+                held_since=None,
+                at=now,
+            )
+        except StoreRefusal:
+            return False
+        self.live.note(
+            slug,
+            number,
+            AuditKind.RESCUED,
+            Actor.MACHINE,
+            f"Waiting to bring it back after {words}: {what}.",
+        )
+        return True
+
+    def _settle_recovery(self, slug: str, number: int, row: Recovery, now: datetime) -> None:
+        """An attempt written before a launch that nothing closed: this
+        server died between the launch and its record, or another process
+        is still verifying (item 2). The replacement is found by the
+        registry's own word — the session that says it resumed the
+        interrupted one — and recorded; past the in-flight window with none
+        found, the attempt is lost and counts."""
+        store = self.live.store
+        for session in self.runtime.sessions():
+            if session.resumed_from == row.session_id and session.pid is not None:
+                store.close_recovery(
+                    row.id,
+                    verdict="found",
+                    replacement=session.session_id,
+                    at=now,
+                    note="the replacement was found registered after the board restarted",
+                )
+                self.live.note(
+                    slug,
+                    number,
+                    AuditKind.RESCUED,
+                    Actor.MACHINE,
+                    f"Found {session.short_id} on {session.slot} already brought back after "
+                    f"{row.words}; the board had restarted before it could say so.",
+                )
+                return
+        if abs((now - row.started_at).total_seconds()) < RECOVERY_IN_FLIGHT_SECONDS:
+            return
+        store.close_recovery(
+            row.id,
+            verdict="lost",
+            replacement=None,
+            at=now,
+            note="no replacement was found registered within the in-flight window",
+        )
+        self.live.note(
+            slug,
+            number,
+            AuditKind.RESCUED,
+            Actor.MACHINE,
+            f"An attempt to bring it back after {row.words} left no session behind; it "
+            "counts as one for this cause in the last hour.",
+        )
 
     def _keep_in_scope(self, lanes: dict[int, Lane], slug: str) -> bool:
         """A session with hands on a lane runs in the lane's scope, whoever
@@ -846,13 +1325,15 @@ class Loops:
                 or session.stale
                 or session.kind != SessionKind.BACKGROUND
                 or session.scope is None
-                or session.session_id in self._scoped
             ):
                 continue
             unit = launch.lane_unit(lane.name)
             if session.scope == unit:
                 continue
-            self._scoped.add(session.session_id)
+            sighting = self.live.store.sighting(session.session_id)
+            if sighting is None or sighting.scoped_at is not None:
+                continue  # not sighted yet this pass, or adopted once already this life
+            self.live.store.record_sighting(sighting.model_copy(update={"scoped_at": clock.now()}))
             scoped = self.runtime.rescope(session, lane.name)
             if scoped.verified:
                 words = (
@@ -975,13 +1456,15 @@ class Loops:
                 session is None
                 or session.pid is None
                 or session.kind != SessionKind.BACKGROUND
-                or session.session_id in self._released
                 or record is None
                 or record.folded_at is None
                 or card.place.column == Column.EXECUTING
                 or not close_landed(card)
             ):
                 continue
+            sighting = self.live.store.sighting(session.session_id)
+            if sighting is None or sighting.released_at is not None:
+                continue  # not sighted yet, or stopped once already this life
             # Its turn is over: the lane reads stopped while the worktree
             # stands, and ended with the process still resident once the
             # fold has removed the worktree (Hello Revenue's fold does; the
@@ -998,7 +1481,9 @@ class Loops:
             history = self.live.store.history(slug, card.number)
             if not close_is_current(card, history, record.first_seen):
                 continue
-            self._released.add(session.session_id)
+            self.live.store.record_sighting(
+                sighting.model_copy(update={"released_at": clock.now()})
+            )
             stopped = self.runtime.stop(session.short_id)
             for window in self.live.store.windows(session.session_id, open_only=True):
                 self.live.store.window_closed(window.id, clock.now())

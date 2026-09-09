@@ -300,6 +300,7 @@ export function OpenCard({ card, onMoveTo }: { card: CardSummary; onMoveTo: (num
           {lane.colliding ? <Clash>{lane.colliding.sentence}</Clash> : null}
           {lane.session?.doing ? <Quiet>Doing: {lane.session.doing.step}, {ago(lane.session.doing.at)}{lane.session.detail ? ` — "${lane.session.detail}"` : ""}</Quiet> : null}
           {lane.died ? <Quiet>{lane.died}</Quiet> : null}
+          {lane.park ? <Quiet>{lane.park}</Quiet> : null}
           {lane.moved ? <Quiet>{lane.moved}</Quiet> : null}
           {lane.edits.length ? <Quiet>Touching: {lane.edits.join(", ")}</Quiet> : null}
           {lane.declared.length ? <Quiet>Its plan names: {lane.declared.join(", ")}</Quiet> : null}

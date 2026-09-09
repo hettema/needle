@@ -628,15 +628,21 @@ def move(
     card: str,
     prompt: str | None = None,
     spent: bool = True,
+    reason: str | None = None,
 ) -> Launch:
     """Move a session to another slot: stop it where it runs, resume it where
     the handoff or the rule names, or start it fresh with its brief when the
     transcript is above the resume limit. One hop per call.
 
     `prompt` is what the resumed session is told (the owner's answer, from
-    the Answer door); without it the handoff's words or CONTINUE. `spent`
-    says whether the slot it ran on is used up: a move on a wall rules the
-    slot out, a resume after an answer or a death prefers to stay put."""
+    the Answer door); without it the handoff's words or CONTINUE — and
+    CONTINUE says the subscription ran out, which is true of a wall alone,
+    so a resume after a death the machine named passes the cause's own
+    words as the prompt (plan 68, item 1). `spent` says whether the slot it
+    ran on is used up: a move on a wall rules the slot out, a resume after
+    an answer or a death prefers to stay put. `reason` is what the ledger
+    records for the move when the caller knows better than the wall or the
+    two request words: the cause the board resumed after."""
     name = session.name
     if session.slot == codex.SLOT:
         return dead(
@@ -732,7 +738,8 @@ def move(
             attempts=attempts,
             reason=verified.reason,
         )
-    reason = wall.reason if wall else (RESUMED_WITH_ANSWER if prompt else MOVED_BY_REQUEST)
+    if reason is None:
+        reason = wall.reason if wall else (RESUMED_WITH_ANSWER if prompt else MOVED_BY_REQUEST)
     if fresh:
         assert size is not None and verified.session_id is not None
         reason += (

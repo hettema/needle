@@ -22,6 +22,7 @@ from domain.audit import AuditEntry, AuditKind
 from domain.card import Actor, Card
 from domain.column import Column
 from domain.document import DocumentKind
+from domain.ending import Cause, Death, Disposition, Park
 from domain.evidence import Evidence
 from domain.hook import HookEvent, HookKind
 from domain.lane import (
@@ -70,8 +71,11 @@ class LaneFacts(BaseModel):
     """Windows the runtime holds open."""
     rescues: dict[str, list[Rescue]]
     """By session id."""
-    deaths: dict[str, str]
-    """The machine's reason a session ended, by session id, when known."""
+    deaths: dict[str, Death]
+    """Why a session's process is gone, by session id, as the board could
+    establish it at the end (plan 68, item 1)."""
+    parks: dict[int, Park] = {}
+    """The park standing on each card's lane, by card number (plan 68, item 3)."""
     worktrees: dict[str, str | None]
     """Worktree path → branch, from git."""
     now: datetime
@@ -92,6 +96,28 @@ def is_question(text: str | None) -> bool:
         return False
     tail = [line for line in text.strip().splitlines() if line.strip()]
     return bool(tail) and _QUESTION_TAIL.search(tail[-1]) is not None
+
+
+_ASKS_OWNER = re.compile(
+    r"\bnothing (?:can move|moves|proceeds|happens) until you\b"
+    r"|\byour (?:ruling|call|decision|word|answer)\b"
+    r"|\buntil you (?:rule|decide|answer|say|confirm)\b",
+    re.I,
+)
+
+
+def asks_owner(text: str | None) -> bool:
+    """Whether a session's whole last message puts a decision to the owner
+    (plan 68, ruling 7). `is_question`'s test on the last line is the door's
+    discriminator for a live session; a dead one is read whole: a question
+    mark closing any line, or a sentence that says nothing moves until he
+    rules — #452's "nothing can move until you rule" ended in no question
+    mark and was read as mid-work."""
+    if not text:
+        return False
+    if any(_QUESTION_TAIL.search(line) for line in text.strip().splitlines() if line.strip()):
+        return True
+    return _ASKS_OWNER.search(text) is not None
 
 
 def first_line(text: str | None, limit: int = 160) -> str | None:
@@ -257,6 +283,9 @@ def lane_for(card: Card, facts: LaneFacts) -> Lane:
 
     question: str | None = None
     died: str | None = None
+    cause: Cause | None = None
+    park = facts.parks.get(card.number)
+    parked = park.words if park is not None and park.lifted_at is None else None
     # The registry's word goes stale across a resume (verified live
     # 2026-09-04: a resumed session read `blocked` with the previous life's
     # detail after its own turn had ended). A Stop the hook pushed after the
@@ -282,10 +311,28 @@ def lane_for(card: Card, facts: LaneFacts) -> Lane:
         where = where_of(winner)
         if winner.wall is not None:
             state = LaneState.MOVING
+            # The moving sentence reads the cause the handoff carries, never
+            # the existence of a handoff (plan 68, item 3): the machine's
+            # connection recovery and its switch-back write the same file.
+            asks = winner.wall.cause
+            if asks == Cause.RECOVERED:
+                what = (
+                    f"the session on it stopped on a dropped connection and the connection is "
+                    f"back; it is being put back to work on {winner.wall.account}"
+                )
+            elif asks == Cause.STRONGER_MODEL:
+                what = (
+                    f"the stronger model is back for the session on it; it is being moved onto "
+                    f"it on {winner.wall.account}"
+                )
+            else:
+                what = (
+                    f"the session on it ran out of allowance on {winner.slot} and is moving to "
+                    f"{winner.wall.account}"
+                )
             sentence = say(
                 Meaning.LIVE,
-                f"the session on it ran out of allowance on {winner.slot} and is moving to "
-                f"{winner.wall.account}",
+                what,
                 why=first_line(winner.wall.reason),
                 then="it carries on by itself once it lands",
             )
@@ -348,7 +395,9 @@ def lane_for(card: Card, facts: LaneFacts) -> Lane:
     elif winner is not None or record is not None or events or on_disk:
         state = LaneState.ENDED
         session_id = winner.session_id if winner is not None else None
-        died = facts.deaths.get(session_id) if session_id else None
+        death = facts.deaths.get(session_id) if session_id else None
+        if death is not None:
+            died, cause = death.words, death.cause
         if died is None and gone:
             died = "its own copy of the code is gone from disk"
         if died is None:
@@ -377,8 +426,25 @@ def lane_for(card: Card, facts: LaneFacts) -> Lane:
         when = f"the session on it ended {ago(last_seen, facts.now)} ago"
         # Only a fold says the work landed; a level checkout beside an
         # unfolded lane says nothing about this card, and the face is red.
+        # A lane that folded is finished, not dead: its sentence leads with
+        # the fold and names no cause of death, and the `died` line under
+        # the band is for a lane that died (plan 68, item 1). A parked lane
+        # is the machine's: it says what it waits on and comes back by
+        # itself, so nothing is asked of him and the face is quiet.
         if folded:
-            sentence = say(Meaning.QUIET, when, why="; ".join(landed))
+            died, cause = None, None
+            sentence = say(
+                Meaning.QUIET,
+                f"its work landed on the shared branch and {when}",
+                why="; ".join(landed[1:]) or None,
+            )
+        elif parked is not None:
+            sentence = say(
+                Meaning.QUIET,
+                f"{when} and the board brings it back by itself",
+                why=died,
+                then=parked,
+            )
         elif on_disk:
             sentence = say(
                 Meaning.BROKEN,
@@ -412,6 +478,8 @@ def lane_for(card: Card, facts: LaneFacts) -> Lane:
         window_open=window_open,
         hands_on_since=since if state in HANDS_ON else None,
         died=died,
+        cause=cause,
+        park=parked if state == LaneState.ENDED else None,
         moved=moved,
         folded=folded,
         trunk_synced=trunk_synced,
@@ -572,6 +640,43 @@ def close_is_current(card: Card, history: list[AuditEntry], since: datetime | No
     if since is None:
         return True
     return _row_written_after(history, RowKind.DELIVERED, since)
+
+
+def owner_decision_outstanding(card: Card) -> str | None:
+    """A decision of the owner's still standing on the card's rows: an ASK
+    or a Q row, or a RULING with no RULED beneath it (plan 68, ruling 7)."""
+    for kind in (RowKind.ASK, RowKind.Q):
+        row = next((r for r in card.rows if r.kind == kind), None)
+        if row is not None:
+            return f"the card carries a {kind.value} row: {first_line(row.text)}"
+    ruling = next((r for r in card.rows if r.kind == RowKind.RULING), None)
+    if ruling is not None and not has_row(card, RowKind.RULED):
+        return f"the card carries a RULING row nobody has ruled on: {first_line(ruling.text)}"
+    return None
+
+
+def disposition(
+    card: Card, lane: Lane, history: list[AuditEntry], since: datetime | None
+) -> tuple[Disposition, str]:
+    """What the work stood at when the session stopped, read from the
+    card's record before any recovery (plan 68, item 4 and ruling 7): a
+    current close is finished work whatever the lane's row says; a
+    question, an owner's row or his own move out of Executing is his; and
+    only the rest is unfinished. `since` is this life of the lane, as the
+    exit rule reads it. The registry's state and the transcript's last
+    line are never read here: they say what the session was doing."""
+    if close_landed(card) and close_is_current(card, history, since):
+        return Disposition.CLOSED, "its close landed: the plan is archived and DELIVERED is written"
+    if lane.state == LaneState.ASKING and lane.question:
+        return Disposition.OWNERS, f"it asked you: {last_line(lane.question)}"
+    if lane.state == LaneState.ENDED and asks_owner(lane.said):
+        return Disposition.OWNERS, f"its last words put a decision to you: {last_line(lane.said)}"
+    outstanding = owner_decision_outstanding(card)
+    if outstanding is not None:
+        return Disposition.OWNERS, outstanding
+    if owner_moved_out_after(history, since):
+        return Disposition.OWNERS, "you moved the card out of Executing yourself"
+    return Disposition.UNFINISHED, "no close landed and no question stands on the card"
 
 
 class Exit(BaseModel):
@@ -776,8 +881,7 @@ def why_this_driver(placement: Placement) -> str:
     if tier is None:
         return placement.why
     said = (
-        f"{placement.why}; your ruling of {tier.ruled_on.isoformat()} "
-        f"puts it in tier {tier.rank}"
+        f"{placement.why}; your ruling of {tier.ruled_on.isoformat()} puts it in tier {tier.rank}"
     )
     return f"{said} ({tier.why})" if tier.why else said
 

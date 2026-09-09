@@ -32,6 +32,7 @@ MODULES: list[str] = [
     "session",
     "window",
     "launch",
+    "ending",
     "hook",
     "signal",
     "lane",

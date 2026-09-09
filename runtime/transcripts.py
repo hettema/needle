@@ -176,3 +176,29 @@ def _cwd_in(path: Path) -> str | None:
     except OSError:
         return None
     return None
+
+
+def last_activity(cwd: str, session_id: str) -> datetime | None:
+    """When the session's transcript last grew, from the newest dated record
+    in its tail (plan 68, item 1): the last thing the process is known to
+    have done, which is what a death that nothing names is dated by. None
+    with no transcript or no dated record in the tail."""
+    path = machine.transcript_path(cwd, session_id)
+    try:
+        with path.open("rb") as f:
+            f.seek(max(0, path.stat().st_size - TAIL_BYTES))
+            tail = f.read().decode("utf-8", errors="replace")
+    except OSError:
+        return None
+    found: datetime | None = None
+    for line in tail.splitlines():
+        try:
+            record = json.loads(line)
+        except ValueError:
+            continue
+        if not isinstance(record, dict):
+            continue
+        at = _when(record.get("timestamp"))
+        if at is not None and (found is None or at > found):
+            found = at
+    return found

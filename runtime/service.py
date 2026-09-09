@@ -10,12 +10,13 @@ from pathlib import Path
 
 from domain.call import Call, CallVerdict
 from domain.dial import Meminfo, ScopeHeld
+from domain.ending import Boot, Named, Sighting
 from domain.gate import Gate
 from domain.handout import Dispatch
 from domain.launch import Launch, Rescue, Start, Stopped, WindowlessStart
 from domain.session import Session, SessionKind
 from domain.signal import Signal
-from domain.slot import Placement, Rung, Slot, Where
+from domain.slot import Handoff, Limits, Placement, Rung, Slot, Where
 from domain.watercooler import Note
 from domain.window import Focused, Opened, Window, WindowKind
 from infrastructure import clock
@@ -27,6 +28,7 @@ from runtime import (
     git,
     handoffs,
     launch,
+    limits,
     machine,
     reasons,
     registry,
@@ -153,7 +155,7 @@ class Runtime:
         not `start`, which is the owner's click."""
         return launch.windowless(self.store, request)
 
-    def move(self, ref: str, to_slot: str | None) -> Launch:
+    def move(self, ref: str, to_slot: str | None, *, reason: str | None = None) -> Launch:
         session = self.session(ref)
         to: Placement | None = None
         if to_slot is not None:
@@ -168,7 +170,13 @@ class Runtime:
                 )
             to = asked.placement
         record = self.store.session_slot(session.session_id)
-        return launch.move(self.store, session, to=to, card=record.card if record else session.name)
+        return launch.move(
+            self.store,
+            session,
+            to=to,
+            card=record.card if record else session.name,
+            reason=reason,
+        )
 
     def stop(self, ref: str) -> Stopped:
         return launch.stop(self.session(ref))
@@ -186,18 +194,65 @@ class Runtime:
         """Bring the session's open window forward, proved by the compositor."""
         return windows.focus_window(self.store, self.session(ref))
 
-    def resume(self, ref: str, *, prompt: str | None, card: str | None = None) -> Launch:
+    def resume(
+        self,
+        ref: str,
+        *,
+        prompt: str | None,
+        card: str | None = None,
+        placement: Placement | None = None,
+        reason: str | None = None,
+    ) -> Launch:
         """Stop the session where it runs and resume it where the rule says,
-        preferring the slot it is on, with the owner's words when given."""
+        preferring the slot it is on, with the owner's words when given.
+        The board's own resume after a death it named (plan 68, item 5)
+        passes the rung the rule answered now as `placement` — a handoff
+        written days ago names a rung that may be spent — and the cause as
+        `reason`, so the ledger says what was resumed after."""
         session = self.session(ref)
         record = self.store.session_slot(session.session_id)
         return launch.move(
             self.store,
             session,
-            to=None,
+            to=placement,
             card=card or (record.card if record else session.name),
             prompt=prompt,
             spent=False,
+            reason=reason,
+        )
+
+    def expire_handoff(self, handoff: Handoff) -> None:
+        """Remove a handoff nothing will act on (plan 68, item 3): one naming
+        a lane whose work is finished, or a session that is gone."""
+        handoffs.remove(handoff)
+
+    def boots(self) -> list[Boot]:
+        return reasons.boots()
+
+    def limits(self, slot: str) -> Limits | None:
+        return limits.snapshot(slot)
+
+    def last_activity(self, session: Session) -> datetime | None:
+        return transcripts.last_activity(session.worktree or session.cwd, session.session_id)
+
+    def cause_of(
+        self,
+        session: Session,
+        *,
+        units: list[str],
+        sighting: Sighting | None,
+        boots_seen: list[Boot],
+        now: datetime,
+    ) -> Named:
+        """What took the session's process, from the evidence that held it
+        (plan 68, item 1)."""
+        return reasons.cause_of(
+            session,
+            units=units,
+            sighting=sighting,
+            boots_seen=boots_seen,
+            last_activity=self.last_activity(session),
+            now=now,
         )
 
     def call(
@@ -311,8 +366,20 @@ class Runtime:
         return signals.read(signal, project_path)
 
     def why_ended(self, session: Session) -> str | None:
+        """Why a session with no lane — a reading, a called colleague —
+        ended, in one line: the same reader a lane's death gets, over the
+        space the runtime put it in."""
         record = self.store.session_slot(session.session_id)
-        return reasons.why_ended(session, record.scope if record else session.scope)
+        scope = record.scope if record else session.scope
+        named = reasons.cause_of(
+            session,
+            units=[scope] if scope else [],
+            sighting=self.store.sighting(session.session_id),
+            boots_seen=reasons.boots(),
+            last_activity=self.last_activity(session),
+            now=clock.now(),
+        )
+        return named.words
 
     def is_repository(self, path: str) -> bool:
         return (Path(path) / ".git").exists()

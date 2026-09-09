@@ -18,6 +18,7 @@ from board.signals import parse_watch
 from domain.audit import AuditEntry, AuditKind
 from domain.card import Actor, Card, CardOrigin, DocumentLink, Place
 from domain.column import Column
+from domain.ending import Cause, Death
 from domain.document import DocumentKind
 from domain.gate import Gate
 from domain.hook import HookEvent, HookKind
@@ -207,7 +208,9 @@ def test_a_stop_the_hook_pushed_wins_over_the_registrys_stale_word():
             events=[event(HookKind.STOP, "THANKS", at=NOW - timedelta(seconds=20))],
         ),
     )
-    assert lane.state == LaneState.STOPPED and lane.sentence.endswith(": THANKS. It waits for your word.")
+    assert lane.state == LaneState.STOPPED and lane.sentence.endswith(
+        ": THANKS. It waits for your word."
+    )
     older = lane_for(
         card(),
         facts(
@@ -324,17 +327,55 @@ def test_a_session_with_no_process_is_an_ended_lane_with_the_machines_reason():
             records=[record],
             worktrees={LANE: "card-7-the-thing"},
             deaths={
-                "aaaa0001-0000-4000-8000-000000000000": "the journal says: Killed process 4242"
+                "aaaa0001-0000-4000-8000-000000000000": Death(
+                    session_id="aaaa0001-0000-4000-8000-000000000000",
+                    project="proj",
+                    card_number=7,
+                    cause=Cause.LANE_KILLED,
+                    words="the journal says: Killed process 4242",
+                    evidence="Killed process 4242",
+                    last_alive_at=NOW,
+                    named_at=NOW,
+                    settled=True,
+                )
             },
         ),
     )
     assert lane.state == LaneState.ENDED and lane.hands_on_since is None
-    assert lane.died == "the journal says: Killed process 4242"
+    # A lane that folded is finished, not dead: the fold leads and no cause
+    # of death is named, whatever the reader established (plan 68, item 1).
+    assert lane.died is None and lane.cause is None
     assert lane.sentence == (
-        "Nothing for you: the session on it ended 1 min ago. Its work landed on the shared "
-        "branch."
+        "Nothing for you: its work landed on the shared branch and the session on it ended "
+        "1 min ago."
     )
     assert lane.folded and not lane.trunk_synced
+    lost = lane_for(
+        card(),
+        facts(
+            sessions=[session(pid=None, state=SessionState.ENDED, recorded="stopped")],
+            records=[record.model_copy(update={"folded_at": None})],
+            worktrees={LANE: "card-7-the-thing"},
+            deaths={
+                "aaaa0001-0000-4000-8000-000000000000": Death(
+                    session_id="aaaa0001-0000-4000-8000-000000000000",
+                    project="proj",
+                    card_number=7,
+                    cause=Cause.LANE_KILLED,
+                    words="the journal says: Killed process 4242",
+                    evidence="Killed process 4242",
+                    last_alive_at=NOW,
+                    named_at=NOW,
+                    settled=True,
+                )
+            },
+        ),
+    )
+    assert lost.died == "the journal says: Killed process 4242" and lost.cause == Cause.LANE_KILLED
+    assert lost.sentence == (
+        "Something is wrong: the session on it ended 1 min ago with nothing landed. The journal "
+        "says: Killed process 4242. Open the card to resume it or start again."
+    )
 
 
 def test_a_discussion_is_never_hands_on_but_is_said():
@@ -518,7 +559,9 @@ def test_start_says_the_slot_and_model_the_rule_named_and_refuses_by_name():
     gateless = doors(card(gate=None), fresh, gate_named=False)
     assert not gateless.start.offered and "names no effort level" in gateless.start.why
     elsewhere = doors(card(column=Column.BACKLOG), fresh)
-    assert "a card starts from Up next or Planned, and this one is in Backlog" in elsewhere.start.why
+    assert (
+        "a card starts from Up next or Planned, and this one is in Backlog" in elsewhere.start.why
+    )
     nowhere = doors(card(), fresh, placement=None, placement_note="no account with headroom")
     assert not nowhere.start.offered and "no account has room to run it" in nowhere.start.why
     assert not nowhere.discuss.offered
@@ -646,10 +689,16 @@ def test_an_ended_lane_offers_look_and_resume_and_never_watch():
     )
     after_removal = doors(card(), gone)
     assert after_removal.start.offered, "a removed worktree is a lane that can start again"
-    assert not after_removal.look.offered and "own copy of the code is gone" in after_removal.look.why
+    assert (
+        not after_removal.look.offered and "own copy of the code is gone" in after_removal.look.why
+    )
     with_worktree = lane_for(card(), facts(worktrees={LANE: "card-7-the-thing"}))
     blocked = doors(card(), with_worktree)
-    assert not blocked.start.offered and "work on it began before and its own copy of the code is still on disk" in blocked.start.why
+    assert (
+        not blocked.start.offered
+        and "work on it began before and its own copy of the code is still on disk"
+        in blocked.start.why
+    )
 
 
 def test_the_owners_signal_question_opens_at_its_due_time():

@@ -13,8 +13,14 @@ from pathlib import Path
 
 from pydantic import BaseModel
 
+from domain.ending import Cause
 from domain.slot import Handoff
 from runtime import machine
+
+
+def cause_of(handoff: Handoff) -> Cause:
+    """What the handoff asks for (plan 68, item 3): the file's own word."""
+    return handoff.cause
 
 
 class Handoffs(BaseModel):
@@ -60,6 +66,7 @@ def read_handoff(path: Path) -> Handoff:
         pid=int(pid) if isinstance(pid, int | float | str) and str(pid).isdigit() else None,
         stopped=bool(stopped) if isinstance(stopped, bool) else None,
         path=str(path),
+        why=str(blob.get("why") or ""),
     )
 
 

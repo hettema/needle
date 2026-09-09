@@ -8,6 +8,7 @@ reaches the machine. The facts here were verified on this machine on
 """
 
 import contextlib
+import json
 import os
 import re
 import shutil
@@ -70,6 +71,17 @@ def handoff_dir() -> Path:
     cache = os.environ.get("XDG_CACHE_HOME")
     base = Path(cache) if cache else Path.home() / ".cache"
     return _path("NEEDLE_HANDOFF_DIR", base / "omarchy" / "claude-acct" / "handoff" / "bg")
+
+
+def acct_cache_dir() -> Path:
+    """`claude-acct`'s own cache: one `<slot>.json` per subscription with
+    its last limits reading — what is spent and when each allowance comes
+    back (`resets`, written since 2026-09-04) — beside the handoff and
+    discussion directories. Read for a park's end (plan 68, item 3), never
+    written."""
+    cache = os.environ.get("XDG_CACHE_HOME")
+    base = Path(cache) if cache else Path.home() / ".cache"
+    return _path("NEEDLE_ACCT_CACHE", base / "omarchy" / "claude-acct")
 
 
 def discussion_dir() -> Path:
@@ -517,3 +529,51 @@ def unit_name(prefix: str, label: str, suffix: str = "scope") -> str:
     """A transient unit's name, with everything systemd would refuse written as `-`."""
     safe = re.sub(r"[^A-Za-z0-9:_.\\-]", "-", label).strip("-") or "unnamed"
     return f"{prefix}{safe}.{suffix}"
+
+
+def boots() -> list[dict[str, object]]:
+    """The machine's boots as the journal lists them (`journalctl
+    --list-boots -o json`, verified 2026-09-09): one object per boot with
+    `index` (0 is this boot, negative the previous ones), `boot_id`, and
+    `first_entry` and `last_entry` in microseconds since the epoch. Empty
+    when there is no journal to ask, which is only a boot unknown."""
+    try:
+        done = run(
+            [which("journalctl"), "--list-boots", "-o", "json", "--no-pager"], timeout=20
+        )
+    except (OSError, Timeout, CommandMissing):
+        return []
+    if done.returncode != 0:
+        return []
+    try:
+        listed = json.loads(done.stdout)
+    except ValueError:
+        return []
+    return [b for b in listed if isinstance(b, dict)] if isinstance(listed, list) else []
+
+
+def journal(unit: str, lines: int) -> list[str]:
+    """The last `lines` of a user unit's journal, each opening with its
+    time (`-o short-iso`: `2026-09-05T21:32:51+0200 host systemd[1]: …`),
+    so a reader can place a line inside or outside a session's life.
+    Empty when the journal cannot be asked, which is only a reason unknown."""
+    try:
+        done = run(
+            [
+                which("journalctl"),
+                "--user",
+                "-u",
+                unit,
+                "-n",
+                str(lines),
+                "--no-pager",
+                "-o",
+                "short-iso",
+            ],
+            timeout=20,
+        )
+    except (OSError, Timeout, CommandMissing):
+        return []
+    if done.returncode != 0:
+        return []
+    return [line.strip() for line in done.stdout.splitlines() if line.strip()]

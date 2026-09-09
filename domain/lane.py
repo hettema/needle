@@ -16,6 +16,7 @@ from pydantic import BaseModel, field_validator
 
 from domain.column import Column
 from domain.document import Item, Review
+from domain.ending import Cause
 from domain.meaning import opened
 from domain.session import Session
 from domain.slot import Placement
@@ -146,7 +147,14 @@ class Lane(BaseModel):
     window_open: bool
     hands_on_since: datetime | None
     died: str | None
-    """The machine's reason when the lane ended without a close."""
+    """The machine's reason when the lane ended without a close, read at the
+    end from the evidence that held the process (plan 68, item 1)."""
+    cause: Cause | None = None
+    """The cause behind `died`, typed, so the loop and the dial can tell a
+    machine's ending from the session's own; None while nothing ended."""
+    park: str | None = None
+    """What the board waits on before it brings the lane back, and until
+    when, as the card says it; None while no park stands (plan 68, item 3)."""
     moved: str | None
     """The rescue sentence, when the runtime moved this lane in its current life."""
     folded: bool
