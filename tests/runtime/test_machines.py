@@ -594,8 +594,15 @@ def test_a_machine_with_work_on_it_is_not_forgotten(two_machines, repo: Path, st
     )
     with pytest.raises(StoreRefusal, match="still holds the lane of p #6"):
         store.remove_machine("rented")
-    # A lane gone from the machine leaves only history, which is not work.
+    # A lane gone from the machine still leaves the session started there
+    # today: a reading has no worktree, and a lane's is read a pass later
+    # than its start (Codex's fourth pass), so a day must pass first.
     store.record_lane(store.lanes("p")[0].model_copy(update={"gone_at": NOW}))
+    with pytest.raises(StoreRefusal, match="had a session started on it in the last day"):
+        store.remove_machine("rented")
+    old = store.session_slot(started.session.session_id)
+    assert old is not None
+    store.record_session_slot(old.model_copy(update={"recorded_at": NOW - timedelta(days=2)}))
     assert store.remove_machine("rented")
     # A name the board does not know routes nowhere, never here.
     ghost = runtime.machine_named("moon")

@@ -460,7 +460,13 @@ def expire_handoff(runtime: Runtime, args: argparse.Namespace) -> int:
 
 def room(runtime: Runtime, args: argparse.Namespace) -> int:
     """This machine against the floor, by the one rule the head uses."""
-    reading = runtime.room(hold=args.hold)
+    owners: dict[str, tuple[str, int]] = {}
+    for spec in args.owners or []:
+        unit, _, card = spec.partition("=")
+        slug, _, number = card.rpartition(":")
+        if unit and slug and number.isdigit():
+            owners[unit] = (slug, int(number))
+    reading = runtime.room(hold=args.hold, owners=owners or None)
     text = reading.sentence or (
         f"room: {_gb(reading.available)} available, {_gb(reading.swap_free)} swap free, "
         f"floor {_gb(reading.floor)}"
@@ -941,6 +947,12 @@ def register(sub: "argparse._SubParsersAction[argparse.ArgumentParser]") -> None
     p_room = parser("room", "this machine against the floor: memory, swap, every group", room)
     p_room.add_argument(
         "--hold", action="store_true", help="give every group without it the floor as its high mark"
+    )
+    p_room.add_argument(
+        "--owner",
+        dest="owners",
+        action="append",
+        help="unit=slug:number — the card a group is, so the reading names it (the wire's form)",
     )
 
     parser("machines", "every machine the board knows, with what each holds", machines)

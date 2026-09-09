@@ -285,7 +285,7 @@ class Runtime:
                 room = self.room(hold=hold, owners=owners, read=read)
             else:
                 try:
-                    room = self._remote(m).room(hold=hold)
+                    room = self._remote(m).room(hold=hold, owners=owners)
                 except _UNREACHABLE as error:
                     why = str(error)
             latest: dict[str, Timing] = {}

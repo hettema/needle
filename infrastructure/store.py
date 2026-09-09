@@ -1819,8 +1819,26 @@ class Store:
                     f"{name} still holds the lane of {lanes.project_slug} #{lanes.card_number}; "
                     "fold or remove it first"
                 )
-            # Session records are history and stay under the name; only a
-            # lane still on the machine is work (Codex's third pass).
+            # A session record is history once it is old; a recent one may
+            # be a session still running there whose worktree the loop has
+            # not read yet, or a reading that has no worktree at all (Codex's
+            # fourth pass: a start writes its record before the lane is
+            # discovered). A day is the bound: a session that ran a day ago
+            # and is still alive is a lane, and the lane guard above holds.
+            recent = session.scalar(
+                select(SessionSlotRow)
+                .where(
+                    SessionSlotRow.machine == name,
+                    SessionSlotRow.recorded_at >= datetime.now(UTC) - timedelta(days=1),
+                )
+                .order_by(SessionSlotRow.recorded_at.desc())
+            )
+            if recent is not None:
+                raise StoreRefusal(
+                    f"{name} had a session started on it in the last day "
+                    f"({recent.session_id[:8]}…, {recent.card}); a machine with work on it is "
+                    "not forgotten until a day has passed"
+                )
             session.delete(row)
             return True
 

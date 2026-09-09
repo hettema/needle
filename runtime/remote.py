@@ -133,8 +133,13 @@ class Remote:
             argv += ["--tried", _tried_argument(tried)]
         return self._ask(argv, Where, timeout=VERB_SECONDS)
 
-    def room(self, *, hold: bool) -> Headroom:
-        return self._ask(["room", *(["--hold"] if hold else [])], Headroom)
+    def room(
+        self, *, hold: bool, owners: dict[str, tuple[str, int]] | None = None
+    ) -> Headroom:
+        argv = ["room", *(["--hold"] if hold else [])]
+        for unit, (slug, number) in (owners or {}).items():
+            argv += ["--owner", f"{unit}={slug}:{number}"]
+        return self._ask(argv, Headroom)
 
     def scopes(self) -> list[ScopeHeld]:
         return self._ask_list(["scopes", "--held"], ScopeHeld)

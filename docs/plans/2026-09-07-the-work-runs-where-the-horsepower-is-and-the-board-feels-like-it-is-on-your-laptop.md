@@ -176,11 +176,23 @@ the memory killer's, against the machine each session's slot record names
 available on that machine over the last two weeks, from a mark the loop
 writes on every pass (`high_water`, one row per machine per day). Build
 timings are written by hand with `needle machine timing <name> <what>
-<seconds>` and read back by `needle machines --json`. The laptop's three
-numbers were handed to the execution role in the first session (three
-runs each of `npm ci`, `vitest run`, `uv run pytest -q` in the main
-checkout, medians kept); the numbers land in this item when the hand's
-report is read, and the resuming session re-runs one by hand first.
+<seconds>` and read back by `needle machines --json`. The laptop's
+frontend numbers exist: the execution role ran `npm ci` three times (2.00,
+3.29, 1.18 s; median 2.00) and `vitest run` three times (14.66, 11.64,
+10.73 s; median 11.64, 76 tests green) in the main checkout on the evening
+of 2026-09-09, and the lane re-ran one of each by hand before writing them
+(3.2 s and 20.4 s, on a laptop then running two other lanes' suites). The
+backend number does not exist yet, and the reason is itself the plan's
+finding: three attempts at `uv run pytest -q` in the main checkout that
+evening — the hand's, and two of the lane's own — were each killed by the
+memory killer or the harness while two other lanes ran their suites, the
+last with the lane's whole process group (48 processes at 22:03Z), on a
+laptop reading 2 GB available. The number is taken on a quiet laptop by
+the resuming session, once, then twice more, and written with `needle
+machine timing laptop pytest <seconds>` beside the two above, which are
+written at the fold. The laptop's memory high-water mark is the board's
+own reading from the fold on; that evening's sampler read 1.9 GB
+available at its lowest.
 
 ## Terrain
 
