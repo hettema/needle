@@ -67,10 +67,14 @@ def summary_of(notice: Notice) -> str:
     return f"Needle · {notice.project_name} #{notice.card_number}: {notice.title}"
 
 
-def tell(notice: Notice, opens: list[str]) -> Told:
+def tell(notice: Notice, opens: list[str], ledger: Path) -> Told:
     """Raise the notice: `notify-send -u critical -t 0` with one action, and
     the moment's sound beside it; `opens` runs when the button is pressed.
-    Answers whether the machine took it and the words the card records."""
+    Answers whether the machine took it and the words the card records.
+    When the popup is answered or dismissed the shell appends one line to
+    `ledger` — the stamp, the project, the card, and `default` or
+    `dismissed` — which is the only trace of how long a popup stood, and
+    what the plan's own reading (item 4) discriminates on."""
     try:
         notifier = machine.which("notify-send")
         player = machine.which("pw-play")
@@ -90,9 +94,18 @@ def tell(notice: Notice, opens: list[str]) -> Told:
         notice.words,
     ]
     play = [player, str(SOUND_DIR / SOUNDS[notice.moment])]
+    record = [
+        "printf",
+        "%s %s %s %s\\n",
+        "$(date -u +%FT%TZ)",
+        notice.project,
+        str(notice.card_number),
+        "${chosen:-dismissed}",
+    ]
     script = (
         f"{shlex.join(play)} >/dev/null 2>&1 & "
         f'chosen="$({shlex.join(notify)})"; '
+        f"{_unquoted(record)} >> {shlex.quote(str(ledger))}; "
         f'[ "$chosen" = {ACTION} ] && exec {shlex.join(opens)}'
     )
     try:
@@ -100,6 +113,15 @@ def tell(notice: Notice, opens: list[str]) -> Told:
     except OSError as error:
         return Told(raised=False, words=f"could not tell you: {error}")
     return Told(raised=True, words=notice.words)
+
+
+def _unquoted(words: list[str]) -> str:
+    """The record line's words for the shell: the literals quoted, the two
+    that the shell must expand — the stamp and the chosen action — left as
+    they are."""
+    return " ".join(
+        word if word.startswith("$") else shlex.quote(word) for word in words
+    )
 
 
 def board_entry(slug: str) -> BoardEntry:
@@ -142,18 +164,25 @@ def show(slug: str, number: int) -> str:
     # The window already on the card's project first — no page has to
     # navigate — else any board of ours, whose page switches project
     # (live on 2026-09-09 the first window under the prefix was another
-    # project's while the card's own stood beside it).
+    # project's while the card's own stood beside it). A board that could
+    # not be asked opens no card by being focused, so the entry is opened
+    # on the card's page instead: the effect, or a refusal by name.
     open_boards = windows.present_under(f"{prefix}{slug}-") or windows.present_under(prefix)
-    if open_boards:
+    if open_boards and asked is None:
         address = next(iter(open_boards))
         windows.focus_address(address)
-        return f"Showed #{number} on {slug}: {asked}; focused the board's window ({address})."
+        return (
+            f"Showed #{number} on {slug}: the board was asked to open it; "
+            f"focused the board's window ({address})."
+        )
     argv = [_APP_URL.sub(f"--app={url}", word) for word in entry.argv]
     machine.spawn(argv)
-    return f"Showed #{number} on {slug}: {asked}; no board window was open, so {url} was opened."
+    why = asked or "no board window was open"
+    return f"Showed #{number} on {slug}: {why}, so {url} was opened."
 
 
-def _ask_board(base: str, slug: str, number: int) -> str:
+def _ask_board(base: str, slug: str, number: int) -> str | None:
+    """None when the board took the request; else why it could not be asked."""
     argv = [
         machine.which("curl"),
         "-sS",
@@ -175,5 +204,5 @@ def _ask_board(base: str, slug: str, number: int) -> str:
     code = lines[-1].strip() if lines else ""
     if done.returncode != 0 or not code.startswith("2"):
         return f"the board could not be asked ({(done.stderr or code).strip()[:120]})"
-    return "the board was asked to show it"
+    return None
 

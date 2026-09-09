@@ -14,6 +14,7 @@ import json
 import os
 import time
 from datetime import timedelta
+from pathlib import Path
 
 import pytest
 from fastapi.testclient import TestClient
@@ -97,6 +98,12 @@ def test_a_lane_that_folds_and_closes_rings_once_as_the_card_enters_executed(
     shell = machine_floor.state()["notified"]
     assert len(shell) == 1
     assert loops_mod.show_command("proj", CARD)[-3:] == ["show", "proj", "253"]
+    # The popup's own shell writes how it was answered beside the store.
+    ledger = Path(client.app.state.loops.live.store.path).parent / loops_mod.TOLD_LEDGER
+    deadline = time.time() + 5
+    while time.time() < deadline and not ledger.exists():
+        time.sleep(0.05)
+    assert ledger.read_text().splitlines()[0].endswith(" proj 253 dismissed")
 
     # The same exit, reconciled again: nothing more rings.
     reconcile(client)
@@ -114,27 +121,49 @@ def test_a_ring_the_record_owes_is_made_at_the_next_reconcile_and_a_failed_one_i
     runtime = client.app.state.loops.runtime
     real_tell = runtime.tell
 
-    # A crash between the move and the ring: the move landed, no `told` row
-    # follows it, and the next reconcile rings.
-    def crash(notice, opens):
+    # A crash between the move and the record: the move landed, no `told`
+    # row follows it, and the next reconcile rings.
+    def crash(self, live, cards, lanes):
         raise RuntimeError("the board died here")
 
-    monkeypatch.setattr(runtime, "tell", crash)
-    kill_lane(machine_floor, launched)
-    reconcile(client)
+    real_tell_owner = loops_mod.Loops._tell_owner
+    loops_mod.Loops._tell_owner = crash
+    try:
+        kill_lane(machine_floor, launched)
+        reconcile(client)
+    finally:
+        loops_mod.Loops._tell_owner = real_tell_owner
     assert column_of(client, CARD) == "Up next"
     assert told_rows(client) == [] and machine_floor.state()["notified"] == []
 
-    monkeypatch.setattr(runtime, "tell", real_tell)
     reconcile(client)
     (argv,) = rings(machine_floor, 1)
     assert argv[9].startswith("Moved Executing → Up next — the lane ended with nothing folded")
     assert len(told_rows(client)) == 1
 
+    # A crash between the record and the popup loses that one ring rather
+    # than ringing twice: the row is the judge, written first.
+    def die(notice, opens, ledger):
+        raise RuntimeError("died after the row")
+
+    monkeypatch.setattr(runtime, "tell", die)
+    client.post(f"/api/projects/proj/cards/{CARD}/resume")
+    assert column_of(client, CARD) == "Executing"
+    kill_lane(machine_floor, machine_floor.state()["launch_log"][-1])
+    reconcile(client)
+    assert column_of(client, CARD) == "Up next"
+    assert len(told_rows(client)) == 2
+    monkeypatch.setattr(runtime, "tell", real_tell)
+    reconcile(client)
+    time.sleep(0.3)
+    assert len(machine_floor.state()["notified"]) == 1 and len(told_rows(client)) == 2
+
     # A notifier that could not be reached: one row saying why, one warning,
     # and never a ring every thirty seconds for the same exit.
     monkeypatch.setattr(
-        runtime, "tell", lambda notice, opens: Told(raised=False, words="could not tell you: no")
+        runtime,
+        "tell",
+        lambda notice, opens, ledger: Told(raised=False, words="could not tell you: no"),
     )
     client.post(f"/api/projects/proj/cards/{CARD}/resume")
     assert column_of(client, CARD) == "Executing"
@@ -143,31 +172,28 @@ def test_a_ring_the_record_owes_is_made_at_the_next_reconcile_and_a_failed_one_i
     reconcile(client)
     assert column_of(client, CARD) == "Up next"
     assert told_rows(client)[0] == "Could not tell you: no"
+    assert told_rows(client)[1].startswith("Told you (moved on): Moved Executing → Up next")
     monkeypatch.setattr(runtime, "tell", real_tell)
     reconcile(client)
     time.sleep(0.3)
     assert len(machine_floor.state()["notified"]) == 1
-    assert len(told_rows(client)) == 2
+    assert len(told_rows(client)) == 4
 
 
-def test_a_lane_killed_by_the_machine_rings_the_reason_once(
+def test_a_lane_that_dies_for_a_cause_the_machine_cannot_name_rings_once_with_what_it_knows(
     client: TestClient, machine_floor: Floor
 ):
+    # A kill the machine can name (oom, a wall) it brings back by itself
+    # (#68), so the card never leaves Executing and nothing rings; a death
+    # it cannot name is parked as his, and that is the exit that rings.
     start(client)
     launched = machine_floor.state()["launch_log"][0]
-    machine_floor.update(
-        journal={
-            f"needle-{LANE}.scope": [
-                "claude[4242]: Killed process 4242 (claude) total-vm:9GB oom-kill",
-            ]
-        }
-    )
     kill_lane(machine_floor, launched)
     reconcile(client)
     assert column_of(client, CARD) == "Up next"
     (argv,) = rings(machine_floor, 1)
     assert argv[9].startswith("Moved Executing → Up next — the lane ended with nothing folded (")
-    assert "Killed process 4242 (claude)" in argv[9]
+    assert "the cause is not established" in argv[9]
     reconcile(client)
     time.sleep(0.3)
     assert len(machine_floor.state()["notified"]) == 1

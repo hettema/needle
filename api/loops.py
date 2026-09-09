@@ -66,6 +66,7 @@ from board.lane import (
     doors_for,
     entered_executing_at,
     exit_for,
+    first_line,
     lane_for,
     last_line,
     should_enter_executing,
@@ -178,12 +179,12 @@ at the next reconcile; a move older than an hour was on the board through
 his next look, and ringing for it now would be 0.1's toast from a poll —
 and at the first beat after this shipped every old exit on every board
 would have rung at once."""
-OWN_MOVE_SECONDS = 60.0
-"""A machine move out of Executing within this of the owner's own Stop on
-the card is his move (card #41, rulings): he was there, and the exit is the
-machine writing down what he did. His drag out of Executing is never a
-machine move, and his Start or answer a minute before a death is not the
-death."""
+TOLD_LEDGER = "told.log"
+"""Beside the store: one line per popup answered or dismissed, written by
+the popup's own shell (card #41, item 4) — the stamp, the project, the
+card, and `default` or `dismissed`. The plan's reading pairs it with the
+`told` rows to tell a popup dismissed in a minute from one that stood for
+hours."""
 TELL_GRACE_SECONDS = 60.0
 """How long a running card waits on him before its bell rings (card #41,
 item 3): a stop that becomes an exit inside the same minute is one ring,
@@ -1608,53 +1609,75 @@ class Loops:
                 continue
             history = self.live.store.history(slug, card.number)
             told = next((h for h in history if h.kind == AuditKind.TOLD), None)
-            notice = self._exit_owed(live, card, history, told, now) or self._wait_owed(
+            notice = self._exit_owed(live, card, lane, history, told, now) or self._wait_owed(
                 live, card, lane, told, now
             )
             if notice is None:
                 continue
-            outcome = self.runtime.tell(notice, show_command(slug, card.number))
-            if outcome.raised:
-                words = f"Told you ({notice.moment}): {outcome.words}"
-            else:
+            # The row before the popup: a crash between the two loses one
+            # ring rather than ringing twice for one thing (the plan's
+            # ruling; Codex's reading of the other order, 2026-09-09).
+            self.live.note(
+                slug,
+                card.number,
+                AuditKind.TOLD,
+                Actor.MACHINE,
+                f"Told you ({notice.moment}): {notice.words}",
+            )
+            ledger = Path(self.live.store.path).parent / TOLD_LEDGER
+            outcome = self.runtime.tell(notice, show_command(slug, card.number), ledger)
+            if not outcome.raised:
                 words = outcome.words[0].upper() + outcome.words[1:]
                 log.warning("#%s on %s: %s", card.number, slug, outcome.words)
-            self.live.note(slug, card.number, AuditKind.TOLD, Actor.MACHINE, words)
+                self.live.note(slug, card.number, AuditKind.TOLD, Actor.MACHINE, words)
 
     @staticmethod
     def _exit_owed(
         live: LiveProject,
         card: Card,
+        lane: Lane,
         history: list[AuditEntry],
         told: AuditEntry | None,
         now: datetime,
     ) -> Notice | None:
-        """The machine's last move out of Executing, when no `told` row
-        follows it, it is recent, and it was not the owner's own act
-        written down. `history` is newest first."""
-        move = next(
-            (
-                h
-                for h in history
-                if h.kind == AuditKind.MOVED
-                and h.actor == Actor.MACHINE
-                and h.from_place is not None
-                and h.from_place.column == Column.EXECUTING
-                and h.to_place is not None
-            ),
-            None,
-        )
-        if move is None or move.to_place is None:
+        """The card's newest move, when it is the machine's out of
+        Executing, no `told` row follows it, it is recent, the lane is not
+        parked to come back by itself, and it was not the owner's own Stop
+        written down. `history` is newest first. A newer move of any kind
+        — his drag, a resume's hands-on — supersedes the exit: an old exit
+        never rings over a card that is working again."""
+        move = next((h for h in history if h.kind == AuditKind.MOVED), None)
+        if (
+            move is None
+            or move.actor != Actor.MACHINE
+            or move.from_place is None
+            or move.from_place.column != Column.EXECUTING
+            or move.to_place is None
+        ):
             return None
         if told is not None and told.id > move.id:
             return None
         if (now - move.at).total_seconds() > TELL_HORIZON_SECONDS:
             return None
+        if lane.park is not None:
+            return None  # the machine brings it back by itself (#68): not his moment
+        # His Stop in this life of the lane — after the move that put the
+        # card in Executing and before the exit — makes the exit his: he
+        # was there. A Stop before a resume is another life's.
+        entry = next(
+            (
+                h
+                for h in history
+                if h.kind == AuditKind.MOVED
+                and h.id < move.id
+                and h.to_place is not None
+                and h.to_place.column == Column.EXECUTING
+            ),
+            None,
+        )
+        first = entry.id if entry is not None else 0
         his = any(
-            h.actor == Actor.OWNER
-            and h.kind == AuditKind.STOPPED
-            and h.id < move.id
-            and (move.at - h.at).total_seconds() <= OWN_MOVE_SECONDS
+            h.actor == Actor.OWNER and h.kind == AuditKind.STOPPED and first < h.id < move.id
             for h in history
         )
         if his:
@@ -1679,7 +1702,15 @@ class Loops:
             return None
         if lane_is_spent(card, lane):
             return None
-        since = lane.said_at or (lane.session.updated_at if lane.session is not None else None)
+        if lane.session is not None and lane.session.kind == SessionKind.INTERACTIVE:
+            return None  # his own terminal: he is there
+        # A question or a stop began when the hook said so; a prompt is the
+        # registry's word, and its own stamp is the wait's start — an older
+        # hook message's stamp would hide a new prompt behind an old ring.
+        if lane.state == LaneState.BLOCKED:
+            since = lane.session.updated_at if lane.session is not None else None
+        else:
+            since = lane.said_at
         if since is None:
             return None
         waited = (now - since).total_seconds()
@@ -1694,9 +1725,8 @@ class Loops:
                 f": {last_line(lane.said)}" if lane.said else ""
             )
         else:
-            words = "Waiting on a prompt" + (
-                f": {lane.session.detail}" if lane.session is not None and lane.session.detail else ""
-            )
+            detail = first_line(lane.session.detail) if lane.session is not None else None
+            words = "Waiting on a prompt" + (f": {detail}" if detail else "")
         return Notice(
             project=live.project.slug,
             project_name=live.project.name,

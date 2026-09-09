@@ -450,11 +450,12 @@ class Runtime:
         except (OSError, machine.Timeout, machine.CommandMissing) as error:
             return False, str(error)
 
-    def tell(self, what: Notice, opens: list[str]) -> Told:
+    def tell(self, what: Notice, opens: list[str], ledger: Path) -> Told:
         """Tell the owner on his screen (card #41, item 1): a notification
         that stays until he dismisses it, a sound, and a button that runs
-        `opens`. Never raises: what it could not do is in the words."""
-        return notice.tell(what, opens)
+        `opens`; how it was answered lands as one line in `ledger`. Never
+        raises: what it could not do is in the words."""
+        return notice.tell(what, opens, ledger)
 
     def show(self, slug: str, number: int) -> str:
         """Put a card in front of him: the board's page navigates to it and

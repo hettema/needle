@@ -34,8 +34,11 @@ def settled(floor: Floor, key: str, count: int, seconds: float = 5.0) -> list:
     raise AssertionError(f"{key} never reached {count}: {floor.state().get(key)}")
 
 
-def test_a_notice_stays_until_dismissed_and_rings_the_moments_sound(machine_floor: Floor):
-    told = notice.tell(NOTICE, ["true"])
+def test_a_notice_stays_until_dismissed_and_rings_the_moments_sound(
+    machine_floor: Floor, tmp_path
+):
+    ledger = tmp_path / "told.log"
+    told = notice.tell(NOTICE, ["true"], ledger)
     assert told.raised and told.words == NOTICE.words
     (argv,) = settled(machine_floor, "notified", 1)
     assert argv[:6] == ["-u", "critical", "-t", "0", "-a", "notify-send"]
@@ -45,28 +48,37 @@ def test_a_notice_stays_until_dismissed_and_rings_the_moments_sound(machine_floo
     assert played == ["/usr/share/sounds/freedesktop/stereo/complete.oga"]
 
     asks = NOTICE.model_copy(update={"words": "Asking you: high or medium?", "moment": Moment.NEEDS_YOU})
-    assert notice.tell(asks, ["true"]).raised
+    assert notice.tell(asks, ["true"], ledger).raised
     played = settled(machine_floor, "played", 2)
     assert played[1] == ["/usr/share/sounds/freedesktop/stereo/message-new-instant.oga"]
+    # Dismissed at once by the fake: the ledger says so, with the stamp first.
+    deadline = time.time() + 5
+    while time.time() < deadline and ledger.read_text().count("\n") < 2 if ledger.exists() else True:
+        time.sleep(0.05)
+    lines = ledger.read_text().splitlines()
+    assert len(lines) == 2 and all(line.endswith(" proj 253 dismissed") for line in lines), lines
+    assert lines[0][:4] == "2026" and "T" in lines[0].split(" ")[0]
 
 
 def test_the_button_runs_what_it_was_given_and_a_dismissal_runs_nothing(
     machine_floor: Floor, tmp_path
 ):
     mark = tmp_path / "pressed"
+    ledger = tmp_path / "told.log"
     opens = ["sh", "-c", f"echo pressed > {mark}"]
-    notice.tell(NOTICE, opens)
+    notice.tell(NOTICE, opens, ledger)
     settled(machine_floor, "notified", 1)
     time.sleep(0.3)
     assert not mark.exists(), "dismissed: the button's command never ran"
 
     machine_floor.update(press="default")
-    notice.tell(NOTICE, opens)
+    notice.tell(NOTICE, opens, ledger)
     settled(machine_floor, "notified", 2)
     deadline = time.time() + 5
     while time.time() < deadline and not mark.exists():
         time.sleep(0.05)
     assert mark.read_text().strip() == "pressed"
+    assert ledger.read_text().splitlines()[-1].endswith(" proj 253 default")
 
 
 def test_without_the_notifier_the_words_say_why_and_nothing_is_raised(
@@ -75,7 +87,7 @@ def test_without_the_notifier_the_words_say_why_and_nothing_is_raised(
     empty = tmp_path / "empty-bin"
     empty.mkdir()
     monkeypatch.setenv("PATH", str(empty))
-    told = notice.tell(NOTICE, ["true"])
+    told = notice.tell(NOTICE, ["true"], tmp_path / "told.log")
     assert not told.raised
     assert told.words == "could not tell you: `notify-send` is not on PATH"
     assert machine_floor.state()["notified"] == []
@@ -104,7 +116,7 @@ def test_show_asks_the_board_and_focuses_an_open_board_window_whatever_it_shows(
     )
     said = notice.show("proj", 253)
     assert said == (
-        "Showed #253 on proj: the board was asked to show it; focused the board's window "
+        "Showed #253 on proj: the board was asked to open it; focused the board's window "
         "(0xboard02)."
     ), "the window already on the card's project comes first"
     assert machine_floor.state()["focus_calls"] == ["0xboard02"]
@@ -123,12 +135,24 @@ def test_show_opens_the_desktop_entry_on_the_card_when_no_board_window_is_open(
     said = notice.show("proj", 253)
     assert said == (
         "Showed #253 on proj: the board could not be asked (curl: (7) Failed to connect to "
-        "http://127.0.0.1:8480/api/show/proj/253); no board window was open, so "
+        "http://127.0.0.1:8480/api/show/proj/253), so "
         "http://127.0.0.1:8480/p/proj#card-253 was opened."
     )
     (spawned,) = machine_floor.state()["spawned"]
     assert spawned["command"] == ["--app=http://127.0.0.1:8480/p/proj#card-253"]
     assert spawned["app_id"] == "chrome-127.0.0.1__p_proj-Profile_5"
+
+    # A board window open but a board that cannot be asked: focusing it
+    # would open no card, so the entry is opened on the card's page too.
+    machine_floor.update(
+        urls={"http://127.0.0.1:8480/api/show/proj/253": {"code": 200, "body": "{}"}}
+    )
+    said = notice.show("proj", 253)
+    assert said.endswith("focused the board's window (0xfake0001).")
+    machine_floor.update(urls={})
+    said = notice.show("proj", 253)
+    assert "could not be asked" in said and said.endswith("#card-253 was opened.")
+    assert len(machine_floor.state()["spawned"]) == 2
 
 
 def test_show_refuses_by_name_without_an_entry_or_when_focus_does_not_land(
@@ -138,6 +162,7 @@ def test_show_refuses_by_name_without_an_entry_or_when_focus_does_not_land(
         notice.show("proj", 253)
     machine_floor.write_board_entry("proj")
     machine_floor.update(
+        urls={"http://127.0.0.1:8480/api/show/proj/253": {"code": 200, "body": "{}"}},
         clients=[{"address": "0xboard01", "class": "chrome-127.0.0.1__p_proj-Profile_5"}],
         focus_works=False,
     )

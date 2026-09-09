@@ -39,6 +39,20 @@ function isBoardEvent(data: unknown): data is BoardEvent {
   return typeof data === "object" && data !== null && "version" in data && typeof (data as { version: unknown }).version === "number";
 }
 
+/**
+ * Whether a `shown` on the stream is one this page should act on (card #41). The first event a
+ * page hears primes it: whatever `shown` stood then was raised before this page existed, or before
+ * it reconnected, and is not acted on — `0` stands for none yet. After that, a `shown` whose id is
+ * not the one last seen is a press, including the first press a page ever hears and a server that
+ * restarted and counts from one again.
+ */
+export function nextShown(seen: number | null, asked: Shown | null): { seen: number; act: boolean } {
+  const id = asked === null ? 0 : asked.id;
+  if (seen === null) return { seen: id, act: false };
+  if (asked === null || id === seen) return { seen, act: false };
+  return { seen: id, act: true };
+}
+
 /** The notification's button pressed (card #41): the card opens on its project's board — a hash on this page, a navigation when the card is another project's. */
 export function showCard(slug: string, shown: Shown): void {
   const hash = `#card-${shown.card_number}`;
@@ -82,9 +96,9 @@ export function useBoard(slug: string): BoardStore {
       if (!isBoardEvent(data)) return;
       if (data.version !== version.current) void refresh();
       const asked = data.shown ?? null;
-      const heard = shown.current;
-      shown.current = asked === null ? heard : asked.id;
-      if (asked !== null && heard !== null && asked.id !== heard) showCard(slug, asked);
+      const next = nextShown(shown.current, asked);
+      shown.current = next.seen;
+      if (next.act && asked !== null) showCard(slug, asked);
     });
     // A reconnect — the server restarted, the page slept — forgets the version
     // it knew, so the first message re-reads the board exactly once: a new
