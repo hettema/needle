@@ -10,7 +10,7 @@ from pathlib import Path
 
 from domain.call import Call, CallVerdict
 from domain.dial import Meminfo, ScopeHeld
-from domain.ending import Boot, Named, Sighting
+from domain.ending import Boot, Cause, Named, Sighting
 from domain.gate import Gate
 from domain.handout import Dispatch
 from domain.launch import Launch, Rescue, Start, Stopped, WindowlessStart
@@ -188,8 +188,28 @@ class Runtime:
         session that waits for room keeps it (card #107)."""
         session = self.session(ref)
         stopped = launch.stop(session)
-        if not keep_handoff and session.wall is not None:
+        if keep_handoff:
+            return stopped
+        if session.wall is not None:
             handoffs.remove(session.wall)
+        # A death the board already named a wall — the board's own stop on
+        # the floor writes one — would still be brought back once the room
+        # holds; the owner's stop is written over it, settled, so the lane
+        # stays down (Codex's reading of card #107's second pass).
+        for project in self.store.projects():
+            death = self.store.deaths(project.slug).get(session.session_id)
+            if death is not None and death.cause is Cause.WALL:
+                self.store.record_death(
+                    death.model_copy(
+                        update={
+                            "cause": Cause.STOPPED,
+                            "words": Cause.STOPPED.value,
+                            "evidence": f"the owner stopped {session.short_id} on {session.slot}",
+                            "named_at": clock.now(),
+                            "settled": True,
+                        }
+                    )
+                )
         return stopped
 
     def window(self, ref: str, kind: WindowKind | None) -> Opened:

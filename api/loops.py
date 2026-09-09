@@ -23,7 +23,7 @@ import logging
 import shlex
 import sys
 from collections.abc import Awaitable, Callable
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from enum import StrEnum
 from pathlib import Path
 
@@ -1012,13 +1012,13 @@ class Loops:
                     changed = True
                 continue
             cause, words = interruption
-            waited = False
             if park is not None:
                 if park.waits_on == "floor" and self._holds_room_it_waits_for(session, cause):
                     # Parked on the floor before this rule landed, or a stop
                     # that did not take: the memory is asked back each pass
-                    # until the process is gone (card #107).
-                    self._give_memory_back(slug, number, session, history)
+                    # until the process is gone (card #107); a stop that took
+                    # changes the machine, so the caller re-reads it.
+                    changed = self._give_memory_back(slug, number, session, history) or changed
                 lifted = self._park_lifts(park, session, now)
                 if lifted is None:
                     continue
@@ -1028,7 +1028,6 @@ class Loops:
                 )
                 park = None
                 changed = True
-                waited = True
             # An attempt recorded after the clock keeps its count (item 5):
             # only the horizon's start bounds the window, never the present.
             floor_at = now - timedelta(seconds=RESCUE_HORIZON_SECONDS)
@@ -1044,16 +1043,17 @@ class Loops:
             # the wall detector chose at the wall, which is fresher than the
             # rule's cache about the account that just ran out, so it is
             # kept whether or not the walled process still stands — the
-            # board itself stops it while it waits for room (card #107). A
-            # lane that waited keeps that rung only while the account's own
-            # latest reading says its allowance is there; an older handoff
-            # asks the rule now.
+            # board itself stops it while it waits for room (card #107), and
+            # only while the account's own latest reading says its allowance
+            # is there, read on every pass so a wait or a restart between
+            # passes cannot reuse a rung that ran out; an older handoff asks
+            # the rule now.
             placement: Placement | None = None
             wall = session.wall
             young = (
                 wall is not None
                 and (now - wall.at).total_seconds() < RESCUE_HORIZON_SECONDS
-                and (not waited or self._rung_open(wall, now))
+                and self._rung_open(wall, now)
             )
             if not young:
                 placement, note = self._placement()
@@ -1066,9 +1066,10 @@ class Loops:
             room = self.headroom_now()
             if room.full:
                 # The park is the claim, written once by whichever process
-                # gets there first; the stop follows it, so two servers do
-                # not both stop, and a server that dies between the two
-                # leaves a parked lane whose process the next pass stops.
+                # gets there first, and the stop follows it: a server that
+                # dies between the two leaves a parked lane whose process the
+                # next pass stops, and a second server reading the standing
+                # park stops a process that is already gone and says nothing.
                 wrote = self._park(slug, number, session, cause, words, now, full=room)
                 if wrote and self._holds_room_it_waits_for(session, cause):
                     self._give_memory_back(slug, number, session, history)
@@ -1246,15 +1247,18 @@ class Loops:
 
     def _give_memory_back(
         self, slug: str, number: int, session: Session, history: list[AuditEntry]
-    ) -> None:
+    ) -> bool:
         """A walled background session has ended its turn with nothing in
         flight; while the board waits for room it holds only memory, which
         is part of the room it waits for (card #107: six lanes walled
         together on 2026-09-09 held 1.1 GB for an hour on a machine 1 GB
         short of the floor). Stopped through its own slot after the park is
         written; the handoff is kept, so the ending is named a wall and the
-        lane is brought back on the handoff's rung once the room holds. A
-        stop that did not take is said once, and asked again each pass."""
+        lane is brought back on the handoff's rung once the room holds. Each
+        outcome is said once: a stop that did not take is asked again each
+        pass in silence, and a second server stopping a process the first
+        already ended adds no second line. Answers whether the process is
+        gone, so the caller re-reads the machine."""
         stopped = self.runtime.stop(session.short_id, keep_handoff=True)
         if stopped.gone:
             said = (
@@ -1267,20 +1271,33 @@ class Loops:
                 f"while it waits for room; it had not gone within {stopped.seconds:.0f} s: "
                 f"{stopped.words}"
             )
-            newest = next((h for h in history if h.kind == AuditKind.RESCUED), None)
-            if newest is not None and newest.detail.startswith(f"Asked {session.short_id} "):
-                return
+        newest = next((h for h in history if h.kind == AuditKind.RESCUED), None)
+        first_word = said.split(" ", 1)[0]
+        if newest is not None and newest.detail.startswith(f"{first_word} {session.short_id} "):
+            return stopped.gone
         self.live.note(slug, number, AuditKind.RESCUED, Actor.MACHINE, f"{said}.")
+        return stopped.gone
 
     def _rung_open(self, wall: Handoff, now: datetime) -> bool:
         """Whether the account the wall chose still has its allowance, by
         that account's own latest reading: a lane that waited for room may
-        have waited past the hour in which the rung was fresh."""
+        have waited past the hour in which the rung was fresh. Every spent
+        allowance counts, and one spent with no time for its return cannot
+        be read as back (Codex's reading of card #107's second pass)."""
         reading = self.runtime.limits(wall.account)
         if reading is None:
             return True
-        reset = limits.next_reset(reading)
-        return reset is None or reset[1] <= now
+        for label, share in reading.spent.items():
+            if share < 1.0:
+                continue
+            when = reading.resets.get(label)
+            if when is None:
+                return False
+            if when.tzinfo is None:
+                when = when.replace(tzinfo=UTC)
+            if when > now:
+                return False
+        return True
 
     def _park_lifts(self, park: Park, session: Session, now: datetime) -> str | None:
         """Whether the park's end has come, in words when it has (item 3),

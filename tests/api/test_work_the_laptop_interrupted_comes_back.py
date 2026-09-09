@@ -17,6 +17,7 @@ import time
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
+import pytest
 from fastapi.testclient import TestClient
 
 from api import loops as loops_mod
@@ -344,12 +345,14 @@ def test_a_lane_parked_on_the_floor_before_this_rule_has_its_process_stopped_nex
     assert len(launches(machine_floor)) == 1
 
 
+@pytest.mark.parametrize("reset_known", [True, False])
 def test_a_walled_lane_that_waited_asks_the_rule_when_its_rung_has_since_run_out(
-    client: TestClient, machine_floor: Floor, monkeypatch
+    client: TestClient, machine_floor: Floor, monkeypatch, reset_known: bool
 ):
     """Codex's reading of card #107's first pass: a handoff younger than the
     horizon named a rung the lane might wait past. The account's own latest
-    reading decides."""
+    reading decides, and an allowance spent with no time for its return is
+    not read as back."""
     launched = begun(client, machine_floor)
     machine_floor.set_memory(available_gb=2.0, swap_free_gb=1.0)
     wall = dict(**{"from": "alpha"}, account="beta", pid=launched["pid"], reason="a limit")
@@ -365,7 +368,7 @@ def test_a_walled_lane_that_waited_asks_the_rule_when_its_rung_has_since_run_out
     machine_floor.write_limits(
         "beta",
         spent={"Session (5-hour)": 1.0},
-        resets={"Session (5-hour)": (held + timedelta(hours=2)).isoformat()},
+        resets={"Session (5-hour)": (held + timedelta(hours=2)).isoformat()} if reset_known else {},
         fetched_at=held.timestamp(),
     )
     hold_clock(monkeypatch, held)
@@ -398,6 +401,35 @@ def test_the_owners_stop_on_a_walled_session_removes_the_machines_request_to_mov
     assert detail(client)["lane"]["state"] == "ended"
     assert detail(client)["lane"]["park"] is None
     assert len(launches(machine_floor)) == 1
+
+
+def test_the_owners_stop_after_the_boards_own_floor_stop_keeps_the_lane_down(
+    client: TestClient, machine_floor: Floor, monkeypatch
+):
+    """The board's stop on the floor names the ending a wall; the owner's stop
+    afterwards is written over it, so room coming back brings nothing."""
+    launched = begun(client, machine_floor)
+    machine_floor.set_memory(available_gb=2.0, swap_free_gb=1.0)
+    machine_floor.write_handoff(
+        launched["session_id"],
+        at=time.time(),
+        **{"from": "alpha"},
+        account="beta",
+        pid=launched["pid"],
+        reason="a limit",
+    )
+    reconcile(client)
+    reconcile(client)
+    assert detail(client)["lane"]["cause"] == Cause.WALL.value
+    assert main(["stop", launched["short"]]) == 0
+    machine_floor.set_memory(available_gb=16.0, swap_free_gb=8.0)
+    reconcile(client)
+    hold_clock(monkeypatch, clock.now() + timedelta(seconds=loops_mod.FLOOR_SECONDS + 1))
+    reconcile(client)
+    reconcile(client)
+    assert len(launches(machine_floor)) == 1, "the owner's stop stands"
+    lane = detail(client)["lane"]
+    assert lane["cause"] == Cause.STOPPED.value and lane["park"] is None
 
 
 def _gone(pid: int) -> bool:

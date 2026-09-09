@@ -36,13 +36,16 @@ belongs to the machine's own record and is filed there as a defect by this
 plan, not built here.
 
 After this plan: a session that ran out of allowance gives its memory back
-the moment the board starts waiting for room, its card still says it is
-moving and what it waits on, and it comes back on the account the wall chose
-as soon as the room holds. A lane can never hold more than the floor itself:
-its own space is capped at that number, so one runaway lane is throttled
-inside its own space rather than pushing the browser out. The floor's number
-and its reason are written where the board reads them, with a loop that says
-whether the kills stopped and whether the lanes flow.
+the moment the board starts waiting for room, its card says it is coming
+back and what it waits on, and it comes back on the account the wall chose
+as soon as the room holds, or on the rule's if that account's own reading
+says its allowance has since gone. A lane is throttled at the floor before
+anything else is: its own space carries the floor as its high mark, so a
+runaway lane presses on itself first rather than on the browser — a
+throttle, which the kernel may still let it exceed under pressure, never a
+cap. The floor's number and its reason are written where the board reads
+them, with a loop that says whether the kills stopped and whether the lanes
+flow.
 
 ## Items
 
