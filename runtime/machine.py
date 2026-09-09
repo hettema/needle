@@ -500,14 +500,16 @@ def unit_pids(unit: str) -> list[int]:
 
 
 def stop_unit(unit: str) -> tuple[bool, str]:
-    """Stop a unit of ours, which ends every process it holds: what
-    `systemctl --user stop` does to a scope (verified 2026-09-04 for
-    `adopt`, and by hand on two finished lanes' groups on 2026-09-09 —
-    15 ms, every process gone). A unit whose processes had to be killed
-    ends `failed` rather than gone (a leftover uvicorn on 2026-09-09) and
-    `adopt` resets one of those before reusing the name. Returns whether
-    the manager took the stop, and its words."""
-    done = run([which("systemctl"), "--user", "stop", unit], timeout=20)
+    """Ask the manager to stop a unit of ours, which ends every process it
+    holds: what `systemctl --user stop` does to a scope (verified
+    2026-09-04 for `adopt`, and by hand on three finished sessions' groups
+    on 2026-09-09 — two gone in 15 ms, one whose `uvicorn` ignored the
+    signal and was killed at the manager's stop timeout, the unit left
+    `failed`, which `adopt` resets before reusing the name). Asked with
+    `--no-block`, so a stubborn process never holds the caller for that
+    timeout: the answer is whether the manager took the job, and its words;
+    `unit_pids` says when the group is empty."""
+    done = run([which("systemctl"), "--user", "stop", "--no-block", unit], timeout=20)
     return done.returncode == 0, (done.stderr or done.stdout).strip()
 
 

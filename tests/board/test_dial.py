@@ -363,3 +363,40 @@ def test_quiet_is_no_lane_with_hands_on_any_project():
     )
     assert (state.running, state.held, state.full) == (0, 0, None)
     assert (state.quiet, state.dial.lanes) == (False, 2)
+
+
+def test_who_is_home_follows_ancestry_and_names_strangers(monkeypatch):
+    """Card #99: a session's children are its own wherever its pid sits,
+    a process no live session started is a stranger named by its command's
+    head, and a stale copy of a session owns nothing."""
+    from board.dial import who_is_home
+    from domain.dial import ScopeHeld
+    from tests.board.test_who_drives import a_session
+
+    live = a_session(short_id="9a7c49a7", pid=4242)
+    stale = a_session(short_id="deadbeef", pid=5151, stale=True)
+    held = [
+        ScopeHeld(
+            unit="needle-card-1-x.scope",
+            pids=[7001, 7002],
+            commands={7001: "/usr/bin/python3 run_batch.py", 7002: "sleep 20"},
+            lineage={7001: [4242, 919], 7002: [7001, 4242, 919]},
+        ),
+        ScopeHeld(
+            unit="needle-reading-card-2-y.scope",
+            pids=[8001, 8002],
+            commands={8001: "uv run uvicorn app:api --port 8000", 8002: "uvicorn app:api"},
+            lineage={8001: [919], 8002: [8001, 919]},
+        ),
+        ScopeHeld(unit="needle-card-3-z.scope", pids=[], commands={}, lineage={}),
+        ScopeHeld(unit="needle-card-4-w.scope", pids=[5151], commands={5151: "claude"}, lineage={}),
+    ]
+    states = {s.unit: s for s in who_is_home(held, [live, stale])}
+    assert states["needle-card-1-x.scope"].home == ["9a7c49a7"]
+    assert states["needle-card-1-x.scope"].strangers == []
+    assert not states["needle-card-1-x.scope"].nobody_home
+    assert states["needle-reading-card-2-y.scope"].home == []
+    assert states["needle-reading-card-2-y.scope"].strangers == ["uv run", "uvicorn app:api"]
+    assert states["needle-reading-card-2-y.scope"].nobody_home
+    assert not states["needle-card-3-z.scope"].nobody_home, "an empty group is nobody's leftovers"
+    assert states["needle-card-4-w.scope"].nobody_home, "a stale copy owns nothing"

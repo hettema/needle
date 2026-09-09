@@ -70,7 +70,7 @@ from domain.board import MachineState, TrunkState
 from domain.call import Call, CallOutcome
 from domain.card import Actor, Card, Place
 from domain.column import Column
-from domain.dial import Headroom, ScopeMemory
+from domain.dial import Headroom, ScopeMemory, ScopeState
 from domain.document import DocumentKind
 from domain.evidence import Evidence
 from domain.gate import Gate
@@ -125,11 +125,13 @@ before it is stopped anyway: the verb runs inside its last turn."""
 READING_EFFORT = Gate.HIGH
 """Reading evidence is bounded investigation, not open thinking (the Discuss
 door's xhigh); the strongest model still does it, by the one rule."""
-SWEEP_READS = 2
-"""How many reads in a row a group must be found with nobody home before
-the beat stops it (card #99): a second read thirty seconds on is cheap,
-and a group that is home again by then was a session settling, never a
-leftover."""
+SWEEP_SECONDS = 30.0
+"""How long a group must stand with nobody home — on every read in
+between, both guards holding — before the beat asks the manager to end it
+(card #99). Reads come as fast as the registry changes, so a count of
+reads is no settling time (Codex's reading, 2026-09-09); a Start's
+registry row is written in under a second, and thirty seconds is one
+floor beat."""
 
 
 class Tended(StrEnum):
@@ -172,12 +174,17 @@ class Loops:
         self._released: set[str] = set()
         """Sessions stopped because their lane folded and closed: one stop
         each, so a stop that did not end the process is said once."""
-        self._nobody_home: dict[str, int] = {}
-        """Groups read with nobody home, by unit, and on how many beats in
-        a row (card #99): stopped on the second, so one read that landed
-        between a Start and its registry row never ends a lane."""
+        self._nobody_home: dict[str, datetime] = {}
+        """Groups found with nobody home and both guards holding, by unit,
+        and since when (card #99): the manager is asked to end one only
+        after `SWEEP_SECONDS` of such reads, and the clock starts again the
+        moment either guard fails."""
+        self._ending: dict[str, tuple[ScopeState, datetime]] = {}
+        """Groups the manager was asked to end, with what each held and when
+        it was asked: the card is told only once the group is empty, and
+        the manager is asked again if it is not after another window."""
         self._sweep_said: set[str] = set()
-        """Groups whose stop the manager refused, said once on the card."""
+        """Groups whose refused stop was said on the card, once."""
         self._scoped: set[str] = set()
         """Sessions the loop put back in their lane's scope (plan 53, item
         2): one adopt each, so a move the machine refused is said once and
@@ -427,52 +434,94 @@ class Loops:
         return room
 
     def _sweep_scopes(self) -> None:
-        """A group nobody is home in is stopped, and the card says so (card
-        #99). Every lane's and reading's session runs in a group of its
-        own, and the board stops the *session* only when its lane folded
-        and closed (`_release_finished`); every other ending left the group
-        standing with whatever the session had started — on 2026-09-09,
-        forty wait loops from three sessions a day gone, each spawning a
-        `sleep` every few seconds while the laptop paged. So the beat reads
-        every group of ours and, when one holds processes and no live
-        session of ours is among them on `SWEEP_READS` reads in a row, ends
-        it through the runtime. The groups are read before the sessions,
-        so a session the registry knew before its group existed is home on
-        the first read; a group whose card still has a live session is
-        left, wherever that pid sits this instant; an empty group is left
-        (Start's settle window); a refusal is said once."""
+        """A group nobody is home in is ended, and the card says so once it
+        is empty (card #99). Every lane's and reading's session runs in a
+        group of its own, and the board stops the *session* only when its
+        lane folded and closed (`_release_finished`); every other ending
+        left the group standing with whatever the session had started — on
+        2026-09-09, forty wait loops from three sessions a day gone, each
+        spawning a `sleep` every few seconds while the laptop paged, and a
+        `uvicorn` a reading had left at 1.9 GB. So the beat reads every
+        group of ours and, when one has held processes no live session owns
+        — by pid or by ancestry — and whose card has no live session, on
+        every read for `SWEEP_SECONDS`, asks the manager to end it, without
+        waiting: a stubborn process takes the manager's whole stop timeout,
+        and the beat holds the lock every door takes. The card is told when
+        the group reads empty, never before; a refusal is said once and
+        asked again after another window; a group still not empty after a
+        window is asked again. The groups are read before the sessions, so
+        a session the registry knew before its group existed is home on the
+        first read; an empty group is left (Start's settle window); a
+        session whose turn is done but whose process still stands is home,
+        and what it left is its own until `_release_finished` ends it."""
         held = self.runtime.scopes()
         if held is None:
             return
-        sessions = self.runtime.sessions()
-        stray = {s.unit: s for s in who_is_home(held, sessions) if s.nobody_home}
+        states = who_is_home(held, self.runtime.sessions())
+        owners = self._lanes_by_unit()
+        now = clock.now()
+        for unit, (state, asked_at) in list(self._ending.items()):
+            still = self.runtime.scope_pids(unit)
+            if still is None:
+                continue  # the manager could not be asked: nothing is established
+            if still:
+                if (now - asked_at).total_seconds() >= SWEEP_SECONDS:
+                    self.runtime.stop_scope(unit)
+                    self._ending[unit] = (state, now)
+                continue
+            del self._ending[unit]
+            self._nobody_home.pop(unit, None)
+            self._sweep_said.discard(unit)
+            self._say_swept(owners.get(unit), unit, self._what_it_held(state, "Stopped"))
+        eligible: dict[str, ScopeState] = {}
+        for state in states:
+            owner = owners.get(state.unit)
+            owner_alive = (
+                owner is not None and owner[2].session is not None and bool(owner[2].session.pid)
+            )
+            if state.nobody_home and not owner_alive:
+                eligible[state.unit] = state
         for unit in list(self._nobody_home):
-            if unit not in stray:
+            if unit not in eligible:
                 del self._nobody_home[unit]
                 self._sweep_said.discard(unit)
-        owners = self._lanes_by_unit()
-        for unit, state in stray.items():
-            self._nobody_home[unit] = self._nobody_home.get(unit, 0) + 1
-            if self._nobody_home[unit] < SWEEP_READS or unit in self._sweep_said:
+        for unit, state in eligible.items():
+            if unit in self._ending:
                 continue
-            owner = owners.get(unit)
-            if owner is not None and owner[2].session is not None and owner[2].session.pid:
+            since = self._nobody_home.setdefault(unit, now)
+            if (now - since).total_seconds() < SWEEP_SECONDS:
                 continue
-            stopped, words = self.runtime.stop_scope(unit)
-            count = len(state.pids)
-            heads = ", ".join(sorted(set(state.strangers))[:3])
-            said = (
-                f"Stopped what a finished session left in {unit}: {count} "
-                f"process{'es' if count != 1 else ''} nobody owned ({heads}); nothing a "
-                "finished session started keeps running"
-                + ("." if stopped else f" — but the machine refused: {words}.")
+            taken, words = self.runtime.stop_scope(unit)
+            if taken:
+                self._ending[unit] = (state, now)
+                continue
+            self._nobody_home[unit] = now
+            if unit in self._sweep_said:
+                continue
+            self._sweep_said.add(unit)
+            self._say_swept(
+                owners.get(unit),
+                unit,
+                self._what_it_held(state, "Asked the machine to end")
+                + f"; it refused: {words}. The beat asks again.",
             )
-            if not stopped:
-                self._sweep_said.add(unit)
-            if owner is None:
-                log.info("%s", said)
-                continue
-            self.live.note(owner[0], owner[1], AuditKind.STOPPED, Actor.MACHINE, said)
+
+    @staticmethod
+    def _what_it_held(state: ScopeState, verb: str) -> str:
+        count = len(state.pids)
+        heads = ", ".join(sorted(set(state.strangers))[:3])
+        return (
+            f"{verb} what a finished session left in {state.unit}: {count} "
+            f"process{'es' if count != 1 else ''} nobody owned ({heads})"
+        )
+
+    def _say_swept(self, owner: tuple[str, int, Lane] | None, unit: str, said: str) -> None:
+        if said.startswith("Stopped"):
+            said += "; nothing a finished session started keeps running."
+        if owner is None:
+            log.info("%s (%s names no card on any board)", said, unit)
+            return
+        self.live.note(owner[0], owner[1], AuditKind.STOPPED, Actor.MACHINE, said)
 
     def _lanes_by_unit(self) -> dict[str, tuple[str, int, Lane]]:
         """Every unit a card's sessions run under — its lane's, its

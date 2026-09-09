@@ -3,7 +3,8 @@
 `list-units` from the scope properties the test put in
 `$NEEDLE_FAKE_STATE["scopes"]`, clears a failed scope on `reset-failed`,
 marks one inactive on `stop` (recording it in `scope_stops`, ending no
-process), and records every call so the test can read what the runtime
+process; a unit named in `stop_refuses` is refused instead), and
+records every call so the test can read what the runtime
 asked the user manager."""
 
 import fcntl
@@ -102,8 +103,12 @@ def _stop(argv: list[str], blob: dict) -> int:
     if scope is None or scope.get("ActiveState") != "active":
         print(f"Failed to stop {unit}: Unit {unit} not loaded.", file=sys.stderr)
         return 5
+    if unit in blob.get("stop_refuses", []):
+        print(f"Failed to stop {unit}: Access denied", file=sys.stderr)
+        return 4
     scope["ActiveState"] = "inactive"
     scope["LoadState"] = "not-found"
+    scope.pop("ControlGroup", None)  # a stopped unit has no group any more
     blob.setdefault("scope_stops", []).append(unit)
     _write(blob)
     return 0

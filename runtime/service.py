@@ -363,9 +363,19 @@ class Runtime:
         except (OSError, machine.Timeout, machine.CommandMissing):
             return None
 
+    def scope_pids(self, unit: str) -> list[int] | None:
+        """What one group of ours holds right now, whatever its state — a
+        group the manager is ending still holds what it is killing (card
+        #99); None when the manager could not be asked."""
+        try:
+            return machine.unit_pids(unit)
+        except (OSError, machine.Timeout, machine.CommandMissing):
+            return None
+
     def stop_scope(self, unit: str) -> tuple[bool, str]:
-        """End a group of ours and everything in it (card #99): what the
-        beat does to a group nobody is home in."""
+        """Ask the manager to end a group of ours and everything in it
+        (card #99), without waiting for it: whether it took the job, and its
+        words. The group reads empty once it is done."""
         try:
             return machine.stop_unit(unit)
         except (OSError, machine.Timeout, machine.CommandMissing) as error:
