@@ -51,7 +51,7 @@ from board.brief import (
     reading_name,
 )
 from board.collision import footprint, verdict
-from board.dial import headroom, who_is_home
+from board.dial import who_is_home
 from board.lane import (
     HANDS_ON,
     HOOK_SLACK_SECONDS,
@@ -81,10 +81,11 @@ from board.triage import already_ruled
 from board.word import compose, notes_word
 from domain.audit import AuditEntry, AuditKind
 from domain.board import MachineState, TrunkState
+from domain.machine import MachineRoom
 from domain.call import Call, CallOutcome
 from domain.card import Actor, Card, Place
 from domain.column import Column
-from domain.dial import MEMORY_FLOOR_BYTES, Headroom, ScopeMemory, ScopeState
+from domain.dial import MEMORY_FLOOR_BYTES, Headroom, ScopeState, headroom
 from domain.document import DocumentKind
 from domain.ending import (
     MACHINE_ENDED,
@@ -246,14 +247,20 @@ class Loops:
         the manager is asked again if it is not after another window."""
         self._sweep_said: set[str] = set()
         """Groups whose refused stop was said on the card, once."""
-        self._boots: list[Boot] = []
-        """The machine's boots as the pass read them: what a death is dated
-        against. Deaths, parks, releases and adoptions live in the store
+        self._boots: dict[str, list[Boot]] = {}
+        """Each machine's boots as the pass read them, by the board's name
+        for the machine (card #83): what a death is dated against. Deaths,
+        parks, releases and adoptions live in the store
         (plan 68, item 2), never in a set here: card #196 carried one park
         note seventeen times because each `needle` command and each restart
         of the server began with an empty head."""
         self._notes: list[Note] = []
         """The machine's watercooler as the last read saw it (plan 17)."""
+        self._rooms: list[MachineRoom] = []
+        """Every machine against the floor as the last read saw it (card
+        #83): what places work between passes, and what the head shows."""
+        self._unit_machine: dict[str, str] = {}
+        """Which machine each group of ours was last read on, by unit."""
         self._parties: dict[tuple[str, int], set[str]] = {}
         """Per lane, the notes its card names: read with the plan's
         footprint, once per beat, so the word never reads a plan."""
@@ -448,17 +455,18 @@ class Loops:
 
     def reconcile_now(self) -> None:
         """One read of the machine, and every move it implies."""
-        self.live.set_machine(
-            MachineState(missing=self.runtime.machine_is_reachable(), roles=self.runtime.roles())
-        )
+        if not self._rooms:
+            self.headroom_now()
         sessions = self.runtime.sessions()
         windows = self.runtime.open_windows()
-        placement, note = self._placement()
         self._notes = self.runtime.notes()
-        self._boots = self.runtime.boots()
+        self._boots = {
+            reading.machine.name: self.runtime.boots(reading.machine.name)
+            for reading in self._rooms
+        }
         for live in list(self.live.projects.values()):
             try:
-                self._reconcile_project(live, sessions, windows, placement, note)
+                self._reconcile_project(live, sessions, windows)
             except Exception as error:  # noqa: BLE001 — one project's failure never hides another's
                 log.warning(
                     "reconciling %s failed (%s: %s)", live.project.slug, type(error).__name__, error
@@ -475,37 +483,48 @@ class Loops:
         grows after the beat let it in is seen here before oomd sees it,
         and the head says which lane and how far; the dial's beat and the
         terminal read the machine through this one call."""
-        units: dict[str, tuple[str, int]] = {}
-        for slug, live in self.live.projects.items():
-            if live.snapshot is None:
+        owners = {unit: (slug, number) for unit, (slug, number, _) in self._lanes_by_unit().items()}
+        # Every machine is read on every pass (card #83): the rooms place
+        # the next card, the head shows each machine, and the day's
+        # high-water mark is kept per machine. Every lane's scope carries
+        # the floor as its high mark, whoever made the scope (card #107):
+        # set where it is missing on every machine, said once on the card.
+        self._rooms = self.runtime.rooms(hold=True, owners=owners)
+        now = clock.now()
+        for reading in self._rooms:
+            if reading.room is None:
                 continue
-            for number, lane in live.snapshot.lanes.items():
-                if lane.state in HANDS_ON:
-                    units[launch.lane_unit(lane.name)] = (slug, number)
-        # Every lane's scope carries the floor as its high mark, whoever made
-        # the scope (card #107): read here, where every lane's scope is read
-        # anyway, and set where it is missing, said once on the card.
-        for unit in self.runtime.hold_scopes_at(sorted(units), MEMORY_FLOOR_BYTES) if units else []:
-            slug, number = units[unit]
-            self.live.note(
-                slug,
-                number,
-                AuditKind.SCOPED,
-                Actor.MACHINE,
-                f"Held {unit} at the floor ({MEMORY_FLOOR_BYTES // 1024**3} GB high mark): "
-                "the scope stood without it.",
+            for unit in reading.room.marked:
+                if unit in owners:
+                    slug, number = owners[unit]
+                    self.live.note(
+                        slug,
+                        number,
+                        AuditKind.SCOPED,
+                        Actor.MACHINE,
+                        f"Held {unit} at the floor ({MEMORY_FLOOR_BYTES // 1024**3} GB high mark) "
+                        f"on {reading.machine.name}: the scope stood without it.",
+                    )
+            if reading.room.total > 0:
+                self.live.store.note_high_water(
+                    reading.machine.name,
+                    available=reading.room.available,
+                    total=reading.room.total,
+                    at=now,
+                )
+        self.live.set_machine(
+            MachineState(
+                missing=self.runtime.machine_is_reachable(),
+                roles=self.runtime.roles(),
+                machines=self._rooms,
             )
-        held = self.runtime.scope_memory(sorted(units)) if units else {}
-        scopes = (
-            [
-                ScopeMemory(unit=unit, held=held[unit], project=slug, card_number=number)
-                for unit, (slug, number) in units.items()
-                if unit in held
-            ]
-            if held is not None
-            else None
         )
-        room = headroom(self.runtime.meminfo(), MEMORY_FLOOR_BYTES, clock.now(), scopes=scopes)
+        here = next((r for r in self._rooms if r.here), None)
+        room = (
+            here.room
+            if here is not None and here.room is not None
+            else headroom(None, MEMORY_FLOOR_BYTES, now)
+        )
         self.live.set_headroom(room)
         return room
 
@@ -533,16 +552,17 @@ class Loops:
         held = self.runtime.scopes()
         if held is None:
             return
+        self._unit_machine.update({group.unit: group.machine for group in held})
         states = who_is_home(held, self.runtime.sessions())
         owners = self._lanes_by_unit()
         now = clock.now()
         for unit, (state, asked_at) in list(self._ending.items()):
-            still = self.runtime.scope_pids(unit)
+            still = self.runtime.scope_pids(unit, machine_name=self._unit_machine.get(unit, ""))
             if still is None:
                 continue  # the manager could not be asked: nothing is established
             if still:
                 if (now - asked_at).total_seconds() >= SWEEP_SECONDS:
-                    self.runtime.stop_scope(unit)
+                    self.runtime.stop_scope(unit, machine_name=self._unit_machine.get(unit, ""))
                     self._ending[unit] = (state, now)
                 continue
             del self._ending[unit]
@@ -567,7 +587,9 @@ class Loops:
             since = self._nobody_home.setdefault(unit, now)
             if (now - since).total_seconds() < SWEEP_SECONDS:
                 continue
-            taken, words = self.runtime.stop_scope(unit)
+            taken, words = self.runtime.stop_scope(
+                unit, machine_name=self._unit_machine.get(unit, "")
+            )
             if taken:
                 self._ending[unit] = (state, now)
                 continue
@@ -598,6 +620,15 @@ class Loops:
             log.info("%s (%s names no card on any board)", said, unit)
             return
         self.live.note(owner[0], owner[1], AuditKind.STOPPED, Actor.MACHINE, said)
+
+    def _repo_of(self, session: Session) -> str | None:
+        """The registered project a session works in, by its directory."""
+        home = session.worktree or session.cwd
+        for live in self.live.projects.values():
+            root = live.project.path.rstrip("/")
+            if home == root or home.startswith(root + "/"):
+                return live.project.path
+        return None
 
     def _lanes_by_unit(self) -> dict[str, tuple[str, int, Lane]]:
         """Every unit a card's sessions run under — its lane's, its
@@ -705,21 +736,27 @@ class Loops:
             "the call follows it",
         )
 
-    def _placement(self) -> tuple[Placement | None, str]:
-        where = self.runtime.where(None, [], cached=True)
-        return where.placement, where.reason
+    def _placement(self, repo: str | None = None) -> tuple[Placement | None, str]:
+        """Where a card in `repo` runs next, over the rooms read this pass
+        (card #83): the machine first, then that machine's rule. On a
+        one-machine board the placement carries no machine name, so the
+        Start door reads as it always has."""
+        where = self.runtime.where(None, [], cached=True, repo=repo, rooms=self._rooms or None)
+        placement = where.placement
+        if placement is not None and len(self._rooms) <= 1:
+            placement = placement.model_copy(update={"machine": ""})
+        return placement, where.reason
 
     def _reconcile_project(
         self,
         live: LiveProject,
         sessions: list[Session],
         windows: list[Window],
-        placement: Placement | None,
-        placement_note: str,
     ) -> None:
         slug, project = live.project.slug, live.project
         store = self.live.store
         now = clock.now()
+        placement, placement_note = self._placement(project.path)
         cards = store.cards(slug)
         worktrees = (
             self.runtime.worktrees(project.path) if self.runtime.is_repository(project.path) else {}
@@ -784,10 +821,14 @@ class Loops:
             parks={p.card_number: p for p in store.parks(slug, standing_only=True)},
             worktrees=worktrees,
             now=now,
+            many_machines=len(self._rooms) > 1,
         )
 
-    def _current_boot(self) -> Boot | None:
-        return next((b for b in self._boots if b.index == 0), None)
+    def _current_boot(self, machine_name: str = "") -> Boot | None:
+        """The boot a machine is in now, by the board's name for it; an
+        unnamed row's machine is this one (card #83)."""
+        boots = self._boots.get(machine_name) or self._boots.get(self.runtime.here().name, [])
+        return next((b for b in boots if b.index == 0), None)
 
     def _sightings(self, slug: str, lanes: dict[int, Lane], now: datetime) -> None:
         """Every session with a live process in a lane, seen on this pass
@@ -795,12 +836,12 @@ class Loops:
         it runs in, so its death — a row that had a process and now has
         none — is named from what actually held it, and a row not yet born
         is never given an epitaph."""
-        boot = self._current_boot()
         deaths = self.live.store.deaths(slug)
         for number, lane in lanes.items():
             session = lane.session
             if session is None or session.pid is None or session.stale:
                 continue
+            boot = self._current_boot(session.machine)
             if session.session_id in deaths:
                 self.live.store.forget_death(session.session_id)
             self.live.store.record_sighting(
@@ -865,7 +906,8 @@ class Loops:
                 session,
                 units=self._units_of(lane, session),
                 sighting=sighting,
-                boots_seen=self._boots,
+                boots_seen=self._boots.get(session.machine)
+                or self._boots.get(self.runtime.here().name, []),
                 now=now,
             )
             if death is not None and (death.cause, death.words) == (named.cause, named.words):
@@ -1066,10 +1108,10 @@ class Loops:
             young = (
                 wall is not None
                 and (now - wall.at).total_seconds() < RESCUE_HORIZON_SECONDS
-                and self._rung_open(wall, now)
+                and self._rung_open(wall, now, session.machine)
             )
             if not young:
-                placement, note = self._placement()
+                placement, note = self._placement(live.project.path)
                 if placement is None:
                     changed = (
                         self._park(slug, number, session, cause, words, now, nowhere=note)
@@ -1228,7 +1270,7 @@ class Loops:
         acted = False
         if session.wall is not None:
             acted = True
-            self.runtime.expire_handoff(session.wall)
+            self.runtime.expire_handoff(session.wall, machine_name=session.machine)
             self.live.note(
                 slug,
                 number,
@@ -1291,13 +1333,13 @@ class Loops:
         self.live.note(slug, number, AuditKind.RESCUED, Actor.MACHINE, f"{said}.")
         return stopped.gone
 
-    def _rung_open(self, wall: Handoff, now: datetime) -> bool:
+    def _rung_open(self, wall: Handoff, now: datetime, machine_name: str = "") -> bool:
         """Whether the account the wall chose still has its allowance, by
         that account's own latest reading: a lane that waited for room may
         have waited past the hour in which the rung was fresh. Every spent
         allowance counts, and one spent with no time for its return cannot
         be read as back (Codex's reading of card #107's second pass)."""
-        reading = self.runtime.limits(wall.account)
+        reading = self.runtime.limits(wall.account, machine_name=machine_name)
         if reading is None:
             return True
         for label, share in reading.spent.items():
@@ -1335,7 +1377,7 @@ class Loops:
             if (now - park.held_since).total_seconds() >= FLOOR_SECONDS:
                 return "the machine's memory has held above the floor for a whole beat"
             return None
-        placement, _ = self._placement()
+        placement, _ = self._placement(self._repo_of(session))
         if placement is None:
             return None
         if park.waits_on == "allowance" and placement.slot == session.slot:
@@ -1386,7 +1428,7 @@ class Loops:
                     "count stands"
                 )
         if cause == Cause.WALL:
-            reading = self.runtime.limits(session.slot)
+            reading = self.runtime.limits(session.slot, machine_name=session.machine)
             reset = limits.next_reset(reading) if reading is not None else None
             if reset is not None:
                 label, when = reset

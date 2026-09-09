@@ -97,3 +97,14 @@ class Rescue(BaseModel):
     to_rung: Rung
     reason: str
     at: datetime
+
+
+class Rescoped(BaseModel):
+    """What putting a session back in its lane's scope answered (plan 53,
+    item 2), as one machine's runtime says it over the wire (card #83)."""
+
+    unit: str
+    asked: bool
+    verified: bool
+    """The session's process reads the unit in /proc after the adoption."""
+    words: str

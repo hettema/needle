@@ -35,6 +35,12 @@ class Floor:
     state_file: Path
     cgroup_root: Path
     applications: Path
+    machine_id: str = "floor-machine-0001"
+    """What the floor's `/etc/machine-id` says (card #83): a second floor
+    laid beside this one answers with its own."""
+    ssh_control: Path | None = None
+    """Where the runtime's `ssh` would keep its shared connection: under
+    the floor, so a test never writes into the laptop's runtime directory."""
     pids: list[int] = field(default_factory=list)
 
     def config_dir(self, slot: str) -> Path:
@@ -150,6 +156,33 @@ class Floor:
 
     def script_launches(self, *fates: dict) -> None:
         self.update(launches=list(fates))
+
+    def lay_host(self, name: str, *, available_gb: float = 24.0) -> "Floor":
+        """A second machine (card #83): its own floor under this one's root,
+        reached by the fake `ssh` under `name`, sharing this floor's fake
+        state (the scripted fates and the compositor are one machine's
+        worth of stand-ins) and its own everything else — slots, registries,
+        memory, store, machine id. `needle` there is the venv's own script,
+        run by the fake `ssh` with the host's environment."""
+        other = lay(self.root / "hosts" / name)
+        other.machine_id = f"floor-machine-{name}"
+        other.state_file = self.state_file
+        other.ssh_control = self.ssh_control
+        write_meminfo(other.meminfo, available_gb=available_gb, swap_free_gb=8.0, swap_total_gb=8.0)
+        env = {
+            variable: str(getattr(other, attribute)) for variable, attribute in ENVIRONMENT.items()
+        }
+        env["NEEDLE_DB"] = str(other.root / "needle.db")
+        hosts = self.state().get("hosts") or {}
+        hosts[name] = {"env": env}
+        self.update(hosts=hosts)
+        return other
+
+    def host_down(self, name: str, down: bool = True) -> None:
+        """The other machine stops answering: the fake `ssh` exits 255."""
+        hosts = self.state().get("hosts") or {}
+        hosts[name]["down"] = down
+        self.update(hosts=hosts)
 
     def write_limits(
         self, slot: str, *, spent: dict[str, float], resets: dict[str, str], fetched_at: float
@@ -486,6 +519,8 @@ def lay(root: Path) -> Floor:
     cgroups.mkdir()
     applications = root / "applications"
     applications.mkdir()
+    ssh_control = root / "ssh-control"
+    ssh_control.mkdir()
     state = root / "fake-state.json"
     state.write_text(
         json.dumps(
@@ -532,6 +567,7 @@ def lay(root: Path) -> Floor:
         state_file=state,
         cgroup_root=cgroups,
         applications=applications,
+        ssh_control=ssh_control / "needle-ssh-%C",
     )
 
 
@@ -566,6 +602,9 @@ ENVIRONMENT = {
     "NEEDLE_FAKE_STATE": "state_file",
     "NEEDLE_CGROUP_ROOT": "cgroup_root",
     "NEEDLE_APPLICATIONS": "applications",
+    "NEEDLE_MACHINE_ID": "machine_id",
+    "NEEDLE_SSH_CONTROL": "ssh_control",
 }
 """Variable → the floor attribute it points at. `runtime.machine` reads all
-but the fake state; the fakes read that one."""
+but the fake state; the fakes read that one. The machine id is a value,
+not a path: what the floor's kernel would say it is (card #83)."""

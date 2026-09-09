@@ -3,6 +3,11 @@
 export const MAKE_VALUES = ["claude", "codex"] as const;
 export type Make = (typeof MAKE_VALUES)[number];
 
+export interface Expired {
+  session_id: string;
+  removed: boolean;
+}
+
 export interface Handoff {
   session_id: string;
   short_id: string | null;
@@ -27,6 +32,10 @@ export interface Limits {
   resets: Record<string, string>;
 }
 
+export interface LimitsRead {
+  limits: Limits | null;
+}
+
 export interface Placement {
   slot: string;
   make: Make;
@@ -34,6 +43,7 @@ export interface Placement {
   config_dir: string;
   why: string;
   tier?: Tier | null;
+  machine?: string;
 }
 
 export interface Rung {

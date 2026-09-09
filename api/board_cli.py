@@ -31,7 +31,7 @@ import sys
 import urllib.error
 import urllib.request
 from collections.abc import Callable
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 from api.dial import Dial
@@ -536,6 +536,11 @@ def signals(
 def lanes(
     args: argparse.Namespace, live: Live, runtime: Runtime, loops: Loops, doors: Doors
 ) -> int:
+    if args.killed:
+        return killed_lanes(args, live, runtime)
+    if args.slug is None:
+        print("name a project, or ask --killed", file=sys.stderr)
+        return 1
     loops.reconcile_now()
     project = live.projects.get(args.slug)
     if project is None or project.snapshot is None:
@@ -545,6 +550,30 @@ def lanes(
         if lane.state.value == "none":
             continue
         print(f"#{number}  {lane.state.value:<8} {lane.name}  {lane.sentence}")
+    return 0
+
+
+def killed_lanes(args: argparse.Namespace, live: Live, runtime: Runtime) -> int:
+    """The lanes the system's memory killer took on one machine over the
+    window (card #83, item 5): the plan's daily loop, read from the deaths
+    the board named and the machine each session ran on."""
+    since = clock.now() - timedelta(hours=args.since_hours)
+    here = runtime.here().name
+    machine = args.machine or here
+    if not any(m.name == machine for m in runtime.machines()):
+        print(f"no machine named {machine!r} is on the board", file=sys.stderr)
+        return 1
+    deaths = live.store.killed_on(machine, since=since, here=here)
+    if args.count:
+        print(len(deaths))
+        return 0
+    for death in sorted(deaths, key=lambda d: d.last_alive_at or d.named_at):
+        when = (death.last_alive_at or death.named_at).strftime("%Y-%m-%d %H:%MZ")
+        print(
+            f"{when}  {death.project} #{death.card_number}  {death.session_id[:8]}  {death.words}"
+        )
+    if not deaths:
+        print(f"no lane was killed by the system on {machine} in the last {args.since_hours} h")
     return 0
 
 
@@ -1048,7 +1077,15 @@ def register(sub: "argparse._SubParsersAction[argparse.ArgumentParser]") -> None
     p_signals.set_defaults(run=_with_board(signals))
 
     p_lanes = sub.add_parser("lanes", help="every card's lane, as the board reads it")
-    p_lanes.add_argument("slug")
+    p_lanes.add_argument("slug", nargs="?")
+    p_lanes.add_argument(
+        "--killed", action="store_true", help="the lanes the system killed, across projects"
+    )
+    p_lanes.add_argument("--machine", help="on this machine, by the board's name for it")
+    p_lanes.add_argument("--count", action="store_true", help="print how many, nothing else")
+    p_lanes.add_argument(
+        "--since", dest="since_hours", type=float, default=24.0, help="hours back (24)"
+    )
     p_lanes.set_defaults(run=_with_board(lanes))
 
     p_verdicts = sub.add_parser(

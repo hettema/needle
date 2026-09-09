@@ -55,3 +55,9 @@ class Shown(BaseModel):
     project: str
     card_number: int
     at: datetime
+
+
+class Said(BaseModel):
+    """What a verb did, in a sentence: what `needle show` answers."""
+
+    said: str

@@ -11,6 +11,18 @@ needle show SLUG CARD [--json]
 needle rescues SHORT [--clear] [--json]
 needle call WHO NOTE [--objective TEXT] [--answer PATH] [--json]
 needle wait CALL [--ceiling SECONDS] [--json]
+needle machine add NAME [--host H] [--desktop] [--ground PATH] [--command LINE]
+needle machine rm NAME
+needle machine timing NAME WHAT SECONDS
+needle machines [--json]
+needle room [--hold] [--json]
+
+Since card #83 the board's runtime asks another machine's runtime for what
+that machine holds, through these same verbs with `--json`: `sessions`,
+`where`, `start`, `stop`, `move`, `resume`, `rescope`, `room`, `scopes`,
+`cause`, `ended`, `boots`, `limits`, `expire-handoff`, `show` and `tell`.
+Each answers the domain value the façade answers, so the wire is the same
+typed edge the terminal reads.
 
 Each verb is a thin call into `runtime.service.Runtime`, answers in prose or
 as the domain value's JSON, and exits 1 when the thing asked for did not
@@ -32,16 +44,19 @@ from pydantic import BaseModel
 
 from board.dial import who_is_home
 from domain.call import CallOutcome, CallVerdict
-from domain.dial import ScopeState
+from domain.dial import ScopePids, ScopeState, ScopeStop
+from domain.ending import Ended, Sighting
 from domain.gate import Gate
-from domain.launch import Launch, LaunchVerdict, Start
+from domain.launch import Launch, LaunchVerdict, Start, WindowlessStart
+from domain.machine import Machine, MachineRoom, Timing
+from domain.notice import Notice, Said
 from domain.session import Session
-from domain.slot import Rung, rung_words
+from domain.slot import Expired, LimitsRead, Rung, rung_words
 from domain.window import WindowKind
 from infrastructure import clock
-from infrastructure.paths import db_path
-from infrastructure.store import Store
-from runtime import calls, codex
+from infrastructure.paths import data_dir, db_path
+from infrastructure.store import Store, StoreRefusal
+from runtime import calls, codex, machine
 from runtime.notice import NoBoardEntry
 from runtime.service import NoSuchSession, Runtime
 from runtime.windows import WindowRefused
@@ -134,6 +149,8 @@ def describe_session(session: Session, now: datetime | None = None) -> str:
         marks.append(f"wall: {session.wall.reason} → {session.wall.account}")
     if session.scope:
         marks.append(session.scope)
+    if session.machine:
+        marks.append(f"on {session.machine}")
     tail = f"  [{'; '.join(marks)}]" if marks else ""
     doing = doing_sentence(session, now or clock.now())
     tail += f"\n{'':<9} {'':<8}  {doing}" if doing else ""
@@ -165,9 +182,7 @@ def describe_launch(launch: Launch) -> str:
         head = f"not running: {launch.reason}"
     lines = [head]
     for attempt in launch.attempts:
-        rung = (
-            f"{attempt.rung.slot}/{attempt.rung.model or 'default'}"
-        )
+        rung = f"{attempt.rung.slot}/{attempt.rung.model or 'default'}"
         line = f"  {rung}: {attempt.verdict.value}"
         line += f" ({attempt.short_id})" if attempt.short_id else ""
         line += f" after {attempt.seconds:.1f} s"
@@ -200,11 +215,27 @@ def describe_scope(state: ScopeState) -> str:
 
 def scopes(runtime: Runtime, args: argparse.Namespace) -> int:
     """Every process group of ours and who is home in it (card #99): the
-    reading behind the beat's sweep, and the loop's own reader."""
+    reading behind the beat's sweep, and the loop's own reader. `--held`,
+    `--pids` and `--stop` are the wire's forms (card #83): what another
+    board asks this machine for, answered raw."""
+    if args.stop_unit:
+        taken, words = runtime.stop_scope(args.stop_unit)
+        _emit(args, ScopeStop(unit=args.stop_unit, taken=taken, words=words), words or "asked")
+        return 0 if taken else 1
+    if args.pids_unit:
+        pids = runtime.scope_pids(args.pids_unit)
+        if pids is None:
+            print("the user manager could not be asked", file=sys.stderr)
+            return 1
+        _emit(args, ScopePids(unit=args.pids_unit, pids=pids), " ".join(map(str, pids)))
+        return 0
     held = runtime.scopes()
     if held is None:
         print("the user manager could not be asked", file=sys.stderr)
         return 1
+    if args.held:
+        _emit(args, held, "\n".join(f"{h.unit}  {len(h.pids)} pids" for h in held) or "none")
+        return 0
     states = who_is_home(held, runtime.sessions())
     if args.stray:
         states = [s for s in states if s.nobody_home]
@@ -216,25 +247,58 @@ def scopes(runtime: Runtime, args: argparse.Namespace) -> int:
     return 0
 
 
+def _gb(byte_count: int) -> str:
+    return f"{byte_count / 1024**3:.1f} GB"
+
+
+def high_water_line(reading: MachineRoom) -> str:
+    """The plan's loop line for one machine: the most memory the board saw
+    used on it over the window, and the day."""
+    mark = reading.high_water
+    if mark is None:
+        return f"{reading.machine.name}: no memory reading yet"
+    return (
+        f"{reading.machine.name}: high-water {_gb(mark.used)} used of {_gb(mark.total)} "
+        f"on {mark.day.isoformat()} ({_gb(mark.least_available)} was the least available)"
+    )
+
+
 def where(runtime: Runtime, args: argparse.Namespace) -> int:
-    answer = runtime.where(args.from_slot, args.tried or [], cached=not args.live)
+    if args.high_water:
+        rooms = runtime.rooms()
+        reading = next((r for r in rooms if r.machine.name == args.high_water), None)
+        if reading is None:
+            print(f"no machine named {args.high_water!r} is on the board", file=sys.stderr)
+            return 1
+        _emit(args, reading, high_water_line(reading))
+        return 0
+    repo = str(Path(args.repo).expanduser().resolve()) if args.repo else None
+    answer = runtime.where(args.from_slot, args.tried or [], cached=not args.live, repo=repo)
     if answer.placement is None:
         _emit(args, answer, f"nowhere: {answer.reason}")
         return 1
     placement = answer.placement
-    _emit(args, answer, f"{rung_words(placement.model, placement.slot)} — {placement.why}")
+    on = f" on {placement.machine}" if placement.machine and repo else ""
+    _emit(args, answer, f"{rung_words(placement.model, placement.slot)}{on} — {placement.why}")
     return 0
 
 
 def start(runtime: Runtime, args: argparse.Namespace) -> int:
-    request = Start(
-        repo=str(Path(args.repo).expanduser().resolve()),
-        card=args.card,
-        brief=args.brief,
-        effort=Gate(args.effort),
-        from_slot=args.from_slot,
-    )
-    launch = runtime.start(request)
+    repo = str(Path(args.repo).expanduser().resolve())
+    if args.windowless:
+        launch = runtime.start_windowless(
+            WindowlessStart(repo=repo, card=args.card, brief=args.brief, effort=Gate(args.effort))
+        )
+    else:
+        launch = runtime.start(
+            Start(
+                repo=repo,
+                card=args.card,
+                brief=args.brief,
+                effort=Gate(args.effort),
+                from_slot=args.from_slot,
+            )
+        )
     _emit(args, launch, describe_launch(launch))
     return 0 if launch.verdict == LaunchVerdict.ALIVE else 1
 
@@ -245,8 +309,33 @@ def move(runtime: Runtime, args: argparse.Namespace) -> int:
     return 0 if launch.verdict == LaunchVerdict.ALIVE else 1
 
 
+def resume(runtime: Runtime, args: argparse.Namespace) -> int:
+    """Resume a session where the rule says, with the words given (card
+    #83): the wire's form of what the board's doors and loops do."""
+    placement = None
+    if args.to:
+        asked = runtime.where(args.to, [], cached=False)
+        if asked.placement is None or asked.placement.slot != args.to:
+            print(f"the rule would not place it on {args.to}: {asked.reason}", file=sys.stderr)
+            return 1
+        placement = asked.placement
+    launch = runtime.resume(
+        args.short, prompt=args.prompt, card=args.card, placement=placement, reason=args.reason
+    )
+    _emit(args, launch, describe_launch(launch))
+    return 0 if launch.verdict == LaunchVerdict.ALIVE else 1
+
+
+def rescope(runtime: Runtime, args: argparse.Namespace) -> int:
+    """Put a session back in its lane's scope (plan 53, item 2), on this
+    machine: the wire's form."""
+    done = runtime.rescope(runtime.session(args.short), args.card)
+    _emit(args, done, f"{done.unit}: {'verified' if done.verified else done.words}")
+    return 0 if done.verified else 1
+
+
 def stop(runtime: Runtime, args: argparse.Namespace) -> int:
-    stopped = runtime.stop(args.short)
+    stopped = runtime.stop(args.short, keep_handoff=args.keep_handoff)
     state = "gone" if stopped.gone else "STILL RUNNING"
     _emit(
         args,
@@ -286,10 +375,6 @@ def focus(runtime: Runtime, args: argparse.Namespace) -> int:
     return 0
 
 
-class Shown(BaseModel):
-    said: str
-
-
 def show(runtime: Runtime, args: argparse.Namespace) -> int:
     """What the notification's button runs (card #41): the card in front of
     him, on that project's board."""
@@ -298,7 +383,181 @@ def show(runtime: Runtime, args: argparse.Namespace) -> int:
     except (NoBoardEntry, WindowRefused) as refused:
         print(f"Could not show #{args.number} on {args.slug}: {refused}", file=sys.stderr)
         return 1
-    _emit(args, Shown(said=said), said)
+    _emit(args, Said(said=said), said)
+    return 0
+
+
+def tell(runtime: Runtime, args: argparse.Namespace) -> int:
+    """Raise a notice on this machine's screen (card #41), as the board on
+    another machine asks the desktop to (card #83): the ledger of how it
+    was answered is kept beside this machine's own store."""
+    notice = Notice.model_validate_json(args.notice)
+    told = runtime.tell(notice, args.opens or [], data_dir() / "told.log")
+    _emit(args, told, told.words)
+    return 0 if told.raised else 1
+
+
+# ── the wire's readers (card #83) ──────────────────────────────────────
+
+
+def cause(runtime: Runtime, args: argparse.Namespace) -> int:
+    """What took a session's process, from this machine's own evidence: the
+    reader the board on another machine asks for a session that ran here."""
+    session = runtime.session(args.short)
+    sighting = Sighting.model_validate_json(args.sighting) if args.sighting else None
+    named = runtime.cause_of(
+        session,
+        units=args.units or [],
+        sighting=sighting,
+        boots_seen=runtime.boots(),
+        now=clock.now(),
+    )
+    _emit(args, named, f"{named.cause.value}: {named.words}")
+    return 0
+
+
+def ended(runtime: Runtime, args: argparse.Namespace) -> int:
+    session = runtime.session(args.short)
+    why = runtime.why_ended(session)
+    _emit(args, Ended(why=why), why or "nothing on this machine says")
+    return 0
+
+
+def boots(runtime: Runtime, args: argparse.Namespace) -> int:
+    listed = runtime.boots()
+    _emit(
+        args,
+        listed,
+        "\n".join(f"{b.index:>3} {b.boot_id} {b.first_entry:%Y-%m-%d %H:%M}" for b in listed)
+        or "no boot listed",
+    )
+    return 0
+
+
+def limits_read(runtime: Runtime, args: argparse.Namespace) -> int:
+    reading = runtime.limits(args.slot)
+    text = (
+        "no reading"
+        if reading is None
+        else ", ".join(f"{label} {share:.0%}" for label, share in reading.spent.items())
+    )
+    _emit(args, LimitsRead(limits=reading), text)
+    return 0
+
+
+def expire_handoff(runtime: Runtime, args: argparse.Namespace) -> int:
+    found = runtime.handoffs().by_session.get(args.session_id)
+    if found is not None:
+        runtime.expire_handoff(found)
+    _emit(
+        args,
+        Expired(session_id=args.session_id, removed=found is not None),
+        "removed" if found is not None else "no handoff named it",
+    )
+    return 0
+
+
+def room(runtime: Runtime, args: argparse.Namespace) -> int:
+    """This machine against the floor, by the one rule the head uses."""
+    reading = runtime.room(hold=args.hold)
+    text = reading.sentence or (
+        f"room: {_gb(reading.available)} available, {_gb(reading.swap_free)} swap free, "
+        f"floor {_gb(reading.floor)}"
+    )
+    if reading.marked:
+        text += f"; held at the floor: {', '.join(reading.marked)}"
+    _emit(args, reading, text)
+    return 0
+
+
+# ── machines (card #83) ────────────────────────────────────────────────
+
+
+def describe_room(reading: MachineRoom) -> str:
+    where = " (here)" if reading.here else ""
+    what = "desktop" if reading.machine.desktop else "horsepower"
+    if reading.room is None:
+        state = f"did not answer: {reading.why}"
+    elif reading.room.full:
+        state = reading.room.sentence or "full"
+    else:
+        state = f"{_gb(reading.room.available)} available"
+    mark = reading.high_water
+    marks = f", high-water {_gb(mark.used)} used" if mark is not None else ""
+    return f"{reading.machine.name}{where}  {what}  {state}{marks}, {reading.killed} killed today"
+
+
+def machines(runtime: Runtime, args: argparse.Namespace) -> int:
+    rooms = runtime.rooms()
+    _emit(args, rooms, "\n".join(describe_room(r) for r in rooms))
+    return 0
+
+
+def machine_add(runtime: Runtime, args: argparse.Namespace) -> int:
+    """Register a machine. Its identity is read from the machine itself —
+    here when no host is named, over `ssh` when one is — so a row is never
+    written for a machine the board cannot reach at the door."""
+    try:
+        if args.host:
+            done = machine.run(["cat", str(machine.MACHINE_ID_FILE)], host=args.host, timeout=20)
+            if done.returncode != 0 or not done.stdout.strip():
+                print(
+                    f"{args.host} did not give its machine id: "
+                    f"{(done.stderr or done.stdout).strip()[:200]}",
+                    file=sys.stderr,
+                )
+                return 1
+            identity = done.stdout.strip()
+        else:
+            identity = machine.machine_id()
+    except (machine.Unreachable, machine.CommandMissing, machine.Timeout, OSError) as error:
+        print(f"could not reach {args.host}: {error}", file=sys.stderr)
+        return 1
+    if not identity:
+        print("this machine has no readable machine id", file=sys.stderr)
+        return 1
+    ground = str(Path(args.ground).expanduser().resolve()) if args.ground else None
+    row = Machine(
+        name=args.name,
+        machine_id=identity,
+        host=args.host,
+        desktop=args.desktop,
+        ground=ground,
+        command=args.command or machine.needle_command(),
+        added_at=clock.now(),
+    )
+    try:
+        runtime.store.add_machine(row)
+    except StoreRefusal as refused:
+        print(str(refused), file=sys.stderr)
+        return 1
+    _emit(
+        args,
+        row,
+        f"Registered {row.name} ({identity[:8]}…)"
+        + (f", reached as {row.host}" if row.host else ", this machine")
+        + (", the desktop" if row.desktop else "")
+        + (f", the ground of {ground}" if ground else ""),
+    )
+    return 0
+
+
+def machine_rm(runtime: Runtime, args: argparse.Namespace) -> int:
+    if runtime.store.remove_machine(args.name):
+        print(f"Forgot {args.name}; its readings stay under its name.")
+        return 0
+    print(f"no machine named {args.name!r} is on the board", file=sys.stderr)
+    return 1
+
+
+def machine_timing(runtime: Runtime, args: argparse.Namespace) -> int:
+    """Write one measured build time for a machine (the plan's item 5)."""
+    if not any(m.name == args.name for m in runtime.machines()):
+        print(f"no machine named {args.name!r} is on the board", file=sys.stderr)
+        return 1
+    timing = Timing(machine=args.name, what=args.what, seconds=args.seconds, at=clock.now())
+    runtime.store.record_timing(timing)
+    print(f"{args.name}: {args.what} {args.seconds:.1f} s, recorded")
     return 0
 
 
@@ -491,9 +750,18 @@ def register(sub: "argparse._SubParsersAction[argparse.ArgumentParser]") -> None
     )
     p_scopes.add_argument("--stray", action="store_true", help="only the groups nobody is home in")
     p_scopes.add_argument("--count", action="store_true", help="print how many, nothing else")
+    p_scopes.add_argument("--held", action="store_true", help="the groups raw, as the wire asks")
+    p_scopes.add_argument("--pids", dest="pids_unit", help="what one group holds, by unit")
+    p_scopes.add_argument("--stop", dest="stop_unit", help="ask the manager to end one group")
 
     p_where = parser("where", "where work runs next, as claude-acct's one rule answers it", where)
     p_where.add_argument("--from", dest="from_slot", help="the slot to ask first")
+    p_where.add_argument(
+        "--repo", help="the project the card is in: picks the machine first (card #83)"
+    )
+    p_where.add_argument(
+        "--high-water", dest="high_water", help="a machine's memory high-water mark, for the loop"
+    )
     p_where.add_argument(
         "--tried",
         type=lambda text: [parse_rung(t) for t in text.split(",") if t],
@@ -509,6 +777,24 @@ def register(sub: "argparse._SubParsersAction[argparse.ArgumentParser]") -> None
     p_start.add_argument("brief")
     p_start.add_argument("--effort", choices=[g.value for g in Gate], default=Gate.XHIGH.value)
     p_start.add_argument("--from", dest="from_slot", help="the slot to ask first")
+    p_start.add_argument(
+        "--windowless",
+        action="store_true",
+        help="a session in the checkout with no worktree and no window (a reading, a planning)",
+    )
+
+    p_resume = parser(
+        "resume", "resume a session where the rule says, with the words given", resume
+    )
+    p_resume.add_argument("short")
+    p_resume.add_argument("--prompt", help="what the resumed session is told")
+    p_resume.add_argument("--card", help="the lane's name, when the record does not say")
+    p_resume.add_argument("--to", help="the slot to resume on; the rule decides otherwise")
+    p_resume.add_argument("--reason", help="what the ledger records for the move")
+
+    p_rescope = parser("rescope", "put a session back in its lane's scope", rescope)
+    p_rescope.add_argument("short")
+    p_rescope.add_argument("card", help="the lane's name: the scope carries it")
 
     p_move = parser(
         "move",
@@ -522,6 +808,12 @@ def register(sub: "argparse._SubParsersAction[argparse.ArgumentParser]") -> None
 
     p_stop = parser("stop", "end a session through its own slot and prove it gone", stop)
     p_stop.add_argument("short")
+    p_stop.add_argument(
+        "--keep-handoff",
+        dest="keep_handoff",
+        action="store_true",
+        help="the board's own stop of a walled session that waits for room (card #107)",
+    )
 
     p_window = parser("window", "open a window into a session, proved by the compositor", window)
     p_window.add_argument("short")
@@ -545,6 +837,55 @@ def register(sub: "argparse._SubParsersAction[argparse.ArgumentParser]") -> None
     )
     p_show.add_argument("slug")
     p_show.add_argument("number", type=int)
+
+    p_tell = parser("tell", "raise a notice on this machine's screen, as the board asks", tell)
+    p_tell.add_argument("--notice", required=True, help="the notice as JSON")
+    p_tell.add_argument(
+        "--open", dest="opens", action="append", help="a word of the button's command"
+    )
+
+    p_cause = parser("cause", "what took a session's process, from this machine's evidence", cause)
+    p_cause.add_argument("short")
+    p_cause.add_argument("--unit", dest="units", action="append", help="a space it may have run in")
+    p_cause.add_argument("--sighting", help="the board's last sighting of it, as JSON")
+
+    p_ended = parser("ended", "why a session with no lane ended, in one line", ended)
+    p_ended.add_argument("short")
+
+    parser("boots", "this machine's boots, newest first", boots)
+
+    p_limits = parser("limits", "a slot's last limits reading on this machine", limits_read)
+    p_limits.add_argument("slot")
+
+    p_expire = parser("expire-handoff", "remove a handoff nothing will act on", expire_handoff)
+    p_expire.add_argument("session_id")
+
+    p_room = parser("room", "this machine against the floor: memory, swap, every group", room)
+    p_room.add_argument(
+        "--hold", action="store_true", help="give every group without it the floor as its high mark"
+    )
+
+    parser("machines", "every machine the board knows, with what each holds", machines)
+    p_machine = sub.add_parser("machine", help="register or forget a machine, or write a timing")
+    machine_sub = p_machine.add_subparsers(dest="machine_verb", required=True)
+    p_add = machine_sub.add_parser("add", help="register a machine on the board")
+    p_add.add_argument("name", help="the word the board uses for it: laptop, rented")
+    p_add.add_argument("--host", help="the ssh name the board reaches it by; none for this one")
+    p_add.add_argument("--desktop", action="store_true", help="it holds the owner's screen")
+    p_add.add_argument("--ground", help="the project that is its own record; its cards run there")
+    p_add.add_argument("--command", help="how needle runs there, as a shell line")
+    p_add.add_argument("--json", action="store_true", help="answer as JSON")
+    p_add.set_defaults(run=_with_runtime(machine_add))
+    p_rm = machine_sub.add_parser("rm", help="forget a machine")
+    p_rm.add_argument("name")
+    p_rm.add_argument("--json", action="store_true", help="answer as JSON")
+    p_rm.set_defaults(run=_with_runtime(machine_rm))
+    p_timing = machine_sub.add_parser("timing", help="write one measured build time for a machine")
+    p_timing.add_argument("name")
+    p_timing.add_argument("what", help="npm ci, vitest, pytest")
+    p_timing.add_argument("seconds", type=float)
+    p_timing.add_argument("--json", action="store_true", help="answer as JSON")
+    p_timing.set_defaults(run=_with_runtime(machine_timing))
 
     p_rescues = parser("rescues", "a session's rescue history in the runtime's ledger", rescues)
     p_rescues.add_argument("short")

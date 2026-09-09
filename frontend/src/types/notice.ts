@@ -12,6 +12,10 @@ export interface Notice {
   moment: Moment;
 }
 
+export interface Said {
+  said: string;
+}
+
 export interface Shown {
   id: number;
   project: string;

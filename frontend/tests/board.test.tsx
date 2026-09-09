@@ -498,6 +498,57 @@ describe("the doors", () => {
     expect(await screen.findByText(/the lane resumed as aaaa0001/)).toBeInTheDocument();
   });
 
+  it("names every machine on the head when the board knows more than one, and says which did not answer", async () => {
+    const b = board();
+    const laptop = { name: "laptop", machine_id: "id-laptop", host: null, desktop: true, ground: "/x/laptop-record", command: "needle", added_at: "2026-09-09T08:00:00+00:00" };
+    const rented = { ...laptop, name: "rented", machine_id: "id-rented", host: "rented", desktop: false, ground: null };
+    const room = { available: 24 * 1024 ** 3, swap_free: 8 * 1024 ** 3, floor: 5 * 1024 ** 3, full: false, sentence: null, scopes: [], read_at: "2026-09-09T08:00:00+00:00", marked: [], total: 32 * 1024 ** 3 };
+    b.machine = { missing: [], roles: null, machines: [
+      { machine: laptop, here: true, room: { ...room, available: 9 * 1024 ** 3 }, why: null, high_water: null, killed: 0 },
+      { machine: rented, here: false, room, why: null, high_water: null, killed: 2 },
+    ] };
+    api.getBoard.mockResolvedValue(b);
+    await renderBoard();
+    const head = document.querySelector(".app-head") as HTMLElement;
+    expect(head).toHaveTextContent("laptop (here): 9.0 GB free · rented: 24.0 GB free, 2 killed today");
+  });
+
+  it("paints the machine line broken when a machine did not answer, with the transport's words", async () => {
+    const b = board();
+    const laptop = { name: "laptop", machine_id: "id-laptop", host: null, desktop: true, ground: null, command: "needle", added_at: "2026-09-09T08:00:00+00:00" };
+    const rented = { ...laptop, name: "rented", machine_id: "id-rented", host: "rented", desktop: false };
+    const room = { available: 9 * 1024 ** 3, swap_free: 8 * 1024 ** 3, floor: 5 * 1024 ** 3, full: false, sentence: null, scopes: [], read_at: "2026-09-09T08:00:00+00:00", marked: [], total: 16 * 1024 ** 3 };
+    b.machine = { missing: [], roles: null, machines: [
+      { machine: laptop, here: true, room, why: null, high_water: null, killed: 0 },
+      { machine: rented, here: false, room: null, why: "rented did not answer", high_water: null, killed: 0 },
+    ] };
+    api.getBoard.mockResolvedValue(b);
+    await renderBoard();
+    const head = document.querySelector(".app-head") as HTMLElement;
+    expect(head).toHaveTextContent("rented: did not answer (rented did not answer)");
+    const facts = Array.from(head.querySelectorAll("[data-meaning='broken']"));
+    expect(facts.some((el) => el.textContent?.includes("rented: did not answer"))).toBe(true);
+  });
+
+  it("says on the open card which machine a lane's session runs on, when the board knows", async () => {
+    const d = withLane("working", "Live: a session is working on it, fable on alpha, for 12 m.");
+    if (d.lane) d.lane.machine = "rented";
+    api.getBoard.mockResolvedValue(board());
+    api.getCard.mockResolvedValue(d);
+    await renderBoard();
+    await userEvent.click(screen.getByText("Every metered kilowatt is billed"));
+    expect(await screen.findByText(/aaaa0001 · fable on alpha · on rented/)).toBeInTheDocument();
+  });
+
+  it("says nothing about machines on a board that knows only one", async () => {
+    const b = board();
+    b.machine = { missing: [], roles: null, machines: [] };
+    api.getBoard.mockResolvedValue(b);
+    await renderBoard();
+    const head = document.querySelector(".app-head") as HTMLElement;
+    expect(head).not.toHaveTextContent("(here)");
+  });
+
   it("offers Look and Resume, never Watch, on a lane whose session is gone, with the machine's reason", async () => {
     api.getCard.mockResolvedValue(withLane("ended", "Lane ended 3 min ago: the journal says: Killed process 4242. nothing folded."));
     api.openDoor.mockRejectedValue(new ApiError(502, "Look did not open: no window appeared under org.omarchy.board-look-card-253 within 8 s"));

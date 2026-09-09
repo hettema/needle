@@ -1,0 +1,48 @@
+#!/usr/bin/env python3
+"""A stand-in for `tmux` on the test floor (card #83): the multiplexer on
+the other machine. `new-session -A -s NAME …` records the session in
+`$NEEDLE_FAKE_STATE["tmux"]` and runs nothing (the command it would hold
+is recorded beside it); `has-session -t =NAME` answers whether one was
+recorded, as the real one does by exit code."""
+
+import fcntl
+import json
+import os
+import sys
+from pathlib import Path
+
+STATE = Path(os.environ["NEEDLE_FAKE_STATE"])
+
+
+def _flag(argv: list[str], name: str) -> str | None:
+    if name in argv and argv.index(name) + 1 < len(argv):
+        return argv[argv.index(name) + 1]
+    return None
+
+
+def main(argv: list[str]) -> int:
+    with (STATE.parent / (STATE.name + ".lock")).open("a+") as lock:
+        fcntl.flock(lock, fcntl.LOCK_EX)
+        blob = json.loads(STATE.read_text(encoding="utf-8"))
+        held = blob.setdefault("tmux", {})
+        verb = argv[0] if argv else ""
+        if verb == "new-session":
+            name = _flag(argv, "-s") or "0"
+            command = argv[argv.index(name) + 1 :] if name in argv else []
+            held[name] = {"command": command, "attached": "-A" in argv}
+            STATE.write_text(json.dumps(blob, indent=1), encoding="utf-8")
+            code = 0
+        elif verb == "has-session":
+            wanted = (_flag(argv, "-t") or "").lstrip("=")
+            code = 0 if wanted in held else 1
+            if code:
+                print(f"can't find session: {wanted}", file=sys.stderr)
+        else:
+            print(f"fake tmux: unknown verb {verb}", file=sys.stderr)
+            code = 2
+        fcntl.flock(lock, fcntl.LOCK_UN)
+    return code
+
+
+if __name__ == "__main__":
+    sys.exit(main(sys.argv[1:]))

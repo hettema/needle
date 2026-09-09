@@ -67,7 +67,7 @@ def summary_of(notice: Notice) -> str:
     return f"Needle · {notice.project_name} #{notice.card_number}: {notice.title}"
 
 
-def tell(notice: Notice, opens: list[str], ledger: Path) -> Told:
+def tell(notice: Notice, opens: list[str], ledger: Path, *, host: str | None = None) -> Told:
     """Raise the notice: `notify-send -u critical -t 0` with one action, and
     the moment's sound beside it; `opens` runs when the button is pressed.
     Answers whether the machine took it and the words the card records.
@@ -76,8 +76,8 @@ def tell(notice: Notice, opens: list[str], ledger: Path) -> Told:
     `dismissed` — which is the only trace of how long a popup stood, and
     what the plan's own reading (item 4) discriminates on."""
     try:
-        notifier = machine.which("notify-send")
-        player = machine.which("pw-play")
+        notifier = machine.which("notify-send") if host is None else "notify-send"
+        player = machine.which("pw-play") if host is None else "pw-play"
     except machine.CommandMissing as missing:
         return Told(raised=False, words=f"could not tell you: {missing}")
     notify = [
@@ -109,8 +109,8 @@ def tell(notice: Notice, opens: list[str], ledger: Path) -> Told:
         f'[ "$chosen" = {ACTION} ] && exec {shlex.join(opens)}'
     )
     try:
-        machine.spawn(["sh", "-c", script], wait=False)
-    except OSError as error:
+        machine.spawn(["sh", "-c", script], wait=False, host=host)
+    except (OSError, machine.Unreachable, machine.CommandMissing) as error:
         return Told(raised=False, words=f"could not tell you: {error}")
     return Told(raised=True, words=notice.words)
 
@@ -119,9 +119,7 @@ def _unquoted(words: list[str]) -> str:
     """The record line's words for the shell: the literals quoted, the two
     that the shell must expand — the stamp and the chosen action — left as
     they are."""
-    return " ".join(
-        word if word.startswith("$") else shlex.quote(word) for word in words
-    )
+    return " ".join(word if word.startswith("$") else shlex.quote(word) for word in words)
 
 
 def board_entry(slug: str) -> BoardEntry:
@@ -205,4 +203,3 @@ def _ask_board(base: str, slug: str, number: int) -> str | None:
     if done.returncode != 0 or not code.startswith("2"):
         return f"the board could not be asked ({(done.stderr or code).strip()[:120]})"
     return None
-

@@ -12,7 +12,7 @@ import re
 import sqlite3
 import threading
 import uuid
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, date, datetime, timedelta
 from pathlib import Path
 
 from alembic import command
@@ -57,6 +57,7 @@ from domain.gate import Gate
 from domain.hook import HeardMark, HookEvent, HookKind, HookPosted
 from domain.lane import Discussion, LaneRecord
 from domain.launch import Rescue
+from domain.machine import HighWater, Machine, Timing
 from domain.project import Project
 from domain.row import Row, RowKind
 from domain.session import SessionSlot
@@ -92,12 +93,14 @@ from infrastructure.schema import (
     GroupRow,
     HeardNoteRow,
     HeardRow,
+    HighWaterRow,
     HookEventRow,
     LaneRow,
-    ParkRow,
     LeverageBatchRow,
     LeverageDeclineRow,
     LeverageReadingRow,
+    MachineRow,
+    ParkRow,
     ProjectRow,
     RailAtOnRow,
     ReadingRow,
@@ -105,6 +108,7 @@ from infrastructure.schema import (
     RescueRow,
     SessionSlotRow,
     SightingRow,
+    TimingRow,
     TitleReadingRow,
     TriageRow,
     TrunkRow,
@@ -1744,6 +1748,7 @@ class Store:
                         card=record.card,
                         scope=record.scope,
                         recorded_at=record.recorded_at,
+                        machine=record.machine,
                     )
                 )
             else:
@@ -1751,6 +1756,8 @@ class Store:
                 row.card = record.card
                 row.scope = record.scope
                 row.recorded_at = record.recorded_at
+                if record.machine:
+                    row.machine = record.machine
 
     def session_slot(self, session_id: str) -> SessionSlot | None:
         with self._session() as session:
@@ -1761,6 +1768,143 @@ class Store:
         with self._session() as session:
             rows = session.scalars(select(SessionSlotRow).order_by(SessionSlotRow.recorded_at))
             return [_session_slot(r) for r in rows]
+
+    # ── machines ───────────────────────────────────────────────────────
+    # The machines the board knows (card #83), registered like projects, and
+    # what the loop measures on each: the least memory per day, and the
+    # build timings written by hand.
+
+    def add_machine(self, machine: Machine) -> None:
+        """Register a machine; a second row under the same name or the same
+        identity is refused, so one machine is never two rows."""
+        with self._session() as session, session.begin():
+            if session.get(MachineRow, machine.name) is not None:
+                raise StoreRefusal(f'A machine named "{machine.name}" is already on the board.')
+            same_id = session.scalar(
+                select(MachineRow).where(MachineRow.machine_id == machine.machine_id)
+            )
+            if same_id is not None:
+                raise StoreRefusal(
+                    f"That machine is already on the board as {same_id.name!r} "
+                    f"(machine id {machine.machine_id})."
+                )
+            session.add(
+                MachineRow(
+                    name=machine.name,
+                    machine_id=machine.machine_id,
+                    host=machine.host,
+                    desktop=machine.desktop,
+                    ground=machine.ground,
+                    command=machine.command,
+                    added_at=machine.added_at,
+                )
+            )
+
+    def remove_machine(self, name: str) -> bool:
+        """Forget a machine; its readings stay under its name. False when
+        no such machine is on the board."""
+        with self._session() as session, session.begin():
+            row = session.get(MachineRow, name)
+            if row is None:
+                return False
+            session.delete(row)
+            return True
+
+    def machines(self) -> list[Machine]:
+        with self._session() as session:
+            rows = session.scalars(select(MachineRow).order_by(MachineRow.added_at))
+            return [_machine(r) for r in rows]
+
+    def note_high_water(self, machine: str, *, available: int, total: int, at: datetime) -> bool:
+        """One reading of a machine's memory: kept when it is the day's
+        lowest, else dropped. True when the mark moved."""
+        day = at.astimezone(UTC).date().isoformat()
+        with self._session() as session, session.begin():
+            row = session.get(HighWaterRow, (machine, day))
+            if row is None:
+                session.add(
+                    HighWaterRow(
+                        machine=machine, day=day, least_available=available, total=total, at=at
+                    )
+                )
+                return True
+            if available < row.least_available:
+                row.least_available, row.total, row.at = available, total, at
+                return True
+            return False
+
+    def high_water(self, machine: str, *, since: datetime | None = None) -> HighWater | None:
+        """The day on which the machine had the least memory available, over
+        the days since `since` (every day when None); None with no reading."""
+        with self._session() as session:
+            query = select(HighWaterRow).where(HighWaterRow.machine == machine)
+            if since is not None:
+                query = query.where(HighWaterRow.day >= since.astimezone(UTC).date().isoformat())
+            rows = list(session.scalars(query))
+        if not rows:
+            return None
+        lowest = min(rows, key=lambda r: (r.least_available, r.day))
+        return _high_water(lowest)
+
+    def high_waters(self, machine: str) -> list[HighWater]:
+        """Every day's mark for the machine, oldest first."""
+        with self._session() as session:
+            rows = session.scalars(
+                select(HighWaterRow)
+                .where(HighWaterRow.machine == machine)
+                .order_by(HighWaterRow.day)
+            )
+            return [_high_water(r) for r in rows]
+
+    def record_timing(self, timing: Timing) -> None:
+        with self._session() as session, session.begin():
+            session.add(
+                TimingRow(
+                    machine=timing.machine, what=timing.what, seconds=timing.seconds, at=timing.at
+                )
+            )
+
+    def timings(self, machine: str | None = None) -> list[Timing]:
+        """Every timing written, oldest first; one machine's when named."""
+        with self._session() as session:
+            query = select(TimingRow).order_by(TimingRow.at, TimingRow.id)
+            if machine is not None:
+                query = query.where(TimingRow.machine == machine)
+            return [
+                Timing(machine=r.machine, what=r.what, seconds=r.seconds, at=r.at)
+                for r in session.scalars(query)
+            ]
+
+    def killed_on(self, machine: str, *, since: datetime, here: str) -> list[Death]:
+        """The deaths the system's memory killer caused on a machine since
+        `since` (card #83, item 5): a death whose session's slot record
+        names the machine, or names none and the board's own machine is
+        `here`. Read by the loop's daily count."""
+        with self._session() as session:
+            rows = list(
+                session.scalars(
+                    select(DeathRow).where(
+                        DeathRow.cause.in_([Cause.LANE_KILLED.value, Cause.DAEMON_KILLED.value])
+                    )
+                )
+            )
+            slots = {
+                r.session_id: r.machine
+                for r in session.scalars(
+                    select(SessionSlotRow).where(
+                        SessionSlotRow.session_id.in_([d.session_id for d in rows])
+                    )
+                )
+            }
+        found: list[Death] = []
+        for row in rows:
+            when = row.last_alive_at or row.named_at
+            if when < since:
+                continue
+            where = slots.get(row.session_id) or here
+            if where == machine:
+                found.append(_death(row))
+        return found
 
     def record_rescue(
         self, session_id: str, from_rung: Rung | None, to_rung: Rung, reason: str, at: datetime
@@ -2443,6 +2587,29 @@ def _session_slot(row: SessionSlotRow) -> SessionSlot:
         card=row.card,
         scope=row.scope,
         recorded_at=row.recorded_at,
+        machine=row.machine or "",
+    )
+
+
+def _machine(row: MachineRow) -> Machine:
+    return Machine(
+        name=row.name,
+        machine_id=row.machine_id,
+        host=row.host,
+        desktop=row.desktop,
+        ground=row.ground,
+        command=row.command,
+        added_at=row.added_at,
+    )
+
+
+def _high_water(row: HighWaterRow) -> HighWater:
+    return HighWater(
+        machine=row.machine,
+        day=date.fromisoformat(row.day),
+        least_available=row.least_available,
+        total=row.total,
+        at=row.at,
     )
 
 
@@ -3097,6 +3264,8 @@ def _recovery(row: RecoveryRow) -> Recovery:
         ended_at=row.ended_at,
         note=row.note,
     )
+
+
 def _focus_ruling(row: FocusRulingRow) -> FocusRuling:
     return FocusRuling(
         id=row.id,

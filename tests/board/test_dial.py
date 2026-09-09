@@ -7,7 +7,6 @@ from board.dial import (
     LIVE_STAGES,
     dial_state,
     filer_of,
-    headroom,
     held_lanes,
     is_quiet,
     rail_count,
@@ -21,7 +20,16 @@ from board.triage import routing_of
 from domain.card import Actor, Card, CardOrigin, DocumentLink, Place
 from domain.column import DEFECTS_RAIL, Column
 from domain.corpus import CorpusIndex
-from domain.dial import MEMORY_FLOOR_BYTES, Dial, Filer, FixLane, FixStage, Meminfo, ScopeMemory
+from domain.dial import (
+    MEMORY_FLOOR_BYTES,
+    Dial,
+    Filer,
+    FixLane,
+    FixStage,
+    Meminfo,
+    ScopeMemory,
+    headroom,
+)
 from domain.document import DocumentKind
 from domain.lane import LaneState
 from domain.row import Row, RowKind

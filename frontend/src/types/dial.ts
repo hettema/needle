@@ -75,12 +75,15 @@ export interface Headroom {
   sentence: string | null;
   scopes?: ScopeMemory[];
   read_at: string;
+  marked?: string[];
+  total?: number;
 }
 
 export interface Meminfo {
   available: number;
   swap_total: number;
   swap_free: number;
+  total?: number;
 }
 
 export interface RailCount {
@@ -94,6 +97,7 @@ export interface ScopeHeld {
   pids: number[];
   commands: Record<string, string>;
   lineage: Record<string, number[]>;
+  machine?: string;
 }
 
 export interface ScopeMemory {
@@ -103,11 +107,22 @@ export interface ScopeMemory {
   card_number: number | null;
 }
 
+export interface ScopePids {
+  unit: string;
+  pids: number[];
+}
+
 export interface ScopeState {
   unit: string;
   pids: number[];
   home: string[];
   strangers: string[];
+}
+
+export interface ScopeStop {
+  unit: string;
+  taken: boolean;
+  words: string;
 }
 
 export interface Waiting {

@@ -233,6 +233,11 @@ class Dial:
         room = self.live.headroom
         if room is None:
             room = self.loops.headroom_now()
+        # The rule that places work picks the machine with room (card #83):
+        # while any machine the board knows has room, the beat may take.
+        others = [r for r in self.live.machine.machines if not r.here]
+        if any(r.room is not None and not r.room.full for r in others):
+            return None
         return room.sentence if room.full else None
 
     def _take_next(self, setting: DialSetting) -> None:

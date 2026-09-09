@@ -6,6 +6,7 @@ from datetime import UTC, datetime
 from sqlalchemy import (
     JSON,
     Boolean,
+    Float,
     ForeignKey,
     ForeignKeyConstraint,
     Index,
@@ -122,6 +123,9 @@ class SessionSlotRow(Base):
     card: Mapped[str] = mapped_column(Text)
     scope: Mapped[str] = mapped_column(Text)
     recorded_at: Mapped[datetime] = mapped_column(UtcDateTime)
+    machine: Mapped[str] = mapped_column(String(40), server_default="")
+    """Which machine the session was started on (card #83); empty for a
+    record written before the board knew of more than one."""
 
 
 class RescueRow(Base):
@@ -622,6 +626,8 @@ class RecoveryRow(Base):
     verdict: Mapped[str | None] = mapped_column(String(20), nullable=True)
     ended_at: Mapped[datetime | None] = mapped_column(UtcDateTime, nullable=True)
     note: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+
 class FocusRulingRow(Base):
     """The owner's click on a project's focus (card #87, item 1): the
     document's fingerprint and when he chose it. One ruling stands at a
@@ -760,4 +766,49 @@ class LeverageDeclineRow(Base):
     focus_fingerprint: Mapped[str] = mapped_column(String(64))
     document_fingerprint: Mapped[str] = mapped_column(String(64))
     leverage: Mapped[str] = mapped_column(String(40))
+    at: Mapped[datetime] = mapped_column(UtcDateTime)
+
+
+class MachineRow(Base):
+    """One machine the board knows (card #83): its name, the kernel's
+    identity for it, how it is reached, whether it holds the owner's screen,
+    the project that is its own record, and how `needle` runs there. The
+    board tells which row is itself by the machine id, never the name."""
+
+    __tablename__ = "machines"
+
+    name: Mapped[str] = mapped_column(String(40), primary_key=True)
+    machine_id: Mapped[str] = mapped_column(String(64), unique=True)
+    host: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    desktop: Mapped[bool] = mapped_column(Boolean)
+    ground: Mapped[str | None] = mapped_column(Text, nullable=True)
+    command: Mapped[str] = mapped_column(Text)
+    added_at: Mapped[datetime] = mapped_column(UtcDateTime)
+
+
+class HighWaterRow(Base):
+    """The least memory a machine had available on one day, as the loop
+    read it (card #83, item 5): one row per machine per day, rewritten when
+    a pass reads lower."""
+
+    __tablename__ = "high_water"
+
+    machine: Mapped[str] = mapped_column(String(40), primary_key=True)
+    day: Mapped[str] = mapped_column(String(10), primary_key=True)
+    least_available: Mapped[int] = mapped_column(Integer)
+    total: Mapped[int] = mapped_column(Integer)
+    at: Mapped[datetime] = mapped_column(UtcDateTime)
+
+
+class TimingRow(Base):
+    """One measured wall-clock of a build step on a machine (card #83,
+    item 5), written by hand from a measurement."""
+
+    __tablename__ = "timings"
+    __table_args__ = (Index("ix_timings_machine", "machine", "what"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    machine: Mapped[str] = mapped_column(String(40))
+    what: Mapped[str] = mapped_column(String(40))
+    seconds: Mapped[float] = mapped_column(Float)
     at: Mapped[datetime] = mapped_column(UtcDateTime)

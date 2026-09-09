@@ -293,7 +293,7 @@ export function OpenCard({ card, onMoveTo }: { card: CardSummary; onMoveTo: (num
       ) : null}
 
       {lane && lane.state !== "none" ? (
-        <Section title="The lane" from={lane.session ? `${lane.session.short_id} · ${rungWords(lane.session.model, lane.session.slot)}` : lane.name}>
+        <Section title="The lane" from={lane.session ? `${lane.session.short_id} · ${rungWords(lane.session.model, lane.session.slot)}${lane.machine ? ` · on ${lane.machine}` : ""}` : lane.name}>
           <Band state={card.state}>{lane.sentence}</Band>
           {lane.state === "asking" && lane.question ? <Ask>{lane.question}</Ask> : null}
           {doors.answer.offered ? <AnswerBox onSend={(text) => void through("answer", { text })} disabled={opening !== null} hint="One sentence resumes the lane with it" /> : null}

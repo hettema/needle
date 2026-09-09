@@ -17,6 +17,7 @@ from domain.gate import Gate
 from domain.handout import Handouts
 from domain.hook import HeardMark
 from domain.lane import Collision, Conversation, Doors, Lane, LaneState, Progress
+from domain.machine import MachineRoom
 from domain.meaning import OPENING, Meaning, opened, opening_of
 from domain.project import Project
 from domain.row import Row
@@ -320,6 +321,10 @@ class MachineState(BaseModel):
     roles: list[str] | None = None
     """The roles the machine's roles file names, in file order; None when
     the machine has no roles file (plan 12, item 2)."""
+    machines: list[MachineRoom] = []
+    """Every machine the board knows, with what each holds against the
+    floor this pass (card #83): the head shows each by name, so a lane on
+    the wrong machine is loud. Empty until the loop has read them."""
 
 
 class BoardState(BaseModel):

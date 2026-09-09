@@ -7,6 +7,7 @@ set, by adding a client under the app-id to the fake compositor."""
 import fcntl
 import json
 import os
+import subprocess
 import sys
 import time
 from pathlib import Path
@@ -25,6 +26,19 @@ def main(argv: list[str]) -> int:
         fcntl.flock(lock, fcntl.LOCK_UN)
     if not blob.get("windows_open", True):
         return 0
+    # A window into a session on another machine is a terminal running
+    # `ssh -t <host> -- tmux …` (card #83): the real terminal runs it, and
+    # the multiplexer's word on the other machine is half the proof, so the
+    # stand-in runs that one shape too — through the fake `ssh` and the
+    # fake `tmux`, which record it. A local attach is left unrun as before.
+    if command[-2:-1] == ["-lc"] and command[-1].startswith("exec ssh -t "):
+        subprocess.Popen(
+            ["bash", "-c", command[-1]],
+            stdin=subprocess.DEVNULL,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            start_new_session=True,
+        )
     time.sleep(float(blob.get("window_delay", 0.0)))
     with (STATE.parent / (STATE.name + ".lock")).open("a+") as lock:
         fcntl.flock(lock, fcntl.LOCK_EX)

@@ -36,6 +36,7 @@ export interface Session {
   updated_at: string | null;
   resumed_from: string | null;
   doing: Doing | null;
+  machine?: string;
 }
 
 export interface SessionSlot {
@@ -44,4 +45,5 @@ export interface SessionSlot {
   card: string;
   scope: string;
   recorded_at: string;
+  machine?: string;
 }

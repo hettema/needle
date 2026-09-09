@@ -42,6 +42,7 @@ MODULES: list[str] = [
     "handout",
     "triage",
     "dial",
+    "machine",
     "call",
     "notice",
     "focus",

@@ -1,21 +1,30 @@
 """The runtime as one typed façade: what the command line and, in slice 03,
 the board call. Every method answers with a domain value or raises with a
 sentence; nothing here reaches the machine except through the modules that
-do so by name."""
+do so by name.
+
+Since card #83 the façade stands on more than one machine: every verb that
+reads or acts on a session, a process group, a journal or a screen goes to
+the machine that holds it — here, through the modules by name, or on
+another machine through that machine's own `needle` (`runtime.remote`).
+Which machine is which is the store's knowledge (`needle machine add`), and
+which row is this machine is the kernel's (`machine.machine_id`)."""
 
 import contextlib
+import logging
 import uuid
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 from domain.call import Call, CallVerdict
-from domain.dial import Meminfo, ScopeHeld
+from domain.dial import MEMORY_FLOOR_BYTES, Headroom, Meminfo, ScopeHeld, ScopeMemory, headroom
 from domain.ending import Boot, Cause, Named, Sighting
 from domain.gate import Gate
 from domain.handout import Dispatch
-from domain.launch import Launch, Rescue, Start, Stopped, WindowlessStart
+from domain.launch import Launch, Rescoped, Rescue, Start, Stopped, WindowlessStart
+from domain.machine import Machine, MachineRoom, choose_machine
 from domain.notice import Notice, Told
-from domain.session import Session, SessionKind
+from domain.session import Session, SessionKind, SessionSlot
 from domain.signal import Signal
 from domain.slot import Handoff, Limits, Placement, Rung, Slot, Where
 from domain.watercooler import Note
@@ -41,22 +50,34 @@ from runtime import (
     transcripts,
     windows,
 )
+from runtime.remote import Remote, RemoteRefused
+
+log = logging.getLogger("needle.runtime")
 
 COMMANDS = (
     "claude",
     "claude-acct",
-    "hyprctl",
-    "omarchy-launch-tui",
     "busctl",
     "systemctl",
     "git",
     "curl",
+    "ssh",
 )
-"""What the runtime needs on PATH. `journalctl` is asked for a death's reason
-and its absence is only a reason unknown."""
+"""What the runtime needs on PATH wherever it runs. `journalctl` is asked
+for a death's reason and its absence is only a reason unknown; `ssh` is how
+another machine is asked (card #83) and its absence is every other machine
+unreachable."""
+DESKTOP_COMMANDS = ("hyprctl", "omarchy-launch-tui")
+"""What the runtime needs on PATH on the machine with the owner's screen,
+which is this one until the board runs elsewhere (card #83)."""
 
+HIGH_WATER_DAYS = 14
+"""The loop's window: the plan decides 32 or 64 GB on two weeks of marks."""
+KILLED_HOURS = 24
+"""The loop's daily count: lanes the system killed on a machine in the last day."""
 
 _EPOCH = datetime.min.replace(tzinfo=UTC)
+_UNREACHABLE = (machine.Unreachable, RemoteRefused)
 
 
 class NoSuchSession(Exception):
@@ -79,19 +100,219 @@ class Runtime:
     def handoffs(self) -> handoffs.Handoffs:
         return handoffs.read_handoffs()
 
+    # ── machines ───────────────────────────────────────────────────────
+    # The machines the board knows (card #83): the store's rows, and this
+    # one by the kernel's identity. A board nobody registered a machine on
+    # is a one-machine board whose machine is the desktop, which is what
+    # every board was until this card.
+
+    def machines(self) -> list[Machine]:
+        """Every machine the board knows, this one included: the registered
+        rows, with this machine named from its hostname when no row is it."""
+        rows = self.store.machines()
+        own = machine.machine_id()
+        if any(m.machine_id == own for m in rows):
+            return rows
+        return [
+            Machine(
+                name=machine.hostname(),
+                machine_id=own,
+                host=None,
+                desktop=True,
+                ground=None,
+                command=machine.needle_command(),
+                added_at=_EPOCH,
+            ),
+            *rows,
+        ]
+
+    def here(self) -> Machine:
+        """The machine this runtime runs on."""
+        own = machine.machine_id()
+        return next(m for m in self.machines() if m.machine_id == own)
+
+    def is_here(self, m: Machine) -> bool:
+        return m.machine_id == machine.machine_id()
+
+    def desktop(self) -> Machine:
+        """The machine with the owner's screen: the registered desktop, else
+        this one."""
+        return next((m for m in self.machines() if m.desktop), self.here())
+
+    def desktop_host(self) -> str | None:
+        """The host every window, focus and notification goes to; None when
+        the screen is on this machine."""
+        desktop = self.desktop()
+        return None if self.is_here(desktop) else desktop.host
+
+    def machine_named(self, name: str) -> Machine:
+        """The machine a row names; an empty or unknown name is this one,
+        because every row written before this card was this machine's."""
+        return next((m for m in self.machines() if m.name == name), self.here())
+
+    def machine_of(self, session: Session) -> Machine:
+        return self.machine_named(session.machine)
+
+    def _remote(self, m: Machine) -> Remote:
+        return Remote(m)
+
+    def _stamped(self, m: Machine, launch_: Launch, card: str) -> Launch:
+        """The launch as the board records it: its placement and session
+        carry the machine's name, and the board's own store holds where
+        the session runs — a launch on another machine wrote that into
+        that machine's ledger, not here."""
+        placement = (
+            launch_.placement.model_copy(update={"machine": m.name})
+            if launch_.placement is not None
+            else None
+        )
+        session = (
+            launch_.session.model_copy(update={"machine": m.name})
+            if launch_.session is not None
+            else None
+        )
+        if session is not None and session.session_id:
+            record = self.store.session_slot(session.session_id)
+            self.store.record_session_slot(
+                SessionSlot(
+                    session_id=session.session_id,
+                    slot=record.slot if record else session.slot,
+                    card=record.card if record else card,
+                    scope=record.scope if record else (launch_.scope or ""),
+                    recorded_at=clock.now(),
+                    machine=m.name,
+                )
+            )
+        return launch_.model_copy(update={"placement": placement, "session": session})
+
+    def room(
+        self, *, hold: bool = False, owners: dict[str, tuple[str, int]] | None = None
+    ) -> Headroom:
+        """This machine against the floor: its memory, and what every group
+        of ours holds, read by the one rule the head uses. With `hold`,
+        every group that stands without the floor as its high mark is given
+        it first (card #107), and the reading says which. `owners` names
+        the card each unit is, when the caller (the board's loop) knows."""
+        try:
+            units = machine.units_named(launch.SESSION_UNIT_PREFIX)
+        except (OSError, machine.Timeout, machine.CommandMissing):
+            units = None
+        marked = self.hold_scopes_at(sorted(units), MEMORY_FLOOR_BYTES) if hold and units else []
+        held = self.scope_memory(sorted(units)) if units else {}
+        named = owners or {}
+        scopes = (
+            [
+                ScopeMemory(
+                    unit=unit,
+                    held=held[unit],
+                    project=named[unit][0] if unit in named else None,
+                    card_number=named[unit][1] if unit in named else None,
+                )
+                for unit in sorted(units)
+                if unit in held
+            ]
+            if held is not None and units is not None
+            else None
+        )
+        return headroom(
+            self.meminfo(), MEMORY_FLOOR_BYTES, clock.now(), scopes=scopes, marked=marked
+        )
+
+    def rooms(
+        self, *, hold: bool = False, owners: dict[str, tuple[str, int]] | None = None
+    ) -> list[MachineRoom]:
+        """Every machine against the floor this pass, with what the board
+        has measured on each: the two-week high-water mark and the day's
+        kills. A machine that did not answer is a room of None with the
+        transport's words, never a machine with room."""
+        now = clock.now()
+        found: list[MachineRoom] = []
+        here = self.here()
+        for m in self.machines():
+            room: Headroom | None = None
+            why: str | None = None
+            if self.is_here(m):
+                room = self.room(hold=hold, owners=owners)
+            else:
+                try:
+                    room = self._remote(m).room(hold=hold)
+                except _UNREACHABLE as error:
+                    why = str(error)
+            found.append(
+                MachineRoom(
+                    machine=m,
+                    here=self.is_here(m),
+                    room=room,
+                    why=why,
+                    high_water=self.store.high_water(
+                        m.name, since=now - timedelta(days=HIGH_WATER_DAYS)
+                    ),
+                    killed=len(
+                        self.store.killed_on(
+                            m.name, since=now - timedelta(hours=KILLED_HOURS), here=here.name
+                        )
+                    ),
+                )
+            )
+        return found
+
+    def place(
+        self, repo: str, rooms: list[MachineRoom] | None = None
+    ) -> tuple[Machine | None, str]:
+        """Which machine a card in `repo` runs on next, and why (the plan's
+        item 4): the rule in `domain.machine.choose_machine`, over the rooms
+        read this pass or read now."""
+        return choose_machine(self.rooms() if rooms is None else rooms, repo)
+
+    def _where_on(
+        self, m: Machine, from_slot: str | None, tried: list[Rung], *, cached: bool
+    ) -> Where:
+        """The one rule, asked on the machine the work would run on: its
+        `claude-acct` knows that machine's logins and allowances."""
+        if self.is_here(m):
+            answer = rule.where(from_slot, tried, cached=cached)
+        else:
+            try:
+                answer = self._remote(m).where(from_slot, tried, cached=cached)
+            except _UNREACHABLE as error:
+                return Where(placement=None, reason=f"{m.name} could not be asked: {error}")
+        if answer.placement is None:
+            return answer
+        return Where(
+            placement=answer.placement.model_copy(update={"machine": m.name}), reason=answer.reason
+        )
+
     def sessions(self) -> list[Session]:
-        """The one list: every registry, every row checked in /proc, one row
-        per session id. Reading it also records the windows the owner has
-        closed since the last read."""
+        """The one list: every registry on every machine, every row checked
+        in /proc there, one row per session id, each stamped with the
+        machine it was read on. Reading it also records the windows the
+        owner has closed since the last read. A machine that does not
+        answer contributes no rows and is said in the log; its sessions are
+        not gone, they are unread, and the lanes they hold read as ended
+        only if nothing else knows better."""
         walls = handoffs.read_handoffs().by_session
         rows = registry.sessions(slots.registries(), walls)
         # Codex's sessions are rows of the same list (plan 57, item 3): read
         # from its rollouts, checked in /proc the same way, sorted under the
         # make's name where a Claude row sorts under its slot.
-        rows = registry.merge([*rows, *codex.sessions(clock.now())])
+        here = self.here()
+        rows = [
+            r.model_copy(update={"machine": here.name})
+            for r in [*rows, *codex.sessions(clock.now())]
+        ]
+        for m in self.machines():
+            if self.is_here(m):
+                continue
+            try:
+                rows += [
+                    r.model_copy(update={"machine": m.name}) for r in self._remote(m).sessions()
+                ]
+            except _UNREACHABLE as error:
+                log.warning("the sessions on %s could not be read: %s", m.name, error)
+        rows = registry.merge(rows)
         # With no compositor to ask, the windows' state stays as last recorded.
         with contextlib.suppress(windows.WindowRefused):
-            windows.reconcile(self.store)
+            windows.reconcile(self.store, host=self.desktop_host())
         return rows
 
     def session(self, ref: str) -> Session:
@@ -139,8 +360,28 @@ class Runtime:
         """The machine's watercooler as it stands, oldest change first."""
         return discussion.notes()
 
-    def where(self, from_slot: str | None, tried: list[Rung], *, cached: bool = True) -> Where:
-        return rule.where(from_slot, tried, cached=cached)
+    def where(
+        self,
+        from_slot: str | None,
+        tried: list[Rung],
+        *,
+        cached: bool = True,
+        repo: str | None = None,
+        rooms: list[MachineRoom] | None = None,
+    ) -> Where:
+        """Where work runs next. With a repository named, the machine is
+        chosen first (the plan's item 4: the project's own machine, else
+        the horsepower with room, else the desktop with room) and that
+        machine's rule is asked; a full board is #53's refusal with every
+        machine's numbers. Without one the rule here answers, stamped with
+        this machine's name, which is what every caller before this card
+        asked for."""
+        if repo is None:
+            return self._where_on(self.here(), from_slot, tried, cached=cached)
+        chosen, why = self.place(repo, rooms)
+        if chosen is None:
+            return Where(placement=None, reason=why)
+        return self._where_on(chosen, from_slot, tried, cached=cached)
 
     def rescues(self, ref: str) -> list[Rescue]:
         return self.store.rescues(self.session(ref).session_id)
@@ -148,17 +389,42 @@ class Runtime:
     # ── acting ─────────────────────────────────────────────────────────
 
     def start(self, request: Start) -> Launch:
-        return launch.start(self.store, request)
+        """Start a lane where the machine rule puts it (card #83): here
+        through the launcher, or on another machine through its own
+        `needle start`, whose answer the board records as its own."""
+        chosen, why = self.place(request.repo)
+        if chosen is None:
+            return launch.dead(request.card, [], why, None)
+        if self.is_here(chosen):
+            return self._stamped(chosen, launch.start(self.store, request), request.card)
+        try:
+            return self._stamped(chosen, self._remote(chosen).start(request), request.card)
+        except _UNREACHABLE as error:
+            return launch.dead(request.card, [], f"{chosen.name} could not start it: {error}", None)
 
     def start_windowless(self, request: WindowlessStart) -> Launch:
         """A session in the project's own checkout with no window and no
         worktree — a reading of a signal (plan 09, item 1) or the planning
         of a defect under the dial (plan 11, item 4): never a lane, so it is
-        not `start`, which is the owner's click."""
-        return launch.windowless(self.store, request)
+        not `start`, which is the owner's click. Placed by the same machine
+        rule as a lane, since it is a session on a machine's memory."""
+        chosen, why = self.place(request.repo)
+        if chosen is None:
+            return launch.dead(request.card, [], why, None)
+        if self.is_here(chosen):
+            return self._stamped(chosen, launch.windowless(self.store, request), request.card)
+        try:
+            return self._stamped(chosen, self._remote(chosen).start(request), request.card)
+        except _UNREACHABLE as error:
+            return launch.dead(request.card, [], f"{chosen.name} could not start it: {error}", None)
 
     def move(self, ref: str, to_slot: str | None, *, reason: str | None = None) -> Launch:
         session = self.session(ref)
+        on = self.machine_of(session)
+        record = self.store.session_slot(session.session_id)
+        card = record.card if record else session.name
+        if not self.is_here(on):
+            return self._moved_elsewhere(on, session, card, reason, self._remote(on).move, to_slot)
         to: Placement | None = None
         if to_slot is not None:
             asked = rule.where(to_slot, [Rung(slot=session.slot, model=None)], cached=False)
@@ -171,14 +437,39 @@ class Runtime:
                     None,
                 )
             to = asked.placement
-        record = self.store.session_slot(session.session_id)
-        return launch.move(
-            self.store,
-            session,
-            to=to,
-            card=record.card if record else session.name,
-            reason=reason,
+        return self._stamped(
+            on, launch.move(self.store, session, to=to, card=card, reason=reason), card
         )
+
+    def _moved_elsewhere(
+        self,
+        on: Machine,
+        session: Session,
+        card: str,
+        reason: str | None,
+        act,
+        *args,
+        **kwargs,
+    ) -> Launch:
+        """A move or resume done by another machine's runtime, recorded here
+        as the board's own: the launch stamped and its session's row written,
+        and the rescue written under the id that lives with the words the
+        launch carries — that machine's ledger holds its own copy, and the
+        board's rescue history is what the face reads."""
+        try:
+            done = act(session.short_id, *args, **kwargs)
+        except _UNREACHABLE as error:
+            return launch.dead(session.name, [], f"{on.name} could not move it: {error}", None)
+        stamped = self._stamped(on, done, card)
+        if stamped.session is not None and stamped.placement is not None:
+            self.store.record_rescue(
+                stamped.session.session_id,
+                Rung(slot=session.slot, model=session.model),
+                Rung(slot=stamped.placement.slot, model=stamped.placement.model),
+                reason or stamped.reason or stamped.placement.why,
+                clock.now(),
+            )
+        return stamped
 
     def stop(self, ref: str, *, keep_handoff: bool = False) -> Stopped:
         """End a session. A standing handoff is the machine's request to move
@@ -187,7 +478,21 @@ class Runtime:
         the handoff and is his stop, while the board's own stop of a walled
         session that waits for room keeps it (card #107)."""
         session = self.session(ref)
-        stopped = launch.stop(session)
+        on = self.machine_of(session)
+        if self.is_here(on):
+            stopped = launch.stop(session)
+        else:
+            try:
+                stopped = self._remote(on).stop(session.short_id, keep_handoff=keep_handoff)
+            except _UNREACHABLE as error:
+                stopped = Stopped(
+                    short_id=session.short_id,
+                    session_id=session.session_id,
+                    slot=session.slot,
+                    gone=False,
+                    seconds=0.0,
+                    words=f"{on.name} could not be asked to stop it: {error}",
+                )
         if keep_handoff:
             return stopped
         # A death the board already named a wall — the board's own stop on
@@ -210,7 +515,8 @@ class Runtime:
                         }
                     )
                 )
-        if session.wall is not None:
+        # The other machine's own stop removed its handoff; this one's is here.
+        if session.wall is not None and self.is_here(on):
             handoffs.remove(session.wall)
         return stopped
 
@@ -218,14 +524,26 @@ class Runtime:
         session = self.session(ref)
         record = self.store.session_slot(session.session_id)
         card = record.card if record else session.name
+        on = self.machine_of(session)
         look: Placement | None = None
         if session.pid is None:
-            look = rule.where(session.slot, [], cached=False).placement
-        return windows.open_window(self.store, session, kind=kind, card=card, look=look)
+            look = self._where_on(on, session.slot, [], cached=False).placement
+        # The window opens on the desktop; it attaches over the tunnel when
+        # the session's machine is not the desktop (card #83, item 4).
+        via = None if on.machine_id == self.desktop().machine_id else on
+        return windows.open_window(
+            self.store,
+            session,
+            kind=kind,
+            card=card,
+            look=look,
+            host=self.desktop_host(),
+            via=via,
+        )
 
     def focus(self, ref: str) -> Focused:
         """Bring the session's open window forward, proved by the compositor."""
-        return windows.focus_window(self.store, self.session(ref))
+        return windows.focus_window(self.store, self.session(ref), host=self.desktop_host())
 
     def resume(
         self,
@@ -243,27 +561,68 @@ class Runtime:
         written days ago names a rung that may be spent — and the cause as
         `reason`, so the ledger says what was resumed after."""
         session = self.session(ref)
+        on = self.machine_of(session)
         record = self.store.session_slot(session.session_id)
-        return launch.move(
-            self.store,
-            session,
-            to=placement,
-            card=card or (record.card if record else session.name),
-            prompt=prompt,
-            spent=False,
-            reason=reason,
+        card = card or (record.card if record else session.name)
+        if not self.is_here(on):
+            return self._moved_elsewhere(
+                on,
+                session,
+                card,
+                reason,
+                self._remote(on).resume,
+                prompt=prompt,
+                card=card,
+                to_slot=placement.slot if placement is not None else None,
+                reason=reason,
+            )
+        return self._stamped(
+            on,
+            launch.move(
+                self.store,
+                session,
+                to=placement,
+                card=card,
+                prompt=prompt,
+                spent=False,
+                reason=reason,
+            ),
+            card,
         )
 
-    def expire_handoff(self, handoff: Handoff) -> None:
+    def expire_handoff(self, handoff: Handoff, *, machine_name: str = "") -> None:
         """Remove a handoff nothing will act on (plan 68, item 3): one naming
-        a lane whose work is finished, or a session that is gone."""
-        handoffs.remove(handoff)
+        a lane whose work is finished, or a session that is gone. On the
+        machine that wrote it: a handoff is that machine's file."""
+        on = self.machine_named(machine_name)
+        if self.is_here(on):
+            handoffs.remove(handoff)
+            return
+        with contextlib.suppress(*_UNREACHABLE):
+            self._remote(on).expire_handoff(handoff.session_id)
 
-    def boots(self) -> list[Boot]:
-        return reasons.boots()
+    def boots(self, machine_name: str = "") -> list[Boot]:
+        """The machine's boots, newest first; none when another machine
+        could not be asked, which names no death a boot."""
+        on = self.machine_named(machine_name)
+        if self.is_here(on):
+            return reasons.boots()
+        try:
+            return self._remote(on).boots()
+        except _UNREACHABLE:
+            return []
 
-    def limits(self, slot: str) -> Limits | None:
-        return limits.snapshot(slot)
+    def limits(self, slot: str, *, machine_name: str = "") -> Limits | None:
+        """A slot's last limits reading on the machine the session runs on:
+        each machine holds its own login for the same subscription, and its
+        own `claude-acct` cache of what that login last saw."""
+        on = self.machine_named(machine_name)
+        if self.is_here(on):
+            return limits.snapshot(slot)
+        try:
+            return self._remote(on).limits(slot)
+        except _UNREACHABLE:
+            return None
 
     def last_activity(self, session: Session) -> datetime | None:
         return transcripts.last_activity(session.worktree or session.cwd, session.session_id)
@@ -278,7 +637,20 @@ class Runtime:
         now: datetime,
     ) -> Named:
         """What took the session's process, from the evidence that held it
-        (plan 68, item 1)."""
+        (plan 68, item 1): the journal, the boots and the transcript of the
+        machine it ran on, read there."""
+        on = self.machine_of(session)
+        if not self.is_here(on):
+            try:
+                return self._remote(on).cause_of(session.short_id, units=units, sighting=sighting)
+            except _UNREACHABLE as error:
+                return Named(
+                    cause=Cause.UNKNOWN,
+                    words=f"{on.name} could not be asked what ended it",
+                    evidence=str(error),
+                    last_alive_at=sighting.last_seen if sighting is not None else None,
+                    settled=False,
+                )
         return reasons.cause_of(
             session,
             units=units,
@@ -357,13 +729,21 @@ class Runtime:
         head's Idea about no card yet. The caller may choose the session id
         when its brief has to name it (an idea's document names the
         conversation it came from)."""
-        where = rule.where(None, [], cached=False)
+        where = self.where(None, [], cached=False, repo=repo)
         if where.placement is None:
             raise windows.WindowRefused(f"the rule found nowhere to run: {where.reason}")
         session_id = session_id or str(uuid.uuid4())
         banner, command = windows.discuss_command(
             where.placement, cwd=repo, session_id=session_id, brief=brief, effort=effort, what=what
         )
+        # The conversation runs where the rule placed it; the window is the
+        # desktop's, attached over the tunnel when those differ (card #83).
+        on = self.machine_named(where.placement.machine)
+        proof: str | None = None
+        if on.machine_id != self.desktop().machine_id:
+            name = windows.tmux_name(kind, card)
+            command = windows.via_tmux(on, name, command)
+            proof = f"{on.host}\t{name}"
         opened = windows.open_fresh(
             self.store,
             session_id=session_id,
@@ -372,6 +752,8 @@ class Runtime:
             command=command,
             banner=banner,
             fresh=True,
+            host=self.desktop_host(),
+            proof=proof,
         )
         return opened, session_id, where.placement
 
@@ -425,6 +807,12 @@ class Runtime:
         """Why a session with no lane — a reading, a called colleague —
         ended, in one line: the same reader a lane's death gets, over the
         space the runtime put it in."""
+        on = self.machine_of(session)
+        if not self.is_here(on):
+            try:
+                return self._remote(on).why_ended(session.short_id)
+            except _UNREACHABLE as error:
+                return f"{on.name} could not be asked what ended it: {error}"
         record = self.store.session_slot(session.session_id)
         scope = record.scope if record else session.scope
         named = reasons.cause_of(
@@ -473,61 +861,130 @@ class Runtime:
         except (OSError, machine.Timeout, machine.CommandMissing):
             return []
 
-    def rescope(self, session: Session, card: str) -> launch.Scoped:
+    def rescope(self, session: Session, card: str) -> Rescoped:
         """Put a session with hands on a lane back in the lane's scope
-        (plan 53, item 2); the same act as at Start, recorded the same way."""
-        return launch.rescope(self.store, session, card)
+        (plan 53, item 2); the same act as at Start, recorded the same way,
+        on the machine the session runs on."""
+        on = self.machine_of(session)
+        if self.is_here(on):
+            scoped = launch.rescope(self.store, session, card)
+            done = Rescoped(
+                unit=scoped.unit, asked=scoped.asked, verified=scoped.verified, words=scoped.words
+            )
+        else:
+            try:
+                done = self._remote(on).rescope(session.short_id, card)
+            except _UNREACHABLE as error:
+                return Rescoped(
+                    unit=launch.lane_unit(card), asked=False, verified=False, words=str(error)
+                )
+        if done.asked or done.verified:
+            self.store.record_session_slot(
+                SessionSlot(
+                    session_id=session.session_id,
+                    slot=session.slot,
+                    card=card,
+                    scope=done.unit,
+                    recorded_at=clock.now(),
+                    machine=on.name,
+                )
+            )
+        return done
 
     def scopes(self) -> list[ScopeHeld] | None:
         """Every process group of ours the manager holds active — the
         prefix every lane's and reading's session is put under at Start —
         with the pids each holds and their command lines (card #99); None
         when the manager could not be asked."""
+        here = self.here()
         try:
             held: list[ScopeHeld] = []
             for unit in machine.units_named(launch.SESSION_UNIT_PREFIX):
                 pids = machine.unit_pids(unit)
                 commands = {pid: machine.cmdline_of(pid) or "" for pid in pids}
                 lineage = {pid: machine.ancestors_of(pid) for pid in pids}
-                held.append(ScopeHeld(unit=unit, pids=pids, commands=commands, lineage=lineage))
-            return held
+                held.append(
+                    ScopeHeld(
+                        unit=unit,
+                        pids=pids,
+                        commands=commands,
+                        lineage=lineage,
+                        machine=here.name,
+                    )
+                )
         except (OSError, machine.Timeout, machine.CommandMissing):
             return None
+        for m in self.machines():
+            if self.is_here(m):
+                continue
+            try:
+                held += [
+                    group.model_copy(update={"machine": m.name})
+                    for group in self._remote(m).scopes()
+                ]
+            except _UNREACHABLE as error:
+                log.warning("the groups on %s could not be read: %s", m.name, error)
+        return held
 
-    def scope_pids(self, unit: str) -> list[int] | None:
+    def scope_pids(self, unit: str, *, machine_name: str = "") -> list[int] | None:
         """What one group of ours holds right now, whatever its state — a
         group the manager is ending still holds what it is killing (card
         #99); None when the manager could not be asked."""
+        on = self.machine_named(machine_name)
         try:
-            return machine.unit_pids(unit)
-        except (OSError, machine.Timeout, machine.CommandMissing):
+            if self.is_here(on):
+                return machine.unit_pids(unit)
+            return self._remote(on).scope_pids(unit)
+        except (OSError, machine.Timeout, machine.CommandMissing, *_UNREACHABLE):
             return None
 
-    def stop_scope(self, unit: str) -> tuple[bool, str]:
+    def stop_scope(self, unit: str, *, machine_name: str = "") -> tuple[bool, str]:
         """Ask the manager to end a group of ours and everything in it
         (card #99), without waiting for it: whether it took the job, and its
         words. The group reads empty once it is done."""
+        on = self.machine_named(machine_name)
         try:
-            return machine.stop_unit(unit)
-        except (OSError, machine.Timeout, machine.CommandMissing) as error:
+            if self.is_here(on):
+                return machine.stop_unit(unit)
+            answer = self._remote(on).stop_scope(unit)
+            return answer.taken, answer.words
+        except (OSError, machine.Timeout, machine.CommandMissing, *_UNREACHABLE) as error:
             return False, str(error)
 
     def tell(self, what: Notice, opens: list[str], ledger: Path) -> Told:
         """Tell the owner on his screen (card #41, item 1): a notification
         that stays until he dismisses it, a sound, and a button that runs
         `opens`; how it was answered lands as one line in `ledger`. Never
-        raises: what it could not do is in the words."""
-        return notice.tell(what, opens, ledger)
+        raises: what it could not do is in the words. On the desktop when
+        the screen is another machine's (card #83): that machine's own
+        `needle tell` raises it there and keeps the ledger beside its own
+        store."""
+        desktop = self.desktop()
+        if self.is_here(desktop):
+            return notice.tell(what, opens, ledger)
+        try:
+            return self._remote(desktop).tell(what, opens)
+        except _UNREACHABLE as error:
+            return Told(raised=False, words=f"could not tell you on {desktop.name}: {error}")
 
     def show(self, slug: str, number: int) -> str:
         """Put a card in front of him: the board's page navigates to it and
-        its window comes forward, or opens (card #41, item 1)."""
-        return notice.show(slug, number)
+        its window comes forward, or opens (card #41, item 1) — on the
+        desktop, through its own `needle show` when that is another machine."""
+        desktop = self.desktop()
+        if self.is_here(desktop):
+            return notice.show(slug, number)
+        try:
+            return self._remote(desktop).show(slug, number).said
+        except _UNREACHABLE as error:
+            raise windows.WindowRefused(f"{desktop.name} could not show it: {error}") from error
 
     def machine_is_reachable(self) -> list[str]:
-        """Which of the commands the runtime needs are missing, by name."""
+        """Which of the commands the runtime needs are missing, by name: the
+        ones every machine needs, and the screen's when the screen is here."""
+        wanted = COMMANDS + (DESKTOP_COMMANDS if self.is_here(self.desktop()) else ())
         missing: list[str] = []
-        for name in COMMANDS:
+        for name in wanted:
             try:
                 machine.which(name)
             except machine.CommandMissing:

@@ -29,10 +29,8 @@ from domain.dial import (
     FixLane,
     FixStage,
     Headroom,
-    Meminfo,
     RailCount,
     ScopeHeld,
-    ScopeMemory,
     ScopeState,
 )
 from domain.document import Document, DocumentKind, FixMark, SuggestionKind
@@ -257,75 +255,6 @@ def who_is_home(held: Sequence[ScopeHeld], sessions: Sequence[Session]) -> list[
             ScopeState(unit=scope.unit, pids=list(scope.pids), home=home, strangers=strangers)
         )
     return states
-
-
-def _gb(byte_count: int) -> str:
-    return f"{byte_count / 1024**3:.1f} GB"
-
-
-def _lane_of(scope: ScopeMemory) -> str:
-    if scope.card_number is None:
-        return scope.unit
-    return f"{scope.project} #{scope.card_number}'s lane"
-
-
-def headroom(
-    meminfo: Meminfo | None,
-    floor: int,
-    now: datetime,
-    *,
-    scopes: Sequence[ScopeMemory] | None = (),
-) -> Headroom:
-    """The machine against the floor, and every lane's scope beside it
-    (plan 53, item 1). A reading the runtime could not make — the memory,
-    or the scopes when there were lanes to read — is full: the beat waits
-    until the machine can be read, and the head says so, rather than
-    opening a lane on a number nobody has. Full names what is short and
-    which lane is growing — the one past the floor, else the biggest — with
-    what it holds, so the owner reads which lane the machine waits on."""
-    if meminfo is None:
-        return Headroom(
-            available=0,
-            swap_free=0,
-            floor=floor,
-            full=True,
-            sentence="the machine is full: its memory could not be read",
-            read_at=now,
-        )
-    if scopes is None:
-        return Headroom(
-            available=meminfo.available,
-            swap_free=meminfo.swap_free,
-            floor=floor,
-            full=True,
-            sentence="the machine is full: what its lanes hold could not be read",
-            read_at=now,
-        )
-    ranked = sorted(scopes, key=lambda s: (-s.held, s.unit))
-    short: list[str] = []
-    if meminfo.available < floor:
-        short.append(f"{_gb(meminfo.available)} available")
-    if meminfo.swap_total > 0 and meminfo.swap_free < floor:
-        short.append(f"{_gb(meminfo.swap_free)} swap free")
-    parts: list[str] = []
-    if short:
-        parts.append(f"{', '.join(short)}, {floor // 1024**3} GB needed")
-    biggest = ranked[0] if ranked else None
-    if biggest is not None and biggest.held >= floor:
-        parts.append(
-            f"{_lane_of(biggest)} holds {_gb(biggest.held)}, past the {floor // 1024**3} GB floor"
-        )
-    elif short and biggest is not None:
-        parts.append(f"the biggest lane is {_lane_of(biggest)} at {_gb(biggest.held)}")
-    return Headroom(
-        available=meminfo.available,
-        swap_free=meminfo.swap_free,
-        floor=floor,
-        full=bool(parts),
-        sentence=f"the machine is full: {'; '.join(parts)}" if parts else None,
-        scopes=ranked,
-        read_at=now,
-    )
 
 
 def dial_state(

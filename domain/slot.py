@@ -87,9 +87,14 @@ class Placement(BaseModel):
     tier: Tier | None = None
     """The owner's dated ruling that put this rung where it is, when the rule
     said; None when it did not, and the board says the rung without a tier
-    rather than inventing one. The one field here with a default: a rung with
-    no tier is a real state the board shows, while a rung with no make is a
-    guess about who drives the card, which is the guess this card ended."""
+    rather than inventing one. A rung with no tier is a real state the board
+    shows, while a rung with no make is a guess about who drives the card,
+    which is the guess this card ended."""
+    machine: str = ""
+    """The machine the rule was asked on, by the board's name for it (card
+    #83): stamped by the board's runtime after it chose the machine, never
+    by the rule, which knows only its own machine. Empty when the rule was
+    asked by a runtime that has not been told its own name."""
 
 
 class Where(BaseModel):
@@ -174,3 +179,17 @@ class Limits(BaseModel):
     share used, 1.0 when it is gone."""
     resets: dict[str, datetime]
     """By the same label, when the allowance returns, for those that say."""
+
+
+class LimitsRead(BaseModel):
+    """One machine's answer for a slot's last limits reading (card #83):
+    the reading, or None when that machine's `claude-acct` has none."""
+
+    limits: Limits | None
+
+
+class Expired(BaseModel):
+    """Whether a handoff file on one machine was removed (card #83)."""
+
+    session_id: str
+    removed: bool

@@ -188,3 +188,11 @@ class Named(BaseModel):
     evidence: str
     last_alive_at: datetime | None
     settled: bool
+
+
+class Ended(BaseModel):
+    """Why a session's process is gone, in one line, as one machine's
+    runtime answers it over the wire (card #83); None when nothing on that
+    machine says."""
+
+    why: str | None

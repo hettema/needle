@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { DndContext, DragOverlay, PointerSensor, pointerWithin, rectIntersection, useSensor, useSensors, type CollisionDetection, type DragEndEvent, type DragMoveEvent, type DragStartEvent } from "@dnd-kit/core";
 import type { BoardState, CardSummary } from "../types/board";
+import type { MachineRoom } from "../types/machine";
 import type { Place } from "../types/card";
 import type { Claim } from "../types/board";
 import type { Column } from "../types/column";
@@ -16,6 +17,16 @@ import { Triage } from "./Triage";
 import { leverageColumns, samePlace, stepTarget, targetInGroup, type LensKind, type Lift, type StepKey } from "./dnd";
 import { WORDS, claimsOf, counted, keeps, lines, type Filter, type WordKey } from "./filter";
 import { ago } from "./time";
+
+/** One machine as the head says it (card #83): what it holds against the
+ * floor, or that it did not answer — the board's runtime read it, the page
+ * only repeats the words. */
+function machineWords(m: MachineRoom): string {
+  if (m.room === null) return `did not answer${m.why ? ` (${m.why})` : ""}`;
+  if (m.room.full) return m.room.sentence ?? "full";
+  const gb = (m.room.available / 1024 ** 3).toFixed(1);
+  return `${gb} GB free${m.killed ? `, ${m.killed} killed today` : ""}`;
+}
 
 export const WIDE_SCREEN = "(min-width: 2300px)";
 
@@ -386,6 +397,17 @@ export function Board({ slug, store, projects, onSwitch }: { slug: string; store
               </Fact>
               {board.machine.missing.length ? (
                 <Fact meaning="broken">the runtime cannot find: {board.machine.missing.join(", ")}</Fact>
+              ) : null}
+              {(board.machine.machines ?? []).length > 1 ? (
+                <Fact {...((board.machine.machines ?? []).some((m) => m.room === null) ? { meaning: "broken" as const } : {})}>
+                  {(board.machine.machines ?? []).map((m, i) => (
+                    <span key={m.machine.name}>
+                      {i ? " · " : ""}
+                      <Strong>{m.machine.name}</Strong>
+                      {m.here ? " (here)" : ""}: {machineWords(m)}
+                    </span>
+                  ))}
+                </Fact>
               ) : null}
               {board.trunk.level === null ? (
                 <Fact>the trunk has not been read yet</Fact>

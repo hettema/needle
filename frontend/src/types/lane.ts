@@ -93,6 +93,7 @@ export interface Lane {
   declared: string[];
   colliding: Collision | null;
   progress?: Progress | null;
+  machine?: string | null;
 }
 
 export interface LaneRecord {

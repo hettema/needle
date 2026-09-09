@@ -24,6 +24,13 @@ export interface Launch {
   reason: string | null;
 }
 
+export interface Rescoped {
+  unit: string;
+  asked: boolean;
+  verified: boolean;
+  words: string;
+}
+
 export interface Rescue {
   id: number;
   session_id: string;

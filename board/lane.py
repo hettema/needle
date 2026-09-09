@@ -79,6 +79,11 @@ class LaneFacts(BaseModel):
     worktrees: dict[str, str | None]
     """Worktree path → branch, from git."""
     now: datetime
+    many_machines: bool = False
+    """The board knows more than one machine (card #83): only then does a
+    lane say which machine its session runs on — on a one-machine board
+    the word carries nothing, and the owner is not to know which machine
+    ran a card unless he looks."""
 
 
 def card_of_cwd(cwd: str, project_path: str) -> int | None:
@@ -500,6 +505,7 @@ def lane_for(card: Card, facts: LaneFacts) -> Lane:
         edits=[],
         declared=[],
         colliding=None,
+        machine=winner.machine if winner is not None and facts.many_machines else None,
     )
 
 

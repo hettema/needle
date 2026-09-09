@@ -84,6 +84,11 @@ class Session(BaseModel):
     doing: Doing | None
     """The last step of a live session, from its transcript; None for a row
     with no process or no transcript."""
+    machine: str = ""
+    """The machine the row was read on, by the board's name for it (card
+    #83): stamped by the runtime that merged the lists, never by the
+    registry, which knows nothing of other machines. Empty for a row read
+    by a runtime that has not been told its own name."""
 
 
 class SessionSlot(BaseModel):
@@ -95,3 +100,6 @@ class SessionSlot(BaseModel):
     card: str
     scope: str
     recorded_at: datetime
+    machine: str = ""
+    """Which machine the session was started on (card #83); empty for a
+    record written before the board knew of more than one."""

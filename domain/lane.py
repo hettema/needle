@@ -174,6 +174,10 @@ class Lane(BaseModel):
     progress: Progress | None = None
     """How far the lane has come, from its own copy of the plan (plan 13);
     None while no session has hands on it, or its plan has no items."""
+    machine: str | None = None
+    """The machine the lane's session runs on, by the board's name for it
+    (card #83); None while no session holds the lane, or the runtime that
+    read it has no name for its own machine."""
 
     @field_validator("sentence")
     @classmethod

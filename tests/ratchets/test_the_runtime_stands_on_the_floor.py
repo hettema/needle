@@ -28,6 +28,8 @@ COMMANDS = (
     "codex",
     "notify-send",
     "pw-play",
+    "ssh",
+    "tmux",
 )
 FORBIDDEN_CALLS = {"home", "expanduser", "getenv", "which"}
 FORBIDDEN_NAMES = {"environ"}
@@ -46,8 +48,12 @@ def test_every_path_the_runtime_reads_is_under_the_floor(machine_floor: Floor):
         machine.cgroup_root(),
         machine.acct_cache_dir(),
         machine.applications_dir(),
+        machine.control_path(),
     ):
         assert read.resolve().is_relative_to(root), f"{read} is not under the floor {root}"
+    # The floor's identity is the floor's, never this laptop's kernel's (card #83).
+    assert machine.machine_id() == machine_floor.machine_id
+    assert machine.machine_id() != Path("/etc/machine-id").read_text().strip()
     assert not machine.slot_root().resolve().is_relative_to(Path.home() / ".claude-accounts")
 
 

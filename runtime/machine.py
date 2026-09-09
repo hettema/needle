@@ -11,7 +11,9 @@ import contextlib
 import json
 import os
 import re
+import shlex
 import shutil
+import socket
 import subprocess
 from pathlib import Path
 
@@ -27,8 +29,102 @@ class CommandMissing(Exception):
     """A command the runtime needs is not on PATH. Named, never silent."""
 
 
+class Unreachable(Exception):
+    """The other machine did not answer: `ssh` exited 255, or the machine
+    has no host the board can reach. The words say which (card #83)."""
+
+
+MACHINE_ID_FILE = Path("/etc/machine-id")
+REPO_ROOT = Path(__file__).resolve().parents[1]
+"""Needle's own checkout, the one `needle` here was installed from: what
+the default command for running `needle` on another machine names, since
+the plan lays every project at the same path on every machine."""
+
+
+def machine_id() -> str:
+    """The kernel's identity for this machine: the 32 hex characters of
+    `/etc/machine-id`, stable across boots and unique per install (read
+    2026-09-09 on this laptop: it begins `704ef8de`). What the board
+    compares to its rows to know which machine it runs on (card #83); the
+    floor lays one of its own. Empty when it cannot be read, which no
+    registered row matches."""
+    override = os.environ.get("NEEDLE_MACHINE_ID")
+    if override:
+        return override.strip()
+    try:
+        return MACHINE_ID_FILE.read_text(encoding="utf-8").strip()
+    except OSError:
+        return ""
+
+
+def hostname() -> str:
+    """What the kernel calls this machine: the word the board uses for a
+    machine nobody registered."""
+    return socket.gethostname() or "this machine"
+
+
+def needle_command() -> str:
+    """How `needle` runs on a machine laid out like this one, as a shell
+    line: the same words `board/brief.py::needle_command` gives a lane —
+    `--project`, never `--directory`, for the reason recorded there."""
+    return f"uv --project {shlex.quote(str(REPO_ROOT))} run needle"
+
+
+SSH_OPTIONS = ("-o", "BatchMode=yes", "-o", "ConnectTimeout=5")
+"""No prompt ever: a key the agent does not hold is a refusal, not a hang;
+and five seconds to connect, so an unreachable machine costs the beat five
+seconds and not the kernel's minutes."""
+SSH_UNREACHABLE = 255
+"""What `ssh` exits with when it never reached a shell on the other side."""
+
+
+def control_path() -> Path:
+    """Where `ssh` keeps its shared connections: one live connection per
+    machine, reused by every verb for a minute, so a pass that asks the
+    other machine four questions pays one handshake."""
+    runtime = os.environ.get("XDG_RUNTIME_DIR")
+    base = Path(runtime) if runtime else Path.home() / ".ssh"
+    return _path("NEEDLE_SSH_CONTROL", base / "needle-ssh-%C")
+
+
+def remote_argv(host: str, line: str) -> list[str]:
+    """`ssh <host> -- bash -lc '<line>'`. A login shell, because the tools
+    the other machine runs `needle` with — `uv` and the rest of mise's
+    shims — are on the PATH its profile sets, and sshd's own PATH has none
+    of them (exit 127, the reading of 2026-09-05 on the signal reader's
+    login shell)."""
+    return [
+        which("ssh"),
+        *SSH_OPTIONS,
+        "-o",
+        "ControlMaster=auto",
+        "-o",
+        "ControlPersist=60",
+        "-o",
+        f"ControlPath={control_path()}",
+        host,
+        "--",
+        "bash",
+        "-lc",
+        line,
+    ]
+
+
+def run_line(host: str, line: str, *, timeout: float = 30.0) -> subprocess.CompletedProcess[str]:
+    """Run one shell line on another machine and answer what it printed.
+    Raises `Unreachable` when `ssh` never got a shell there."""
+    done = subprocess.run(
+        remote_argv(host, line), capture_output=True, text=True, timeout=timeout, check=False
+    )
+    if done.returncode == SSH_UNREACHABLE:
+        raise Unreachable(f"{host} did not answer: {(done.stderr or done.stdout).strip()[:200]}")
+    return done
+
+
 Timeout = subprocess.TimeoutExpired
 """What `run` raises past its deadline, named here so no other module needs subprocess."""
+Completed = subprocess.CompletedProcess[str]
+"""What `run` and `run_line` answer, named here for the same reason."""
 
 
 def _path(variable: str, default: Path) -> Path:
@@ -163,6 +259,7 @@ def meminfo() -> Meminfo:
     fields = {key: int(value) * 1024 for key, value in _MEMINFO_LINE.findall(text)}
     try:
         return Meminfo(
+            total=fields.get("MemTotal", 0),
             available=fields["MemAvailable"],
             swap_total=fields["SwapTotal"],
             swap_free=fields["SwapFree"],
@@ -187,7 +284,20 @@ def run(
     env: dict[str, str] | None = None,
     cwd: str | Path | None = None,
     timeout: float = 30.0,
+    host: str | None = None,
 ) -> subprocess.CompletedProcess[str]:
+    """Run a command here, or on `host` when one is named (card #83): the
+    same words, quoted for the other machine's shell, run in `cwd` there
+    when one is given. An environment never crosses the wire — what a
+    session on another machine runs with is that machine's runtime's to
+    set — so `env` with `host` is refused rather than silently dropped."""
+    if host is not None:
+        if env is not None:
+            raise ValueError("an environment cannot be sent to another machine")
+        line = shlex.join(argv)
+        if cwd is not None:
+            line = f"cd {shlex.quote(str(cwd))} && {line}"
+        return run_line(host, line, timeout=timeout)
     return subprocess.run(
         argv, capture_output=True, text=True, env=env, cwd=cwd, timeout=timeout, check=False
     )
@@ -199,8 +309,17 @@ notification stays on his screen until he dismisses it, so its process
 lives for hours, and a handle dropped on the floor warns at collection."""
 
 
-def spawn(argv: list[str], *, env: dict[str, str] | None = None, wait: bool = True) -> None:
-    """Start a process the runtime never waits on, pipes to or signals.
+def spawn(
+    argv: list[str],
+    *,
+    env: dict[str, str] | None = None,
+    wait: bool = True,
+    host: str | None = None,
+) -> None:
+    """Start a process the runtime never waits on, pipes to or signals —
+    here, or on `host` through `ssh` when the desktop is another machine
+    (card #83); the launcher there ends in `setsid` as here, so the `ssh`
+    returns when it does and the window outlives it.
 
     A window is the owner's room: 0.1 held a pipe to the launcher, whose
     process chain ends in the terminal itself, and killed the window when its
@@ -210,6 +329,10 @@ def spawn(argv: list[str], *, env: dict[str, str] | None = None, wait: bool = Tr
     or dismisses it (card #41), and the loop that raised it beats on; the
     handle is kept and reaped on a later spawn.
     """
+    if host is not None:
+        if env is not None:
+            raise ValueError("an environment cannot be sent to another machine")
+        argv = remote_argv(host, shlex.join(argv))
     child = subprocess.Popen(
         argv,
         stdin=subprocess.DEVNULL,

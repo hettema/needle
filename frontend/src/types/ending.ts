@@ -25,6 +25,10 @@ export interface Death {
   settled: boolean;
 }
 
+export interface Ended {
+  why: string | null;
+}
+
 export interface Named {
   cause: Cause;
   words: string;

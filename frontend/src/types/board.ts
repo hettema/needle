@@ -11,6 +11,7 @@ import type { Gate } from "./gate";
 import type { Handouts } from "./handout";
 import type { HeardMark } from "./hook";
 import type { Collision, Conversation, Doors, Lane, LaneState, Progress } from "./lane";
+import type { MachineRoom } from "./machine";
 import type { Meaning } from "./meaning";
 import type { Project } from "./project";
 import type { Row } from "./row";
@@ -162,6 +163,7 @@ export interface Loop {
 export interface MachineState {
   missing: string[];
   roles?: string[] | null;
+  machines?: MachineRoom[];
 }
 
 export interface OwnerAsk {
