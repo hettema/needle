@@ -2,7 +2,7 @@
 
 **Kind:** defect
 **Fix:** now — the intent is written (`frontend/.gitignore` line 6 ignores `node_modules/`, and CLAUDE.md's "the board reads what runs; it never is the thing that runs" — a checkout's installed packages are the machine's, not the work's); the fix stays inside the door the close uses to stage its files (`git add -A` in the close) or the ignore rule itself (`node_modules` without the trailing slash also matches a link), and it removes the class — any link or file a session lays under an ignored name — not this one link.
-**Found by:** the lane on card #68 (docs/plans/2026-09-05-work-the-laptop-interrupted-comes-back-by-itself-and-the-board-says-truly-how-it-ended.md), in the review's boundary pass, when the type check would not run
+**Found by:** the lane on card #68 (docs/plans/done/2026-09-05-work-the-laptop-interrupted-comes-back-by-itself-and-the-board-says-truly-how-it-ended.md), in the review's boundary pass, when the type check would not run
 
 ## The intent it breaks
 

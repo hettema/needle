@@ -2,7 +2,7 @@
 
 **Kind:** defect
 **Fix:** now — the intent is written (`docs/plans/README.md`'s title rule and `docs/vocabulary.md`, held on Needle's own live titles by `tests/ratchets/test_every_title_is_in_the_owners_words.py`); the fix stays inside the door a suggestion enters Needle's corpus through from another project's lane or the main checkout (the ratchet's own reading, run before the file is written, or a refusal at the commit hook `hooks/commit-msg` already runs on every commit); and it removes the class — any title written from outside a Needle lane — not this one file.
-**Found by:** the lane on card #68 (docs/plans/2026-09-05-work-the-laptop-interrupted-comes-back-by-itself-and-the-board-says-truly-how-it-ended.md), in the review's boundary pass
+**Found by:** the lane on card #68 (docs/plans/done/2026-09-05-work-the-laptop-interrupted-comes-back-by-itself-and-the-board-says-truly-how-it-ended.md), in the review's boundary pass
 
 ## The intent it breaks
 
