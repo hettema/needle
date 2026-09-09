@@ -1,6 +1,6 @@
 # The focus of a project, discussed between two makes
 
-**Written:** 2026-09-07, by the interactive Needle session d03a7b55 (Claude Fable 5.1) and a Codex worker (0.153.4, read-only, reasoning effort high; thread 01a07c30, forked for rounds two and three), for the owner's idea of a "sort on intent" on the board. Three rounds: an independent reading each, a cross-read, and a design round on the owner's reply. Every Codex line is verbatim from its answer files; Claude's readings are the files it wrote before each Codex answer landed. The plan this record backs is `docs/plans/2026-09-07-you-name-what-matters-now-a-colleague-finds-what-holds-it-back-and-the-board-sorts-every-card-by-whether-it-moves-that.md`.
+**Written:** 2026-09-07, by the interactive Needle session d03a7b55 (Claude Fable 5.1) and a Codex worker (0.153.4, read-only, reasoning effort high; thread 01a07c30, forked for rounds two and three), for the owner's idea of a "sort on intent" on the board. Three rounds: an independent reading each, a cross-read, and a design round on the owner's reply. Every Codex line is verbatim from its answer files; Claude's readings are the files it wrote before each Codex answer landed. The plan this record backs is `docs/plans/done/2026-09-07-you-name-what-matters-now-a-colleague-finds-what-holds-it-back-and-the-board-sorts-every-card-by-whether-it-moves-that.md`.
 
 ## Round one — the note both read
 

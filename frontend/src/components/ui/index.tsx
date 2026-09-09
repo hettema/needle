@@ -1316,6 +1316,11 @@ export function FocusBar({
             ) : null}
           </span>
         ) : null}
+        {strip.conversation ? (
+          <span className="focus-check" data-meaning="live">
+            {strip.conversation.short_id} on {strip.conversation.slot}
+          </span>
+        ) : null}
         {strip.check ? (
           <span className="focus-check" title={strip.check.line}>
             a reader of the other kind says it <b>{strip.check.verdict}</b>: {strip.check.line}
