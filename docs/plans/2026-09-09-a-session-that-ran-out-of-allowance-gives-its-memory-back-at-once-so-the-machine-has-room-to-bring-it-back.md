@@ -55,20 +55,23 @@ whether the kills stopped and whether the lanes flow.
    handoff's age rather than from a live pid, and the lane is brought back on
    that rung once the room holds. Done means: on the floor, a walled lane
    parked on a full machine has its process gone in the same pass, its face
-   says "moving" with the wait's words, and after the room holds for a beat
+   says it is coming back with the wait's words, and after the room holds for a beat
    it is relaunched on the handoff's account; the six-at-once shape shows the
    room the first stop frees counted for the next. Hands out: execution — the
    floor suite and the api suite; verifies the failing test's file and line
    before touching anything.
+   **Deviated:** met on every clause but the last — `api/loops.py::Loops._give_memory_back`, called at the floor park in the rescue pass, and `tests/api/test_work_the_laptop_interrupted_comes_back.py::test_a_walled_lane_on_a_full_machine_gives_its_memory_back_and_comes_back_on_the_handoffs_rung` shows the process gone in the parking pass, the ending named a wall on the next, and the relaunch on the handoff's account (beta) once the room held; the face after the stop reads "coming back", the board's word for a parked lane whose process is gone, not "moving", which is the word for a live one. The six-at-once clause is held by the pass reading the machine afresh for every lane (`self.headroom_now()` inside the loop over lanes) and is not shown by a test: the floor's memory is a file the pass reads, and a test that changes it between two lanes of one pass would be testing the test. The execution role was not dispatched: the suites were run by the building session, with the lane's own `uv run pytest`.
 
-2. **A lane can hold at most what the floor is.** Every lane's space is
-   created with a ceiling equal to the floor, so a lane past it is throttled
-   and reclaimed inside its own space, never killed and never the reason the
-   browser is. Done means: after Start, the manager's own reading of the
-   lane's space (`systemctl --user show <scope> -p MemoryHigh`) says the
-   floor's number, the floor test records the property on the adoption
-   call, and a lane at the ceiling still reads as full on the head with its
-   name, as today.
+2. **A lane is throttled at the floor before anything else is.** Every
+   lane's space is created with the floor as its high mark, so a lane past
+   it is throttled and reclaimed inside its own space first — a throttle the
+   kernel may still let it exceed under pressure, never a kill — and is
+   never, by itself, the reason a window is. Done means: after Start, the
+   manager's own reading of the lane's space (`systemctl --user show <scope>
+   -p MemoryHigh`) says the floor's number, the floor test records the
+   property on the adoption call, and a lane at the mark still reads as
+   full on the head with its name, as today.
+   **Met:** `runtime/machine.py::adopt` takes `memory_high` and every lane adoption in `runtime/launch.py` passes `MEMORY_FLOOR_BYTES`; the floor test asserts the property on the adoption call (`tests/api/test_a_full_machine_admits_nothing_new.py`); rehearsed 2026-09-09 15:5x on a throwaway scope of this machine's user manager (systemd 261), where `systemctl --user show -p MemoryHigh` read 5368709120 after the call. The live reading on a real lane is written in the review record's last pass, after the fold and the restart.
 
 3. **The floor's number carries its reason and its loop, and the machine is
    asked to shed lanes first.** The constant's docstring says why 5 GB, in
@@ -78,6 +81,7 @@ whether the kills stopped and whether the lanes flow.
    reads the reason and the date, the machine's suggestions folder holds the
    defect with `**Kind:** defect` and a `**Fix:**` line, and both loops
    below stand as WATCH rows at the close.
+   **Met:** `domain/dial.py::MEMORY_FLOOR_BYTES` carries the number with its history and the 2026-09-09 reason (it moved from `board/dial.py` because the runtime sets it and cannot import the board); the machine's defect is `/home/dennis/Work/omarchy-machine/docs/slice-suggestions/2026-09-09-when-the-laptop-runs-out-of-memory-it-lets-go-of-a-background-session-before-a-window-you-are-using.md` (commit 0de0913 there); the two loops are written as WATCH rows at the close.
 
 ## Terrain
 
@@ -104,12 +108,16 @@ whether the kills stopped and whether the lanes flow.
 ## Acceptance
 
 - A walled lane on a full machine: its process is gone within the pass that
-  parks it, the card says moving and what it waits on, and it comes back on
-  the wall's account once the room holds.
+  parks it, the card says it is coming back and what it waits on, and it
+  comes back on the wall's account once the room holds — unless that
+  account's own latest reading says its allowance is gone, then on the
+  rule's.
+- A lane parked on the floor before this landed, its walled process still
+  standing: stopped on the next pass, and said once.
 - A walled lane on a machine with room: unchanged, moved in the same pass as
   today.
-- A hand `needle stop` on a walled session: still reads as the owner's stop
-  and stays down (the handoff is what makes the difference, not the stop).
+- A hand `needle stop`, or the Stop door, on a walled session: the owner's
+  stop; the handoff is removed with it, so the lane stays down.
 - Every new lane space reads `MemoryHigh` equal to the floor.
 - The suite is green and the ratchets hold.
 

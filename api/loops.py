@@ -113,7 +113,7 @@ from domain.launch import LaunchVerdict, WindowlessStart
 from domain.notice import Moment, Notice
 from domain.session import Session, SessionKind, SessionState
 from domain.signal import SessionWork, Signal, SignalKind, WindowlessSession
-from domain.slot import Placement, rung_words
+from domain.slot import Handoff, Placement, rung_words
 from domain.watercooler import Note
 from domain.window import Window, WindowKind
 from infrastructure import clock
@@ -1012,7 +1012,13 @@ class Loops:
                     changed = True
                 continue
             cause, words = interruption
+            waited = False
             if park is not None:
+                if park.waits_on == "floor" and self._holds_room_it_waits_for(session, cause):
+                    # Parked on the floor before this rule landed, or a stop
+                    # that did not take: the memory is asked back each pass
+                    # until the process is gone (card #107).
+                    self._give_memory_back(slug, number, session, history)
                 lifted = self._park_lifts(park, session, now)
                 if lifted is None:
                     continue
@@ -1022,6 +1028,7 @@ class Loops:
                 )
                 park = None
                 changed = True
+                waited = True
             # An attempt recorded after the clock keeps its count (item 5):
             # only the horizon's start bounds the window, never the present.
             floor_at = now - timedelta(seconds=RESCUE_HORIZON_SECONDS)
@@ -1037,11 +1044,17 @@ class Loops:
             # the wall detector chose at the wall, which is fresher than the
             # rule's cache about the account that just ran out, so it is
             # kept whether or not the walled process still stands — the
-            # board itself stops it while it waits for room (card #107); an
-            # older one asks the rule now.
+            # board itself stops it while it waits for room (card #107). A
+            # lane that waited keeps that rung only while the account's own
+            # latest reading says its allowance is there; an older handoff
+            # asks the rule now.
             placement: Placement | None = None
             wall = session.wall
-            young = wall is not None and (now - wall.at).total_seconds() < RESCUE_HORIZON_SECONDS
+            young = (
+                wall is not None
+                and (now - wall.at).total_seconds() < RESCUE_HORIZON_SECONDS
+                and (not waited or self._rung_open(wall, now))
+            )
             if not young:
                 placement, note = self._placement()
                 if placement is None:
@@ -1052,9 +1065,14 @@ class Loops:
                     continue
             room = self.headroom_now()
             if room.full:
-                if cause == Cause.WALL and session.pid is not None:
-                    self._give_memory_back(slug, number, session)
-                changed = self._park(slug, number, session, cause, words, now, full=room) or changed
+                # The park is the claim, written once by whichever process
+                # gets there first; the stop follows it, so two servers do
+                # not both stop, and a server that dies between the two
+                # leaves a parked lane whose process the next pass stops.
+                wrote = self._park(slug, number, session, cause, words, now, full=room)
+                if wrote and self._holds_room_it_waits_for(session, cause):
+                    self._give_memory_back(slug, number, session, history)
+                changed = wrote or changed
                 continue
             try:
                 row = store.open_recovery(
@@ -1217,24 +1235,52 @@ class Loops:
             )
         return acted
 
-    def _give_memory_back(self, slug: str, number: int, session: Session) -> None:
+    def _holds_room_it_waits_for(self, session: Session, cause: Cause) -> bool:
+        """A walled session whose process still stands while its lane waits
+        for room — and only one with a standing handoff: that file is what
+        names its ending a wall to bring back (`runtime/reasons.py::cause_of`).
+        A limit read from a stop-failure event with no handoff is left
+        running; stopped, its ending would read as a plain stop and the
+        park would lift with nothing to bring back."""
+        return cause == Cause.WALL and session.wall is not None and session.pid is not None
+
+    def _give_memory_back(
+        self, slug: str, number: int, session: Session, history: list[AuditEntry]
+    ) -> None:
         """A walled background session has ended its turn with nothing in
         flight; while the board waits for room it holds only memory, which
         is part of the room it waits for (card #107: six lanes walled
         together on 2026-09-09 held 1.1 GB for an hour on a machine 1 GB
-        short of the floor). Stopped through its own slot before the park;
-        the handoff stands, so the ending is named a wall and the lane is
-        brought back on the handoff's rung once the room holds."""
-        stopped = self.runtime.stop(session.short_id)
-        said = (
-            f"Stopped {session.short_id} on {session.slot} to give its memory back while it "
-            "waits for room"
-            if stopped.gone
-            else f"Asked {session.short_id} on {session.slot} to stop, to give its memory back "
-            f"while it waits for room; it had not gone within {stopped.seconds:.0f} s: "
-            f"{stopped.words}"
-        )
+        short of the floor). Stopped through its own slot after the park is
+        written; the handoff is kept, so the ending is named a wall and the
+        lane is brought back on the handoff's rung once the room holds. A
+        stop that did not take is said once, and asked again each pass."""
+        stopped = self.runtime.stop(session.short_id, keep_handoff=True)
+        if stopped.gone:
+            said = (
+                f"Stopped {session.short_id} on {session.slot} to give its memory back while "
+                "it waits for room"
+            )
+        else:
+            said = (
+                f"Asked {session.short_id} on {session.slot} to stop, to give its memory back "
+                f"while it waits for room; it had not gone within {stopped.seconds:.0f} s: "
+                f"{stopped.words}"
+            )
+            newest = next((h for h in history if h.kind == AuditKind.RESCUED), None)
+            if newest is not None and newest.detail.startswith(f"Asked {session.short_id} "):
+                return
         self.live.note(slug, number, AuditKind.RESCUED, Actor.MACHINE, f"{said}.")
+
+    def _rung_open(self, wall: Handoff, now: datetime) -> bool:
+        """Whether the account the wall chose still has its allowance, by
+        that account's own latest reading: a lane that waited for room may
+        have waited past the hour in which the rung was fresh."""
+        reading = self.runtime.limits(wall.account)
+        if reading is None:
+            return True
+        reset = limits.next_reset(reading)
+        return reset is None or reset[1] <= now
 
     def _park_lifts(self, park: Park, session: Session, now: datetime) -> str | None:
         """Whether the park's end has come, in words when it has (item 3),

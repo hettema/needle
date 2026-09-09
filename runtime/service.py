@@ -180,8 +180,17 @@ class Runtime:
             reason=reason,
         )
 
-    def stop(self, ref: str) -> Stopped:
-        return launch.stop(self.session(ref))
+    def stop(self, ref: str, *, keep_handoff: bool = False) -> Stopped:
+        """End a session. A standing handoff is the machine's request to move
+        it, and `cause_of` names an ended session with one as a wall to bring
+        back — so a stop by the owner (the Stop door, `needle stop`) removes
+        the handoff and is his stop, while the board's own stop of a walled
+        session that waits for room keeps it (card #107)."""
+        session = self.session(ref)
+        stopped = launch.stop(session)
+        if not keep_handoff and session.wall is not None:
+            handoffs.remove(session.wall)
+        return stopped
 
     def window(self, ref: str, kind: WindowKind | None) -> Opened:
         session = self.session(ref)

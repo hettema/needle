@@ -273,9 +273,11 @@ six walled lanes parked. The floor was never the cause: it gates what the
 board admits and chooses nothing about who is killed. It stays 5 GB — a
 third of a 15.6 GB laptop that runs a browser, an editor and half its swap
 beside the lanes; lower trades idle lanes for a slower machine, not a
-crash. Since card #107 it is also the ceiling of every lane's own space
-(`MemoryHigh` on the scope, `runtime/machine.py::adopt`), so one runaway
-lane is throttled inside its space rather than pushing a window out, and
-a walled lane gives its memory back the moment it waits for room. It lives
+crash. Since card #107 it is also the high mark of every lane's own space
+(`MemoryHigh` on the scope, `runtime/machine.py::adopt`): past it the kernel
+throttles the lane and reclaims inside its space — a throttle the kernel may
+still let a lane exceed under pressure, never a hard cap and never a kill —
+so a runaway lane presses on itself first rather than on a window; and a
+walled lane gives its memory back the moment it waits for room. It lives
 here so the runtime, which cannot import the board, sets the same number
 it reads (the layers ratchet)."""

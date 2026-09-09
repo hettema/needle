@@ -268,16 +268,14 @@ def test_a_walled_lane_on_a_full_machine_gives_its_memory_back_and_comes_back_on
     reconcile(client)
 
     assert len(launches(machine_floor)) == 1, "parked, not launched"
-    assert not Path(f"/proc/{launched['pid']}/status").exists() or _zombie(launched["pid"]), (
-        "the walled process is gone in the same pass"
-    )
-    words = rescued(client)  # newest first: the park note, then the stop before it
-    assert words[1].startswith("Stopped "), words
-    assert "to give its memory back while it waits for room" in words[1], words
-    assert words[0].startswith("Waiting to bring it back after its allowance ran out on alpha"), (
+    assert _gone(launched["pid"]), "the walled process is gone in the same pass"
+    words = rescued(client)  # newest first: the park is written, then the stop follows it
+    assert words[0].startswith("Stopped "), words
+    assert "to give its memory back while it waits for room" in words[0], words
+    assert words[1].startswith("Waiting to bring it back after its allowance ran out on alpha"), (
         words
     )
-    assert "the machine is full: 2.0 GB available, 1.0 GB swap free, 5 GB needed" in words[0]
+    assert "the machine is full: 2.0 GB available, 1.0 GB swap free, 5 GB needed" in words[1]
 
     # The next pass names the ending from the standing handoff, and waits on.
     reconcile(client)
@@ -309,6 +307,101 @@ def test_a_walled_lane_on_a_full_machine_gives_its_memory_back_and_comes_back_on
     assert any(w.startswith(held) for w in lifted)
     assert any(w.startswith("Brought back after its allowance ran out on alpha") for w in lifted)
     assert column_of(client, CARD) == "Executing"
+
+
+def test_a_lane_parked_on_the_floor_before_this_rule_has_its_process_stopped_next_pass(
+    client: TestClient, machine_floor: Floor, store: Store
+):
+    """The six real lanes of 2026-09-09 were parked with their processes
+    standing; a park that already stands is where the stop has to happen."""
+    launched = begun(client, machine_floor)
+    machine_floor.set_memory(available_gb=2.0, swap_free_gb=1.0)
+    machine_floor.write_handoff(
+        launched["session_id"],
+        at=time.time(),
+        **{"from": "alpha"},
+        account="beta",
+        pid=launched["pid"],
+        reason="You've hit your session limit · resets 4:40pm",
+    )
+    store.open_park(
+        "proj",
+        CARD,
+        session_id=launched["session_id"],
+        cause=Cause.WALL,
+        words="it waits: the machine is full; then it comes back by itself",
+        waits_on="floor",
+        until=None,
+        held_since=None,
+        at=clock.now(),
+    )
+    reconcile(client)
+    assert _gone(launched["pid"]), "stopped on the first pass that finds the standing park"
+    words = rescued(client)
+    assert words[0].startswith("Stopped ") and "to give its memory back" in words[0], words
+    reconcile(client)
+    assert len(rescued(client)) == len(words), "said once"
+    assert len(launches(machine_floor)) == 1
+
+
+def test_a_walled_lane_that_waited_asks_the_rule_when_its_rung_has_since_run_out(
+    client: TestClient, machine_floor: Floor, monkeypatch
+):
+    """Codex's reading of card #107's first pass: a handoff younger than the
+    horizon named a rung the lane might wait past. The account's own latest
+    reading decides."""
+    launched = begun(client, machine_floor)
+    machine_floor.set_memory(available_gb=2.0, swap_free_gb=1.0)
+    wall = dict(**{"from": "alpha"}, account="beta", pid=launched["pid"], reason="a limit")
+    machine_floor.write_handoff(launched["session_id"], at=time.time(), **wall)
+    reconcile(client)
+    reconcile(client)
+    machine_floor.set_memory(available_gb=16.0, swap_free_gb=8.0)
+    reconcile(client)
+    held = clock.now() + timedelta(seconds=loops_mod.FLOOR_SECONDS + 1)
+    machine_floor.write_handoff(
+        launched["session_id"], at=(held - timedelta(minutes=5)).timestamp(), **wall
+    )
+    machine_floor.write_limits(
+        "beta",
+        spent={"Session (5-hour)": 1.0},
+        resets={"Session (5-hour)": (held + timedelta(hours=2)).isoformat()},
+        fetched_at=held.timestamp(),
+    )
+    hold_clock(monkeypatch, held)
+    reconcile(client)
+    assert len(launches(machine_floor)) == 2
+    assert launches(machine_floor)[1]["config_dir"] == str(machine_floor.config_dir("alpha")), (
+        "beta's own reading says its allowance is gone, so the rule placed it"
+    )
+
+
+def test_the_owners_stop_on_a_walled_session_removes_the_machines_request_to_move_it(
+    client: TestClient, machine_floor: Floor
+):
+    """A standing handoff would name the ending a wall and bring the lane
+    back; the owner's stop is his, so the request goes with it."""
+    launched = begun(client, machine_floor)
+    path = machine_floor.write_handoff(
+        launched["session_id"],
+        at=time.time(),
+        **{"from": "alpha"},
+        account="nowhere",
+        pid=launched["pid"],
+        reason="a limit",
+    )
+    reconcile(client)
+    assert detail(client)["lane"]["state"] == "moving"
+    assert main(["stop", launched["short"]]) == 0
+    assert not path.exists(), "the owner's stop took the handoff with it"
+    reconcile(client)
+    assert detail(client)["lane"]["state"] == "ended"
+    assert detail(client)["lane"]["park"] is None
+    assert len(launches(machine_floor)) == 1
+
+
+def _gone(pid: int) -> bool:
+    return not Path(f"/proc/{pid}/status").exists() or _zombie(pid)
 
 
 def _zombie(pid: int) -> bool:

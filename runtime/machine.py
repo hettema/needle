@@ -485,9 +485,10 @@ def adopt(unit: str, pids: list[int], *, memory_high: int | None = None) -> tupl
     stopping the scope ends it. A unit of that name the manager still holds
     as failed is reset first (verified 2026-09-07: the call is refused
     otherwise, and lands after the reset). `memory_high` is the scope's
-    ceiling in bytes (`MemoryHigh`): past it the kernel throttles and
-    reclaims inside the scope and never kills, so a lane that grows presses
-    on itself, not on the windows the owner is using (card #107; verified
+    high mark in bytes (`MemoryHigh`): past it the kernel throttles and
+    reclaims inside the scope — a throttle it may let the scope exceed under
+    pressure, never a kill — so a lane that grows presses on itself first,
+    not on the windows the owner is using (card #107; verified
     2026-09-09 on a throwaway scope of this machine's user manager, systemd
     261: the property lands and `systemctl show -p MemoryHigh` reads it).
     Returns whether the call succeeded and the command's own words.
