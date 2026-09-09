@@ -13,12 +13,15 @@ from pathlib import Path
 import pytest
 
 from api.cli import main
-from domain.dial import Headroom
+from board.dial import who_is_home
+from board.lane import driver
+from domain.dial import Headroom, ScopeHeld
 from domain.ending import Cause, Death
 from domain.gate import Gate
 from domain.launch import LaunchVerdict, Start
 from domain.machine import Machine, MachineRoom, choose_machine
-from domain.session import SessionSlot
+from domain.session import Session, SessionKind, SessionSlot, SessionState
+from domain.slot import Make, Placement
 from domain.window import WindowKind
 from infrastructure.store import Store, StoreRefusal
 from runtime import launch, windows
@@ -379,3 +382,61 @@ def test_the_loops_readers_answer_from_the_command_line(machine_floor: Floor, ca
     assert main(["where", "--high-water", "moon"]) == 1
     assert main(["machine", "timing", "laptop", "pytest", "812.4"]) == 0
     assert "laptop: pytest 812.4 s, recorded" in capsys.readouterr().out
+
+
+# ── the face ──────────────────────────────────────────────────────────
+
+
+def test_the_start_preview_names_the_machine_only_when_the_placement_carries_one():
+    placement = Placement(
+        slot="alpha", make=Make.CLAUDE, model=None, config_dir="/x", why="room on alpha"
+    )
+    assert driver(placement) == "alpha"
+    assert driver(placement.model_copy(update={"machine": "rented"})) == "alpha on rented"
+
+
+def test_a_group_is_matched_to_a_session_on_its_own_machine_never_by_pid_alone():
+    def session(machine: str, pid: int) -> Session:
+        return Session(
+            slot="alpha",
+            config_dir="/x/alpha",
+            short_id=f"s-{machine}",
+            session_id=f"s-{machine}-0000",
+            kind=SessionKind.BACKGROUND,
+            name="card-1",
+            cwd="/p",
+            worktree=None,
+            state=SessionState.WORKING,
+            recorded="working",
+            detail="",
+            pid=pid,
+            scope=None,
+            model=None,
+            effort=None,
+            stale=False,
+            wall=None,
+            intent="",
+            created_at=None,
+            updated_at=None,
+            resumed_from=None,
+            doing=None,
+            machine=machine,
+        )
+
+    laptop_group = ScopeHeld(
+        unit="needle-card-1.scope",
+        pids=[4242],
+        commands={4242: "claude"},
+        lineage={},
+        machine="laptop",
+    )
+    rented_group = ScopeHeld(
+        unit="needle-card-2.scope",
+        pids=[4242],
+        commands={4242: "sleep 9"},
+        lineage={},
+        machine="rented",
+    )
+    states = who_is_home([laptop_group, rented_group], [session("laptop", 4242)])
+    assert [s.home for s in states] == [["s-laptop"], []]
+    assert states[1].nobody_home and states[1].strangers == ["sleep 9"]

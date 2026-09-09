@@ -906,7 +906,12 @@ def driver(placement: Placement) -> str:
     "claude" on a board that has said `fable on eduard` since its first
     day; naming it only when it is news is what the owner reads."""
     words = rung_words(placement.model, placement.slot)
-    return words if placement.make is Make.CLAUDE else f"{words} ({placement.make.value})"
+    if placement.make is not Make.CLAUDE:
+        words = f"{words} ({placement.make.value})"
+    # The machine is news only when the board knows more than one: the
+    # loop blanks it otherwise (card #83), so a one-machine board reads as
+    # it always has and a two-machine board says where the card would run.
+    return f"{words} on {placement.machine}" if placement.machine else words
 
 
 def why_this_driver(placement: Placement) -> str:

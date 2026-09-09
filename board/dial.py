@@ -242,11 +242,21 @@ def who_is_home(held: Sequence[ScopeHeld], sessions: Sequence[Session]) -> list[
     processes and nobody is home in is a finished session's leftovers —
     forty wait loops from three sessions a day gone, on 2026-09-09 — and
     is what the beat stops and `needle scopes --stray` lists."""
-    by_pid = {s.pid: s.short_id for s in sessions if s.pid is not None and not s.stale}
+    # A pid names a process on one machine only (card #83): a group read
+    # on the rented machine is matched against the sessions read there,
+    # never against a laptop session that happens to hold the same number.
+    by_pid = {(s.machine, s.pid): s.short_id for s in sessions if s.pid is not None and not s.stale}
     states: list[ScopeState] = []
     for scope in held:
         owner = {
-            pid: next((by_pid[p] for p in (pid, *scope.lineage.get(pid, ())) if p in by_pid), None)
+            pid: next(
+                (
+                    by_pid[(scope.machine, p)]
+                    for p in (pid, *scope.lineage.get(pid, ()))
+                    if (scope.machine, p) in by_pid
+                ),
+                None,
+            )
             for pid in scope.pids
         }
         home = sorted({who for who in owner.values() if who is not None})
