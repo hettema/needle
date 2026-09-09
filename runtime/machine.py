@@ -460,7 +460,10 @@ def hold_scopes_at(units: list[str], memory_high: int) -> list[str]:
     the next in, keeps the mark it was born with — Hello Revenue #483's
     read infinity beside #409's 5 GB a minute after card #107's fold — so
     the mark is read on every pass and set where it is missing. Returns
-    the units set. Raises what `show_units` raises."""
+    the units set. Raises what `show_units` raises; one scope whose set
+    fails or times out is skipped and the rest are still set, so a unit
+    set before it is still answered and one after it is still tried
+    (Codex's reading of the fix, 2026-09-09)."""
     fields = show_units(units, ["MemoryHigh"])
     held: list[str] = []
     for unit in units:
@@ -474,7 +477,11 @@ def hold_scopes_at(units: list[str], memory_high: int) -> list[str]:
             unit,
             f"MemoryHigh={memory_high}",
         ]
-        if run(argv, timeout=10).returncode == 0:
+        try:
+            done = run(argv, timeout=10)
+        except (OSError, Timeout):
+            continue
+        if done.returncode == 0:
             held.append(unit)
     return held
 

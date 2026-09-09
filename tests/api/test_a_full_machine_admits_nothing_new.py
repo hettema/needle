@@ -164,6 +164,35 @@ def test_a_session_with_hands_on_a_lane_is_put_back_in_its_scope_once_and_the_ca
     assert machine_floor.state()["scopes"][UNIT]["MemoryHigh"] == str(MEMORY_FLOOR_BYTES)
 
 
+def test_one_scope_that_refuses_the_floors_mark_does_not_cost_the_others_theirs(
+    client: TestClient, machine_floor: Floor, repo: Path
+):
+    """Codex's reading of the live-read fix (card #107): one scope whose set
+    fails must not drop the mark, or the note, of the others in the pass."""
+    other = f"needle-{doors.LANE}.scope"
+    machine_floor.update(
+        scopes={
+            UNIT: {"ActiveState": "active", "LoadState": "loaded"},
+            other: {"ActiveState": "active", "LoadState": "loaded"},
+        },
+        setprop_refuses=[UNIT],
+    )
+    lane_241(repo, machine_floor)
+    doors.start(client)
+    client.app.state.loops.live.rescan("proj")
+    reconcile(client)
+    sets = [c[3] for c in machine_floor.state()["systemctl_calls"] if "set-property" in c]
+    assert set(sets) == {UNIT, other}, sets
+    assert sets.count(other) == 1, "set once, then read as held"
+    assert sets.count(UNIT) >= 1, "the refusing scope is asked again on every pass"
+    scopes = machine_floor.state()["scopes"]
+    assert scopes[other]["MemoryHigh"] == str(MEMORY_FLOOR_BYTES)
+    assert "MemoryHigh" not in scopes[UNIT], "the refusing scope keeps what it had"
+    held = [h for h in detail(client)["history"] if h["detail"].startswith(f"Held {other} ")]
+    assert len(held) == 1, "the scope that was set is answered"
+    assert not [h for h in detail(client, 241)["history"] if h["detail"].startswith("Held ")]
+
+
 def test_a_move_the_machine_refused_is_said_once_on_the_card(
     client: TestClient, machine_floor: Floor, repo: Path
 ):

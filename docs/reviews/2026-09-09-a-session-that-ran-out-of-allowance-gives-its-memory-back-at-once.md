@@ -3,7 +3,7 @@
 **Plan:** docs/plans/done/2026-09-09-a-session-that-ran-out-of-allowance-gives-its-memory-back-at-once-so-the-machine-has-room-to-bring-it-back.md
 **Reviewer:** the building session (Claude Fable 5.1, interactive, hrme 89b15944) read the done-means; a reader of the other make (Codex 0.153.4, `codex exec -s read-only`, reasoning effort high, run in the lane's checkout with each commit's patch) read the seams and the boundaries and re-read every fix cold. Its answers are verbatim in `codex-pass1.md` to `codex-pass4.md` of the building session's scratchpad and are quoted below where they bear.
 **Diff range:** 74b5bbf (the plan on the trunk) to the lane's tip on `card-107-a-session-that-ran-out-of-allowa` — the feature commit 87f4a56, the fixes 2b8babf and edeafb4, and the close.
-**Findings:** 17 across five reading passes — 13 fixed and re-read, 3 no change with the reason written, 1 filed as a defect in the corpus.
+**Findings:** 19 across seven reading passes — 15 fixed and re-read, 3 no change with the reason written, 1 filed as a defect in the corpus.
 
 ## The passes
 
@@ -11,7 +11,9 @@
 2. **The seams and the done-means, read cold (Codex, on 87f4a56).** Seven findings, 3–9 below: the six real lanes were parked before the rule and would never have been stopped; a limit with no handoff, once stopped, is lost; the stop preceded the park; a hand stop on a walled session was resumed as a wall; a young handoff's rung reused after a long wait; "moving" and "cap" overclaimed. Fixed in 2b8babf.
 3. **The fixed work, read cold again (Codex, on 2b8babf).** Four resolved; five findings new or partial, 10–14 below: the owner's stop after the board's floor stop was still brought back because the stored death said wall; the rung check read only the soonest reset and read an allowance spent with no return time as back; the check hung on a flag a restart forgets; a stop on a standing park left the snapshot a pass behind; two intent paragraphs still promised a cap and a moving face. Fixed in edeafb4. The boundaries lens: "nothing new in layers, process ownership, typed edges, or deferral markers."
 4. **The fixed work, read cold a third time (Codex, on edeafb4).** "New defects introduced by this commit: nothing new beyond those incomplete fixes"; boundaries "nothing new". Two carried items: the owner's stop removed the handoff before writing the death over, so a crash between the two left a wall to recover (17, fixed by the reorder in the next commit); two servers may both stop a standing park's process and both write the line (14, no change with the reason). 
-5. **The reorder, read cold (Codex, on 13970d8).** "Finding (3) resolved: the settled STOPPED death now commits before handoff removal, and recovery honors it after restart. nothing new." The clean pass after a pass with findings; the loop ends here.
+5. **The reorder, read cold (Codex, on 13970d8).** "Finding (3) resolved: the settled STOPPED death now commits before handoff removal, and recovery honors it after restart. nothing new." The clean pass after a pass with findings.
+6. **The live read after the fold, and its fix (the building session, then Codex on 8e84f7d).** Finding 18 below, from the served board a minute after the fold; Codex's read of the fix found 19, one seam in it.
+7. **The per-scope fix, read cold (Codex).** Written below once its answer landed.
 
 ## Dispositions
 
@@ -31,6 +33,8 @@
 14. **Two servers reading one standing park may both stop its process.** The second stop finds a process already gone and, with the "Stopped" line now said once from the history, adds nothing; a stop is idempotent. NO CHANGE beyond the dedupe and the comment, which no longer claims two servers cannot both stop.
 15. **The plan's intent paragraph still promised "moving" and "can never hold more … capped".** FIXED in edeafb4.
 17. **The owner's stop removed the handoff before the death was written over; a crash between left a settled wall death to recover after restart.** FIXED: the record goes first, the handoff second, so the crash leaves a settled stop the loop honours.
+18. **A lane's scope that stood before its session was put back kept `MemoryHigh=infinity`.** Read live a minute after the fold: #409 (adopted by the loop) 5 GB, #483 (its scope outlived the stopped session and took the resumed one in) infinity. FIXED in 8e84f7d: the loop reads every lane's scope's mark where it already reads its memory, sets it through the manager where it is missing, and says so once on the card; the floor's fake manager answers `set-property`. Re-read by Codex (pass 6).
+19. **One scope whose set fails or times out dropped the marks and notes of the others in the pass.** Codex's read of 18's fix: a timeout on one unit raised out of the whole set, the wrapper answered nothing, the scope set before it was never said and the one after it never tried. FIXED: each unit's set is caught on its own; a two-lane floor case has one scope refuse and the other set and said, with the refusing one asked again on every pass. Re-read by Codex (pass 7).
 16. **A Codex reader run inside the lane's copy was read by the board as the lane's session; when it ended, card #107 showed "session died" in red with a Resume that cannot work on a Codex row.** Outside this change. FILED: `docs/slice-suggestions/2026-09-09-a-colleague-reading-a-cards-code-is-not-mistaken-for-the-session-building-it.md`, `**Kind:** defect`, `**Fix:** now`.
 
 ## What was checked

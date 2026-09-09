@@ -62,7 +62,7 @@ def _set_property(argv: list[str], blob: dict) -> int:
     words = [a for a in argv if not a.startswith("-") and a != "set-property"]
     unit = words[0] if words else ""
     scope = blob.get("scopes", {}).get(unit)
-    if scope is None:
+    if scope is None or unit in blob.get("setprop_refuses", []):
         print(f"Failed to set unit properties on {unit}: Unit {unit} not loaded.", file=sys.stderr)
         return 1
     for pair in words[1:]:
