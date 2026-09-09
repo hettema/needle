@@ -608,7 +608,29 @@ def machine_add(runtime: Runtime, args: argparse.Namespace) -> int:
 
 
 def machine_rm(runtime: Runtime, args: argparse.Namespace) -> int:
-    if runtime.store.remove_machine(args.name):
+    """Forget a machine — only when the one list shows nothing live on it
+    (a lane, a reading, a conversation: any row with a process) and it
+    answered the read, since an unread machine may hold anything; the
+    store's own guards (a lane still there, a session started today) hold
+    beneath this (Codex's fourth and fifth passes)."""
+    live = [s for s in runtime.sessions() if s.machine == args.name and s.pid is not None]
+    if args.name in runtime.unread:
+        print(
+            f"{args.name} did not answer ({runtime.unread[args.name]}); a machine whose sessions "
+            "cannot be read is not forgotten",
+            file=sys.stderr,
+        )
+        return 1
+    if live:
+        names = ", ".join(f"{s.short_id} ({s.name})" for s in live[:3])
+        print(f"{args.name} still runs {len(live)} session(s): {names}", file=sys.stderr)
+        return 1
+    try:
+        forgotten = runtime.store.remove_machine(args.name)
+    except StoreRefusal as refused:
+        print(str(refused), file=sys.stderr)
+        return 1
+    if forgotten:
         print(f"Forgot {args.name}; its readings stay under its name.")
         return 0
     print(f"no machine named {args.name!r} is on the board", file=sys.stderr)

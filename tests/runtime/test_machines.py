@@ -391,6 +391,27 @@ def test_machine_add_reads_the_identity_from_the_machine_itself(
     assert main(["machine", "rm", "rented"]) == 1
 
 
+def test_a_machine_with_a_live_session_or_no_answer_is_not_forgotten_from_the_command_line(
+    machine_floor: Floor, repo: Path, capsys
+):
+    """The one list is the evidence (Codex's fifth pass): a reading has no
+    worktree and a session older than a day may still run, so removal
+    reads the sessions, not the records' age."""
+    machine_floor.lay_host("rented", available_gb=24.0)
+    assert main(["machine", "add", "laptop", "--desktop"]) == 0
+    assert main(["machine", "add", "rented", "--host", "rented"]) == 0
+    assert (
+        main(["start", str(repo), "card-9-reading", "read it", "--effort", "high", "--windowless"])
+        == 0
+    )
+    capsys.readouterr()
+    assert main(["machine", "rm", "rented"]) == 1
+    assert "still runs 1 session(s)" in capsys.readouterr().err
+    machine_floor.host_down("rented")
+    assert main(["machine", "rm", "rented"]) == 1
+    assert "did not answer" in capsys.readouterr().err
+
+
 def test_the_loops_readers_answer_from_the_command_line(machine_floor: Floor, capsys):
     assert main(["machine", "add", "laptop", "--desktop"]) == 0
     capsys.readouterr()
