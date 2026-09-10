@@ -440,3 +440,34 @@ def test_a_verdict_quotes_the_answer_the_board_holds_and_a_call_from_elsewhere_i
         within="/home/other/project",
     )
     assert len(elsewhere) == 3 and all("outside this project" in f for f in elsewhere)
+    # The answer's own first word and its own addresses, never a substring
+    # (the cold read of round eleven): "not complete" is not complete, and
+    # "1.20" is not "1.2"; a sibling directory is another project; the
+    # words come from the answer file when the row holds none yet.
+    tricked = dict(rows)
+    tricked[13] = _call(13, "codex", landed=True, words="broke 1.1 — not complete")
+    tricked[12] = _call(12, "codex", landed=True, words="broke 1.20 — x")
+    faults = verdict_faults(
+        review, "r.md", call_of=tricked.get, lane_slot="hrclaude", landed=lambda c: True
+    )
+    assert any("read complete, and the answer" in f for f in faults)
+    assert any("broke 1.2, and the answer" in f for f in faults)
+    sibling = verdict_faults(
+        review,
+        "r.md",
+        call_of=rows.get,
+        lane_slot="hrclaude",
+        landed=lambda c: True,
+        within="/tmp/lan",
+    )
+    assert len(sibling) == 3 and all("outside this project" in f for f in sibling)
+    unstored = {n: rows[n].model_copy(update={"words": None}) for n in rows}
+    from_file = verdict_faults(
+        review,
+        "r.md",
+        call_of=unstored.get,
+        lane_slot="hrclaude",
+        landed=lambda c: True,
+        words_of=lambda c: "broke 1.2 — x" if c.id == 12 else "complete",
+    )
+    assert from_file == []

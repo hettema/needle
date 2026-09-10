@@ -987,6 +987,11 @@ def wait(runtime: Runtime, args: argparse.Namespace) -> int:
         if landed is not None:
             verdict = calls.judge(record, [], why_ended=None, moved_words=None)
             assert verdict is not None and verdict.outcome == CallOutcome.LANDED
+            # The row holds the answer's words from the moment anyone saw
+            # it land, not from the loop's next beat: a close that quotes
+            # the verdict can follow the wait at once (the cold read of
+            # round eleven). Idempotent with the loop's own ending.
+            runtime.store.end_call(record.id, clock.now(), verdict.words)
             _emit(args, verdict, _wait_text(verdict))
             return 0
         now = time.monotonic()

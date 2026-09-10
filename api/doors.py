@@ -1818,6 +1818,10 @@ class Doors:
             lane_slot=lane_slot,
             landed=calls.landed,
             within=project.path,
+            # The row's words once the loop or a waiter stored them, else
+            # the answer file itself — a close can come before the loop's
+            # next beat (the cold read of round eleven).
+            words_of=lambda c: c.words or calls.read_answer(c.answer).words,
         )
         if faults:
             more = f"; and {len(faults) - 4} more" if len(faults) > 4 else ""

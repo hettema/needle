@@ -49,6 +49,11 @@ def test_a_fresh_call_starts_a_new_thread_records_it_and_wait_lands_the_answer(
     assert main(["wait", "1", "--ceiling", "10"]) == 0
     said = capsys.readouterr().out
     assert said.startswith("landed: ") and said.rstrip().endswith("The premise holds.")
+    # The row holds the answer's words from the wait, before the loop's next
+    # beat (the cold read of round eleven), so a close can quote it at once.
+    ended = store.call(1)
+    assert ended is not None and ended.ended_at is not None
+    assert ended.words is not None and ended.words.endswith("The premise holds.")
 
 
 def test_a_fresh_call_names_the_other_make_and_a_low_effort_is_named(

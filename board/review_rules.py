@@ -188,6 +188,7 @@ def verdict_faults(
     lane_slot: str | None,
     landed: Callable[[Call], bool],
     within: str | None = None,
+    words_of: Callable[[Call], str | None] | None = None,
 ) -> list[str]:
     """The faults only the board's call table shows (item 2, ruling 5): a
     verdict's call has a row, its colleague is of the other kind — `codex`
@@ -235,21 +236,50 @@ def verdict_faults(
         # not, is the writer's word and not the reader's (the cold read of
         # round eleven drove the door with another project's call whose
         # stored answer said "broke 9.9" and the record said otherwise).
-        words = (call.words or "").lower()
-        if verdict.complete and "complete" not in words:
+        said = answer_outcome((words_of or _row_words)(call))
+        if verdict.complete and said != "complete":
             faults.append(
                 f"{name}:{verdict.line} says call {verdict.call} read complete, and the answer "
                 "the board holds for that call does not"
             )
-        missing = [address for address in verdict.broke if address not in words]
+        named = set(said) if isinstance(said, list) else set()
+        missing = [address for address in verdict.broke if address not in named]
         if missing:
             faults.append(
                 f"{name}:{verdict.line} says call {verdict.call} broke {', '.join(missing)}, "
                 "and the answer the board holds for that call names no such address"
             )
-        if within is not None and not call.caller.startswith(within.rstrip("/")):
+        root = within.rstrip("/") if within is not None else None
+        if root is not None and not (call.caller == root or call.caller.startswith(root + "/")):
             faults.append(
                 f"{name}:{verdict.line} call {verdict.call} was made from {call.caller}, outside "
                 "this project — a round's cold read is called from the lane or its project"
             )
     return faults
+
+
+_LANDED_WORDS = re.compile(r"\blanded at \S+: ", re.S)
+_ANSWER_BROKE = re.compile(r"^\s*broke\b(?P<addresses>[\d.,\s]*)", re.I)
+
+
+def _row_words(call: Call) -> str | None:
+    return call.words
+
+
+def answer_outcome(words: str | None) -> str | list[str] | None:
+    """What a reader's answer said, from its first words: `"complete"`,
+    the addresses after `broke`, or None when it said neither. The loop
+    stores a landed answer as `<file> landed at <when>: <the answer's
+    words>`, so the answer is what follows; a verdict quoting it is held
+    to the answer's own first word and its own addresses — never to a
+    substring, where "not complete" holds "complete" and "1.20" holds
+    "1.2" (the cold read of round eleven)."""
+    if not words:
+        return None
+    answer = _LANDED_WORDS.split(words, maxsplit=1)[-1].strip()
+    if answer.lower().startswith("complete"):
+        return "complete"
+    broke = _ANSWER_BROKE.match(answer)
+    if broke:
+        return re.findall(r"\d+(?:\.\d+)?", broke.group("addresses"))
+    return None
