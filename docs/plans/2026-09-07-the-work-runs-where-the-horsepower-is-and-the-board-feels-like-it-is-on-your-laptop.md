@@ -131,8 +131,9 @@ Done means: the board opens on the laptop at its old address and shows the
 same cards with their history; a session on the laptop and a session on the
 machine both appear on it; the laptop's service is off and the machine's
 record says how to bring the board back to the laptop in one command.
-In flight (2026-09-10, 10:30Z): the half the fixture proves is on the
-lane. The gap it closes was found reading item 3 cold: once the store is
+In flight (2026-09-10; the fixture half folded at 13:0xZ, origin/develop
+71d1bbe, the page rebuilt, the served board restarted and the shared
+store at 0018): the half the fixture proves is on the trunk. The gap it closes was found reading item 3 cold: once the store is
 on the machine, a session on the laptop running `needle row`, `close` or
 `fold` would open the laptop's copy and write a row the board never
 reads. So a machine that is not the board's hands every verb that opens
