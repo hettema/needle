@@ -82,6 +82,21 @@ class Rollout:
     started_at: datetime | None
     updated_at: datetime
     """The file's last change: the last thing the session wrote."""
+    effort: str | None = None
+    """The reasoning effort the session's first turn ran at, from its
+    `turn_context` record (`effort`, read from a 0.153.4 rollout on
+    2026-09-10); None when the head carries none, which the caller is told
+    rather than guessed (card #110, item 5)."""
+    sandbox: str | None = None
+    """The sandbox the same turn ran in (`sandbox_policy.type`: `read-only`,
+    `workspace-write`, …); None when the head carries none."""
+
+
+HEAD_BYTES = 64 * 1024
+"""How far into a rollout the first `turn_context` is looked for: it follows
+the session head and the developer messages, within the first few records;
+a rollout whose first turn has not begun has none, and a larger read would
+open the whole transcript of a long session for two words."""
 
 
 def is_worker(rollout: Rollout) -> bool:
@@ -126,6 +141,7 @@ def _rollout_of(path: Path) -> Rollout | None:
     if not isinstance(session_id, str) or not session_id:
         return None
     cwd = payload.get("cwd")
+    effort, sandbox = _context_of(path)
     return Rollout(
         path=path,
         session_id=session_id,
@@ -134,7 +150,63 @@ def _rollout_of(path: Path) -> Rollout | None:
         model=_model_of(payload),
         started_at=_when(payload.get("timestamp")) or _when(meta.get("timestamp")),
         updated_at=datetime.fromtimestamp(stamp, UTC),
+        effort=effort,
+        sandbox=sandbox,
     )
+
+
+def _context_of(path: Path) -> tuple[str | None, str | None]:
+    """The effort and the sandbox of the rollout's first turn, from its
+    first `turn_context` record within the head; (None, None) when there
+    is none or the head cannot be read."""
+    try:
+        with path.open("rb") as f:
+            text = f.read(HEAD_BYTES).decode("utf-8", errors="replace")
+    except OSError:
+        return None, None
+    for line in text.splitlines():
+        if '"turn_context"' not in line:
+            continue
+        try:
+            record = json.loads(line)
+        except ValueError:
+            continue
+        if not isinstance(record, dict) or record.get("type") != "turn_context":
+            continue
+        payload = record.get("payload")
+        if not isinstance(payload, dict):
+            return None, None
+        effort = payload.get("effort")
+        policy = payload.get("sandbox_policy")
+        sandbox = policy.get("type") if isinstance(policy, dict) else None
+        return (
+            effort if isinstance(effort, str) and effort else None,
+            sandbox if isinstance(sandbox, str) and sandbox else None,
+        )
+    return None, None
+
+
+def last_error(log: Path) -> str | None:
+    """The last tool error a worker's log holds — `ERROR codex_core::…:
+    error=<words>`, the line Codex writes when a tool call fails inside a
+    turn — so a turn that ended on one is reported as that error and not
+    as a colleague that finished without its note (card #110, item 5; the
+    carried defect's evidence: `collab spawn failed: no thread with id …`
+    as a call's last line, 2026-09-07). None when the log has none or
+    cannot be read."""
+    try:
+        text = log.read_text(encoding="utf-8", errors="replace")
+    except OSError:
+        return None
+    found: str | None = None
+    for line in text.splitlines():
+        match = _TOOL_ERROR.search(line)
+        if match:
+            found = match.group(1).strip()
+    return found
+
+
+_TOOL_ERROR = re.compile(r"\bERROR\b.*?\berror=(.+)$")
 
 
 def _model_of(payload: dict) -> str | None:
@@ -147,6 +219,16 @@ def _model_of(payload: dict) -> str | None:
     provenance = instructions.get("provenance") if isinstance(instructions, dict) else None
     named = provenance.get("model") if isinstance(provenance, dict) else None
     return named if isinstance(named, str) and named else None
+
+
+def _gate_of(effort: str | None) -> Gate | None:
+    """Codex's effort word as the board's gate when it is one of the four;
+    a word outside them (`none`, `minimal`) is no gate, and the row says
+    so by carrying none."""
+    try:
+        return Gate(effort) if effort else None
+    except ValueError:
+        return None
 
 
 def _when(stamp: object) -> datetime | None:
@@ -250,7 +332,8 @@ def row_of(rollout: Rollout, pid: int | None) -> Session:
         pid=pid,
         scope=machine.cgroup_of(pid) if pid is not None else None,
         model=rollout.model,
-        effort=None,
+        effort=_gate_of(rollout.effort),
+        sandbox=rollout.sandbox,
         stale=False,
         wall=None,
         intent="",

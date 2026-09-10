@@ -8,6 +8,9 @@ export type DocumentKind = (typeof DOCUMENT_KIND_VALUES)[number];
 export const DOCUMENT_STATE_VALUES = ["plan", "suggestion", "archived", "note", "gone"] as const;
 export type DocumentState = (typeof DOCUMENT_STATE_VALUES)[number];
 
+export const FATE_VALUES = ["fixed", "no_change", "filed"] as const;
+export type Fate = (typeof FATE_VALUES)[number];
+
 export const FIX_MARK_VALUES = ["now", "when", "his"] as const;
 export type FixMark = (typeof FIX_MARK_VALUES)[number];
 
@@ -16,6 +19,30 @@ export type Stance = (typeof STANCE_VALUES)[number];
 
 export const SUGGESTION_KIND_VALUES = ["idea", "defect"] as const;
 export type SuggestionKind = (typeof SUGGESTION_KIND_VALUES)[number];
+
+export interface ColdRead {
+  pass_number: number;
+  line: number;
+  who: string;
+  commit: string;
+  call: number;
+  complete: boolean;
+  broke: string[];
+  words: string;
+}
+
+export interface Disposition {
+  number: number;
+  pass_number: number | null;
+  address: string;
+  line: number;
+  name: string;
+  text: string;
+  fate: Fate | null;
+  reaches: string | null;
+  assumes: string | null;
+  repair_of: string | null;
+}
 
 export interface Document {
   kind: DocumentKind;
@@ -82,6 +109,10 @@ export interface Review {
   no_change: number;
   filed: number;
   filed_names: string[];
+  dispositions: Disposition[];
+  verdicts: ColdRead[];
+  caught: number;
+  escaped: number;
 }
 
 export interface ReviewPass {

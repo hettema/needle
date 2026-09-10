@@ -519,6 +519,11 @@ button.chip:focus-visible { outline: 2px solid var(--ink); outline-offset: 1px; 
 .item .itext { font-size: 12.3px; color: var(--ink-2); }
 .item .itext.quiet { color: var(--ink-3); }
 .item.filed { padding-top: 6px; border-top: 1px solid var(--line); }
+/* The repairs the review chased (card 110): one quiet line above the passes,
+ * in the mono voice the counters use; a cold reader's verdict sits under the
+ * pass whose round it read, in the same voice. */
+.passes .chased { font-family: var(--mono); font-size: 11px; color: var(--ink-3); line-height: 1.5; }
+.item .itext.verdict { font-family: var(--mono); font-size: 11px; color: var(--ink-3); }
 .sec .strip { max-width: 200px; margin-bottom: 10px; }
 
 .heard {

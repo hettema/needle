@@ -37,6 +37,7 @@ export interface Session {
   resumed_from: string | null;
   doing: Doing | null;
   machine?: string;
+  sandbox?: string | null;
 }
 
 export interface SessionSlot {

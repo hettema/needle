@@ -1189,6 +1189,14 @@ describe("how far a running card has come (plan 13)", () => {
     expect(passRows.map((r) => r.querySelector(".istance")?.textContent)).toEqual(["read", "read", "open", undefined]);
     expect((passRows[2]?.querySelector(".istance") as HTMLElement).dataset["meaning"]).toBe("broken");
     expect(passRows[3]).toHaveTextContent("A berth is let twice when two offices book in the same second — outside this change");
+    // The repairs the review chased, and the cold reader's verdict under the pass whose round it read (card #110).
+    expect(within(passes).getByLabelText("the repairs the review chased")).toHaveTextContent(
+      "repairs chased: 1 caught cold before the round shipped, 0 escaped to a full pass",
+    );
+    expect(passRows[0]?.querySelector(".verdict")).toHaveTextContent(
+      "read cold by Codex (01a08a3a), call 7: broke 2 — the retry path writes the log line too and was not named",
+    );
+    expect(passRows[1]?.querySelector(".verdict")).toBeNull();
   });
 });
 

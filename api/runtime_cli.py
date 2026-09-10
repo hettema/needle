@@ -9,7 +9,7 @@ needle window SHORT [--as KIND] [--json]
 needle focus SHORT [--json]
 needle show SLUG CARD [--json]
 needle rescues SHORT [--clear] [--json]
-needle call WHO NOTE [--objective TEXT] [--answer PATH] [--json]
+needle call WHO NOTE [--objective TEXT] [--answer PATH] [--fresh [--effort LEVEL]] [--json]
 needle wait CALL [--ceiling SECONDS] [--json]
 needle machine add NAME [--host H] [--desktop] [--ground PATH] [--command LINE]
 needle machine rm NAME
@@ -50,7 +50,7 @@ from pathlib import Path
 from pydantic import BaseModel
 
 from board.dial import who_is_home
-from domain.call import CallOutcome, CallVerdict
+from domain.call import Answer, CallOutcome, CallVerdict
 from domain.dial import ScopePids, ScopeState, ScopeStop
 from domain.ending import Ended, Sighting
 from domain.gate import Gate
@@ -821,11 +821,35 @@ def answer_path(note: str, short_id: str) -> str:
     return str(given.parent / f"from-{short_id}-re-{topic}.md")
 
 
+def picked_line(who: Session) -> str:
+    """What a bare-name call says first (card #110, item 5): which session
+    it picked by recency, at what effort and in what sandbox — so a caller
+    who needs judgment at high effort, or a probe the sandbox allows, can
+    choose another session or a fresh thread before the minutes are
+    spent. The carried defect's evidence: a call to the bare name landed
+    on a lane at effort none and then on a probe in a read-only sandbox,
+    and the caller learned which only from the answer that never came."""
+    effort = who.effort.value if who.effort is not None else "unknown"
+    return (
+        f"picked {who.short_id}, the most recent {who.slot} worker: effort {effort}, sandbox "
+        f"{who.sandbox or 'unknown'} — name a session id to choose another, or --fresh for a "
+        "new thread at the effort you name"
+    )
+
+
 def call(runtime: Runtime, args: argparse.Namespace) -> int:
     note = str(Path(args.note).expanduser().resolve())
     if not Path(note).is_file():
         print(f"{note} is not a file; a call names the note that holds the thread", file=sys.stderr)
         return 1
+    if args.fresh:
+        if args.who != codex.SLOT:
+            print(
+                f"--fresh starts a new thread of the other make; call {codex.SLOT} --fresh",
+                file=sys.stderr,
+            )
+            return 1
+        return _call_fresh(runtime, args, note)
     who = runtime.colleague(args.who)
     if who is None:
         print(
@@ -839,6 +863,8 @@ def call(runtime: Runtime, args: argparse.Namespace) -> int:
         short = session_id.split("-")[0]
     else:
         session_id, name, short = who.session_id, who.name, who.short_id
+    if args.who == codex.SLOT and isinstance(who, Session) and not args.json:
+        print(picked_line(who))
     answer = (
         str(Path(args.answer).expanduser().resolve()) if args.answer else answer_path(note, short)
     )
@@ -867,6 +893,65 @@ def call(runtime: Runtime, args: argparse.Namespace) -> int:
     forked = f" (resumed from {short})" if launch.session.session_id != session_id else ""
     text = (
         f"call {record.id}: {launch.session.short_id}{forked} is working on {note}, {where}\n"
+        f"  the answer lands in {answer}\n"
+        f"  wait for it: needle wait {record.id}"
+    )
+    _emit(args, record, text)
+    return 0
+
+
+def _call_fresh(runtime: Runtime, args: argparse.Namespace, note: str) -> int:
+    """A call to a fresh colleague of the other make (card #110, item 5):
+    no earlier thread, the effort the caller names — high by default,
+    where the doctrine puts judgment — a read-only sandbox in the caller's
+    own directory so the reading can run a probe over the files, and the
+    row every call leaves, so `needle wait` follows it and the close can
+    check it. The one sibling of the warm call: `Runtime.ask` is the
+    launch card #87's focus loop already uses, so a fresh reading is one
+    thing however it is asked for."""
+    given = Path(note)
+    topic = _FROM.sub("", given.stem) or given.stem
+    stamp = clock.now().strftime("%H%M%S")
+    answer = (
+        str(Path(args.answer).expanduser().resolve())
+        if args.answer
+        else str(given.parent / f"from-{codex.SLOT}-fresh-{stamp}-re-{topic}.md")
+    )
+    brief = call_brief(note, answer, args.objective, by_message=True)
+    schema = codex.schema_path(answer)
+    try:
+        schema.parent.mkdir(parents=True, exist_ok=True)
+        schema.write_text(json.dumps(Answer.model_json_schema(), indent=1), encoding="utf-8")
+    except OSError as error:
+        print(f"the answer's schema could not be written beside it: {error}", file=sys.stderr)
+        return 1
+    called_at = clock.now()
+    launch = runtime.ask(
+        cwd=os.getcwd(),
+        name=f"call-fresh-{topic}",
+        brief=brief,
+        answer=answer,
+        schema=str(schema),
+        effort=Gate(args.effort),
+    )
+    if launch.verdict != LaunchVerdict.ALIVE:
+        _emit(args, launch, describe_launch(launch))
+        return 1
+    session = launch.session
+    record = runtime.store.record_call(
+        session_id=session.session_id if session is not None else "unknown",
+        slot=codex.SLOT,
+        name=session.name if session is not None else f"{codex.SLOT}-fresh",
+        note=note,
+        answer=answer,
+        brief=brief,
+        caller=os.getcwd(),
+        at=called_at,
+    )
+    who = f" {session.short_id}" if session is not None else ""
+    text = (
+        f"call {record.id}: a fresh {codex.SLOT} thread{who} is working on {note}, effort "
+        f"{args.effort}, sandbox read-only, in {os.getcwd()}\n"
         f"  the answer lands in {answer}\n"
         f"  wait for it: needle wait {record.id}"
     )
@@ -1155,6 +1240,18 @@ def register(sub: "argparse._SubParsersAction[argparse.ArgumentParser]") -> None
     p_call.add_argument("note", help="the file that holds the thread and the question")
     p_call.add_argument("--objective", help="one sentence on what the answer is for")
     p_call.add_argument("--answer", help="where the reply lands; beside the note if omitted")
+    p_call.add_argument(
+        "--fresh",
+        action="store_true",
+        help="a new thread of the other make with no earlier context (`call codex --fresh`), "
+        "read-only in the current directory, recorded as a row like any call",
+    )
+    p_call.add_argument(
+        "--effort",
+        choices=[g.value for g in Gate],
+        default=Gate.HIGH.value,
+        help="the reasoning effort of a fresh thread; high unless said",
+    )
 
     p_wait = parser(
         "wait",

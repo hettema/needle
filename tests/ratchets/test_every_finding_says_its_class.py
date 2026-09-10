@@ -20,6 +20,8 @@ import re
 from datetime import date
 from pathlib import Path
 
+from board.parse import review_of
+from board.review_rules import dated
 from tests.ratchets.paths import REPO
 
 REVIEWS = REPO / "docs" / "reviews"
@@ -29,30 +31,25 @@ FINDING = re.compile(r"^\s*(\d+)\.\s+(.*)$")
 CLASSED = re.compile(r"^\[(" + "|".join(CLASSES) + r")\]\s+\S")
 
 
-def dated(record: Path) -> date | None:
-    head = re.match(r"(\d{4})-(\d{2})-(\d{2})-", record.name)
-    return date(int(head[1]), int(head[2]), int(head[3])) if head else None
-
-
 def dispositions(text: str) -> list[tuple[int, str]]:
-    """(line number, text) of every numbered finding under `## Dispositions`."""
+    """(line number, text) of every finding under `## Dispositions`, as the
+    one reader finds them (`board.parse.review_of`, card #110, ruling 4):
+    the ratchet's own walk read fenced examples the reader strips and
+    indented lists the reader does not count, so the two disagreed on what
+    a disposition was. The text is the line's own, after its number, so the
+    class is read where the writer put it."""
+    lines = text.split("\n")
     found: list[tuple[int, str]] = []
-    inside = False
-    for number, line in enumerate(text.splitlines(), 1):
-        if line.startswith("## "):
-            inside = line.strip() == "## Dispositions"
-            continue
-        if inside:
-            finding = FINDING.match(line)
-            if finding:
-                found.append((number, finding.group(2)))
+    for disposition in review_of(text, "").dispositions:
+        finding = FINDING.match(lines[disposition.line - 1])
+        found.append((disposition.line, finding.group(2) if finding else ""))
     return found
 
 
 def unclassed(records: list[Path], since: date) -> list[str]:
     faults: list[str] = []
     for record in records:
-        when = dated(record)
+        when = dated(record.name)
         if when is None or when < since:
             continue
         for number, text in dispositions(record.read_text(encoding="utf-8")):
@@ -102,7 +99,9 @@ def test_a_classed_record_passes_and_only_dispositions_are_read(tmp_path):
 
 
 def test_an_unclassed_finding_is_named_with_its_line(tmp_path):
-    record = _write(tmp_path, "2026-09-07-a-fixture.md", RECORD.replace("2. [verification] ", "2. "))
+    record = _write(
+        tmp_path, "2026-09-07-a-fixture.md", RECORD.replace("2. [verification] ", "2. ")
+    )
     faults = unclassed([record], FROM)
     assert len(faults) == 1 and faults[0].startswith("2026-09-07-a-fixture.md:12")
 

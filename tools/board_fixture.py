@@ -500,6 +500,8 @@ RECORD = """# Review — a storm warning reaches every skipper
 
 1. **The feature against the plan's "done means".** A boat booked twice was
    warned twice; the log line said reached before the message left; two more.
+Read cold by Codex (01a08a3a) on 4d1e2f, call 7: broke 2 — the retry path writes the
+   log line too and was not named.
 2. **The seams.** Two offices warning at once; the send retried on a timeout
    and reached a skipper twice; two more.
 3. **The boundaries.** The warning reaches the office's mailer directly — the fix is landing.
@@ -511,7 +513,7 @@ RECORD = """# Review — a storm warning reaches every skipper
 3. **A skipper with no phone was skipped in silence.** FIXED in 5e2f3a.
 4. **The list read yesterday's bookings after midnight.** FIXED in 5e2f3a.
 5. **Two offices warned at once.** FIXED in 6f3a4b.
-6. **The send retried on a timeout and reached a skipper twice.** FIXED in 6f3a4b.
+6. [repair of 2] **The send retried on a timeout and reached a skipper twice.** FIXED in 6f3a4b.
 7. **The rehearsal's five unreached were the wrong five.** FIXED in 7a4b5c.
 8. **The Warn button was reachable from the tide table.** FIXED in 7a4b5c.
 9. **A berth is let twice when two offices book in the same second.** Outside

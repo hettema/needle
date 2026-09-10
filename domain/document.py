@@ -117,12 +117,72 @@ class ReviewPass(BaseModel):
     clean: bool
 
 
+class Fate(StrEnum):
+    """What happened to a finding, by the token at the tail of its line
+    (`docs/reviews/README.md`): FIXED, NO CHANGE, or filed as a suggestion."""
+
+    FIXED = "fixed"
+    NO_CHANGE = "no_change"
+    FILED = "filed"
+
+
+class Disposition(BaseModel):
+    """One finding's line under `## Dispositions` (card #110): where it sits,
+    what became of it, and — for a fix — who else it reaches and what it
+    assumes, the two halves a cold reader tries to break before the round
+    ships. The address is how a verdict and a repair-caused mark name it."""
+
+    number: int
+    pass_number: int | None
+    """The pass whose findings it sits under (`### Pass N …`); None in a
+    record that lists its dispositions flat."""
+    address: str
+    """`<pass>.<number>` under a pass heading, else the number alone."""
+    line: int
+    """The line in the record, 1-based, so a refusal can name it."""
+    name: str
+    """The finding's bold lead, else its first sentence: what the face
+    shows for a filed finding."""
+    text: str
+    fate: Fate | None
+    reaches: str | None
+    """Who else the fix reaches: the sibling cases, the other readers of the
+    surface it changed; None when the line does not say."""
+    assumes: str | None
+    """What the fix assumes about who else reads or writes the thing, and in
+    what order; None when the line does not say."""
+    repair_of: str | None
+    """The address of the earlier repair that caused this finding, when the
+    line carries the `[repair of <address>]` mark."""
+
+
+class ColdRead(BaseModel):
+    """A cold reader's word on one round's repairs (card #110), written on
+    its own line under the pass whose round it read: who read, on which
+    commit, through which call, and whether every fix line held or which
+    addresses it broke."""
+
+    pass_number: int
+    line: int
+    who: str
+    commit: str
+    call: int
+    complete: bool
+    broke: list[str]
+    """The addresses of the fix lines the reader broke; empty when complete."""
+    words: str
+
+
 class Review(BaseModel):
     """A review record as its counts read (plan 13, item 5): the passes from
     its `## The passes`, the findings from its `**Findings:**` line, and
     each disposition's fate from `## Dispositions` — FIXED, NO CHANGE, or
     filed as a suggestion. Read from the lane's own worktree while it runs,
-    so the face counts the loop as the lane writes it, pass by pass."""
+    so the face counts the loop as the lane writes it, pass by pass. Since
+    card #110 it also carries every disposition with its two halves, every
+    cold reader's verdict, and how many findings an earlier repair caused —
+    caught by a cold reader before the round shipped, or escaped to a full
+    pass — which is the loop that card reads."""
 
     path: str
     """Relative to the project root."""
@@ -140,6 +200,15 @@ class Review(BaseModel):
     filed_names: list[str]
     """The filed findings by their disposition titles: what this lane will
     not fix, and what lands on the defects rail when it folds."""
+    dispositions: list[Disposition]
+    verdicts: list[ColdRead]
+    caught: int
+    """Repair-caused findings a cold reader named before the round shipped:
+    the addresses its verdicts broke, each once."""
+    escaped: int
+    """Repair-caused findings a full pass found that no verdict had named:
+    the addresses the `[repair of …]` marks cite that no verdict broke, each
+    once."""
 
 
 class DocumentState(StrEnum):

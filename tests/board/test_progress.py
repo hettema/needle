@@ -259,7 +259,7 @@ def test_progress_counts_the_lanes_copy_and_reads_the_record_only_once_every_ite
     )
     assert whole is not None and whole.review is not None and reads == [1]
     assert whole.review.path == "docs/reviews/2026-09-05-the-waiting-list.md"
-    assert whole.line == "review · pass 3 · 9 found, 8 fixed, 1 filed"
+    assert whole.line == "review · pass 3 · 9 found, 8 fixed, 1 filed · 0 caught, 0 escaped"
 
     clean = RECORD.replace(
         "## Dispositions", "4. **The fixed work again.** Nothing new.\n\n## Dispositions"
@@ -270,7 +270,7 @@ def test_progress_counts_the_lanes_copy_and_reads_the_record_only_once_every_ite
         read_reviews=lambda: [("docs/reviews/2026-09-05-the-waiting-list.md", clean)],
         now=NOW,
     )
-    assert after is not None and after.line == "review clean · 4 passes · 9 found, 8 fixed, 1 filed"
+    assert after is not None and after.line == "review clean · 4 passes · 9 found, 8 fixed, 1 filed · 0 caught, 0 escaped"
 
 
 def test_a_plan_with_no_items_has_no_progress_and_nothing_marked_shows_zero():

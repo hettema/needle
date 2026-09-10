@@ -846,7 +846,11 @@ class Runtime:
         if fork is not None:
             history = self.store.rescues(fork.session_id)
             moved = history[-1].reason if history else None
-        return calls.judge(call, rows, why_ended=why, moved_words=moved)
+        # A Codex worker's own log sits beside its answer; the last tool
+        # error in it is how a turn that ended on one is told from a turn
+        # that finished with nothing to say (card #110, item 5).
+        error = codex.last_error(codex.log_path(call.answer)) if call.slot == codex.SLOT else None
+        return calls.judge(call, rows, why_ended=why, moved_words=moved, tool_error=error)
 
     def discuss(
         self,

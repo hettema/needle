@@ -1144,7 +1144,7 @@ def test_the_card_counts_the_lanes_own_copy_and_its_record_and_nothing_once_the_
     progress = summary_of(client)["progress"]
     assert progress["met"] == 3 and progress["review"] is not None
     assert progress["review"]["path"] == "docs/reviews/2026-09-05-every-metered-kilowatt.md"
-    assert progress["line"] == "review clean · 2 passes · 3 found, 2 fixed, 1 filed"
+    assert progress["line"] == "review clean · 2 passes · 3 found, 2 fixed, 1 filed · 0 caught, 0 escaped"
     assert progress["review"]["filed_names"] == [
         "A berth with no meter is billed nothing and says nothing"
     ]

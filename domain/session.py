@@ -89,6 +89,12 @@ class Session(BaseModel):
     #83): stamped by the runtime that merged the lists, never by the
     registry, which knows nothing of other machines. Empty for a row read
     by a runtime that has not been told its own name."""
+    sandbox: str | None = None
+    """The sandbox a Codex session's turn ran in, in Codex's own word
+    (`read-only`, `workspace-write`); None for a row that does not say —
+    every Claude row, and a Codex rollout whose first turn has not begun.
+    Read so a caller told which session a bare-name call picked can see
+    whether it can run the probe the question needs (card #110, item 5)."""
 
 
 class TranscriptSize(BaseModel):

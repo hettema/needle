@@ -311,8 +311,10 @@ rings: inside the change is fixed and re-read; adjacent is fixed when it
 serves this intent, else filed as a suggestion marked a defect; outside is
 never fixed here, only filed. A pass and the repairs it causes are a round,
 and every round's repairs are read for completeness by a cold reader of
-another make before they ship — who else calls this, what is the sibling
-case, what list was written by hand — so a round closes when that read says
+another make before they ship — who reads the fix's line and tries to break
+it — who else calls this, what is the sibling case, what list was written by
+hand, what does the fix assume and what drove it — and whose verdict is on
+the record before the round ships — so a round closes when that read says
 complete or its siblings are fixed. A repair reported partial is one of three:
 the cause half removed, or a test that would not catch the regression, either
 of which blocks the fold; or the record's words off, which the writer fixes
@@ -337,8 +339,10 @@ What makes it hard: each repair creates changed surface that needs review, and
 repairs can introduce new defects; bounding repairs by size can block a
 structural correction whose promise crosses files. So a repair is bounded by
 the promise it restores, not by how many lines it touches: every review repair names the finding, the promise it must
-restore, and the affected dependencies; it changes enough to remove the cause
-and reconcile those dependencies, and omits unrelated improvements. A
+restore, and the affected dependencies — who else the fix reaches and what it
+assumes about who else reads or writes the thing, written on the fix's own
+line; it changes enough to remove the cause and reconcile those dependencies,
+and omits unrelated improvements. A
 structural repair remains part of delivering the existing promise — if it
 needs a separate item, the original promise stays unmet until that item lands
 or the person explicitly changes the promised outcome. The revision under

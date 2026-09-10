@@ -10898,9 +10898,135 @@
         "filed": 1,
         "filed_names": [
           "A berth is let twice when two offices book in the same second"
-        ]
+        ],
+        "dispositions": [
+          {
+            "number": 1,
+            "pass_number": null,
+            "address": "1",
+            "line": 20,
+            "name": "A boat booked twice was warned twice",
+            "text": "A boat booked twice was warned twice. FIXED in 4d1e2f.",
+            "fate": "fixed",
+            "reaches": null,
+            "assumes": null,
+            "repair_of": null
+          },
+          {
+            "number": 2,
+            "pass_number": null,
+            "address": "2",
+            "line": 21,
+            "name": "The log line said reached before the message left",
+            "text": "The log line said reached before the message left. FIXED in 4d1e2f.",
+            "fate": "fixed",
+            "reaches": null,
+            "assumes": null,
+            "repair_of": null
+          },
+          {
+            "number": 3,
+            "pass_number": null,
+            "address": "3",
+            "line": 22,
+            "name": "A skipper with no phone was skipped in silence",
+            "text": "A skipper with no phone was skipped in silence. FIXED in 5e2f3a.",
+            "fate": "fixed",
+            "reaches": null,
+            "assumes": null,
+            "repair_of": null
+          },
+          {
+            "number": 4,
+            "pass_number": null,
+            "address": "4",
+            "line": 23,
+            "name": "The list read yesterday's bookings after midnight",
+            "text": "The list read yesterday's bookings after midnight. FIXED in 5e2f3a.",
+            "fate": "fixed",
+            "reaches": null,
+            "assumes": null,
+            "repair_of": null
+          },
+          {
+            "number": 5,
+            "pass_number": null,
+            "address": "5",
+            "line": 24,
+            "name": "Two offices warned at once",
+            "text": "Two offices warned at once. FIXED in 6f3a4b.",
+            "fate": "fixed",
+            "reaches": null,
+            "assumes": null,
+            "repair_of": null
+          },
+          {
+            "number": 6,
+            "pass_number": null,
+            "address": "6",
+            "line": 25,
+            "name": "The send retried on a timeout and reached a skipper twice",
+            "text": "[repair of 2] The send retried on a timeout and reached a skipper twice. FIXED in 6f3a4b.",
+            "fate": "fixed",
+            "reaches": null,
+            "assumes": null,
+            "repair_of": "2"
+          },
+          {
+            "number": 7,
+            "pass_number": null,
+            "address": "7",
+            "line": 26,
+            "name": "The rehearsal's five unreached were the wrong five",
+            "text": "The rehearsal's five unreached were the wrong five. FIXED in 7a4b5c.",
+            "fate": "fixed",
+            "reaches": null,
+            "assumes": null,
+            "repair_of": null
+          },
+          {
+            "number": 8,
+            "pass_number": null,
+            "address": "8",
+            "line": 27,
+            "name": "The Warn button was reachable from the tide table",
+            "text": "The Warn button was reachable from the tide table. FIXED in 7a4b5c.",
+            "fate": "fixed",
+            "reaches": null,
+            "assumes": null,
+            "repair_of": null
+          },
+          {
+            "number": 9,
+            "pass_number": null,
+            "address": "9",
+            "line": 28,
+            "name": "A berth is let twice when two offices book in the same second",
+            "text": "A berth is let twice when two offices book in the same second. Outside this change — filed as docs/slice-suggestions/2026-09-05-a-berth-is-let-twice.md.",
+            "fate": "filed",
+            "reaches": null,
+            "assumes": null,
+            "repair_of": null
+          }
+        ],
+        "verdicts": [
+          {
+            "pass_number": 1,
+            "line": 12,
+            "who": "Codex (01a08a3a)",
+            "commit": "4d1e2f",
+            "call": 7,
+            "complete": false,
+            "broke": [
+              "2"
+            ],
+            "words": "the retry path writes the log line too and was not named."
+          }
+        ],
+        "caught": 1,
+        "escaped": 0
       },
-      "line": "review · pass 3 · 9 found, 8 fixed, 1 filed"
+      "line": "review · pass 3 · 9 found, 8 fixed, 1 filed · 1 caught, 0 escaped"
     },
     "review_clean": {
       "items": [
@@ -10974,9 +11100,135 @@
         "filed": 1,
         "filed_names": [
           "A berth is let twice when two offices book in the same second"
-        ]
+        ],
+        "dispositions": [
+          {
+            "number": 1,
+            "pass_number": null,
+            "address": "1",
+            "line": 22,
+            "name": "A boat booked twice was warned twice",
+            "text": "A boat booked twice was warned twice. FIXED in 4d1e2f.",
+            "fate": "fixed",
+            "reaches": null,
+            "assumes": null,
+            "repair_of": null
+          },
+          {
+            "number": 2,
+            "pass_number": null,
+            "address": "2",
+            "line": 23,
+            "name": "The log line said reached before the message left",
+            "text": "The log line said reached before the message left. FIXED in 4d1e2f.",
+            "fate": "fixed",
+            "reaches": null,
+            "assumes": null,
+            "repair_of": null
+          },
+          {
+            "number": 3,
+            "pass_number": null,
+            "address": "3",
+            "line": 24,
+            "name": "A skipper with no phone was skipped in silence",
+            "text": "A skipper with no phone was skipped in silence. FIXED in 5e2f3a.",
+            "fate": "fixed",
+            "reaches": null,
+            "assumes": null,
+            "repair_of": null
+          },
+          {
+            "number": 4,
+            "pass_number": null,
+            "address": "4",
+            "line": 25,
+            "name": "The list read yesterday's bookings after midnight",
+            "text": "The list read yesterday's bookings after midnight. FIXED in 5e2f3a.",
+            "fate": "fixed",
+            "reaches": null,
+            "assumes": null,
+            "repair_of": null
+          },
+          {
+            "number": 5,
+            "pass_number": null,
+            "address": "5",
+            "line": 26,
+            "name": "Two offices warned at once",
+            "text": "Two offices warned at once. FIXED in 6f3a4b.",
+            "fate": "fixed",
+            "reaches": null,
+            "assumes": null,
+            "repair_of": null
+          },
+          {
+            "number": 6,
+            "pass_number": null,
+            "address": "6",
+            "line": 27,
+            "name": "The send retried on a timeout and reached a skipper twice",
+            "text": "[repair of 2] The send retried on a timeout and reached a skipper twice. FIXED in 6f3a4b.",
+            "fate": "fixed",
+            "reaches": null,
+            "assumes": null,
+            "repair_of": "2"
+          },
+          {
+            "number": 7,
+            "pass_number": null,
+            "address": "7",
+            "line": 28,
+            "name": "The rehearsal's five unreached were the wrong five",
+            "text": "The rehearsal's five unreached were the wrong five. FIXED in 7a4b5c.",
+            "fate": "fixed",
+            "reaches": null,
+            "assumes": null,
+            "repair_of": null
+          },
+          {
+            "number": 8,
+            "pass_number": null,
+            "address": "8",
+            "line": 29,
+            "name": "The Warn button was reachable from the tide table",
+            "text": "The Warn button was reachable from the tide table. FIXED in 7a4b5c.",
+            "fate": "fixed",
+            "reaches": null,
+            "assumes": null,
+            "repair_of": null
+          },
+          {
+            "number": 9,
+            "pass_number": null,
+            "address": "9",
+            "line": 30,
+            "name": "A berth is let twice when two offices book in the same second",
+            "text": "A berth is let twice when two offices book in the same second. Outside this change — filed as docs/slice-suggestions/2026-09-05-a-berth-is-let-twice.md.",
+            "fate": "filed",
+            "reaches": null,
+            "assumes": null,
+            "repair_of": null
+          }
+        ],
+        "verdicts": [
+          {
+            "pass_number": 1,
+            "line": 12,
+            "who": "Codex (01a08a3a)",
+            "commit": "4d1e2f",
+            "call": 7,
+            "complete": false,
+            "broke": [
+              "2"
+            ],
+            "words": "the retry path writes the log line too and was not named."
+          }
+        ],
+        "caught": 1,
+        "escaped": 0
       },
-      "line": "review clean · 4 passes · 9 found, 8 fixed, 1 filed"
+      "line": "review clean · 4 passes · 9 found, 8 fixed, 1 filed · 1 caught, 0 escaped"
     }
   }
 }

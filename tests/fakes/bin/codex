@@ -116,6 +116,18 @@ def resume(args: list[str]) -> int:
         # the id in argv, which is how the runtime finds a worker's process.
         os.execv("/usr/bin/sleep", [f"codex-exec-resume-{session_id}", "300"])
     time.sleep(float(fate.get("after", 0.3)))
+    if then == "error":
+        # A tool call failed inside the turn and the worker ended with no
+        # final message: Codex writes the error to its own stderr, which the
+        # runtime keeps in the log beside the answer (the carried defect's
+        # evidence, 2026-09-07), and writes nothing to the `-o` file.
+        print(
+            "2026-09-07T12:20:31.634510Z ERROR codex_core::tools::router: error="
+            + fate.get("error", "collab spawn failed: no thread with id: 01a07bcf"),
+            file=sys.stderr,
+        )
+        _append(rollout, "event_msg", {"type": "turn_aborted", "turn_id": "fake"})
+        return 1
     text = "" if then == "silent" else fate.get("text", "the answer, from the fake worker")
     _append(rollout, "event_msg", {"type": "task_complete", "turn_id": "fake"})
     if answer is not None:
@@ -215,6 +227,25 @@ def lane(args: list[str]) -> int:
     with rollout.open("a", encoding="utf-8") as f:
         f.write(json.dumps(meta) + "\n")
     _append(rollout, "event_msg", {"type": "task_started", "turn_id": "lane"})
+    # The first turn's context, as Codex writes it (0.153.4, read 2026-09-10):
+    # the effort from `-c model_reasoning_effort=…` and the sandbox from
+    # `-s`, so a row of this session says what it ran at (card #110).
+    effort = next(
+        (a.split("=", 1)[1] for a in args if a.startswith("model_reasoning_effort=")), None
+    )
+    sandbox = next((args[i + 1] for i, a in enumerate(args[:-1]) if a in ("-s", "--sandbox")), None)
+    _append(
+        rollout,
+        "turn_context",
+        {
+            "turn_id": "lane",
+            "cwd": cwd or os.getcwd(),
+            "approval_policy": "never",
+            "sandbox_policy": {"type": sandbox or "workspace-write"},
+            "model": model or "gpt-6-astra",
+            "effort": effort or "medium",
+        },
+    )
     if fresh and then != "linger":
         time.sleep(float(fate.get("after", 0.3)))
         text = "" if then == "silent" else fate.get("text", "the answer, from the fake worker")

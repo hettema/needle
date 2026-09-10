@@ -18,6 +18,10 @@ from pydantic import ValidationError
 from domain.call import Answer, Call, CallOutcome, CallVerdict
 from domain.session import Session, SessionState
 
+_TURN_OVER = (SessionState.DONE, SessionState.IDLE, SessionState.ENDED)
+"""A colleague whose turn is over: the states in which a tool error in its
+log is the end of the story rather than a step it is still recovering from."""
+
 
 def answer_landed(call: Call) -> datetime | None:
     """When the answer file last changed, if after the call; None otherwise."""
@@ -29,17 +33,32 @@ def answer_landed(call: Call) -> datetime | None:
     return changed if changed >= call.called_at and stat.st_size > 0 else None
 
 
+def landed(call: Call) -> bool:
+    """Whether the call's answer ever landed after the call: the file says
+    so now, or the row says so — the loop ends a landed call with the
+    verdict's words, which name the file and when it landed — so a
+    verdict quoted from an answer since tidied away still stands (card
+    #110, ruling 5)."""
+    if answer_landed(call) is not None:
+        return True
+    return call.ended_at is not None and bool(call.words) and " landed at " in (call.words or "")
+
+
 def judge(
     call: Call,
     sessions: list[Session],
     *,
     why_ended: str | None,
     moved_words: str | None,
+    tool_error: str | None = None,
 ) -> CallVerdict | None:
     """What the call's state is on this read; None while the colleague is
     still at work and nothing has landed. `why_ended` is the runtime's
     reason for a dead process, asked only when one is dead; `moved_words`
-    the rescue's reason when a live fork of the called session exists."""
+    the rescue's reason when a live fork of the called session exists;
+    `tool_error` the last tool error the colleague's own log holds, so a
+    turn that ended on one is reported as that error and never as a
+    colleague that merely finished without its note (card #110, item 5)."""
     landed = answer_landed(call)
     if landed is not None:
         read = read_answer(call.answer)
@@ -66,10 +85,18 @@ def judge(
             slot=fork.slot,
         )
     session = by_id.get(call.session_id)
+    short = call.session_id.split("-")[0]
+    if tool_error and (session is None or session.pid is None or session.state in _TURN_OVER):
+        return CallVerdict(
+            outcome=CallOutcome.ENDED,
+            words=f"{short}'s turn ended on a tool error, with no final message: {tool_error}",
+            session_id=call.session_id,
+            slot=call.slot,
+        )
     if session is None:
         return CallVerdict(
             outcome=CallOutcome.ENDED,
-            words=f"{call.name} ({call.session_id.split('-')[0]}) is in no registry any more",
+            words=f"{call.name} ({short}) is in no registry any more",
             session_id=call.session_id,
             slot=call.slot,
         )
@@ -148,5 +175,3 @@ def _first_line(text: str) -> str:
         if line.strip():
             return line.strip()
     return ""
-
-

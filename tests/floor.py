@@ -335,12 +335,16 @@ class Floor:
         tool: str | None = None,
         tool_input: str = "",
         malformed: bool = False,
+        effort: str | None = None,
+        sandbox: str | None = None,
     ) -> Path:
         """A Codex rollout as Codex writes one (verified 2026-09-05): the
         `session_meta` head naming the session, its directory and its
         source (`cli` for a terminal, `exec` for a worker), then a turn —
         open when `mid_turn`, else closed by `task_complete` — with one
-        tool call in it when `tool` is named."""
+        tool call in it when `tool` is named, and, when `effort` or
+        `sandbox` is given, the `turn_context` record Codex writes at the
+        turn's start naming both (0.153.4, read 2026-09-10; card #110)."""
         stamp = started_at.replace(":", "-").split(".")[0]
         folder = self.codex_home / "sessions" / "2026" / "09" / "05"
         folder.mkdir(parents=True, exist_ok=True)
@@ -378,6 +382,22 @@ class Floor:
                 "payload": {"type": "task_started", "turn_id": "t1"},
             },
         ]
+        if effort is not None or sandbox is not None:
+            records.append(
+                {
+                    "timestamp": started_at,
+                    "ordinal": 1,
+                    "type": "turn_context",
+                    "payload": {
+                        "turn_id": "t1",
+                        "cwd": cwd,
+                        "approval_policy": "never",
+                        "sandbox_policy": {"type": sandbox or "workspace-write"},
+                        "model": model or "gpt-6-astra",
+                        "effort": effort or "medium",
+                    },
+                }
+            )
         if tool is not None:
             records.append(
                 {

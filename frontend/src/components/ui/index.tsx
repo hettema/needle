@@ -994,13 +994,17 @@ export function Items({ items }: { items: readonly Item[] }) {
   );
 }
 
-/** The review loop on the open card: one row per pass with its lens and what it found — the pass still open is the red one — and the findings this lane filed rather than fixed. */
+/** The review loop on the open card: one row per pass with its lens and what it found — the pass still open is the red one — each cold reader's verdict under the pass whose round it read, the repairs the review chased (caught cold before the round shipped, or escaped to a full pass), and the findings this lane filed rather than fixed. */
 export function Passes({ review }: { review: Review }) {
   const last = review.passes.length;
   return (
     <div className="passes" role="list" aria-label="the review's passes">
+      <div className="chased" aria-label="the repairs the review chased">
+        repairs chased: {review.caught} caught cold before the round shipped, {review.escaped} escaped to a full pass
+      </div>
       {review.passes.map((pass) => {
         const open = pass.number === last && !pass.clean;
+        const reads = review.verdicts.filter((verdict) => verdict.pass_number === pass.number);
         return (
           <div key={pass.number} className="item" role="listitem">
             <span className="inum">{pass.number}</span>
@@ -1012,6 +1016,13 @@ export function Passes({ review }: { review: Review }) {
                 </span>
               </span>
               {pass.text ? <span className="itext">{pass.text}</span> : null}
+              {reads.map((verdict) => (
+                <span key={verdict.line} className="itext verdict">
+                  read cold by {verdict.who}, call {verdict.call}:{" "}
+                  {verdict.complete ? "complete" : `broke ${verdict.broke.join(", ")}`}
+                  {verdict.words ? ` — ${verdict.words}` : ""}
+                </span>
+              ))}
             </span>
           </div>
         );

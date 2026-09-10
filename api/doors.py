@@ -11,9 +11,11 @@ import uuid
 from pathlib import Path
 
 from api.loops import Loops
+from board import review_rules
 from board.assemble import document_of, is_trigger_card
 from board.brief import (
     FOCUS_EXCERPT,
+    completeness_read,
     corpus_lane_name,
     filing_rule,
     focus_brief,
@@ -27,6 +29,7 @@ from board.brief import (
 from board.focus import FOCUS_PATH, is_chosen
 from board.handouts import handouts_row
 from board.lane import HANDS_ON
+from board.parse import plan_stem_of, review_of
 from board.signals import GRAMMAR, read_or_decline, where_after, where_after_finding
 from board.title import title_fingerprint
 from board.triage import routing_now, triaged_row
@@ -67,6 +70,7 @@ from domain.window import WindowKind
 from infrastructure import clock
 from infrastructure.live import WATERCOOLER_SHOWN, Live
 from infrastructure.store import StoreRefusal
+from runtime import calls
 from runtime.service import Runtime
 from runtime.windows import WindowRefused
 
@@ -279,6 +283,9 @@ class Doors:
                 + (f" ({detail.document.path})" if detail.document is not None else "")
                 + ", in the review's <lens> pass"
             )
+            + "."
+            "\n\n"
+            + completeness_read(needle)
             + "."
             "\n\nTo ask the owner something, end your turn with the question; the board shows it "
             "on the card and his answer resumes you."
@@ -1596,6 +1603,8 @@ class Doors:
             self._refuse_an_unstanced_promise(slug, number, card)
         lane = live.snapshot.lanes.get(number) if live.snapshot else None
         self._refuse_a_code_lane_without_its_review(slug, number, lane, review)
+        if review:
+            self._refuse_a_record_that_skipped_the_read(slug, number, card, lane, review)
         # Read before any row is written, so nothing that goes wrong reading
         # the lane leaves DELIVERED on a card that did not move (review
         # pass 2; a file the board cannot read is skipped, and a directory
@@ -1656,13 +1665,13 @@ class Doors:
         a review record that exists — named by the path it was expected at.
         A card the board knows no lane for shipped nothing the board could
         see, and passes; the head counts a shipped card with no REVIEW row
-        either way."""
+        either way. Whether the record named exists and holds is the next
+        refusal's, for every record a close names (card #110, ruling 2)."""
         project = self.live.projects[slug].project
-        record = self.live.store.lane(slug, number)
-        where = record.path if record is not None else (lane.path if lane is not None else None)
+        where, standing = self._lane_root(slug, number, lane)
         if where is None:
             return
-        standing = Path(where).is_dir()
+        record = self.live.store.lane(slug, number)
         files = self.runtime.lane_files(
             where if standing else project.path,
             birth=record.birth if record is not None else None,
@@ -1678,10 +1687,82 @@ class Doors:
                 f"#{number}'s lane folded code ({shown}); a code lane closes with a review "
                 f"record — name it with --review, a file at {expected}."
             )
-        if not any((Path(root) / review).is_file() for root in (project.path, where)):
+
+    def _lane_root(self, slug: str, number: int, lane: Lane | None) -> tuple[str | None, bool]:
+        """Where the lane's tree is, by the board's own record of it, else
+        the loop's last read, and whether it still stands on disk."""
+        record = self.live.store.lane(slug, number)
+        where = record.path if record is not None else (lane.path if lane is not None else None)
+        return where, where is not None and Path(where).is_dir()
+
+    def _refuse_a_record_that_skipped_the_read(
+        self, slug: str, number: int, card: Card, lane: Lane | None, review: str
+    ) -> None:
+        """Every record a close names is read where the lane stands —
+        through the runtime's lane-document path, so a lane on another
+        machine is read there — and held to what `docs/HOW-WE-WORK.md` §13
+        says a record owes (card #110, rulings 2 to 5): it is a file inside
+        the project's tree, named by the README's dated shape; its `Plan:`
+        line names this card's plan; and, when its date is after the day
+        that card folded, every fix line says who else it reaches and what
+        it assumes, every round of repairs carries a cold reader's verdict
+        whose call is a row the board holds, and every claim the reader
+        broke has a disposition. The rules are `board.review_rules`, the
+        same ones Needle's own ratchet reads; a record dated on or before
+        the fold's day closes as it did before. What this does not hold: a
+        round nobody read may already be on the trunk — the fold comes
+        first, and a lane that skipped the read finds out here, with its
+        code landed (the register says so)."""
+        project = self.live.projects[slug].project
+        given = Path(review)
+        if given.is_absolute() or ".." in given.parts:
+            raise DoorRefused(
+                f"#{number}'s review record {review} is not a path inside the project's tree; "
+                f"name it from the project root, a file at {project.path}/docs/reviews/<file>.md."
+            )
+        where, standing = self._lane_root(slug, number, lane)
+        roots = [where, project.path] if where is not None and standing else [project.path]
+        text: str | None = None
+        for root in roots:
+            text = self.runtime.lane_docs(root, [review]).plan
+            if text is not None:
+                break
+        if text is None:
             raise DoorRefused(
                 f"#{number}'s review record {review} is not in the project's tree; expected "
                 f"{project.path}/{review}."
+            )
+        if card.link is not None:
+            named = plan_stem_of(text)
+            if named != card.link.stem:
+                raise DoorRefused(
+                    f"#{number}'s review record {review} names the plan "
+                    f"{named or 'nothing'} on its `**Plan:**` line, and #{number}'s plan is "
+                    f"{card.link.stem}; a record is its card's word about its own diff."
+                )
+        name = given.name
+        if review_rules.dated(name) is None:
+            raise DoorRefused(
+                f"#{number}'s review record {review} carries no date in its name; the README's "
+                "shape is docs/reviews/YYYY-MM-DD-<topic>.md."
+            )
+        if not review_rules.held(name):
+            return
+        read = review_of(text, review)
+        lane_slot = lane.session.slot if lane is not None and lane.session is not None else None
+        faults = review_rules.record_faults(read, review) + review_rules.verdict_faults(
+            read,
+            review,
+            call_of=self.live.store.call,
+            lane_slot=lane_slot,
+            landed=calls.landed,
+        )
+        if faults:
+            more = f"; and {len(faults) - 4} more" if len(faults) > 4 else ""
+            shown = "; ".join(faults[:4]) + more
+            raise DoorRefused(
+                f"#{number}'s review record skipped the read HOW-WE-WORK §13 asks for, so the "
+                f"card cannot close: {shown}"
             )
 
     def _handed_out(self, slug: str, number: int, lane: Lane | None) -> str | None:

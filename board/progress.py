@@ -70,10 +70,17 @@ def progress_line(
         if review.no_change:
             counts += f", {review.no_change} no change"
         counts += f", {review.filed} filed"
+        # The repairs the review chased (card #110, item 3): how many
+        # findings an earlier fix caused, caught cold before the round
+        # shipped or escaped to a full pass — always shown, so a zero is a
+        # zero and not a line that forgot to count.
+        chased = f"{review.caught} caught, {review.escaped} escaped"
         passes = len(review.passes)
         if review.clean:
-            return f"review clean · {passes} pass{'es' if passes != 1 else ''} · {counts}"
-        return f"review · pass {passes} · {counts}"
+            return (
+                f"review clean · {passes} pass{'es' if passes != 1 else ''} · {counts} · {chased}"
+            )
+        return f"review · pass {passes} · {counts} · {chased}"
     line = f"{met} of {total} met"
     if deviated:
         line += f", {deviated} deviated"

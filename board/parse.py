@@ -12,8 +12,11 @@ from datetime import date, datetime
 
 from board.triage import fingerprint
 from domain.document import (
+    ColdRead,
+    Disposition,
     Document,
     DocumentKind,
+    Fate,
     Fix,
     FixMark,
     HeadField,
@@ -131,9 +134,51 @@ _DISPOSITIONS_HEADING = re.compile(r"^##\s+dispositions\b", re.I)
 _CLEAN = re.compile(r"\bnothing new\b|\bclean\b[.!]?\s*$", re.I)
 """A pass that found nothing: the record says "nothing new" or ends the
 pass on the word clean, as every record under `docs/reviews/` does."""
-_FIXED = re.compile(r"\bFIXED\b")
-_NO_CHANGE = re.compile(r"\bNO CHANGE\b")
-_FILED = re.compile(r"\bfiled\b", re.I)
+_FATE = re.compile(
+    r"(?:^|(?<=[—–:.;,(]\s)|(?<=[—–:.;,][\"')]\s)|(?<=\s-\s)|(?<=\())"
+    r"(FIXED|NO CHANGE|NOT FIXED|FILED|[Ff]iled)\b"
+)
+"""A finding's fate is the token that opens a clause of its line — the
+whole line, or a segment after a dash, a colon, a full stop, a semicolon,
+a comma or a bracket — and the last such token decides (card #110, ruling
+4): "the earlier FIXED claim was wrong — NO CHANGE" is no change, "NOT
+FIXED IN THE LANE — filed" is filed, and Needle's "**Title.** FIXED: …" is
+fixed. A token inside prose ("the earlier FIXED claim", "PARTLY FIXED")
+opens no clause and says nothing. The openers are the ones the three
+corpora write (the cold read of the corpus table, 2026-09-10: thirty
+all-caps FILED, three after a semicolon, one after a closing quote)."""
+_FATES = {"FIXED": Fate.FIXED, "NO CHANGE": Fate.NO_CHANGE, "FILED": Fate.FILED}
+_REACHES = re.compile(r"\breaches\s+(.+?)(?=;\s*assumes\b|\s*$)", re.S)
+_ASSUMES = re.compile(r"\bassumes\s+(.+?)(?=;\s*reaches\b|\s*$)", re.S)
+"""The two halves of a fix line (card #110, item 1), read from the tail
+after the fate token, where `docs/reviews/README.md` puts them: `— FIXED
+in <sha>; reaches <…>; assumes <…>`. A "reaches" in the finding's own
+prose is prose."""
+_CLASS = re.compile(r"^`?\[[\w-]+\]`?\s*")
+"""The class a finding opens with (card #60), plain or in backticks as
+Hello Revenue writes it; stripped before the fate and the marks are read."""
+_REPAIR_OF = re.compile(r"\[repair of\s+(\d+(?:\.\d+)?)\]", re.I)
+"""The mark on a finding an earlier round's repair caused (card #110, item
+3): the address of that repair, after the class."""
+_PASS_FINDINGS = re.compile(r"^###\s+pass\s+(\d+)\b", re.I)
+"""`### Pass N's findings`: the heading under `## Dispositions` that gives
+the findings below it their pass, and so their address (card #110)."""
+_VERDICT = re.compile(
+    r"^\s*Read cold by\s+(?P<who>.+?)\s+on\s+(?P<commit>[^\s,]+),\s*call\s+(?P<call>\d+):\s*"
+    r"(?P<rest>.*)$",
+    re.I | re.S,
+)
+_VERDICT_OPENS = re.compile(r"^\s*Read cold by\b", re.I)
+_BROKE = re.compile(
+    r"^broke\s+(?P<addresses>[\d.,\s]+?)(?:\s*[—–-]\s*(?P<words>.*))?$", re.I | re.S
+)
+_COMPLETE = re.compile(r"^complete\b[.:]?\s*[—–-]?\s*(?P<words>.*)$", re.I | re.S)
+_ADDRESS = re.compile(r"\d+(?:\.\d+)?")
+"""A cold reader's verdict on a round (card #110, item 2), on a line of
+its own under the pass whose round it read: `Read cold by <who> on <sha>,
+call <n>: complete` or `…: broke <pass.finding>, … — <its words>`. Read
+apart from the pass's own text, so a verdict never changes whether the
+pass reads clean."""
 _INTEGER = re.compile(r"\d+")
 
 ESSENCE_MAX = 280
@@ -512,25 +557,38 @@ def _heading_items(lines: list[str | None]) -> list[Item]:
     return items
 
 
-def _numbered_entries(lines: list[str | None]) -> list[tuple[int, str, list[str | None]]]:
+_TOP_ENTRY = re.compile(r"^(\d+)[.)]\s+(.+?)\s*$")
+"""A record's entry — a pass, a finding — opens at the margin. An entry
+indented under another is that entry's own list (a pass's findings
+written under it, as Hello Revenue's campaign record of 2026-09-08 does),
+and reading it as a pass counted 157 passes on a record with 22 (card
+#110, ruling 4)."""
+
+
+def _numbered_entries(
+    lines: list[str | None], *, start: int = 0
+) -> list[tuple[int, int, str, list[str | None]]]:
     """Top-level `N. text` entries with the lines under each, up to the next
-    entry or heading: the shape of a list of items, of a record's passes and
-    of its dispositions. Each is (number, first line's text, body)."""
-    entries: list[tuple[int, str, list[str | None]]] = []
+    entry or heading: the shape of a record's passes and of its
+    dispositions. Each is (line index in the document, number, first
+    line's text, body); `start` is where `lines` begins in the document."""
+    entries: list[tuple[int, int, str, list[str | None]]] = []
     index = 0
     while index < len(lines):
         line = lines[index]
-        listed = _ITEM_LIST.match(line) if line is not None else None
+        listed = _TOP_ENTRY.match(line) if line is not None else None
         if listed is None:
             index += 1
             continue
         end = index + 1
         while end < len(lines):
             nxt = lines[end]
-            if nxt is not None and (_ITEM_LIST.match(nxt) or nxt.startswith("#")):
+            if nxt is not None and (_TOP_ENTRY.match(nxt) or nxt.startswith("#")):
                 break
             end += 1
-        entries.append((int(listed.group(1)), listed.group(2), lines[index + 1 : end]))
+        entries.append(
+            (start + index, int(listed.group(1)), listed.group(2), lines[index + 1 : end])
+        )
         index = end
     return entries
 
@@ -619,20 +677,28 @@ def items_of(text: str) -> list[Item]:
     return _heading_items(lines) or _list_items(lines)
 
 
-def _section(lines: list[str | None], heading: re.Pattern[str]) -> list[str | None]:
-    """The lines under the first `## ` heading matching, up to the next `## `."""
+def _section_span(lines: list[str | None], heading: re.Pattern[str]) -> tuple[int, int] | None:
+    """Where the first `## ` heading matching sits: the index of its first
+    body line and the index of the next `## ` (or the end); None when the
+    document has no such section."""
     start = next(
         (i for i, line in enumerate(lines) if line is not None and heading.match(line)), None
     )
     if start is None:
-        return []
+        return None
     end = start + 1
     while end < len(lines):
         line = lines[end]
         if line is not None and line.startswith("## "):
             break
         end += 1
-    return lines[start + 1 : end]
+    return start + 1, end
+
+
+def _section(lines: list[str | None], heading: re.Pattern[str]) -> list[str | None]:
+    """The lines under the first `## ` heading matching, up to the next `## `."""
+    span = _section_span(lines, heading)
+    return [] if span is None else lines[span[0] : span[1]]
 
 
 def _lead_and_rest(first: str, body: list[str | None]) -> tuple[str, str]:
@@ -666,23 +732,26 @@ def review_of(text: str, path: str) -> Review:
     count = _INTEGER.search(findings_line)
     lines = _unfenced(text)
     passes: list[ReviewPass] = []
-    for number, first, body in _numbered_entries(_section(lines, _PASSES_HEADING)):
-        lens, rest = _lead_and_rest(first, body)
-        passes.append(
-            ReviewPass(number=number, lens=lens, text=rest, clean=_CLEAN.search(rest) is not None)
-        )
-    fixed = no_change = filed = 0
-    filed_names: list[str] = []
-    for _, first, body in _numbered_entries(_section(lines, _DISPOSITIONS_HEADING)):
-        name, rest = _lead_and_rest(first, body)
-        whole = f"{first} {rest}"
-        if _FIXED.search(whole):
-            fixed += 1
-        elif _NO_CHANGE.search(whole):
-            no_change += 1
-        elif _FILED.search(whole):
-            filed += 1
-            filed_names.append(name)
+    verdicts: list[ColdRead] = []
+    span = _section_span(lines, _PASSES_HEADING)
+    if span is not None:
+        for index, number, first, body in _numbered_entries(
+            lines[span[0] : span[1]], start=span[0]
+        ):
+            own, read = _verdicts_apart(body, start=index + 1)
+            lens, rest = _lead_and_rest(first, own)
+            passes.append(
+                ReviewPass(
+                    number=number, lens=lens, text=rest, clean=_CLEAN.search(rest) is not None
+                )
+            )
+            verdicts.extend(_verdict(number, line, words) for line, words in read)
+    dispositions = _dispositions(lines)
+    fixed = sum(1 for d in dispositions if d.fate == Fate.FIXED)
+    no_change = sum(1 for d in dispositions if d.fate == Fate.NO_CHANGE)
+    filed_names = [d.name for d in dispositions if d.fate == Fate.FILED]
+    caught = {address for v in verdicts for address in v.broke}
+    marked = {d.repair_of for d in dispositions if d.repair_of is not None}
     return Review(
         path=path,
         plan_stem=plan_stem,
@@ -691,8 +760,148 @@ def review_of(text: str, path: str) -> Review:
         found=int(count.group(0)) if count else 0,
         fixed=fixed,
         no_change=no_change,
-        filed=filed,
+        filed=len(filed_names),
         filed_names=filed_names,
+        dispositions=dispositions,
+        verdicts=verdicts,
+        caught=len(caught),
+        escaped=len(marked - caught),
+    )
+
+
+def _verdicts_apart(
+    body: list[str | None], *, start: int
+) -> tuple[list[str | None], list[tuple[int, str]]]:
+    """A pass's body split into its own lines and its verdict lines (card
+    #110, item 2): a verdict opens with `Read cold by` and runs to the next
+    blank line, another verdict or the body's end, so a wrapped one is read
+    whole. Each verdict is (line number, its text joined)."""
+    own: list[str | None] = []
+    read: list[tuple[int, str]] = []
+    index = 0
+    while index < len(body):
+        line = body[index]
+        if line is None or not _VERDICT_OPENS.match(line):
+            own.append(line)
+            index += 1
+            continue
+        parts = [line.strip()]
+        end = index + 1
+        while end < len(body):
+            nxt = body[end]
+            if nxt is None or not nxt.strip() or _VERDICT_OPENS.match(nxt):
+                break
+            parts.append(nxt.strip())
+            end += 1
+        read.append((start + index + 1, " ".join(parts)))
+        index = end
+    return own, read
+
+
+def _verdict(pass_number: int, line: int, words: str) -> ColdRead:
+    """One verdict line as `docs/reviews/README.md` writes it. A line that
+    opens as a verdict but is not in the form is kept with no call and no
+    commit, so the door can name it rather than miss it."""
+    match = _VERDICT.match(words)
+    if match is None:
+        return ColdRead(
+            pass_number=pass_number,
+            line=line,
+            who="",
+            commit="",
+            call=0,
+            complete=False,
+            broke=[],
+            words=_plain(words),
+        )
+    rest = match.group("rest").strip()
+    complete = _COMPLETE.match(rest)
+    broke = _BROKE.match(rest)
+    if complete is not None:
+        return ColdRead(
+            pass_number=pass_number,
+            line=line,
+            who=match.group("who").strip(),
+            commit=match.group("commit"),
+            call=int(match.group("call")),
+            complete=True,
+            broke=[],
+            words=_plain(complete.group("words") or ""),
+        )
+    if broke is not None:
+        return ColdRead(
+            pass_number=pass_number,
+            line=line,
+            who=match.group("who").strip(),
+            commit=match.group("commit"),
+            call=int(match.group("call")),
+            complete=False,
+            broke=_ADDRESS.findall(broke.group("addresses")),
+            words=_plain(broke.group("words") or ""),
+        )
+    return ColdRead(
+        pass_number=pass_number,
+        line=line,
+        who=match.group("who").strip(),
+        commit=match.group("commit"),
+        call=int(match.group("call")),
+        complete=False,
+        broke=[],
+        words=_plain(rest),
+    )
+
+
+def _dispositions(lines: list[str | None]) -> list[Disposition]:
+    """Every finding under `## Dispositions` with its pass — from the `###
+    Pass N` heading above it — its fate, its two halves and its repair
+    mark (card #110). The fate is the last clause-opening token of the
+    line; the halves are read after it."""
+    span = _section_span(lines, _DISPOSITIONS_HEADING)
+    if span is None:
+        return []
+    found: list[Disposition] = []
+    pass_number: int | None = None
+    index = span[0]
+    section = lines[span[0] : span[1]]
+    entries = {i: (n, f, b) for i, n, f, b in _numbered_entries(section, start=span[0])}
+    while index < span[1]:
+        line = lines[index]
+        if line is not None and line.startswith("###"):
+            heading = _PASS_FINDINGS.match(line)
+            pass_number = int(heading.group(1)) if heading else None
+        if index in entries:
+            number, first, body = entries[index]
+            found.append(_disposition(index + 1, pass_number, number, first, body))
+        index += 1
+    return found
+
+
+def _disposition(
+    line: int, pass_number: int | None, number: int, first: str, body: list[str | None]
+) -> Disposition:
+    tail = " ".join(line.strip() for line in body if line is not None and line.strip())
+    unclassed = _CLASS.sub("", first)
+    name, _ = _lead_and_rest(_REPAIR_OF.sub("", unclassed).strip(), [])
+    text = _plain(f"{unclassed} {tail}".strip())
+    repair = _REPAIR_OF.search(text)
+    fate: Fate | None = None
+    after = ""
+    for match in _FATE.finditer(text):
+        fate = _FATES.get(match.group(1).upper())
+        after = text[match.end() :]
+    reaches = _REACHES.search(after) if fate is Fate.FIXED else None
+    assumes = _ASSUMES.search(after) if fate is Fate.FIXED else None
+    return Disposition(
+        number=number,
+        pass_number=pass_number,
+        address=f"{pass_number}.{number}" if pass_number is not None else str(number),
+        line=line,
+        name=name,
+        text=text,
+        fate=fate,
+        reaches=reaches.group(1).strip().rstrip(".") or None if reaches else None,
+        assumes=assumes.group(1).strip().rstrip(".") or None if assumes else None,
+        repair_of=repair.group(1) if repair else None,
     )
 
 
