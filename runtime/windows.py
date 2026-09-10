@@ -62,6 +62,11 @@ def _hyprctl(args: list[str], host: str | None) -> machine.Completed:
 def clients(host: str | None = None) -> list[dict[str, object]]:
     try:
         done = _hyprctl(["clients", "-j"], host)
+    except machine.Timeout as slow:
+        # A desktop reached over the wire that does not answer in time is a
+        # refusal with words, never a loop that dies (the first Focus from
+        # the moved board, 2026-09-10).
+        raise WindowRefused(f"the compositor did not answer within {slow.timeout:.0f} s") from slow
     except (OSError, machine.CommandMissing, machine.Unreachable) as error:
         raise WindowRefused(f"the compositor cannot be asked: {error}") from error
     if done.returncode != 0:
@@ -96,6 +101,11 @@ def active(host: str | None = None) -> dict[str, object]:
     """The window the compositor reports focused, or an empty dict when none."""
     try:
         done = _hyprctl(["activewindow", "-j"], host)
+    except machine.Timeout as slow:
+        # A desktop reached over the wire that does not answer in time is a
+        # refusal with words, never a loop that dies (the first Focus from
+        # the moved board, 2026-09-10).
+        raise WindowRefused(f"the compositor did not answer within {slow.timeout:.0f} s") from slow
     except (OSError, machine.CommandMissing, machine.Unreachable) as error:
         raise WindowRefused(f"the compositor cannot be asked: {error}") from error
     if done.returncode != 0:
@@ -127,6 +137,11 @@ def focus_address(address: str, app_id: str = "the window", *, host: str | None 
     (card #41)."""
     try:
         done = _hyprctl(["eval", focus_script(address)], host)
+    except machine.Timeout as slow:
+        # A desktop reached over the wire that does not answer in time is a
+        # refusal with words, never a loop that dies (the first Focus from
+        # the moved board, 2026-09-10).
+        raise WindowRefused(f"the compositor did not answer within {slow.timeout:.0f} s") from slow
     except (OSError, machine.CommandMissing, machine.Unreachable) as error:
         raise WindowRefused(f"the compositor cannot be asked: {error}") from error
     if done.returncode != 0 or "error" in done.stdout.lower():
