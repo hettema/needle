@@ -171,7 +171,22 @@ round's repairs (the record's eighth to twelfth passes, thirty-three
 findings; the loop for this half ended under §13's three-passes rule
 with one corner of the clone record filed as a defect and the revert
 script's last five repaired for the rehearsal to prove; the record says
-which and why). The first live move (2026-09-10, 15:20Z) crossed the store and stopped
+which and why). **Deviated:** four of the five clauses hold live, and the fifth waits on
+item 4's first card. The second move (2026-09-10, 15:40Z–15:44Z,
+`tools/board-move --except needle:83`, the owner watching) crossed the
+store (43 tables, 39,337 rows, equal in the copy), started the board on
+the rented machine, which bound its port after 115 s of first read with
+no warning in its journal, and made the laptop's `127.0.0.1:8480` the
+tunnel's end: the board answers there with the same five projects as
+before the move, in the same browser at the same address; the head names
+both machines, `rented (here)` and `laptop`; the laptop's `needle-serve`
+is disabled and the revert is `tools/board-back` in the rented record; a
+session on the laptop — this lane's — appears on it as working, and its
+`needle lanes` from the laptop runs on the rented machine over the wire
+(44 s, every read of the laptop crossing back). The clause not yet shown:
+a session on the rented machine appearing on it, which is the first card
+the board places there (item 4's live half, the owner's Start).
+The first live move (2026-09-10, 15:20Z) crossed the store and stopped
 at the rented board's first read — the record's thirteenth pass, seven
 findings no cold read had, two in the code and five in the procedure,
 repaired the same hour — and the laptop's board was brought back; the
