@@ -13,6 +13,7 @@ which row is this machine is the kernel's (`machine.machine_id`)."""
 import contextlib
 import logging
 import uuid
+from collections.abc import Callable
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
@@ -556,7 +557,9 @@ class Runtime:
         record = self.store.session_slot(session.session_id)
         card = record.card if record else session.name
         if not self.is_here(on):
-            return self._moved_elsewhere(on, session, card, reason, self._remote(on).move, to_slot)
+            return self._moved_elsewhere(
+                on, session, card, reason, lambda: self._remote(on).move(session.short_id, to_slot)
+            )
         to: Placement | None = None
         if to_slot is not None:
             asked = rule.where(to_slot, [Rung(slot=session.slot, model=None)], cached=False)
@@ -579,17 +582,19 @@ class Runtime:
         session: Session,
         card: str,
         reason: str | None,
-        act,
-        *args,
-        **kwargs,
+        act: Callable[[], Launch],
     ) -> Launch:
         """A move or resume done by another machine's runtime, recorded here
         as the board's own: the launch stamped and its session's row written,
         and the rescue written under the id that lives with the words the
         launch carries — that machine's ledger holds its own copy, and the
-        board's rescue history is what the face reads."""
+        board's rescue history is what the face reads. `act` is the wire
+        call with its arguments already bound: forwarding them through this
+        helper's own parameters made a resume's `card` and `reason` collide
+        with the helper's, and the board's first comeback on the rented
+        machine died on the TypeError (Hello Revenue #503, 2026-09-10)."""
         try:
-            done = act(session.short_id, *args, **kwargs)
+            done = act()
         except _UNREACHABLE as error:
             return launch.dead(session.name, [], f"{on.name} could not move it: {error}", None)
         stamped = self._stamped(on, done, card)
@@ -700,16 +705,15 @@ class Runtime:
         record = self.store.session_slot(session.session_id)
         card = card or (record.card if record else session.name)
         if not self.is_here(on):
+            to_slot = placement.slot if placement is not None else None
             return self._moved_elsewhere(
                 on,
                 session,
                 card,
                 reason,
-                self._remote(on).resume,
-                prompt=prompt,
-                card=card,
-                to_slot=placement.slot if placement is not None else None,
-                reason=reason,
+                lambda: self._remote(on).resume(
+                    session.short_id, prompt=prompt, card=card, to_slot=to_slot, reason=reason
+                ),
             )
         return self._stamped(
             on,

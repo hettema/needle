@@ -816,3 +816,33 @@ def test_the_heads_word_is_the_boards_full_only_when_no_machine_has_room(
         assert "rented: the machine is full: 1.5 GB available, 5 GB needed" in room.sentence
     finally:
         store.close()
+
+
+def test_a_lane_on_the_rented_machine_is_resumed_there_with_its_card_and_reason(
+    two_machines, repo: Path, machine_floor: Floor, store: Store
+):
+    """The board's own comeback of a lane on another machine goes through
+    that machine's `needle resume` with the card and the cause; the first
+    live comeback (Hello Revenue #503, 2026-09-10) died on a TypeError in
+    the board's own forwarding before any wire call, and no test had ever
+    resumed a lane elsewhere."""
+    runtime, other = two_machines
+    started = runtime.start(
+        Start(repo=str(repo), card="card-7-far-away", brief="go", effort=Gate.HIGH, from_slot=None)
+    )
+    assert started.verdict == LaunchVerdict.ALIVE, started.reason
+    assert started.session is not None
+    resumed = runtime.resume(
+        started.session.short_id,
+        prompt=None,
+        card="card-7-far-away",
+        reason="its allowance ran out",
+    )
+    words = [" ".join(c["words"]) for c in machine_floor.state().get("ssh_calls", [])]
+    asked = [w for w in words if f"needle resume {started.session.short_id}" in w]
+    assert asked, words[-3:]
+    assert "--card card-7-far-away" in asked[-1] and "--reason" in asked[-1]
+    assert resumed.verdict == LaunchVerdict.ALIVE, resumed.reason
+    assert resumed.session is not None and resumed.session.machine == "rented"
+    record = store.session_slot(resumed.session.session_id)
+    assert record is not None and record.machine == "rented" and record.card == "card-7-far-away"
