@@ -74,12 +74,14 @@ def unescape_mount(field: str) -> Path:
 
 def mount_under(path: Path) -> tuple[Path, str]:
     """The mount point the resolved path stands on and its filesystem type:
-    the longest mount-point prefix in the kernel's own table, and among
-    mounts on one point the latest, which is the one that shows (the table
-    is in mount order). The type is read from the table and never guessed
-    from the path, so a machine whose temp folder is a disk passes and a
-    `--basetemp` given by hand into memory is refused wherever it points
-    (card #109, ruling 4)."""
+    the last entry in the kernel's own table whose point prefixes the path.
+    The table is in mount order, and a later mount either sits inside the
+    one that showed before it or covers it — a mount on a parent point hides
+    everything mounted under it earlier — so the last prefix is the one that
+    shows; the longest prefix is not (Codex's finding, card #109). The type
+    is read from the table and never guessed from the path, so a machine
+    whose temp folder is a disk passes and a `--basetemp` given by hand into
+    memory is refused wherever it points (ruling 4)."""
     resolved = path.resolve()
     best: tuple[Path, str] | None = None
     for line in MOUNT_TABLE.read_text(encoding="utf-8").splitlines():
@@ -87,9 +89,7 @@ def mount_under(path: Path) -> tuple[Path, str]:
         if len(fields) < 3:
             continue
         point = unescape_mount(fields[1])
-        if resolved.is_relative_to(point) and (
-            best is None or len(point.parts) >= len(best[0].parts)
-        ):
+        if resolved.is_relative_to(point):
             best = (point, fields[2])
     assert best is not None, f"{resolved} is under no mount in {MOUNT_TABLE}"
     return best
@@ -101,12 +101,18 @@ def test_the_mount_reader_undoes_escapes_and_takes_the_mount_that_shows(monkeypa
         "/dev/sda1 / ext4 rw 0 0\n"
         "tmpfs /scratch\\040\\303\\251 tmpfs rw 0 0\n"
         "/dev/sdb1 /over ext4 rw 0 0\n"
-        "tmpfs /over tmpfs rw 0 0\n",
+        "/dev/sdc1 /over/child ext4 rw 0 0\n"
+        "tmpfs /over tmpfs rw 0 0\n"
+        "/dev/sdd1 /over/later ext4 rw 0 0\n",
         encoding="utf-8",
     )
     monkeypatch.setattr("tests.ratchets.test_the_runtime_stands_on_the_floor.MOUNT_TABLE", table)
     assert mount_under(Path("/scratch é/x")) == (Path("/scratch é"), "tmpfs")
     assert mount_under(Path("/over/x")) == (Path("/over"), "tmpfs")
+    # A mount under a point is hidden by a later mount on that point ...
+    assert mount_under(Path("/over/child/x")) == (Path("/over"), "tmpfs")
+    # ... and a mount made after it, inside it, shows.
+    assert mount_under(Path("/over/later/x")) == (Path("/over/later"), "ext4")
     assert mount_under(Path("/elsewhere")) == (Path("/"), "ext4")
 
 
