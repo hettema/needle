@@ -2,7 +2,7 @@
 
 **Kind:** defect
 **Fix:** his — the check on card #109 refuses a scratch root by the kernel's own name for its filesystem (tmpfs, ramfs), and a layered filesystem (overlay) answers with its own name while its writes may go to a memory layer beneath; whether the board's bar is "the kernel calls it memory" or "the writes end up in memory" is the owner's to set, because holding the second means reading each layered kind's mount options for where its writable layer lives, and no machine on the board mounts one for a test root today.
-**Found by:** the lane on card #109 (docs/plans/2026-09-10-a-test-run-never-takes-the-memory-the-work-needs.md), in the review's fourth cold read by Codex
+**Found by:** the lane on card #109 (docs/plans/done/2026-09-10-a-test-run-never-takes-the-memory-the-work-needs.md), in the review's fourth cold read by Codex
 
 ## The intent it breaks
 

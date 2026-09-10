@@ -57,7 +57,7 @@ def pytest_configure(config: pytest.Config) -> None:
     # would erase the record of every earlier run, so it is refused before
     # any use (Codex's seventh read, card #109).
     given = config.option.basetemp
-    if given is not None and FLOOR_RUNS_LEDGER.is_relative_to(Path(given).resolve()):
+    if given is not None and FLOOR_RUNS_LEDGER.resolve().is_relative_to(Path(given).resolve()):
         raise pytest.UsageError(
             f"--basetemp={given} holds the floors ledger {FLOOR_RUNS_LEDGER}, which pytest "
             "would wipe with it; point it elsewhere"
