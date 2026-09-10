@@ -213,7 +213,23 @@ round's repairs (the record's eighth to twelfth passes, thirty-three
 findings; the loop for this half ended under §13's three-passes rule
 with one corner of the clone record filed as a defect and the revert
 script's last five repaired for the rehearsal to prove; the record says
-which and why). **Deviated:** four of the five clauses hold live, and the fifth waits on
+which and why). **Deviated, then ruled otherwise:** the move was made and held for three
+hours (15:44Z–18:31Z) and every clause was shown live but one; then the
+owner ruled the board back to the laptop for the shape's sake (Rulings,
+2026-09-10 evening): with the board on the machine, a pass asks the
+laptop one question per lane over the wire under the loop's lock — a
+minute per project, every door behind it — and the wire's cost is
+proportional to the lanes on the *other* machine, a hundred here and one
+there. What the move was for is served another way now: a machine's
+`needle` hands its board verbs across (`needle board laptop` on the
+rented machine), and its sessions' hooks reach the laptop's board through
+a tunnel end there (`needle-tunnel.socket` in the rented record, the
+laptop's port served on the tailnet), so a lane on the rented machine is
+a lane like any other with the board here. The record of the three hours
+and what they taught is the review's thirteenth and fourteenth passes;
+the shape that would let the board live on the machine is the next slice
+(the suggestion of 2026-09-10, "one question a pass"). The stance as the
+move stood: four of the five clauses live, the fifth waits on
 item 4's first card. The second move (2026-09-10, 15:40Z–15:44Z,
 `tools/board-move --except needle:83`, the owner watching) crossed the
 store (43 tables, 39,337 rows, equal in the copy), started the board on
@@ -530,6 +546,18 @@ then a day of use on both before the other slots move.
   rule: its git runs where the worktree is, so the board asks it back
   over the wire as one more runtime verb (`push`), the same way it asks
   for a lane's edits.
+
+- **The board stays on the laptop; the rented machine is the horsepower**
+  (the owner's ruling, 2026-09-10 evening, on Codex's reading of the
+  first live day). The board's reads of another machine cost a second per
+  question per lane under its lock, so the board lives where most lanes
+  are and reads the few over the wire; a lane on the rented machine
+  reaches the board through the tunnel end laid there and its `needle`
+  handing board verbs across. Rejected for now: the board on the machine
+  with today's wire (the doors wait minutes behind a pass); the batch
+  observation that would make either home fast is the next slice, not an
+  emergency. The move and its revert stay as the record's tools, proven
+  both ways in one day.
 
 ## Deliberately not
 
