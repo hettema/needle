@@ -71,6 +71,7 @@ from infrastructure import clock
 from infrastructure.live import WATERCOOLER_SHOWN, Live
 from infrastructure.store import StoreRefusal
 from runtime import calls
+from runtime.git import TRUNK
 from runtime.service import Runtime
 from runtime.windows import WindowRefused
 
@@ -332,6 +333,11 @@ class Doors:
         session = launch.session
         now = clock.now()
         path = session.worktree or f"{project.path}/.claude/worktrees/{name}"
+        # The lane's birth is the trunk's head its branch was laid from,
+        # read now rather than left for the loop's first pass: a close
+        # before that pass — a docs-only lane closed at once — has nothing
+        # else to say what the lane folded from (card #110, pass four).
+        laid = self.runtime.branch_tip(project.path, TRUNK, path=path)
         self.live.store.record_lane(
             LaneRecord(
                 project=slug,
@@ -339,8 +345,8 @@ class Doors:
                 name=name,
                 path=path,
                 branch=None,
-                birth=None,
-                tip=None,
+                birth=laid,
+                tip=laid,
                 first_seen=now,
                 last_seen=now,
                 gone_at=None,
@@ -1673,14 +1679,14 @@ class Doors:
         birth = record.birth if record is not None else None
         tip = record.tip if record is not None else None
         files = self.runtime.lane_files(where, birth=birth, tip=None) if standing else set()
-        if not files and birth is None:
-            # Nothing in the tree — gone here, gone on the machine that held
-            # it, or level — and no birth to diff the checkout from: the
-            # board cannot say what the lane folded, and says so rather than
-            # reading an empty diff as docs-only (the cold reads of rounds
-            # nine and ten — a level checkout with no birth answers nothing,
-            # and a remote lane stands by placement whether its tree is
-            # there or not).
+        if birth is None:
+            # No birth to diff the checkout from: whatever the tree still
+            # holds — nothing, or a docs edit left standing — says nothing
+            # about what the lane folded before, so the board asks for a
+            # record rather than reading the leftovers as docs-only (the
+            # cold reads of rounds nine and ten and of pass four: a level
+            # checkout, a remote lane standing by placement, an edit left in
+            # the tree).
             if not review:
                 raise DoorRefused(
                     f"#{number}'s lane is gone and the board recorded neither its birth nor its "
@@ -1814,12 +1820,24 @@ class Doors:
         # it is — a Codex lane's row carries no worktree and a Claude reader
         # called into its directory carries none either, so directory and
         # slot order cannot tell author from reader (pass three's reader).
+        # (A warm call re-cards the session's slot row with the call's name,
+        # so the row's card is evidence only while it stands — pass four's
+        # reader — and the session's own capability is read beside it: a
+        # cold reader of the other make runs read-only by construction, a
+        # lane's worker writes. The durable answer — the board remembering
+        # which session it started on a card — is filed as a defect.)
         owners = {
             s.session_id
             for s in self.live.store.session_slots()
             if where is not None and s.card == Path(where).name
         }
-        on_lane.sort(key=lambda s: (s.session_id not in owners, s.worktree != where))
+        on_lane.sort(
+            key=lambda s: (
+                s.session_id not in owners,
+                s.worktree != where,
+                s.sandbox == "read-only",
+            )
+        )
         lane_slot = on_lane[0].slot if on_lane else None
         faults = review_rules.record_faults(read, review) + review_rules.verdict_faults(
             read,
