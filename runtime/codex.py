@@ -98,31 +98,14 @@ the session head, the developer messages and a `world_state` record that
 carries the whole doctrine chain, so it sits at 24 KB in a bare thread and
 at 275 KB in one started in a lane (forty real rollouts measured on
 2026-09-10, the farthest a forked thread's at 3.1 MB); a rollout whose first
-turn has not begun has none. The scan stops at the first one found and its
-answer is kept per file, so the one list, read every two seconds while a
-caller waits, never reads a long transcript twice."""
-
-
-@dataclass
-class _Context:
-    """What one rollout's scan for its first `turn_context` has found so
-    far: the bytes scanned to the last complete line, the record's place
-    and bytes once found, and the two words read from it. A rollout is
-    appended to and never rewritten by Codex, but a scan can land on a
-    line still being written and the test floor rewrites a rollout in
-    place (the cold read of round one, call 69), so a scan that found
-    nothing resumes only from the last complete line, and a found answer
-    is trusted only while the bytes at its place still read the same."""
-
-    scanned: int
-    effort: str | None
-    sandbox: str | None
-    at: int | None
-    """Where the found record begins; None while none is found."""
-    record: bytes
-
-
-_CONTEXT: dict[Path, _Context] = {}
+turn has not begun has none. Every read scans afresh from the head: a cache
+was tried twice and broken twice by the cold readers of rounds one and two
+(a line still being written stepped past for good; a rollout rewritten in
+place answering from before; a resumed scan skipping a context written
+before its offset; identical bytes at one place not proving the record is
+still the first), so the representation changed — the scan is the answer,
+and its cost over every rollout of the last day is measured in the review
+record of card #110."""
 
 
 def is_worker(rollout: Rollout) -> bool:
@@ -185,27 +168,15 @@ def _context_of(path: Path) -> tuple[str | None, str | None]:
     """The effort and the sandbox of the rollout's first turn, from its
     first `turn_context` record within the head; (None, None) when there
     is none or the head cannot be read."""
-    known = _CONTEXT.get(path) or _Context(0, None, None, None, b"")
+    scanned = 0
     try:
         with path.open("rb") as f:
-            if known.at is not None:
-                # Found before: trust it while the bytes at its place still
-                # read the same, else the file was rewritten — start over.
-                f.seek(known.at)
-                if f.read(len(known.record)) == known.record:
-                    return known.effort, known.sandbox
-                known = _Context(0, None, None, None, b"")
-            f.seek(0, 2)
-            if f.tell() < known.scanned:
-                known = _Context(0, None, None, None, b"")
-            f.seek(known.scanned)
-            while known.scanned < CONTEXT_SCAN_BYTES:
+            while scanned < CONTEXT_SCAN_BYTES:
                 raw = f.readline()
                 if not raw.endswith(b"\n"):
-                    # A line still being written is read next time, whole.
+                    # The end, or a line still being written: read whole next time.
                     break
-                start = known.scanned
-                known.scanned += len(raw)
+                scanned += len(raw)
                 if b'"turn_context"' not in raw:
                     continue
                 try:
@@ -215,19 +186,18 @@ def _context_of(path: Path) -> tuple[str | None, str | None]:
                 if not isinstance(record, dict) or record.get("type") != "turn_context":
                     continue
                 payload = record.get("payload")
-                if isinstance(payload, dict):
-                    named = payload.get("effort")
-                    policy = payload.get("sandbox_policy")
-                    kind = policy.get("type") if isinstance(policy, dict) else None
-                    known.effort = named if isinstance(named, str) and named else None
-                    known.sandbox = kind if isinstance(kind, str) and kind else None
-                known.at = start
-                known.record = raw
-                break
+                if not isinstance(payload, dict):
+                    return None, None
+                named = payload.get("effort")
+                policy = payload.get("sandbox_policy")
+                kind = policy.get("type") if isinstance(policy, dict) else None
+                return (
+                    named if isinstance(named, str) and named else None,
+                    kind if isinstance(kind, str) and kind else None,
+                )
     except OSError:
         return None, None
-    _CONTEXT[path] = known
-    return known.effort, known.sandbox
+    return None, None
 
 
 def last_error(log: Path) -> str | None:
