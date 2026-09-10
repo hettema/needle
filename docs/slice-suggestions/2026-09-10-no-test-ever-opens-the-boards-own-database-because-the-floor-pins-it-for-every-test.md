@@ -1,4 +1,4 @@
-# No test ever opens the board's own store, because the floor pins it for every test
+# No test ever opens the board's own database, because the floor pins it for every test
 
 **Kind:** defect
 **Fix:** now — the intent is written (the floor's own docstring in `tests/conftest.py`: no path the runtime reads is the laptop's; card #51's ruling that a test never migrates the shared store); the fix is one line in the floor's fixture — `NEEDLE_DB` pinned under the floor for every test, as `NEEDLE_SLOT_ROOT` and the rest are — and removes the class, where today each test module that touches the store sets it for itself and one that forgets writes beside the laptop's store.
