@@ -272,6 +272,15 @@ def test_a_bare_mark_a_verdict_that_says_neither_and_findings_without_the_sectio
         "no disposition marked `[repair of 1.2]` under pass 1 or later says what became of it" in f
         for f in faults
     )
+    # "No change" and "filed" say the claim stands or leaves; neither answers
+    # a break (the cold read of round nine).
+    stands = RECORD.replace(
+        "3. [seam] [repair of 1.2] **The nightly job reads the table too.** — FIXED in ac1823d;\n"
+        "   reaches the nightly job and the sweep; assumes the two never run at once.",
+        "3. [seam] [repair of 1.2] The problem remains — NO CHANGE",
+    )
+    faults = record_faults(review_of(stands, "r.md"), "r.md")
+    assert len(faults) == 1 and "under pass 1 or later says what became of it" in faults[0]
     neither = RECORD.replace(
         "Read cold by Codex (01a08a3b) on ac1823d, call 13: complete",
         "Read cold by Codex (01a08a3b) on ac1823d, call 13: unable to read the files",

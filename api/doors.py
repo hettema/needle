@@ -1673,6 +1673,18 @@ class Doors:
         birth = record.birth if record is not None else None
         tip = record.tip if record is not None else None
         files = self.runtime.lane_files(where, birth=birth, tip=None) if standing else set()
+        if not files and not standing and birth is None:
+            # Neither the tree nor a birth to diff the checkout from: the
+            # board cannot say what the lane folded, and says so rather than
+            # reading an empty diff as docs-only (the cold read of round
+            # nine — a level checkout with no birth answers nothing).
+            if not review:
+                raise DoorRefused(
+                    f"#{number}'s lane is gone and the board recorded neither its birth nor its "
+                    "tip, so it cannot tell what the lane folded; name its review record with "
+                    f"--review, a file at {project.path}/docs/reviews/<file>.md."
+                )
+            return
         if not files:
             # The lane's tree is gone — here, or on the machine that held it,
             # which answers empty for a tree it no longer has (the cold read
@@ -1780,10 +1792,19 @@ class Doors:
         # A session that holds the worktree outranks one merely working in
         # it: a cold reader of the other make is started in the lane's
         # directory too, and would otherwise read as the lane's own make.
+        # On the machine the lane is on: the one list merges every
+        # machine's sessions, and the same absolute path exists on each (the
+        # cold read of round nine — a remote holder at the local author's
+        # path). A row with no machine name was read here.
+        lane_on = self.runtime.lane_machine(where) if where is not None else None
         on_lane = [
             s
             for s in self.runtime.sessions()
-            if where is not None and not s.stale and where in (s.worktree, s.cwd)
+            if where is not None
+            and lane_on is not None
+            and not s.stale
+            and where in (s.worktree, s.cwd)
+            and (s.machine == lane_on.name if s.machine else self.runtime.is_here(lane_on))
         ]
         on_lane.sort(key=lambda s: s.worktree != where)
         lane_slot = on_lane[0].slot if on_lane else None

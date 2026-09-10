@@ -122,10 +122,14 @@ def record_faults(review: Review, name: str) -> list[str]:
     # one correction was satisfying every later break of its address).
     # Verdicts are read in the record's order — by pass, then as written.
     ordered = sorted(review.verdicts, key=lambda v: (v.pass_number, v.line))
+    # An answer is a fix or a correction — never "no change" or "filed",
+    # which say the claim stands or leaves (the cold read of round nine).
     unclaimed: list[Disposition] = [
         d
         for d in review.dispositions
-        if d.repair_of is not None and d.fate is not None and d.pass_number is not None
+        if d.repair_of is not None
+        and d.fate in (Fate.FIXED, Fate.CORRECTED)
+        and d.pass_number is not None
     ]
     answered_by: dict[int, dict[str, Disposition]] = {}
     for verdict in ordered:

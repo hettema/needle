@@ -304,6 +304,9 @@ def test_a_lane_on_the_second_machine_has_its_record_read_there(
     known = store.lane("proj", CARD)
     assert known is not None and known.path == str(worktree)
     store.record_lane(known.model_copy(update={"machine": "rented"}))
+    # The lane's session ran where the lane is: the rented floor's registry names
+    # it on the worktree, which is where the close reads the lane's make from.
+    other.write_job("alpha", "far00002", state="done", cwd=str(worktree), worktree=str(worktree))
     (worktree / "docs" / "reviews").mkdir(exist_ok=True)
     (worktree / "docs" / "reviews" / "2026-09-11-the-meter.md").write_text(
         record(call=call), encoding="utf-8"
@@ -362,6 +365,18 @@ def test_a_lane_whose_worktree_is_only_on_the_second_machine_is_asked_there(
     # round), so a close without a record is still a code lane's, refused.
     code, _, err = close(None, capsys)
     assert code == 1 and "folded code (engine/meter.py)" in err, err
+    # With neither a birth nor a tip on record, the board cannot tell what
+    # the lane folded, and says so (the cold read of round nine).
+    store.record_lane(
+        known.model_copy(
+            update={"machine": "rented", "path": elsewhere, "birth": None, "tip": None}
+        )
+    )
+    code, _, err = close(None, capsys)
+    assert code == 1 and "--review" in err, (
+        err
+    )  # gone, unrecorded: a record is asked for either way
+    store.record_lane(known.model_copy(update={"machine": "rented", "path": elsewhere}))
     write(repo, "2026-09-11-the-meter.md", record(call=call))
     before = len(machine_floor.state().get("ssh_calls", []))
     code, out, _ = close("docs/reviews/2026-09-11-the-meter.md", capsys)
