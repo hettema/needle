@@ -1,4 +1,5 @@
 # Calling Codex reaches the right session, not whichever ran last
+**Carried by:** docs/plans/2026-09-10-a-fix-says-who-else-it-reaches-and-what-it-assumes-and-a-colleague-checks-both-before-it-ships.md
 
 **Kind:** defect
 **Fix:** now — a call that answers nothing costs the caller ten minutes of wait and the doctrine says a call is the one way to ask a colleague; the class is "the colleague a call reaches is chosen by recency, not fitness"
