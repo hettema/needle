@@ -104,6 +104,32 @@ def resume(args: list[str]) -> int:
         return 1
     rollout = found[0]
     _append(rollout, "event_msg", {"type": "task_started", "turn_id": "fake"})
+    # Every turn opens with its context, a resumed one included (a real
+    # resumed worker's later turn carried its own on 2026-09-10, the cold
+    # read of round three of card #110): the settings carry over from the
+    # last turn, since `resume` names neither an effort nor a sandbox.
+    effort, sandbox = "medium", "workspace-write"
+    for line in rollout.read_text(encoding="utf-8").splitlines():
+        if '"turn_context"' not in line:
+            continue
+        try:
+            payload = json.loads(line).get("payload") or {}
+        except ValueError:
+            continue
+        effort = payload.get("effort") or effort
+        sandbox = (payload.get("sandbox_policy") or {}).get("type") or sandbox
+    _append(
+        rollout,
+        "turn_context",
+        {
+            "turn_id": "fake",
+            "cwd": os.getcwd(),
+            "approval_policy": "never",
+            "sandbox_policy": {"type": sandbox},
+            "model": "gpt-6-astra",
+            "effort": effort,
+        },
+    )
     _append(
         rollout,
         "response_item",

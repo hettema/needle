@@ -68,7 +68,10 @@ class Session(BaseModel):
     """The systemd unit holding the process, when it has one."""
     model: str | None
     effort: Gate | None
-    """The effort the session was started with, so a fresh session from its transcript keeps it."""
+    """The effort the session runs at: for a Claude row, what it was started
+    with, so a fresh session from its transcript keeps it; for a Codex row,
+    its latest turn's, from the rollout (card #110), which is what a caller
+    picking it is told."""
     stale: bool
     """A copy of a session id whose live process is in another slot's registry."""
     wall: Handoff | None

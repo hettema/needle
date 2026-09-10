@@ -2,9 +2,9 @@
 2026-09-07): a call to the bare name landed on a worker at effort none in a
 read-only sandbox and nothing said so, and a turn that ended on a tool error
 was reported as a colleague that finished without its note. A Codex row now
-carries the effort and the sandbox its first turn ran at, read from the
-rollout's `turn_context`; a worker's log is read for its last tool error, and
-the judge names it."""
+carries the effort and the sandbox its latest turn ran at, read from the last
+`turn_context` in the rollout; a worker's log is read for its last tool error,
+and the judge names it."""
 
 from datetime import UTC, datetime
 from pathlib import Path
@@ -156,3 +156,26 @@ def test_the_latest_turns_context_answers_not_the_first(machine_floor: Floor, ru
         f.write('{"type": "turn_context", "payload": {"effort": "medium"')  # in flight
     again = runtime.session(WORKER[:8])
     assert again.effort is Gate.HIGH, "a line in flight is not read"
+
+
+def test_a_line_in_flight_longer_than_a_block_and_a_record_past_the_cap(
+    machine_floor: Floor, runtime: Runtime
+):
+    """The cold read of round four (call 72): a trailing line in flight
+    longer than the first block emptied the block and raised; and the cap
+    is a bound the scan never exceeds — a context farther back than it
+    reads as none, which is the truth the row tells."""
+    path = machine_floor.write_rollout(WORKER, cwd="/tmp/lane", effort="high", sandbox="read-only")
+    with path.open("a", encoding="utf-8") as f:
+        f.write('{"type": "response_item", "payload": {"text": "' + "y" * 70000)  # no newline
+    row = runtime.session(WORKER[:8])
+    assert row.effort is Gate.HIGH and row.sandbox == "read-only", "the tail spans blocks"
+    with path.open("a", encoding="utf-8") as f:
+        f.write(
+            '"}}\n'
+            + '{"type": "response_item", "payload": {"text": "'
+            + "z" * (5 * 1024 * 1024)
+            + '"}}\n'
+        )
+    far = runtime.session(WORKER[:8])
+    assert far.effort is None and far.sandbox is None, "past the cap is none, never a guess"

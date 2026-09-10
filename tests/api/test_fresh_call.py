@@ -95,17 +95,28 @@ def test_a_bare_name_call_says_first_which_session_it_picked_and_what_it_ran_at(
 def test_a_turn_that_ends_on_a_tool_error_is_reported_as_that_error(
     client: TestClient, machine_floor: Floor, repo: Path, capsys
 ):
-    machine_floor.write_rollout(WORKER, cwd=str(repo))
+    rollout = machine_floor.write_rollout(WORKER, cwd=str(repo), effort="high", sandbox="read-only")
     machine_floor.script_codex(
         {"then": "error", "after": 2.5, "error": "collab spawn failed: no thread with id: 01a07bcf"}
     )
     note = a_note(machine_floor)
     assert main(["call", WORKER[:8], str(note)]) == 0
     capsys.readouterr()
+    # A resumed turn opens with its own context, carried over from the last
+    # (the cold read of round four): the row still says what it runs at.
+    assert rollout.read_text(encoding="utf-8").count('"turn_context"') == 2
+    picked = next(s for s in client.app.state.loops.runtime.sessions() if s.short_id == WORKER[:8])
+    assert (
+        picked.effort is not None
+        and picked.effort.value == "high"
+        and picked.sandbox == "read-only"
+    )
     started = time.monotonic()
     assert main(["wait", "1", "--ceiling", "20"]) == 1
     assert time.monotonic() - started < 10, "the truth came before the ceiling"
     said = capsys.readouterr().out
-    assert said.startswith("ended: 01a07123's turn ended on a tool error, with no final message: "), said
+    assert said.startswith(
+        "ended: 01a07123's turn ended on a tool error, with no final message: "
+    ), said
     assert "collab spawn failed: no thread with id: 01a07bcf" in said
     assert "without its note" not in said

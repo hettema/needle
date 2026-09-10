@@ -85,11 +85,12 @@ class Rollout:
     effort: str | None = None
     """The reasoning effort the session's latest turn ran at, from the last
     `turn_context` record in the rollout (`effort`, read from a 0.153.4
-    rollout on 2026-09-10); None when no turn carries one, which the
+    rollout on 2026-09-10); None when no turn carries a context, or the
+    latest one names no effort whatever earlier turns named — which the
     caller is told rather than guessed (card #110, item 5)."""
     sandbox: str | None = None
     """The sandbox the same turn ran in (`sandbox_policy.type`: `read-only`,
-    `workspace-write`, …); None when no turn carries one."""
+    `workspace-write`, …); None on the same terms."""
 
 
 CONTEXT_SCAN_BYTES = 4 * 1024 * 1024
@@ -181,13 +182,20 @@ def _context_of(path: Path) -> tuple[str | None, str | None]:
             end = size
             block = 64 * 1024
             carry = b""
+            tail = True
             while end > 0 and size - end < CONTEXT_SCAN_BYTES:
-                start = max(0, end - block)
+                # Never past the cap: the budget bounds every block, so a
+                # record larger than it is never read at all (round four).
+                start = max(0, end - min(block, CONTEXT_SCAN_BYTES - (size - end)))
                 f.seek(start)
                 data = f.read(end - start) + carry
                 lines = data.split(b"\n")
-                if end == size:
-                    lines.pop()  # the bytes after the last newline: nothing, or a line in flight
+                if tail:
+                    # The bytes after the file's last newline: nothing, or a
+                    # line in flight — which may span several blocks (round
+                    # four), so the tail is dropped until a newline is met.
+                    lines.pop()
+                    tail = not lines
                 whole = lines if start == 0 else lines[1:]
                 for raw in reversed(whole):
                     if b'"turn_context"' not in raw:
@@ -195,7 +203,7 @@ def _context_of(path: Path) -> tuple[str | None, str | None]:
                     found = _turn_context(raw)
                     if found is not None:
                         return found
-                carry = b"" if start == 0 else lines[0]
+                carry = b"" if start == 0 or not lines else lines[0]
                 end = start
                 block *= 2
     except OSError:

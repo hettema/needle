@@ -295,7 +295,9 @@ def test_call_codex_resumes_the_worker_and_wait_returns_as_its_last_message_land
     started = time.monotonic()
     assert main(["call", "codex", str(note), "--objective", "Say which."]) == 0
     said = capsys.readouterr().out
-    assert said.startswith("call 1: 01a07123 is working on"), said
+    # The bare name says first which session it picked (card #110, item 5).
+    assert said.startswith("picked 01a07123, the most recent codex worker: "), said
+    assert "\ncall 1: 01a07123 is working on" in said, said
     assert f"the answer lands in {answer}" in said and "wait for it: needle wait 1" in said
     ran = machine_floor.state()["codex_log"]
     assert len(ran) == 1 and ran[0]["id"] == WORKER and ran[0]["answer"] == str(answer)
