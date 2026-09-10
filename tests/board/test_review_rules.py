@@ -221,11 +221,35 @@ def test_a_fix_that_answers_the_last_break_is_read_and_a_correction_closes_the_r
     repairs. A round ends on a verdict that says complete, or on breaks
     answered by a record-only correction."""
     unread = RECORD.replace("Read cold by Codex (01a08a3c) on ac1823d, call 14: complete\n", "")
+    unread = unread.replace("Read cold by Codex (01a08a3b) on ac1823d, call 13: complete\n", "")
     review = review_of(unread, "r.md")
     faults = record_faults(review, "r.md")
     assert len(faults) == 1 and "the fix that answers it was never read cold" in faults[0]
-    assert "broke 1.2" in faults[0]
+    assert "the record's last verdict broke 1.2" in faults[0]
     assert record_faults(review_of(RECORD, "r.md"), "r.md") == [], "read again, complete"
+    # A later pass's verdict is a later read of the tree: a fix under pass 1
+    # read complete under pass 2 was read (the cold read of round eight).
+    later_read = RECORD.replace("Read cold by Codex (01a08a3c) on ac1823d, call 14: complete\n", "")
+    assert record_faults(review_of(later_read, "r.md"), "r.md") == []
+    # Two verdicts breaking one address need two answers: a correction made
+    # between them does not answer the second break (round eight's reader).
+    twice = RECORD.replace(
+        "Read cold by Codex (01a08a3c) on ac1823d, call 14: complete",
+        "Read cold by Codex (01a08a3c) on ac1823d, call 14: broke 1.2 — still the nightly job",
+    ).replace(
+        "3. [seam] [repair of 1.2] **The nightly job reads the table too.** — FIXED in ac1823d;\n"
+        "   reaches the nightly job and the sweep; assumes the two never run at once.",
+        "3. [record] [repair of 1.2] The reach line named the sweep alone — CORRECTED in the "
+        "record.",
+    )
+    faults = record_faults(review_of(twice, "r.md"), "r.md")
+    assert len(faults) == 1 and "r.md:15 broke 1.2 and no disposition marked" in faults[0]
+    twice_answered = twice.replace(
+        "### Pass 2's findings\n",
+        "### Pass 2's findings\n\n0. [record] [repair of 1.2] Still the sweep alone — CORRECTED in "
+        "the record.\n",
+    )
+    assert record_faults(review_of(twice_answered, "r.md"), "r.md") == []
     corrected = unread.replace(
         "3. [seam] [repair of 1.2] **The nightly job reads the table too.** — FIXED in ac1823d;\n"
         "   reaches the nightly job and the sweep; assumes the two never run at once.",

@@ -86,9 +86,11 @@ from 2026-09-11 (card #110; the three forms above, read by
   `[repair of <address>]` after the class and ending in a fate: a fix with its
   own reach and premise (`— FIXED in <sha>; reaches …; assumes …`), or a
   record-only correction (`— CORRECTED in the record`), which §13 lets the
-  writer make and re-read alone. A fix that answers a break is a new repair
-  and is read: a round ends on a verdict that says complete, or on breaks the
-  writer answered with a correction — never on a fix nobody read.
+  writer make and re-read alone. An answer serves one break: a second verdict
+  breaking the same address needs a second answer. A fix that answers a break
+  is a new repair and is read: the record's last verdict says complete, or
+  its breaks are answered by corrections — the loop never ends on a fix
+  nobody read.
 - A record whose head counts findings lists them under `## Dispositions`;
   a count with no such section is a record in another shape, not a
   zero-finding record.

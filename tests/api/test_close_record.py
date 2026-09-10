@@ -354,6 +354,9 @@ def test_a_lane_whose_worktree_is_only_on_the_second_machine_is_asked_there(
     assert known is not None and known.path == str(worktree)
     elsewhere = "/srv/rented/worktrees/" + Path(known.path).name
     store.record_lane(known.model_copy(update={"machine": "rented", "path": elsewhere}))
+    # The lane's own session ran there: the rented floor's registry names it
+    # on that worktree, which is where the close reads the lane's make from.
+    other.write_job("alpha", "far00001", state="done", cwd=elsewhere, worktree=elsewhere)
     # The tree there is gone too: the machine answers empty, and the project's
     # own checkout says what the lane folded (the cold read of pass two's
     # round), so a close without a record is still a code lane's, refused.

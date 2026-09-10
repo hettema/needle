@@ -108,58 +108,66 @@ def record_faults(review: Review, name: str) -> list[str]:
     # Every claim the reader broke gets a disposition that says what became
     # of it: a fix, or a record-only correction (pass two's reader: a bare
     # mark, "still broken", answered nothing).
-    def answers(verdict) -> dict[str, Disposition]:
-        """The dispositions that answer this verdict's breaks: marked, with
-        a fate, and under the verdict's pass or a later one — an answer
-        follows its break (the cold read of pass two's round: an earlier
-        pass's correction was satisfying a later verdict that broke the
-        same address again)."""
-        return {
-            d.repair_of: d
-            for d in review.dispositions
-            if d.repair_of is not None
-            and d.fate is not None
-            and d.pass_number is not None
-            and d.pass_number >= verdict.pass_number
-        }
-
     rounds = sorted({fix.pass_number for fix in fixes if fix.pass_number is not None})
     for number in rounds:
-        read = verdicts_by_pass.get(number)
-        if not read:
+        if not verdicts_by_pass.get(number):
             faults.append(
                 f"{name}: pass {number}'s round has FIXED lines and no verdict under it — every "
                 "round's repairs are read cold before they ship (HOW-WE-WORK §13)"
             )
-            continue
-        # The round closes on a read that says complete, or on breaks the
-        # writer answered with the record's own words; a fix that answers a
-        # break is a new repair, and a new repair is read (pass two's reader:
-        # an earlier verdict was satisfying later, unread repairs).
-        last = read[-1]
-        answered = answers(last)
-        unread = [
-            address
-            for address in last.broke
-            if address in answered and answered[address].fate is not Fate.CORRECTED
-        ]
-        if unread:
-            faults.append(
-                f"{name}:{last.line} the last verdict under pass {number} broke "
-                f"{', '.join(unread)} and the fix that answers it was never read cold — a "
-                "round ends on a verdict that says complete, or on breaks answered by a "
-                "record-only correction"
-            )
-    for verdict in review.verdicts:
-        answered = answers(verdict)
+    # Each break is answered by its own disposition — marked with its
+    # address, carrying a fate, under the verdict's pass or a later one —
+    # and an answer serves one break: a second verdict breaking the same
+    # address again needs a second answer (the cold read of round eight:
+    # one correction was satisfying every later break of its address).
+    # Verdicts are read in the record's order — by pass, then as written.
+    ordered = sorted(review.verdicts, key=lambda v: (v.pass_number, v.line))
+    unclaimed: list[Disposition] = [
+        d
+        for d in review.dispositions
+        if d.repair_of is not None and d.fate is not None and d.pass_number is not None
+    ]
+    answered_by: dict[int, dict[str, Disposition]] = {}
+    for verdict in ordered:
+        answered_by[verdict.line] = {}
         for address in verdict.broke:
-            if address not in answered:
+            answer = next(
+                (
+                    d
+                    for d in unclaimed
+                    if d.repair_of == address and d.pass_number >= verdict.pass_number
+                ),
+                None,
+            )
+            if answer is None:
                 faults.append(
                     f"{name}:{verdict.line} broke {address} and no disposition marked "
                     f"`[repair of {address}]` under pass {verdict.pass_number} or later says "
                     "what became of it — every claim the reader broke gets a disposition after "
                     "it: FIXED with its own line, or CORRECTED in the record"
                 )
+                continue
+            unclaimed.remove(answer)
+            answered_by[verdict.line][address] = answer
+    # The record's last word is a cold reader's: the loop ends on a verdict
+    # that says complete, or on breaks the writer answered with the
+    # record's own words; a fix that answers a break is a new repair, and a
+    # new repair is read (pass two's reader: an earlier verdict was
+    # satisfying later, unread repairs; round eight's: a fix read complete
+    # by a later pass's verdict was being refused as unread).
+    if ordered:
+        last = ordered[-1]
+        unread = [
+            address
+            for address, answer in answered_by[last.line].items()
+            if answer.fate is not Fate.CORRECTED
+        ]
+        if unread:
+            faults.append(
+                f"{name}:{last.line} the record's last verdict broke {', '.join(unread)} and "
+                "the fix that answers it was never read cold — the loop ends on a verdict that "
+                "says complete, or on breaks answered by a record-only correction"
+            )
     if review.found and not review.dispositions:
         faults.append(
             f"{name}: the head counts {review.found} finding(s) and no `## Dispositions` "

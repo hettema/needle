@@ -1673,12 +1673,14 @@ class Doors:
         birth = record.birth if record is not None else None
         tip = record.tip if record is not None else None
         files = self.runtime.lane_files(where, birth=birth, tip=None) if standing else set()
-        if not files and tip is not None:
+        if not files:
             # The lane's tree is gone — here, or on the machine that held it,
             # which answers empty for a tree it no longer has (the cold read
             # of pass two's round) — so the project's checkout, which the
             # fold has levelled, says what the lane folded up to the tip the
-            # board recorded; a lane with no tip folded nothing.
+            # board recorded, or to the trunk's head when it recorded none:
+            # a missing observation is not "folded nothing" (round eight's
+            # reader), and over-asking for a record is the loud failure.
             files = self.runtime.lane_files(project.path, birth=birth, tip=tip)
         code = sorted(f for f in files if not f.startswith(DOCS))
         if not code:
@@ -1769,11 +1771,22 @@ class Doors:
         # one, else the runtime's own record of who it started on the card
         # — and never a default (pass two's reader: an unknown author read
         # as Claude's would accept its own make as the cold reader).
-        # (A fallback by the lane's name over the runtime's session ledger
-        # was tried and broken by the cold read of pass two's round: lane
-        # names carry no project, so two projects' card 1 answered for each
-        # other. No session on record: the rules say so and refuse.)
-        lane_slot = lane.session.slot if lane is not None and lane.session is not None else None
+        # The lane's make is the slot of a session on its worktree — the
+        # closing session itself, which runs there. By path, never by name:
+        # a lane's name carries no project and the snapshot's own selector
+        # matches names too, so two projects' card 1 answered for each other
+        # (the cold reads of pass two's round and of round eight). A lane no
+        # session of any make is on: the rules say so and refuse.
+        # A session that holds the worktree outranks one merely working in
+        # it: a cold reader of the other make is started in the lane's
+        # directory too, and would otherwise read as the lane's own make.
+        on_lane = [
+            s
+            for s in self.runtime.sessions()
+            if where is not None and not s.stale and where in (s.worktree, s.cwd)
+        ]
+        on_lane.sort(key=lambda s: s.worktree != where)
+        lane_slot = on_lane[0].slot if on_lane else None
         faults = review_rules.record_faults(read, review) + review_rules.verdict_faults(
             read,
             review,
