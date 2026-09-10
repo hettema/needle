@@ -1,4 +1,4 @@
-# A lane on a machine with room is not held to the laptop's floor
+# Work placed on a machine with room is not held to the laptop's floor
 
 **Kind:** defect
 **Fix:** now — the intent is written (card #83's plan, item 4: the horsepower takes the cards the laptop cannot hold; card #107: every lane's scope carries the floor as its high mark so a lane never takes the memory the laptop needs); the fix stays inside the room's rule (`domain/dial.py`, `runtime/service.py::room`) and removes the class — the mark a lane's scope carries is that machine's floor against that machine's memory, not the laptop's five gigabytes everywhere — rather than a number changed by hand.
