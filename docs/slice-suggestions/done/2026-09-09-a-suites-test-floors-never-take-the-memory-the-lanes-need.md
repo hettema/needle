@@ -1,5 +1,6 @@
 # A suite's test floors never take the memory the lanes need
 
+**Carried by:** docs/plans/2026-09-10-a-test-run-never-takes-the-memory-the-work-needs.md
 **Kind:** defect
 **Fix:** now — the intent it breaks is written (the plan "a full machine admits nothing new": the floor is a ceiling the machine lowers, and the memory it reads is what the lanes have), the fix stays inside the test floor (`tests/floor.py`, `tests/conftest.py`: lay every floor under a directory on disk, not under `/tmp`), and it removes a class: every suite on this laptop, not one run
 **Found by:** the lane on card #83 (docs/plans/2026-09-07-the-work-runs-where-the-horsepower-is-and-the-board-feels-like-it-is-on-your-laptop.md), running its final suite
