@@ -108,6 +108,10 @@ def resume(args: list[str]) -> int:
     # resumed worker's later turn carried its own on 2026-09-10, the cold
     # read of round three of card #110): the settings carry over from the
     # last turn, since `resume` names neither an effort nor a sandbox.
+    # The latest context's words, as they are — a missing effort stays
+    # missing (a real worker's context carried effort null on 2026-09-07),
+    # never an earlier turn's, so the fake conceals no absent setting from
+    # the tests that read it (the cold read of round five, card #110).
     effort, sandbox = "medium", "workspace-write"
     for line in rollout.read_text(encoding="utf-8").splitlines():
         if '"turn_context"' not in line:
@@ -116,8 +120,8 @@ def resume(args: list[str]) -> int:
             payload = json.loads(line).get("payload") or {}
         except ValueError:
             continue
-        effort = payload.get("effort") or effort
-        sandbox = (payload.get("sandbox_policy") or {}).get("type") or sandbox
+        effort = payload.get("effort")
+        sandbox = (payload.get("sandbox_policy") or {}).get("type")
     _append(
         rollout,
         "turn_context",

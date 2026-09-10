@@ -73,8 +73,9 @@ def test_a_bare_name_call_says_first_which_session_it_picked_and_what_it_ran_at(
     assert main(["call", "codex", str(note)]) == 0
     lines = capsys.readouterr().out.splitlines()
     assert lines[0] == (
-        "picked 01a07123, the most recent codex worker: effort unknown, sandbox read-only — "
-        "name a session id to choose another, or --fresh for a new thread at the effort you name"
+        "picked 01a07123, the most recent codex worker; its latest turn ran at effort unknown "
+        "in sandbox read-only — name a session id to choose another, or --fresh for a new "
+        "thread at the effort you name"
     ), lines[0]
     assert lines[1].startswith("call 1: 01a07123 is working on")
 
@@ -88,7 +89,9 @@ def test_a_bare_name_call_says_first_which_session_it_picked_and_what_it_ran_at(
     machine_floor.script_codex({"then": "answer", "text": "the answer", "after": 0.5})
     assert main(["call", "codex", str(note)]) == 0
     first = capsys.readouterr().out.splitlines()[0]
-    assert first.startswith("picked 01a07999, the most recent codex worker: effort high, sandbox ")
+    assert first.startswith(
+        "picked 01a07999, the most recent codex worker; its latest turn ran at effort high "
+    )
     assert "workspace-write" in first
 
 

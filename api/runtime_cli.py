@@ -829,11 +829,16 @@ def picked_line(who: Session) -> str:
     spent. The carried defect's evidence: a call to the bare name landed
     on a lane at effort none and then on a probe in a read-only sandbox,
     and the caller learned which only from the answer that never came."""
+    # What is said is what was read — the latest turn's settings from the
+    # rollout — and not a prediction of the next turn's, which is Codex's
+    # to resolve when the resume runs (the cold read of round five: "do not
+    # replace the scanner with another predictor and call the prediction
+    # checked").
     effort = who.effort.value if who.effort is not None else "unknown"
     return (
-        f"picked {who.short_id}, the most recent {who.slot} worker: effort {effort}, sandbox "
-        f"{who.sandbox or 'unknown'} — name a session id to choose another, or --fresh for a "
-        "new thread at the effort you name"
+        f"picked {who.short_id}, the most recent {who.slot} worker; its latest turn ran at "
+        f"effort {effort} in sandbox {who.sandbox or 'unknown'} — name a session id to choose "
+        "another, or --fresh for a new thread at the effort you name"
     )
 
 
