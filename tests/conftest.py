@@ -55,24 +55,27 @@ def pytest_configure(config: pytest.Config) -> None:
         os.environ[TEMP_ROOT_VARIABLE] = str(root)
 
 
-def floor_runs_ledger() -> Path:
-    """Where every run of this suite writes one line — when, the root its
-    floors were laid under, and the kernel's word for that root's filesystem
-    — so the plan's loop reads a trace the suite leaves instead of scanning
-    the temp folder, which three review reads showed can hide a floor
-    (another user's shared directory, an unreadable one, a bind). Beside
-    the floors' root, never under it: pytest prunes under the root."""
-    return floors_root().parent / "floor-runs.log"
+FLOOR_RUNS_LEDGER = Path.home() / ".local" / "state" / "needle" / "floor-runs.log"
+"""Where every run of this suite writes one line — when, the kernel's word
+for the filesystem its floors' root stands on, and the root, quoted — so the
+plan's loop reads a trace the suite leaves instead of scanning the temp
+folder, which three review reads showed can hide a floor (another user's
+shared directory, an unreadable one, a bind). A fixed place, on purpose: the
+loop's line names it verbatim, so it follows no variable (`XDG_CACHE_HOME`
+would move it from under the loop), and it sits in the state directory and
+not beside the floors, because pytest wipes a given `--basetemp` and a root
+given as the cache's own directory would have erased the ledger with it
+(Codex's sixth read, card #109)."""
 
 
 @pytest.fixture(autouse=True, scope="session")
 def floors_recorded(tmp_path_factory: pytest.TempPathFactory) -> None:
     root = tmp_path_factory.getbasetemp()
-    ledger = floor_runs_ledger()
-    ledger.parent.mkdir(parents=True, exist_ok=True)
+    FLOOR_RUNS_LEDGER.parent.mkdir(parents=True, exist_ok=True)
     stamp = datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
-    with ledger.open("a", encoding="utf-8") as out:
-        out.write(f"{stamp} {floor_mod.filesystem_of(root)} {root}\n")
+    # The root is quoted so a path holding a newline stays one line.
+    with FLOOR_RUNS_LEDGER.open("a", encoding="utf-8") as out:
+        out.write(f"{stamp} {floor_mod.filesystem_of(root)} {json.dumps(str(root))}\n")
 
 
 @pytest.fixture(autouse=True)
