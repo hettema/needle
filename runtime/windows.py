@@ -38,12 +38,25 @@ class WindowRefused(Exception):
     """No window was opened; the message says why, by name."""
 
 
+HYPRLAND_INSTANCE = (
+    'HYPRLAND_INSTANCE_SIGNATURE="$(ls -t "$XDG_RUNTIME_DIR/hypr" 2>/dev/null | head -1)"'
+)
+"""How a shell reached over ssh names the running compositor: a login there
+has the runtime directory but not the session's signature, and `hyprctl`
+refuses without one ("HYPRLAND_INSTANCE_SIGNATURE not set!", the first
+focus asked of the moved board, 2026-09-10). The newest instance directory
+is the running one."""
+
+
 def _hyprctl(args: list[str], host: str | None) -> machine.Completed:
     """Ask the compositor here, or on the desktop machine when the board runs
     elsewhere (card #83): the command is resolved here only when it runs
-    here — on the other machine its own shell finds it."""
-    argv = [machine.which("hyprctl") if host is None else "hyprctl", *args]
-    return machine.run(argv, timeout=10, host=host)
+    here — on the other machine its own shell finds it, told which
+    compositor instance is running."""
+    if host is None:
+        return machine.run([machine.which("hyprctl"), *args], timeout=10)
+    line = f"{HYPRLAND_INSTANCE} hyprctl {shlex.join(args)}"
+    return machine.run_line(host, line, timeout=10)
 
 
 def clients(host: str | None = None) -> list[dict[str, object]]:
