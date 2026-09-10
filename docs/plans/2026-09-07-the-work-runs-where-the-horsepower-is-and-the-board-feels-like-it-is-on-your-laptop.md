@@ -127,6 +127,48 @@ configuration is the laptop's record's, linked (the machine's
 Claude slots, each the same round through the laptop's browser, after the
 day has shown the first pair refreshing apart.
 
+### 2a. Accounts stay usable and work changes accounts without the owner intervening
+Owner clarification, 2026-09-10: "can we add it to 83's plan? We're waiting
+for a day before we close it out." This makes the existing intent's "same
+account switcher" observable; it does not replace item 2's full-day proof
+or authorize a close merely because a day elapsed.
+
+The live inspection found only hrclaude signed in on rented. Its selector
+and handoff hooks were present and its own host renewal succeeded, but no
+periodic allowance/renewal or interrupted-session recovery timer was
+installed. A successful model call or selection alone does not prove
+unattended operation or an account change.
+
+Reuse the existing authority: omarchy-machine's `home/.local/bin/claude-acct`
+(selection, renewal locks, supervision and recovery), its allowance-refresh
+and recover units, and Needle's `runtime/rule.py`, `runtime/handoffs.py` and
+`runtime/service.py`. The rented record already carries the usage collector.
+Inspect which recovery responsibilities Needle already performs before
+installing anything; do not create two supervisors for one session. Record
+rented-specific installation and drift detection in rented-machine. The
+absence of laptop unit names is not itself failure if an equivalent active
+reader proves the behavior. Do not create a second chooser or copy logins.
+
+Done means: during item 2's full-day observation, an idle rented account's
+allowance is refreshed and renewable access is renewed without an open
+editor or an owner action; the independent laptop login still works. Once
+the other accounts are signed in, selection considers their actual allowance.
+A safe simulated limit proves that a supervised session and a Needle lane
+resume the same work on an eligible account without duplicate execution;
+the model rule is preserved and unavailable accounts are excluded. A
+simulated transient interruption proves unattended recovery without two
+supervisors resuming the same session. A real sign-out or no eligible
+allowance produces an actionable visible state instead of silent inactivity.
+Installed upkeep survives a user-service restart; rented's drift check
+reports missing upkeep. Record the installed mechanism, time-stamped live
+renewal evidence, and rehearsal evidence separately before marking this met.
+Do not exhaust real allowances or interrupt the owner's running sessions to
+test a handoff. These are close-out requirements within #83, not follow-up
+work after closing it.
+Hands out: execution — run isolated switching/recovery rehearsals and collect
+the full-day renewal evidence; verifies the recorded transitions, no duplicate
+process, and a live call on each independent login before accepting the report.
+
 ### 3. The board serves from the machine, and the laptop's address still reaches it
 `needle serve` runs on the rented machine over the one store, moved once at
 a quiet moment with the service stopped on both sides; on the laptop the
@@ -411,6 +453,9 @@ then a day of use on both before the other slots move.
   before, and does not know which machine ran it unless he looks.
 - Every subscription works from both machines a day after its login, with
   no token file copied.
+- Rented renews idle access, selects available accounts, switches on a limit
+  and recovers interrupted work without owner intervention, with item 2a
+  evidenced before close; the day-long wait alone does not satisfy it.
 - An Omarchy card never runs off the laptop.
 - The step from 32 GB to 64 GB is taken, or not, on the loop's numbers.
 
