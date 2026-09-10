@@ -95,7 +95,8 @@ def test_the_floors_stand_on_disk(tmp_path_factory: pytest.TempPathFactory):
     assert kind not in IN_MEMORY, (
         f"the floors' root {root} stands on {point}, a {kind} filesystem in memory: "
         "a test run must never take the memory the work needs (card #109). "
-        "Run with no --basetemp, or point it at a directory on disk."
+        "Point --basetemp or PYTEST_DEBUG_TEMPROOT at a directory on disk, or unset both "
+        "and the suite chooses one under the cache (tests/conftest.py::floors_root)."
     )
 
 
