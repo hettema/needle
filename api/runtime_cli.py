@@ -14,15 +14,22 @@ needle wait CALL [--ceiling SECONDS] [--json]
 needle machine add NAME [--host H] [--desktop] [--ground PATH] [--command LINE]
 needle machine rm NAME
 needle machine timing NAME WHAT SECONDS
+needle machine host NAME HOST
 needle machines [--json]
 needle room [--hold] [--json]
+needle board [NAME|here]
+needle push --worktree PATH [--main] [--json]
+needle level REPO [--json]
 
 Since card #83 the board's runtime asks another machine's runtime for what
 that machine holds, through these same verbs with `--json`: `sessions`,
 `where`, `start`, `stop`, `move`, `resume`, `rescope`, `room`, `scopes`,
-`cause`, `ended`, `boots`, `limits`, `expire-handoff`, `show` and `tell`.
-Each answers the domain value the façade answers, so the wire is the same
-typed edge the terminal reads.
+`cause`, `ended`, `boots`, `limits`, `expire-handoff`, `show`, `tell`,
+`push` and `level`. Each answers the domain value the façade answers, so
+the wire is the same typed edge the terminal reads. The other way round,
+`needle board NAME` on a machine makes every verb that opens the board's
+store run on NAME over the same wire (item 3), so a lane there writes the
+one board and never a copy.
 
 Each verb is a thin call into `runtime.service.Runtime`, answers in prose or
 as the domain value's JSON, and exits 1 when the thing asked for did not
@@ -49,7 +56,7 @@ from domain.ending import Ended, Sighting
 from domain.gate import Gate
 from domain.lane import Checkouts, Edited
 from domain.launch import Launch, LaunchVerdict, Start, WindowlessStart
-from domain.machine import Machine, MachineRoom, Timing
+from domain.machine import BoardMachine, Machine, MachineRoom, Timing
 from domain.notice import Notice, Said
 from domain.session import Session, TranscriptSize
 from domain.slot import Expired, LimitsRead, Rung, rung_words
@@ -57,7 +64,7 @@ from domain.window import WindowKind
 from infrastructure import clock
 from infrastructure.paths import data_dir, db_path
 from infrastructure.store import Store, StoreRefusal
-from runtime import calls, codex, machine
+from runtime import calls, codex, git, machine
 from runtime.notice import NoBoardEntry
 from runtime.service import NoSuchSession, Runtime
 from runtime.windows import WindowRefused
@@ -495,6 +502,99 @@ def tip(runtime: Runtime, args: argparse.Namespace) -> int:
         str(Path(args.repo).expanduser().resolve()), args.branch, path=args.repo
     )
     _emit(args, found, f"{found.tip or 'no tip'} born at {found.birth or 'unknown'}")
+    return 0
+
+
+def push(runtime: Runtime, args: argparse.Namespace) -> int:
+    """The git half of a fold, run on the machine that holds the lane: the
+    board asks it over the wire when the lane is not on its own machine
+    (card #83, item 3). Exit 1 with the value when nothing was pushed."""
+    worktree = str(Path(args.worktree).expanduser().resolve())
+    folded = runtime.fold(worktree, promote_main=args.main)
+    _emit(args, folded, folded.words)
+    return 0 if folded.pushed else 1
+
+
+def level(runtime: Runtime, args: argparse.Namespace) -> int:
+    """This machine's clone of a project brought level with the trunk: what
+    the board asks of every machine at each pass (card #83, item 3)."""
+    repo = str(Path(args.repo).expanduser().resolve())
+    if not runtime.is_repository(repo):
+        levelled = git.Levelled(
+            level=None,
+            behind=0,
+            note=f"{repo} is not a git repository on this machine",
+            fetched=False,
+            main_updated=False,
+        )
+    else:
+        levelled = runtime.level(repo)
+    said = "level with origin/develop" if levelled.level else levelled.note or "not level"
+    _emit(args, levelled, said)
+    return 0 if levelled.level else 1
+
+
+def board(runtime: Runtime, args: argparse.Namespace) -> int:
+    """Which machine the board serves from (card #83, item 3). With a name:
+    that machine's row becomes this machine's answer for every board verb,
+    and `needle serve` here refuses. `here` forgets it. The row is read from
+    this machine's own store, which is the board's until the move and its
+    ledger after, so the name is one the board knew when it was here."""
+    if args.name is None:
+        current = machine.board_elsewhere()
+        if current is None:
+            print("the board serves from this machine: every verb opens the store here")
+        else:
+            print(
+                f"the board serves from {current.name} ({current.host}): every board verb "
+                f"runs there over ssh, as `{current.command}`"
+            )
+        return 0
+    if args.name == "here":
+        machine.set_board(None)
+        print("the board serves from this machine: every verb opens the store here")
+        return 0
+    row = next((m for m in runtime.machines() if m.name == args.name), None)
+    if row is None:
+        print(f"no machine named {args.name!r} is on the board", file=sys.stderr)
+        return 1
+    if runtime.is_here(row):
+        print(f"{args.name} is this machine; `needle board here` says so", file=sys.stderr)
+        return 1
+    if not row.host:
+        print(f"{args.name} has no host this machine reaches it by", file=sys.stderr)
+        return 1
+    machine.set_board(BoardMachine(name=row.name, host=row.host, command=row.command))
+    print(
+        f"the board serves from {row.name} ({row.host}): every board verb runs there over "
+        "ssh, and `needle serve` here refuses until `needle board here`"
+    )
+    return 0
+
+
+def machine_host(runtime: Runtime, args: argparse.Namespace) -> int:
+    """How the board reaches a machine, rewritten after the board moved:
+    the host is proved to be that machine by its own machine id before the
+    row changes, as `machine add` proves it (card #83, item 3)."""
+    row = next((m for m in runtime.machines() if m.name == args.name), None)
+    if row is None:
+        print(f"no machine named {args.name!r} is on the board", file=sys.stderr)
+        return 1
+    try:
+        done = machine.run(["cat", str(machine.MACHINE_ID_FILE)], host=args.host, timeout=20)
+    except (machine.Unreachable, machine.CommandMissing, machine.Timeout, OSError) as error:
+        print(f"could not reach {args.host}: {error}", file=sys.stderr)
+        return 1
+    identity = done.stdout.strip()
+    if identity != row.machine_id:
+        print(
+            f"{args.host} is not {args.name}: its machine id is {identity or 'unreadable'}, "
+            f"and {args.name}'s is {row.machine_id}",
+            file=sys.stderr,
+        )
+        return 1
+    runtime.store.set_machine_host(args.name, args.host)
+    print(f"{args.name}: reached as {args.host}")
     return 0
 
 
@@ -946,6 +1046,14 @@ def register(sub: "argparse._SubParsersAction[argparse.ArgumentParser]") -> None
     p_tip = parser("tip", "a lane branch's tip and birth on this machine", tip)
     p_tip.add_argument("repo")
     p_tip.add_argument("branch")
+    p_push = parser("push", "the git half of a fold, on the machine that holds the lane", push)
+    p_push.add_argument("--worktree", required=True, help="the lane's worktree")
+    p_push.add_argument("--main", action="store_true", help="promote main from the same commit")
+    p_level = parser("level", "this machine's clone of a project, level with the trunk", level)
+    p_level.add_argument("repo")
+    p_board = sub.add_parser("board", help="which machine the board serves from")
+    p_board.add_argument("name", nargs="?", help="a machine's name, or here; none to ask")
+    p_board.set_defaults(run=_with_runtime(board))
     p_edits = parser("edits", "what a checkout on this machine has changed", edits)
     p_edits.add_argument("checkout")
     p_edits.add_argument("--lane", action="store_true", help="from the lane's birth to its tip")
@@ -998,6 +1106,11 @@ def register(sub: "argparse._SubParsersAction[argparse.ArgumentParser]") -> None
     p_timing.add_argument("seconds", type=float)
     p_timing.add_argument("--json", action="store_true", help="answer as JSON")
     p_timing.set_defaults(run=_with_runtime(machine_timing))
+    p_host = machine_sub.add_parser("host", help="how the board reaches a machine, by its id")
+    p_host.add_argument("name")
+    p_host.add_argument("host", help="the ssh name")
+    p_host.add_argument("--json", action="store_true", help="answer as JSON")
+    p_host.set_defaults(run=_with_runtime(machine_host))
 
     p_rescues = parser("rescues", "a session's rescue history in the runtime's ledger", rescues)
     p_rescues.add_argument("short")

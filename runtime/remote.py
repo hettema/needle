@@ -30,7 +30,7 @@ from domain.machine import Machine
 from domain.notice import Notice, Said, Told
 from domain.session import Session, TranscriptSize
 from domain.slot import Expired, Limits, LimitsRead, Rung, Where
-from runtime import machine
+from runtime import git, machine
 
 T = TypeVar("T", bound=BaseModel)
 
@@ -222,6 +222,16 @@ class Remote:
         else:
             argv.append("--windowless")
         return self._ask(argv, Launch, timeout=START_SECONDS)
+
+    def push(self, worktree: str, *, promote_main: bool) -> git.Folded:
+        """The lane's fold, run where the lane is: its branch pushed to the
+        trunk from the checkout that holds it (card #83, item 3)."""
+        argv = ["push", "--worktree", worktree, *(["--main"] if promote_main else [])]
+        return self._ask(argv, git.Folded, timeout=START_SECONDS)
+
+    def level(self, repo: str) -> git.Levelled:
+        """That machine's clone of a project brought level with the trunk."""
+        return self._ask(["level", repo], git.Levelled, timeout=START_SECONDS)
 
     def stop(self, short_id: str, *, keep_handoff: bool) -> Stopped:
         argv = ["stop", short_id, *(["--keep-handoff"] if keep_handoff else [])]

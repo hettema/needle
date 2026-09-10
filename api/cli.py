@@ -13,6 +13,7 @@ so a rescan is always one command away.
 
 import argparse
 import json
+import os
 import re
 import signal
 import sys
@@ -33,6 +34,7 @@ from infrastructure.entrance import read_entrance
 from infrastructure.live import Live, sweep
 from infrastructure.paths import db_path
 from infrastructure.store import Store, StoreRefusal
+from runtime import machine
 from runtime.git import corpus_renames
 
 DEFAULT_PORT = 8480
@@ -186,6 +188,15 @@ def _answered(sig: int, frame: FrameType | None) -> None:
 def serve(args: argparse.Namespace) -> int:
     from api.app import create_app
 
+    elsewhere = machine.board_elsewhere()
+    if elsewhere is not None:
+        print(
+            f"The board serves from {elsewhere.name} ({elsewhere.host}), and this machine hands "
+            "it every board verb; a second board here would read a store nobody writes. "
+            "`needle board here` takes the board back once the store is here.",
+            file=sys.stderr,
+        )
+        return 1
     store = Store(db_path())
     if not store.projects():
         print("No project is on the board yet. Run: needle add /path/to/repo", file=sys.stderr)
@@ -236,7 +247,7 @@ def main(argv: list[str] | None = None) -> int:
     p_add.add_argument("path")
     p_add.add_argument("--name", help="the project's display name; the folder name if omitted")
     p_add.add_argument("--slug", help="the project's URL slug; derived from the folder if omitted")
-    p_add.set_defaults(run=add)
+    p_add.set_defaults(board=True, run=add)
 
     p_serve = sub.add_parser("serve", help="serve the board")
     p_serve.add_argument("--host", default="127.0.0.1")
@@ -244,7 +255,7 @@ def main(argv: list[str] | None = None) -> int:
     p_serve.set_defaults(run=serve)
 
     p_projects = sub.add_parser("projects", help="list the projects on the board")
-    p_projects.set_defaults(run=projects)
+    p_projects.set_defaults(board=True, run=projects)
 
     p_types = sub.add_parser("types", help="regenerate the frontend's types from the domain")
     p_types.set_defaults(run=types)
@@ -255,7 +266,24 @@ def main(argv: list[str] | None = None) -> int:
     register(sub)
     register_board(sub)
 
-    args = parser.parse_args(argv)
+    words = list(sys.argv[1:] if argv is None else argv)
+    args = parser.parse_args(words)
+    if getattr(args, "board", False):
+        # A verb that opens the board's store runs on the machine the board
+        # serves from (card #83, item 3): the store here is this machine's
+        # own ledger the moment `needle board NAME` was written, and a row
+        # written into it would be one the board never reads. The fold
+        # names its worktree, since the other side has no working directory
+        # of ours; its git runs back here over the wire.
+        try:
+            elsewhere = machine.board_elsewhere()
+        except machine.BoardUnreadable as wrong:
+            print(str(wrong), file=sys.stderr)
+            return 1
+        if elsewhere is not None:
+            if args.command == "fold" and not args.worktree:
+                words += ["--worktree", os.getcwd()]
+            return machine.forward(elsewhere, words)
     return int(args.run(args))
 
 

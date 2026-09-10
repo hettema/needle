@@ -43,6 +43,19 @@ class Machine(BaseModel):
     added_at: datetime
 
 
+class BoardMachine(BaseModel):
+    """The machine the board serves from, as another machine knows it: enough
+    to hand a board verb there (card #83, item 3). Written by `needle board
+    NAME` from that machine's row, absent on the board's own machine; a
+    machine that holds one runs every verb that opens the board's store on
+    the named machine instead, so no session ever writes a copy the board
+    never reads."""
+
+    name: str
+    host: str
+    command: str
+
+
 class HighWater(BaseModel):
     """The least memory a machine had available on one day, as the board
     read it on its passes: the mark the plan's loop reads to decide 32 or

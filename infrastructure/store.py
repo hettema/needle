@@ -1857,6 +1857,17 @@ class Store:
             rows = session.scalars(select(MachineRow).order_by(MachineRow.added_at))
             return [_machine(r) for r in rows]
 
+    def set_machine_host(self, name: str, host: str | None) -> bool:
+        """How the board reaches a machine, rewritten: the board moved, so
+        the machine it used to run on is now one it reaches over ssh (card
+        #83, item 3). False when no such machine is on the board."""
+        with self._session() as session, session.begin():
+            row = session.get(MachineRow, name)
+            if row is None:
+                return False
+            row.host = host
+            return True
+
     def note_high_water(self, machine: str, *, available: int, total: int, at: datetime) -> bool:
         """One reading of a machine's memory: kept when it is the day's
         lowest, else dropped. True when the mark moved. One conditional

@@ -984,7 +984,46 @@ class Runtime:
     def level(self, repo: str) -> git.Levelled:
         return git.level(repo)
 
+    def level_everywhere(self, repo: str) -> list[tuple[Machine, git.Levelled]]:
+        """The project's clone brought level with the trunk on every machine,
+        this one first (card #83, item 3): the board's checkout is the corpus
+        it reads, and each other machine's is what its `needle` reads and its
+        lanes are born from — a fold that changed the wire was not live on
+        the rented machine until its clone was pulled by hand (2026-09-10).
+        A machine that does not answer is a note under its name, never a
+        stop for the rest."""
+        found = [(self.here(), self.level(repo))]
+        for m in self.machines():
+            if self.is_here(m):
+                continue
+            try:
+                found.append((m, self._remote(m).level(repo)))
+            except _UNREACHABLE as error:
+                found.append(
+                    (
+                        m,
+                        git.Levelled(
+                            level=None, behind=0, note=str(error), fetched=False, main_updated=False
+                        ),
+                    )
+                )
+        return found
+
     def fold(self, worktree: str, *, promote_main: bool) -> git.Folded:
+        """The lane's branch pushed to the trunk from the machine that holds
+        the lane: a fold asked of the board runs its git where the worktree
+        is (card #83, item 3)."""
+        on = self.lane_machine(worktree)
+        if not self.is_here(on):
+            try:
+                return self._remote(on).push(worktree, promote_main=promote_main)
+            except _UNREACHABLE as error:
+                return git.Folded(
+                    pushed=False,
+                    words=f"{on.name} holds the lane and could not push it: {error}",
+                    tip=None,
+                    main_pushed=None,
+                )
         return git.fold(worktree, promote_main=promote_main)
 
     def read_signal(self, signal: Signal, project_path: str) -> tuple[bool | None, str]:

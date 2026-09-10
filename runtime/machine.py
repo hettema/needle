@@ -15,9 +15,12 @@ import shlex
 import shutil
 import socket
 import subprocess
+import sys
 from pathlib import Path
 
 from domain.dial import Meminfo
+from domain.machine import BoardMachine
+from infrastructure.paths import board_path
 
 PROC = Path("/proc")
 SPAWN_REAP_SECONDS = 5.0
@@ -111,6 +114,56 @@ def remote_argv(host: str, line: str) -> list[str]:
         "--",
         shlex.join(["bash", "-lc", line]),
     ]
+
+
+class BoardUnreadable(Exception):
+    """The file that says where the board is cannot be read as saying so."""
+
+
+def board_elsewhere() -> BoardMachine | None:
+    """The machine the board serves from, when it is not this one: the file
+    `needle board NAME` wrote, read by every verb that would open the
+    board's store before it does (card #83, item 3). None when there is no
+    file — the board is here, or this is a one-machine board. A file that
+    cannot be read as one is a refusal and never silence: the verb would
+    otherwise write a store the board never reads."""
+    path = board_path()
+    if not path.exists():
+        return None
+    try:
+        return BoardMachine.model_validate_json(path.read_text(encoding="utf-8"))
+    except (OSError, ValueError) as wrong:
+        raise BoardUnreadable(f"{path} does not say where the board is: {wrong}") from wrong
+
+
+def set_board(board: BoardMachine | None) -> Path:
+    """Write which machine the board serves from, or forget it (None)."""
+    path = board_path()
+    if board is None:
+        path.unlink(missing_ok=True)
+    else:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(board.model_dump_json(indent=2) + "\n", encoding="utf-8")
+    return path
+
+
+def forward(board: BoardMachine, argv: list[str]) -> int:
+    """Run one `needle` verb on the board's machine with its output flowing
+    here as if it had run here, and answer its exit code. Nothing is read
+    from stdin on either side: no verb reads it, and an open one would hold
+    the other side's shell. An unreachable board is said in its name."""
+    done = subprocess.run(
+        remote_argv(board.host, f"{board.command} {shlex.join(argv)}"),
+        stdin=subprocess.DEVNULL,
+        check=False,
+    )
+    if done.returncode == SSH_UNREACHABLE:
+        print(
+            f"the board serves from {board.name} ({board.host}) and it could not be reached; "
+            f"`needle {argv[0]}` did not run",
+            file=sys.stderr,
+        )
+    return done.returncode
 
 
 def run_line(host: str, line: str, *, timeout: float = 30.0) -> subprocess.CompletedProcess[str]:

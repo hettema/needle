@@ -2333,10 +2333,18 @@ class Loops:
                 level=None, behind=0, note=f"{path} is not a git repository", read_at=now
             )
         else:
-            result = self.runtime.level(path)
-            state = TrunkState(
-                level=result.level, behind=result.behind, note=result.note, read_at=now
-            )
+            levelled = self.runtime.level_everywhere(path)
+            _, result = levelled[0]
+            # Another machine's clone that is not level is said under its
+            # name beside this checkout's own state; the board's level is
+            # its own checkout's, which is the corpus it reads.
+            elsewhere = [
+                f"{m.name}: {r.note or f'{r.behind} behind'}"
+                for m, r in levelled[1:]
+                if r.level is not True
+            ]
+            note = "; ".join(([result.note] if result.note else []) + elsewhere) or None
+            state = TrunkState(level=result.level, behind=result.behind, note=note, read_at=now)
         before = self.live.store.trunk(slug)
         self.live.store.record_trunk(slug, state)
         if (before.level, before.behind, before.note) != (state.level, state.behind, state.note):

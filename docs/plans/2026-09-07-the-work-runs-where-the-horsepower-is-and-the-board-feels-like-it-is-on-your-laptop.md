@@ -131,6 +131,33 @@ Done means: the board opens on the laptop at its old address and shows the
 same cards with their history; a session on the laptop and a session on the
 machine both appear on it; the laptop's service is off and the machine's
 record says how to bring the board back to the laptop in one command.
+In flight (2026-09-10, 10:30Z): the half the fixture proves is on the
+lane. The gap it closes was found reading item 3 cold: once the store is
+on the machine, a session on the laptop running `needle row`, `close` or
+`fold` would open the laptop's copy and write a row the board never
+reads. So a machine that is not the board's hands every verb that opens
+the board's store — `card`, `row`, `close`, `reading`, `triage`, `fold`,
+`watercooler`, `lanes`, `sync`, `add`, `projects` and the rest — to the
+board's machine over the wire the board already reads it by: `needle
+board rented` writes which machine that is (`~/.local/share/needle/
+board.json`, beside the store it is about), `runtime/machine.py::forward`
+runs the verb there with its output flowing back, `needle serve` on such
+a machine refuses, and `needle board here` takes the board back. The fold
+is the one verb whose git must run where the lane is, so the board's
+`fold` pushes through the wire (`needle push --worktree` on the machine
+that holds the lane, `Runtime.fold`), and every machine's clone is
+levelled at each pass under its own name (`Runtime.level_everywhere`,
+`needle level`; the seam the first evening showed). `needle machine host
+NAME HOST` rewrites how the board reaches a machine once it has moved,
+proved by that machine's id as `machine add` proves it. Proven on the
+floor: `tests/runtime/test_board_elsewhere.py`. The live half — the
+store moved at a quiet moment with both services stopped, the laptop's
+`127.0.0.1:8480` made the tunnel's end by a socket unit that proxies to
+the machine's `tailscale serve`, the laptop's own `needle-serve` disabled
+with its revert, sshd on the laptop for the board's way back to the
+screen — is a procedure in the rented machine's record (`docs/board.md`
+there, the revert in `docs/revert.md`), and runs when no lane is on the
+laptop's board, which the day's lanes decide.
 
 ### 4. A lane runs where its ground is, and a window into it opens here
 The rule that places work (`needle where`, `claude-acct`'s one rule) gains
@@ -266,6 +293,21 @@ reach (every path below is in Needle's repository unless said):
   (`tmux_has`). `tell` and `show` go through the desktop's own `needle`
   when the board runs elsewhere (item 3's territory, written, unproven
   live).
+- **A machine that is not the board's hands its board verbs over.**
+  `needle board NAME` writes `domain/machine.py::BoardMachine` (name,
+  host, command) to `infrastructure/paths.py::board_path`; `api/cli.py::
+  main` reads it (`runtime/machine.py::board_elsewhere`) before any verb
+  marked `board=True` opens the store and runs the verb there instead
+  (`runtime/machine.py::forward`: the same `ssh … bash -lc` line, stdin
+  closed, output flowing back, exit 255 said in the board's name); the
+  runtime verbs are never forwarded, since the board asks them of this
+  machine. `fold` from a lane names its worktree on the way over, and the
+  board's `Runtime.fold` routes the push back to `lane_machine(worktree)`
+  through `Remote.push`; `Runtime.level_everywhere` levels the board's
+  checkout first, then every other machine's through `Remote.level`, and
+  `api/loops.py::level_project` writes another machine's shortfall into
+  the trunk note under that machine's name. `needle machine host` sets a
+  row's host after the id read over ssh matches the row's.
 - **The loop reads every machine on every pass.** `api/loops.py::
   headroom_now` reads `Runtime.rooms(hold=True)`, sets the floor's high
   mark on every machine's lane scopes, writes the day's high-water mark
@@ -376,6 +418,23 @@ then a day of use on both before the other slots move.
   every existing test reads as before. Why: the acceptance says he does
   not know which machine ran a card unless he looks, and on one machine
   there is nothing to look at.
+
+- **A machine that is not the board's runs its board verbs on the
+  board's machine, over the wire the board reads it by** (the lane's
+  ruling, 2026-09-10). The board's store is one file on one machine, and
+  the sessions that write it run on both; the verbs that open it are
+  `needle`'s, so `needle` on the other machine hands them across and the
+  words, the exit code and the files they name (a review's path under
+  `docs/reviews/`, a plan's) mean the same there because every machine
+  lays the projects out the same. Rejected: an HTTP endpoint per verb on
+  the board (the hook's and `start-card`'s way), which is a second edge
+  to keep typed for twenty verbs that already have one; the store over a
+  network filesystem (SQLite corrupts); a store per machine reconciled
+  later (the registry drift the doctrine refuses, and the fold's row
+  would be on the wrong side). The fold is the exception that proves the
+  rule: its git runs where the worktree is, so the board asks it back
+  over the wire as one more runtime verb (`push`), the same way it asks
+  for a lane's edits.
 
 ## Deliberately not
 

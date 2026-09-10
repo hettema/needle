@@ -23,3 +23,11 @@ def db_path() -> Path:
     if override:
         return Path(override)
     return data_dir() / "needle.db"
+
+
+def board_path() -> Path:
+    """Where this machine writes which machine the board serves from (card
+    #83, item 3): beside the store it would otherwise open, because that
+    store is what the fact is about — while the file names another machine,
+    the store here is this machine's own ledger and never the board's."""
+    return db_path().with_name("board.json")

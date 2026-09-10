@@ -21,7 +21,12 @@ needle fixes SLUG|all                    # every fix lane the dial ran, and the 
 
 Rows are written to the store directly — the one writer — and the running
 board hears the store change; a start goes through the server so the board
-watches the launch exactly as the button's.
+watches the launch exactly as the button's. On a machine that is not the
+board's (`needle board NAME`, card #83 item 3) every verb here runs on the
+board's machine over ssh instead — `api/cli.py::main` hands it over before
+the store is opened — so a lane there writes the one board and never a
+copy; `hook install` and `start-card` stay here, one editing this
+machine's file, the other already talking to the board by its address.
 """
 
 import argparse
@@ -971,14 +976,14 @@ def register(sub: "argparse._SubParsersAction[argparse.ArgumentParser]") -> None
     p_card.add_argument("slug")
     p_card.add_argument("number", type=int)
     p_card.add_argument("--lane", action="store_true", help="with the riders a launched lane gets")
-    p_card.set_defaults(run=_with_board(card))
+    p_card.set_defaults(board=True, run=_with_board(card))
 
     p_row = sub.add_parser("row", help="write one row on a card")
     p_row.add_argument("slug")
     p_row.add_argument("number", type=int)
     p_row.add_argument("kind", choices=[k.value for k in RowKind])
     p_row.add_argument("text")
-    p_row.set_defaults(run=_with_board(row))
+    p_row.set_defaults(board=True, run=_with_board(row))
 
     p_close = sub.add_parser(
         "close", help="a session's close: DELIVERED, WATCH, REVIEW and the move"
@@ -991,7 +996,7 @@ def register(sub: "argparse._SubParsersAction[argparse.ArgumentParser]") -> None
     )
     p_close.add_argument("--review", help="the review record's path under docs/reviews/")
     p_close.add_argument("--column", choices=[c.value for c in Column], help="Executed unless said")
-    p_close.set_defaults(run=_with_board(close))
+    p_close.set_defaults(board=True, run=_with_board(close))
 
     p_reading = sub.add_parser(
         "reading", help="a reading session's finding on its card, with the evidence"
@@ -1003,7 +1008,7 @@ def register(sub: "argparse._SubParsersAction[argparse.ArgumentParser]") -> None
     p_reading.add_argument(
         "--watch", help="a replacement WATCH row when the measure could not be read"
     )
-    p_reading.set_defaults(run=_with_board(reading))
+    p_reading.set_defaults(board=True, run=_with_board(reading))
 
     p_triage = sub.add_parser(
         "triage",
@@ -1035,21 +1040,21 @@ def register(sub: "argparse._SubParsersAction[argparse.ArgumentParser]") -> None
         choices=[d.value for d in Direction],
         help="which way it moves the product; required with now",
     )
-    p_triage.set_defaults(run=_with_board(triage))
+    p_triage.set_defaults(board=True, run=_with_board(triage))
 
     p_decisions = sub.add_parser(
         "decisions", help="every decision a colleague took on the rail, with source and fate"
     )
     p_decisions.add_argument("slug", help="a project's slug, or all")
     p_decisions.add_argument("--first", type=int, help="only the first N, for the cold audit")
-    p_decisions.set_defaults(run=_with_board(decisions))
+    p_decisions.set_defaults(board=True, run=_with_board(decisions))
 
     p_fold = sub.add_parser(
         "fold", help="fast-forward push this lane to origin/develop; level the trunk"
     )
     p_fold.add_argument("--main", action="store_true", help="promote main from the same commit")
     p_fold.add_argument("--worktree", help="the lane's worktree; the current directory if omitted")
-    p_fold.set_defaults(run=_with_board(fold))
+    p_fold.set_defaults(board=True, run=_with_board(fold))
 
     p_start = sub.add_parser("start-card", help="Start a card through the running board")
     p_start.add_argument("slug")
@@ -1070,11 +1075,11 @@ def register(sub: "argparse._SubParsersAction[argparse.ArgumentParser]") -> None
 
     p_sync = sub.add_parser("sync", help="level each project's main checkout with origin/develop")
     p_sync.add_argument("slug", nargs="?")
-    p_sync.set_defaults(run=_with_board(sync))
+    p_sync.set_defaults(board=True, run=_with_board(sync))
 
     p_signals = sub.add_parser("signals", help="read every due signal now")
     p_signals.add_argument("slug", nargs="?")
-    p_signals.set_defaults(run=_with_board(signals))
+    p_signals.set_defaults(board=True, run=_with_board(signals))
 
     p_lanes = sub.add_parser("lanes", help="every card's lane, as the board reads it")
     p_lanes.add_argument("slug", nargs="?")
@@ -1086,20 +1091,20 @@ def register(sub: "argparse._SubParsersAction[argparse.ArgumentParser]") -> None
     p_lanes.add_argument(
         "--since", dest="since_hours", type=float, default=24.0, help="hours back (24)"
     )
-    p_lanes.set_defaults(run=_with_board(lanes))
+    p_lanes.set_defaults(board=True, run=_with_board(lanes))
 
     p_verdicts = sub.add_parser(
         "verdicts", help="the verdicts the board's own facts settle, for cards carrying none"
     )
     p_verdicts.add_argument("slug")
     p_verdicts.add_argument("--write", action="store_true", help="write them as VERDICT rows")
-    p_verdicts.set_defaults(run=_with_board(verdicts))
+    p_verdicts.set_defaults(board=True, run=_with_board(verdicts))
 
     p_kinds = sub.add_parser(
         "kinds", help="every live suggestion's kind as the board reads it, and why"
     )
     p_kinds.add_argument("slug")
-    p_kinds.set_defaults(run=_with_board(kinds))
+    p_kinds.set_defaults(board=True, run=_with_board(kinds))
 
     p_rows = sub.add_parser(
         "rows", help="the record as JSON: every row on every card, with its time and writer"
@@ -1107,7 +1112,7 @@ def register(sub: "argparse._SubParsersAction[argparse.ArgumentParser]") -> None
     p_rows.add_argument("slug")
     p_rows.add_argument("--since", help="a day or a moment, ISO; rows written from then on")
     p_rows.add_argument("--kind", help="one row kind, e.g. DELIVERED")
-    p_rows.set_defaults(run=_with_board(rows))
+    p_rows.set_defaults(board=True, run=_with_board(rows))
 
     p_retire = sub.add_parser(
         "retire", help="retire a duplicate card into the card that carries its document"
@@ -1116,7 +1121,7 @@ def register(sub: "argparse._SubParsersAction[argparse.ArgumentParser]") -> None
     p_retire.add_argument("number", type=int, help="the card to retire")
     p_retire.add_argument("--into", type=int, required=True, help="the card that survives")
     p_retire.add_argument("why", help="why, in a sentence, for both cards' history")
-    p_retire.set_defaults(run=_with_board(retire))
+    p_retire.set_defaults(board=True, run=_with_board(retire))
 
     p_water = sub.add_parser(
         "watercooler", help="the project's watercooler: read it, or say one line as a card's lane"
@@ -1124,20 +1129,20 @@ def register(sub: "argparse._SubParsersAction[argparse.ArgumentParser]") -> None
     p_water.add_argument("slug")
     p_water.add_argument("number", type=int, nargs="?", help="the card whose lane is speaking")
     p_water.add_argument("text", nargs="?", help="the line")
-    p_water.set_defaults(run=_with_board(watercooler))
+    p_water.set_defaults(board=True, run=_with_board(watercooler))
 
     p_dial = sub.add_parser(
         "dial", help="the dial: read it, or turn auto-fix on or off and set the number of fix lanes"
     )
     p_dial.add_argument("setting", nargs="?", choices=["on", "off"])
     p_dial.add_argument("--lanes", type=int, help="how many fix lanes may run at once")
-    p_dial.set_defaults(run=_with_board(dial))
+    p_dial.set_defaults(board=True, run=_with_board(dial))
 
     p_fixes = sub.add_parser(
         "fixes", help="every fix lane the dial ran, and the rail now against dial-on"
     )
     p_fixes.add_argument("slug", help="a project's slug, or all")
-    p_fixes.set_defaults(run=_with_board(fixes))
+    p_fixes.set_defaults(board=True, run=_with_board(fixes))
 
     # `focus` is the runtime's verb for bringing a session's window forward
     # (api/runtime_cli.py), so a project's focus prints under the name of
@@ -1156,7 +1161,7 @@ def register(sub: "argparse._SubParsersAction[argparse.ArgumentParser]") -> None
         "--unbound", action="store_true", help="projects shown chosen with no bound ruling"
     )
     p_focus.add_argument("--count", action="store_true", help="print the number alone")
-    p_focus.set_defaults(run=_with_board(focus))
+    p_focus.set_defaults(board=True, run=_with_board(focus))
 
     p_check = sub.add_parser(
         "focus-check", help="a cold reading's verdict on a project's proposed focus"
@@ -1165,7 +1170,7 @@ def register(sub: "argparse._SubParsersAction[argparse.ArgumentParser]") -> None
     p_check.add_argument("verdict", choices=[v.value for v in FocusVerdict])
     p_check.add_argument("line", help="one sentence saying why, naming the weakest link")
     p_check.add_argument("--how-known", choices=[h.value for h in HowKnown])
-    p_check.set_defaults(run=_with_board(focus_check))
+    p_check.set_defaults(board=True, run=_with_board(focus_check))
 
     p_leverage = sub.add_parser(
         "leverage", help="one card's reading against the chosen focus: its class and why"
@@ -1179,7 +1184,7 @@ def register(sub: "argparse._SubParsersAction[argparse.ArgumentParser]") -> None
         choices=[lk.value for lk in Likelihood],
         help="how likely it is to work; with helps remove this limit only",
     )
-    p_leverage.set_defaults(run=_with_board(leverage))
+    p_leverage.set_defaults(board=True, run=_with_board(leverage))
 
     p_recheck = sub.add_parser(
         "focus-recheck", help="the scheduled recheck's word on a chosen focus"
@@ -1187,7 +1192,7 @@ def register(sub: "argparse._SubParsersAction[argparse.ArgumentParser]") -> None
     p_recheck.add_argument("slug")
     p_recheck.add_argument("outcome", choices=[o.value for o in RecheckOutcome])
     p_recheck.add_argument("words", help="one sentence, with the numbers")
-    p_recheck.set_defaults(run=_with_board(focus_recheck))
+    p_recheck.set_defaults(board=True, run=_with_board(focus_recheck))
 
     p_accept = sub.add_parser(
         "leverage-accept",
@@ -1196,4 +1201,4 @@ def register(sub: "argparse._SubParsersAction[argparse.ArgumentParser]") -> None
     p_accept.add_argument("slug")
     p_accept.add_argument("numbers", type=int, nargs="*", help="the cards whose moves are ticked")
     p_accept.add_argument("--put-back", action="store_true")
-    p_accept.set_defaults(run=_with_board(leverage_accept))
+    p_accept.set_defaults(board=True, run=_with_board(leverage_accept))
