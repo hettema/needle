@@ -25,7 +25,7 @@ from collections.abc import Callable
 from datetime import date
 
 from domain.call import Call
-from domain.document import Fate, Review
+from domain.document import Disposition, Fate, Review
 from domain.slot import Make
 
 HELD_FROM = date(2026, 9, 11)
@@ -104,14 +104,25 @@ def record_faults(review: Review, name: str) -> list[str]:
                 "call <n>: complete` or `…: broke <pass.finding>, … — <its words>` — a reader "
                 "that could not read, or said neither, has not read the round"
             )
+
     # Every claim the reader broke gets a disposition that says what became
     # of it: a fix, or a record-only correction (pass two's reader: a bare
     # mark, "still broken", answered nothing).
-    answers = {
-        d.repair_of: d
-        for d in review.dispositions
-        if d.repair_of is not None and d.fate is not None
-    }
+    def answers(verdict) -> dict[str, Disposition]:
+        """The dispositions that answer this verdict's breaks: marked, with
+        a fate, and under the verdict's pass or a later one — an answer
+        follows its break (the cold read of pass two's round: an earlier
+        pass's correction was satisfying a later verdict that broke the
+        same address again)."""
+        return {
+            d.repair_of: d
+            for d in review.dispositions
+            if d.repair_of is not None
+            and d.fate is not None
+            and d.pass_number is not None
+            and d.pass_number >= verdict.pass_number
+        }
+
     rounds = sorted({fix.pass_number for fix in fixes if fix.pass_number is not None})
     for number in rounds:
         read = verdicts_by_pass.get(number)
@@ -126,10 +137,11 @@ def record_faults(review: Review, name: str) -> list[str]:
         # break is a new repair, and a new repair is read (pass two's reader:
         # an earlier verdict was satisfying later, unread repairs).
         last = read[-1]
+        answered = answers(last)
         unread = [
             address
             for address in last.broke
-            if address in answers and answers[address].fate is not Fate.CORRECTED
+            if address in answered and answered[address].fate is not Fate.CORRECTED
         ]
         if unread:
             faults.append(
@@ -139,12 +151,14 @@ def record_faults(review: Review, name: str) -> list[str]:
                 "record-only correction"
             )
     for verdict in review.verdicts:
+        answered = answers(verdict)
         for address in verdict.broke:
-            if address not in answers:
+            if address not in answered:
                 faults.append(
                     f"{name}:{verdict.line} broke {address} and no disposition marked "
-                    f"`[repair of {address}]` says what became of it — every claim the reader "
-                    "broke gets a disposition: FIXED with its own line, or CORRECTED in the record"
+                    f"`[repair of {address}]` under pass {verdict.pass_number} or later says "
+                    "what became of it — every claim the reader broke gets a disposition after "
+                    "it: FIXED with its own line, or CORRECTED in the record"
                 )
     if review.found and not review.dispositions:
         faults.append(
@@ -166,8 +180,8 @@ def verdict_faults(
     verdict's call has a row, its colleague is of the other kind — `codex`
     for a lane of Claude's, anything else for a Codex lane — and its answer
     landed after the call. `lane_slot` is the slot of the session that held
-    the lane, None when the board never saw one, which reads as a lane of
-    Claude's."""
+    the lane; None when the board never saw one, and then the rules refuse
+    to judge — unknown authorship is nobody's make by default."""
     faults: list[str] = []
     if lane_slot is None and any(v.call for v in review.verdicts):
         # Unknown authorship is not Claude's by default (pass two's reader):

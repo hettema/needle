@@ -206,7 +206,7 @@ def test_a_round_without_a_verdict_a_verdict_without_its_row_and_a_broken_claim_
     write(repo, "2026-09-11-the-meter.md", record(call=call, verdict="broke 1.2 — the nightly job"))
     code, _, err = close(path, capsys)
     assert code == 1
-    assert "broke 1.2 and no disposition marked `[repair of 1.2]` says what became of it" in err
+    assert "broke 1.2 and no disposition marked `[repair of 1.2]` under pass 1 or later" in err
 
     # A fix that answers a break is a new repair, and a new repair is read
     # (pass two's reader): the round ends on a verdict that says complete.
@@ -354,6 +354,11 @@ def test_a_lane_whose_worktree_is_only_on_the_second_machine_is_asked_there(
     assert known is not None and known.path == str(worktree)
     elsewhere = "/srv/rented/worktrees/" + Path(known.path).name
     store.record_lane(known.model_copy(update={"machine": "rented", "path": elsewhere}))
+    # The tree there is gone too: the machine answers empty, and the project's
+    # own checkout says what the lane folded (the cold read of pass two's
+    # round), so a close without a record is still a code lane's, refused.
+    code, _, err = close(None, capsys)
+    assert code == 1 and "folded code (engine/meter.py)" in err, err
     write(repo, "2026-09-11-the-meter.md", record(call=call))
     before = len(machine_floor.state().get("ssh_calls", []))
     code, out, _ = close("docs/reviews/2026-09-11-the-meter.md", capsys)

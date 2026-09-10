@@ -162,9 +162,11 @@ prose is prose."""
 _CLASS = re.compile(r"^`?\[[\w-]+\]`?\s*")
 """The class a finding opens with (card #60), plain or in backticks as
 Hello Revenue writes it; stripped before the fate and the marks are read."""
-_REPAIR_OF = re.compile(r"\[repair of\s+(\d+(?:\.\d+)?)\]", re.I)
+_REPAIR_OF = re.compile(r"^\s*\[repair of\s+(\d+(?:\.\d+)?)\]", re.I)
 """The mark on a finding an earlier round's repair caused (card #110, item
-3): the address of that repair, after the class."""
+3): the address of that repair, after the class and nowhere else — a line
+that quotes the mark in its prose (this card's own record did) is not
+marked (the author's re-read of pass two's round)."""
 _PASS_FINDINGS = re.compile(r"^###\s+pass\s+(\d+)\b", re.I)
 """`### Pass N's findings`: the heading under `## Dispositions` that gives
 the findings below it their pass, and so their address (card #110)."""

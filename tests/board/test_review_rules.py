@@ -181,9 +181,9 @@ def test_a_broken_address_nobody_answered_is_a_fault():
     faults = record_faults(review_of(text, "r.md"), "r.md")
     assert (
         len(faults) == 1
-        and "broke 1.2 and no disposition marked `[repair of 1.2]` says what became of it"
+        and "broke 1.2 and no disposition marked `[repair of 1.2]` under pass 1 or later says"
         in faults[0]
-        and "broke 1.2 and no disposition marked `[repair of 1.2]` says what became of it"
+        and "broke 1.2 and no disposition marked `[repair of 1.2]` under pass 1 or later says"
         in faults[0]
     )
     corrected = text.replace(
@@ -245,7 +245,8 @@ def test_a_bare_mark_a_verdict_that_says_neither_and_findings_without_the_sectio
     )
     faults = record_faults(review_of(bare, "r.md"), "r.md")
     assert any(
-        "no disposition marked `[repair of 1.2]` says what became of it" in f for f in faults
+        "no disposition marked `[repair of 1.2]` under pass 1 or later says what became of it" in f
+        for f in faults
     )
     neither = RECORD.replace(
         "Read cold by Codex (01a08a3b) on ac1823d, call 13: complete",
@@ -258,6 +259,29 @@ def test_a_bare_mark_a_verdict_that_says_neither_and_findings_without_the_sectio
     assert review.dispositions == [] and review.found == 5
     faults = record_faults(review, "r.md")
     assert any("counts 5 finding(s) and no `## Dispositions`" in f for f in faults)
+
+
+def test_an_answer_follows_its_break_and_a_mark_quoted_in_prose_is_not_a_mark():
+    """The cold read of pass two's round: a correction under an earlier
+    pass was satisfying a later verdict that broke the same address again;
+    and the author's own re-read: a disposition quoting `[repair of 1.1]`
+    in its words read as marked."""
+    again = RECORD.replace(
+        "Read cold by Codex (01a08a3b) on ac1823d, call 13: complete",
+        "Read cold by Codex (01a08a3b) on ac1823d, call 13: broke 1.2 — still the nightly job",
+    )
+    faults = record_faults(review_of(again, "r.md"), "r.md")
+    assert len(faults) == 1 and "under pass 2 or later says what became of it" in faults[0]
+    answered_later = again + (
+        "3. [seam] [repair of 1.2] The nightly job, again — CORRECTED in the record.\n"
+    )
+    assert record_faults(review_of(answered_later, "r.md"), "r.md") == []
+    quoted = RECORD.replace(
+        "1. [record] The earlier FIXED claim on the mailer was wrong — NO CHANGE",
+        "1. [record] The README's example line `[repair of 1.1]` was mis-set — NO CHANGE",
+    )
+    review = review_of(quoted, "r.md")
+    assert review.dispositions[3].repair_of is None and review.escaped == 0
 
 
 def test_the_counts_are_findings_in_pass_order():

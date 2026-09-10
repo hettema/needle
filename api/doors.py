@@ -1670,11 +1670,16 @@ class Doors:
         if where is None:
             return
         record = self.live.store.lane(slug, number)
-        files = self.runtime.lane_files(
-            where if standing else project.path,
-            birth=record.birth if record is not None else None,
-            tip=None if standing else (record.tip if record is not None else None),
-        )
+        birth = record.birth if record is not None else None
+        tip = record.tip if record is not None else None
+        files = self.runtime.lane_files(where, birth=birth, tip=None) if standing else set()
+        if not files and tip is not None:
+            # The lane's tree is gone — here, or on the machine that held it,
+            # which answers empty for a tree it no longer has (the cold read
+            # of pass two's round) — so the project's checkout, which the
+            # fold has levelled, says what the lane folded up to the tip the
+            # board recorded; a lane with no tip folded nothing.
+            files = self.runtime.lane_files(project.path, birth=birth, tip=tip)
         code = sorted(f for f in files if not f.startswith(DOCS))
         if not code:
             return
@@ -1764,17 +1769,11 @@ class Doors:
         # one, else the runtime's own record of who it started on the card
         # — and never a default (pass two's reader: an unknown author read
         # as Claude's would accept its own make as the cold reader).
+        # (A fallback by the lane's name over the runtime's session ledger
+        # was tried and broken by the cold read of pass two's round: lane
+        # names carry no project, so two projects' card 1 answered for each
+        # other. No session on record: the rules say so and refuse.)
         lane_slot = lane.session.slot if lane is not None and lane.session is not None else None
-        if lane_slot is None:
-            lane_name = Path(where).name if where is not None else None
-            lane_slot = next(
-                (
-                    s.slot
-                    for s in reversed(self.live.store.session_slots())
-                    if lane_name is not None and s.card == lane_name
-                ),
-                None,
-            )
         faults = review_rules.record_faults(read, review) + review_rules.verdict_faults(
             read,
             review,
