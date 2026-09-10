@@ -1,4 +1,4 @@
-# A worktree at the same path on two machines is read where its record says
+# A copy of the work at the same path on two machines is read where its record says
 
 **Kind:** defect
 **Fix:** now — the intent is written (card #83's plan, item 4 and its Terrain: a lane's edits, tip and documents are read on the machine that holds the lane, and the board's own record of where it was last seen seeds the routing); the fix stays inside `runtime/service.py::worktrees` and removes the class — when a path is found on more than one machine, the board's record of the lane (`lanes.machine`) decides, and a path on two machines with no record is said on the card rather than silently given to the board's own machine — rather than pinning the one path that bit.
