@@ -116,9 +116,16 @@ allowance collector, which the rule calls and Debian lacks, was carried
 into the machine's record (`docs/collector.md` there). The day's proof is
 the machine record's `login-check`, read by the Loop line below from
 2026-09-10; the laptop's own hrclaude login is the one the owner uses all
-day, so its half of the proof is his ordinary work. What remains of this
-item: the other four slots and Codex, each the same round through the
-laptop's browser, after the day has shown the first pair refreshing apart.
+day, so its half of the proof is his ordinary work. Codex signed in on the
+machine on 2026-09-10 (14:51Z) by its own device-code flow — a code
+printed there, entered by the owner in the laptop's browser, no token
+file crossing — once "device code authorization for Codex" was switched
+on in the ChatGPT account's security settings, which the first code's
+refusal named; `codex exec` there answered the same minute, and its
+configuration is the laptop's record's, linked (the machine's
+`docs/install.md`, step 8). What remains of this item: the other four
+Claude slots, each the same round through the laptop's browser, after the
+day has shown the first pair refreshing apart.
 
 ### 3. The board serves from the machine, and the laptop's address still reaches it
 `needle serve` runs on the rented machine over the one store, moved once at
