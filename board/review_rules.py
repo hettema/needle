@@ -98,27 +98,59 @@ def record_faults(review: Review, name: str) -> list[str]:
     verdicts_by_pass: dict[int, list] = {}
     for verdict in review.verdicts:
         verdicts_by_pass.setdefault(verdict.pass_number, []).append(verdict)
-        if not verdict.call:
+        if not verdict.call or (not verdict.complete and not verdict.broke):
             faults.append(
                 f"{name}:{verdict.line} a verdict not in the form `Read cold by <who> on <sha>, "
-                "call <n>: complete` or `…: broke <pass.finding>, … — <its words>`"
+                "call <n>: complete` or `…: broke <pass.finding>, … — <its words>` — a reader "
+                "that could not read, or said neither, has not read the round"
             )
+    # Every claim the reader broke gets a disposition that says what became
+    # of it: a fix, or a record-only correction (pass two's reader: a bare
+    # mark, "still broken", answered nothing).
+    answers = {
+        d.repair_of: d
+        for d in review.dispositions
+        if d.repair_of is not None and d.fate is not None
+    }
     rounds = sorted({fix.pass_number for fix in fixes if fix.pass_number is not None})
     for number in rounds:
-        if number not in verdicts_by_pass:
+        read = verdicts_by_pass.get(number)
+        if not read:
             faults.append(
                 f"{name}: pass {number}'s round has FIXED lines and no verdict under it — every "
                 "round's repairs are read cold before they ship (HOW-WE-WORK §13)"
             )
-    answered = {d.repair_of for d in review.dispositions if d.repair_of is not None}
+            continue
+        # The round closes on a read that says complete, or on breaks the
+        # writer answered with the record's own words; a fix that answers a
+        # break is a new repair, and a new repair is read (pass two's reader:
+        # an earlier verdict was satisfying later, unread repairs).
+        last = read[-1]
+        unread = [
+            address
+            for address in last.broke
+            if address in answers and answers[address].fate is not Fate.CORRECTED
+        ]
+        if unread:
+            faults.append(
+                f"{name}:{last.line} the last verdict under pass {number} broke "
+                f"{', '.join(unread)} and the fix that answers it was never read cold — a "
+                "round ends on a verdict that says complete, or on breaks answered by a "
+                "record-only correction"
+            )
     for verdict in review.verdicts:
         for address in verdict.broke:
-            if address not in answered:
+            if address not in answers:
                 faults.append(
-                    f"{name}:{verdict.line} broke {address} and no disposition is marked "
-                    f"`[repair of {address}]` — every claim the reader broke gets a disposition: "
-                    "a fix with its own line, or a record-only correction"
+                    f"{name}:{verdict.line} broke {address} and no disposition marked "
+                    f"`[repair of {address}]` says what became of it — every claim the reader "
+                    "broke gets a disposition: FIXED with its own line, or CORRECTED in the record"
                 )
+    if review.found and not review.dispositions:
+        faults.append(
+            f"{name}: the head counts {review.found} finding(s) and no `## Dispositions` "
+            "section lists them — a record's findings sit under that heading, one line each"
+        )
     return faults
 
 
@@ -137,6 +169,16 @@ def verdict_faults(
     the lane, None when the board never saw one, which reads as a lane of
     Claude's."""
     faults: list[str] = []
+    if lane_slot is None and any(v.call for v in review.verdicts):
+        # Unknown authorship is not Claude's by default (pass two's reader):
+        # a close with no session on record for the lane cannot tell the
+        # reader's make from the author's, and says so.
+        faults.append(
+            f"{name}: the board holds no session for this lane, so the make of its cold "
+            "readers cannot be told from the lane's own — a lane's close names a lane the "
+            "board saw a session on"
+        )
+        return faults
     own_kind_is_codex = lane_slot == Make.CODEX
     for verdict in review.verdicts:
         if not verdict.call:

@@ -205,13 +205,24 @@ def test_a_round_without_a_verdict_a_verdict_without_its_row_and_a_broken_claim_
 
     write(repo, "2026-09-11-the-meter.md", record(call=call, verdict="broke 1.2 — the nightly job"))
     code, _, err = close(path, capsys)
-    assert code == 1 and "broke 1.2 and no disposition is marked `[repair of 1.2]`" in err
+    assert code == 1
+    assert "broke 1.2 and no disposition marked `[repair of 1.2]` says what became of it" in err
 
-    answered = record(call=call, verdict="broke 1.2 — the nightly job") + (
+    # A fix that answers a break is a new repair, and a new repair is read
+    # (pass two's reader): the round ends on a verdict that says complete.
+    fixed = record(call=call, verdict="broke 1.2 — the nightly job") + (
         "3. [seam] [repair of 1.2] The nightly job reads the table too — FIXED in bcd2345; "
         "reaches the nightly job and the sweep; assumes the two never run at once.\n"
     )
-    write(repo, "2026-09-11-the-meter.md", answered)
+    write(repo, "2026-09-11-the-meter.md", fixed)
+    code, _, err = close(path, capsys)
+    assert code == 1 and "the fix that answers it was never read cold" in err
+
+    read_again = fixed.replace(
+        "\n## Dispositions",
+        f"Read cold by Codex (01a08a3a) on bcd2345, call {call}: complete\n\n## Dispositions",
+    )
+    write(repo, "2026-09-11-the-meter.md", read_again)
     code, out, _ = close(path, capsys)
     assert code == 0, out
 
@@ -302,6 +313,53 @@ def test_a_lane_on_the_second_machine_has_its_record_read_there(
     assert code == 0, out
     asked = [" ".join(c["words"]) for c in machine_floor.state().get("ssh_calls", [])[before:]]
     assert any("lane-docs" in a for a in asked), asked
+
+
+def test_a_lane_whose_worktree_is_only_on_the_second_machine_is_asked_there(
+    client: TestClient, machine_floor: Floor, repo: Path, capsys, tmp_path: Path
+):
+    """Pass two's reader: a local `is_dir` on a path that exists only on
+    the rented machine read every remote lane as gone, so the record was
+    never asked for over the wire. The lane's record is moved to a path
+    this disk does not hold; the close asks the rented machine for the
+    lane's files and its record, and falls to the project's own copy."""
+    worktree = a_code_lane(client, machine_floor, repo)
+    call = a_landed_codex_call(client, machine_floor, repo)
+    store = client.app.state.loops.live.store
+    other = machine_floor.lay_host("rented", available_gb=24.0)
+    store.add_machine(
+        Machine(
+            name="laptop",
+            machine_id=machine_floor.machine_id,
+            host=None,
+            desktop=True,
+            ground=str(tmp_path),
+            command="needle",
+            added_at=NOW,
+        )
+    )
+    store.add_machine(
+        Machine(
+            name="rented",
+            machine_id=other.machine_id,
+            host="rented",
+            desktop=False,
+            ground=None,
+            command="needle",
+            added_at=NOW,
+        )
+    )
+    doors.reconcile(client)
+    known = store.lane("proj", CARD)
+    assert known is not None and known.path == str(worktree)
+    elsewhere = "/srv/rented/worktrees/" + Path(known.path).name
+    store.record_lane(known.model_copy(update={"machine": "rented", "path": elsewhere}))
+    write(repo, "2026-09-11-the-meter.md", record(call=call))
+    before = len(machine_floor.state().get("ssh_calls", []))
+    code, out, _ = close("docs/reviews/2026-09-11-the-meter.md", capsys)
+    assert code == 0, out
+    asked = [" ".join(c["words"]) for c in machine_floor.state().get("ssh_calls", [])[before:]]
+    assert any("lane-docs" in a and elsewhere in a for a in asked), asked
 
 
 def test_the_lanes_brief_says_what_the_cold_read_of_a_round_is(

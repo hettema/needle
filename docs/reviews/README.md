@@ -70,19 +70,28 @@ from 2026-09-11 (card #110; the three forms above, read by
   pass, so a finding's *address* is `<pass>.<number>` and a verdict or a
   repair mark can name it.
 - Every round of repairs — a pass and the fixes it caused — is read cold by a
-  colleague of the other make through `needle call codex --fresh <note>` and
-  `needle wait <n>`, handed the round's FIXED lines with one job per line:
-  re-run the search behind the reach and name a sibling or a reader the line
-  left out; drive the premise and say what it saw. Its verdict goes on a line
-  of its own under the pass, `Read cold by <who> on <sha>, call <n>: complete`
-  or `…: broke <address>, <address> — <its words>`. The close checks the row:
-  the call exists, its colleague is of the other make, its answer landed after
-  the call. A verdict is read apart from the pass's text, so it never makes a
-  pass read clean.
+  colleague of the other make through the board's call — `needle call codex
+  --fresh <note>` from a lane of Claude's, `needle call <a Claude slot or
+  session> <note>` from a lane of Codex's — and `needle wait <n>`, handed the
+  round's FIXED lines with one job per line: re-run the search behind the
+  reach and name a sibling or a reader the line left out; drive the premise
+  and say what it saw. Its verdict goes on a line of its own under the pass,
+  `Read cold by <who> on <sha>, call <n>: complete` or `…: broke <address>,
+  <address> — <its words>`; a verdict that says neither has not read the
+  round. The close checks the row: the call exists, its colleague is of the
+  other make (the lane's make is the session the board saw on it), its answer
+  landed after the call. A verdict is read apart from the pass's text, so it
+  never makes a pass read clean.
 - Every address a reader broke gets a disposition after it, marked
-  `[repair of <address>]` after the class: a fix with its own reach and
-  premise, or a record-only correction (`— CORRECTED in the record`), which
-  §13 lets the writer make and re-read alone.
+  `[repair of <address>]` after the class and ending in a fate: a fix with its
+  own reach and premise (`— FIXED in <sha>; reaches …; assumes …`), or a
+  record-only correction (`— CORRECTED in the record`), which §13 lets the
+  writer make and re-read alone. A fix that answers a break is a new repair
+  and is read: a round ends on a verdict that says complete, or on breaks the
+  writer answered with a correction — never on a fix nobody read.
+- A record whose head counts findings lists them under `## Dispositions`;
+  a count with no such section is a record in another shape, not a
+  zero-finding record.
 - A finding a full pass makes whose cause is an earlier round's repair carries
   the same mark. The board counts the marks at two stages — *caught*, when a
   verdict broke the address before the round shipped; *escaped*, when only a

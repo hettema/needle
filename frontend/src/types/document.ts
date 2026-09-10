@@ -8,7 +8,7 @@ export type DocumentKind = (typeof DOCUMENT_KIND_VALUES)[number];
 export const DOCUMENT_STATE_VALUES = ["plan", "suggestion", "archived", "note", "gone"] as const;
 export type DocumentState = (typeof DOCUMENT_STATE_VALUES)[number];
 
-export const FATE_VALUES = ["fixed", "no_change", "filed"] as const;
+export const FATE_VALUES = ["fixed", "no_change", "filed", "corrected"] as const;
 export type Fate = (typeof FATE_VALUES)[number];
 
 export const FIX_MARK_VALUES = ["now", "when", "his"] as const;

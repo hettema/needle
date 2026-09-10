@@ -136,7 +136,7 @@ _CLEAN = re.compile(r"\bnothing new\b|\bclean\b[.!]?\s*$", re.I)
 pass on the word clean, as every record under `docs/reviews/` does."""
 _FATE = re.compile(
     r"(?:^|(?<=[—–:.;,(]\s)|(?<=[—–:.;,][\"')]\s)|(?<=\s-\s)|(?<=\())"
-    r"(FIXED|NO CHANGE|NOT FIXED|FILED|[Ff]iled)\b"
+    r"(FIXED|NO CHANGE|NOT FIXED|FILED|CORRECTED|[Ff]iled)\b"
 )
 """A finding's fate is the token that opens a clause of its line — the
 whole line, or a segment after a dash, a colon, a full stop, a semicolon,
@@ -147,7 +147,12 @@ fixed. A token inside prose ("the earlier FIXED claim", "PARTLY FIXED")
 opens no clause and says nothing. The openers are the ones the three
 corpora write (the cold read of the corpus table, 2026-09-10: thirty
 all-caps FILED, three after a semicolon, one after a closing quote)."""
-_FATES = {"FIXED": Fate.FIXED, "NO CHANGE": Fate.NO_CHANGE, "FILED": Fate.FILED}
+_FATES = {
+    "FIXED": Fate.FIXED,
+    "NO CHANGE": Fate.NO_CHANGE,
+    "FILED": Fate.FILED,
+    "CORRECTED": Fate.CORRECTED,
+}
 _REACHES = re.compile(r"\breaches\s+(.+?)(?=;\s*assumes\b|\s*$)", re.S)
 _ASSUMES = re.compile(r"\bassumes\s+(.+?)(?=;\s*reaches\b|\s*$)", re.S)
 """The two halves of a fix line (card #110, item 1), read from the tail
@@ -750,8 +755,25 @@ def review_of(text: str, path: str) -> Review:
     fixed = sum(1 for d in dispositions if d.fate == Fate.FIXED)
     no_change = sum(1 for d in dispositions if d.fate == Fate.NO_CHANGE)
     filed_names = [d.name for d in dispositions if d.fate == Fate.FILED]
+    # The loop's unit (card #110, ruling 8, as pass two's reader refined
+    # it): caught is every address a cold reader broke, once; escaped is
+    # every marked finding a full pass made whose repair no reader had
+    # broken by then — a finding, not an address, so two findings on one
+    # repair are two escapes, as the baseline counted them.
     caught = {address for v in verdicts for address in v.broke}
-    marked = {d.repair_of for d in dispositions if d.repair_of is not None}
+    broken_by = {}
+    for v in verdicts:
+        for address in v.broke:
+            broken_by[address] = min(broken_by.get(address, v.pass_number), v.pass_number)
+    escaped = sum(
+        1
+        for d in dispositions
+        if d.repair_of is not None
+        and (
+            d.repair_of not in broken_by
+            or (d.pass_number is not None and broken_by[d.repair_of] > d.pass_number)
+        )
+    )
     return Review(
         path=path,
         plan_stem=plan_stem,
@@ -765,7 +787,7 @@ def review_of(text: str, path: str) -> Review:
         dispositions=dispositions,
         verdicts=verdicts,
         caught=len(caught),
-        escaped=len(marked - caught),
+        escaped=escaped,
     )
 
 

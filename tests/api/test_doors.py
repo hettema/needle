@@ -532,6 +532,12 @@ def test_executed_needs_a_signal_and_the_close_writes_rows_and_moves(
 
     done = archive_plan(repo)
     watch = f"the plan is archived — file {done.relative_to(repo)} by 2026-12-31 every 1h"
+    # Every record a close names is read and held to the README's shape
+    # (card #110): a dated name, in the project's tree, naming this plan.
+    (repo / "docs" / "reviews").mkdir(exist_ok=True)
+    (repo / "docs" / "reviews" / "2026-09-05-r.md").write_text(
+        f"# Review\n\n**Plan:** {done.relative_to(repo)}\n**Findings:** 0\n", encoding="utf-8"
+    )
     assert (
         main(
             [
@@ -543,7 +549,7 @@ def test_executed_needs_a_signal_and_the_close_writes_rows_and_moves(
                 "--watch",
                 watch,
                 "--review",
-                "docs/reviews/r.md",
+                "docs/reviews/2026-09-05-r.md",
             ]
         )
         == 0
@@ -1144,7 +1150,9 @@ def test_the_card_counts_the_lanes_own_copy_and_its_record_and_nothing_once_the_
     progress = summary_of(client)["progress"]
     assert progress["met"] == 3 and progress["review"] is not None
     assert progress["review"]["path"] == "docs/reviews/2026-09-05-every-metered-kilowatt.md"
-    assert progress["line"] == "review clean · 2 passes · 3 found, 2 fixed, 1 filed · 0 caught, 0 escaped"
+    assert progress["line"] == (
+        "review clean · 2 passes · 3 found, 2 fixed, 1 filed · 0 caught, 0 escaped"
+    )
     assert progress["review"]["filed_names"] == [
         "A berth with no meter is billed nothing and says nothing"
     ]
@@ -1464,8 +1472,12 @@ def test_the_close_refuses_executed_while_the_archived_plan_carries_an_unstanced
     )
     done = archive_plan(repo)
     watch = f"the plan is archived — file {done.relative_to(repo)} by 2026-12-31 every 1h"
+    (repo / "docs" / "reviews").mkdir(exist_ok=True)
+    (repo / "docs" / "reviews" / "2026-09-05-r.md").write_text(
+        f"# Review\n\n**Plan:** {done.relative_to(repo)}\n**Findings:** 0\n", encoding="utf-8"
+    )
     close = ["close", "proj", str(CARD), "--delivered", "d", "--watch", watch]
-    close += ["--review", "docs/reviews/r.md"]
+    close += ["--review", "docs/reviews/2026-09-05-r.md"]
     assert main(close) == 1
     refused = capsys.readouterr().err
     assert "unstanced promise: item 2, The two months are re-read" in refused

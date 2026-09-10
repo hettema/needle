@@ -284,9 +284,7 @@ class Doors:
                 + ", in the review's <lens> pass"
             )
             + "."
-            "\n\n"
-            + completeness_read(needle)
-            + "."
+            "\n\n" + completeness_read(needle) + "."
             "\n\nTo ask the owner something, end your turn with the question; the board shows it "
             "on the card and his answer resumes you."
         )
@@ -1690,10 +1688,19 @@ class Doors:
 
     def _lane_root(self, slug: str, number: int, lane: Lane | None) -> tuple[str | None, bool]:
         """Where the lane's tree is, by the board's own record of it, else
-        the loop's last read, and whether it still stands on disk."""
+        the loop's last read, and whether it still stands — on this disk
+        for a lane here, and taken as standing for a lane the board places
+        on another machine, whose runtime answers for it over the wire and
+        answers nothing when it is gone (pass two's reader: a local
+        `is_dir` on a path that exists only there read every remote lane
+        as gone)."""
         record = self.live.store.lane(slug, number)
         where = record.path if record is not None else (lane.path if lane is not None else None)
-        return where, where is not None and Path(where).is_dir()
+        if where is None:
+            return None, False
+        if not self.runtime.is_here(self.runtime.lane_machine(where)):
+            return where, True
+        return where, Path(where).is_dir()
 
     def _refuse_a_record_that_skipped_the_read(
         self, slug: str, number: int, card: Card, lane: Lane | None, review: str
@@ -1753,7 +1760,21 @@ class Doors:
                     f"{card.link.stem}; a record is its card's word about its own diff."
                 )
         read = review_of(text, review)
+        # The lane's make, from the session the board saw on it — the live
+        # one, else the runtime's own record of who it started on the card
+        # — and never a default (pass two's reader: an unknown author read
+        # as Claude's would accept its own make as the cold reader).
         lane_slot = lane.session.slot if lane is not None and lane.session is not None else None
+        if lane_slot is None:
+            lane_name = Path(where).name if where is not None else None
+            lane_slot = next(
+                (
+                    s.slot
+                    for s in reversed(self.live.store.session_slots())
+                    if lane_name is not None and s.card == lane_name
+                ),
+                None,
+            )
         faults = review_rules.record_faults(read, review) + review_rules.verdict_faults(
             read,
             review,

@@ -839,6 +839,13 @@ class Runtime:
         rows = self.sessions() if sessions is None else sessions
         session = next((s for s in rows if s.session_id == call.session_id and not s.stale), None)
         why = self.why_ended(session) if session is not None and session.pid is None else None
+        if why is not None and why.endswith(Cause.UNKNOWN.value):
+            # An ending the runtime could not establish is no reason to
+            # stand above the log's own words (pass two's reader asked that
+            # an established reason — a signal, a boot — never be replaced
+            # by an earlier, recovered tool error; an unestablished one is
+            # not a reason).
+            why = None
         fork = next(
             (s for s in rows if s.resumed_from == call.session_id and s.pid is not None), None
         )

@@ -916,7 +916,9 @@ def _call_fresh(runtime: Runtime, args: argparse.Namespace, note: str) -> int:
     thing however it is asked for."""
     given = Path(note)
     topic = _FROM.sub("", given.stem) or given.stem
-    stamp = clock.now().strftime("%H%M%S")
+    # To the microsecond, so two fresh calls on one note in one second never
+    # share an answer, a schema or a log (pass two's reader).
+    stamp = clock.now().strftime("%H%M%S%f")
     answer = (
         str(Path(args.answer).expanduser().resolve())
         if args.answer

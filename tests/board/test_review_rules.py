@@ -28,6 +28,7 @@ RECORD = """# Review — the meter
    2. another
 Read cold by Codex (01a08a3a) on b14c0cb, call 12: broke 1.2 — the sweep's
    sibling in the nightly job reads the same table and was not named.
+Read cold by Codex (01a08a3c) on ac1823d, call 14: complete
 
 2. **The seams.** Two offices; findings 3 to 4. Nothing new.
 Read cold by Codex (01a08a3b) on ac1823d, call 13: complete
@@ -61,6 +62,7 @@ def test_the_reader_counts_passes_at_the_margin_and_reads_verdicts_apart():
     assert "Read cold" not in review.passes[0].text and "Read cold" not in review.passes[1].text
     assert [(v.pass_number, v.call, v.commit, v.complete, v.broke) for v in review.verdicts] == [
         (1, 12, "b14c0cb", False, ["1.2"]),
+        (1, 14, "ac1823d", True, []),
         (2, 13, "ac1823d", True, []),
     ]
     assert review.verdicts[0].who == "Codex (01a08a3a)"
@@ -72,7 +74,7 @@ def test_the_reader_reads_each_dispositions_address_fate_halves_and_mark():
     by_address = {d.address: d for d in review.dispositions}
     assert sorted(by_address) == ["1.1", "1.2", "1.3", "2.1", "2.2"]
     first = by_address["1.1"]
-    assert first.fate is Fate.FIXED and first.line == 25
+    assert first.fate is Fate.FIXED and first.line == 26
     assert first.reaches == "the retry path and the invoice mailer, which reads the same row"
     assert first.assumes == "the sweep runs after the bill is written"
     assert by_address["1.3"].repair_of == "1.2" and by_address["1.3"].name == (
@@ -149,10 +151,10 @@ def test_a_fix_line_without_a_half_is_named_by_its_line():
         "— FIXED in b14c0cb; reaches the sweep alone.",
     )
     faults = record_faults(review_of(text, "r.md"), "r.md")
-    assert len(faults) == 1 and faults[0].startswith("r.md:28 FIXED says no assumes")
+    assert len(faults) == 1 and faults[0].startswith("r.md:29 FIXED says no assumes")
     text = text.replace("— FIXED in b14c0cb; reaches the sweep alone.", "— FIXED in b14c0cb.")
     faults = record_faults(review_of(text, "r.md"), "r.md")
-    assert faults[0].startswith("r.md:28 FIXED says no reaches or assumes")
+    assert faults[0].startswith("r.md:29 FIXED says no reaches or assumes")
 
 
 def test_a_round_of_repairs_without_a_verdict_is_a_fault_and_a_zero_finding_record_is_not():
@@ -161,7 +163,8 @@ def test_a_round_of_repairs_without_a_verdict_is_a_fault_and_a_zero_finding_reco
     assert faults == [], "pass 2's round holds no FIXED line, so it owes no verdict"
     text = RECORD.replace(
         "Read cold by Codex (01a08a3a) on b14c0cb, call 12: broke 1.2 — the sweep's\n"
-        "   sibling in the nightly job reads the same table and was not named.\n",
+        "   sibling in the nightly job reads the same table and was not named.\n"
+        "Read cold by Codex (01a08a3c) on ac1823d, call 14: complete\n",
         "",
     )
     faults = record_faults(review_of(text, "r.md"), "r.md")
@@ -177,7 +180,11 @@ def test_a_broken_address_nobody_answered_is_a_fault():
     text = RECORD.replace("[repair of 1.2] ", "")
     faults = record_faults(review_of(text, "r.md"), "r.md")
     assert (
-        len(faults) == 1 and "broke 1.2 and no disposition is marked `[repair of 1.2]`" in faults[0]
+        len(faults) == 1
+        and "broke 1.2 and no disposition marked `[repair of 1.2]` says what became of it"
+        in faults[0]
+        and "broke 1.2 and no disposition marked `[repair of 1.2]` says what became of it"
+        in faults[0]
     )
     corrected = text.replace(
         "1. [record] The earlier FIXED claim on the mailer was wrong — NO CHANGE",
@@ -206,7 +213,73 @@ def test_a_verdict_off_the_form_is_a_fault():
         "Read cold by Codex: complete",
     )
     faults = record_faults(review_of(text, "r.md"), "r.md")
-    assert len(faults) == 1 and faults[0].startswith("r.md:17 a verdict not in the form")
+    assert len(faults) == 1 and faults[0].startswith("r.md:18 a verdict not in the form")
+
+
+def test_a_fix_that_answers_the_last_break_is_read_and_a_correction_closes_the_round():
+    """Pass two's reader: an earlier verdict was satisfying later, unread
+    repairs. A round ends on a verdict that says complete, or on breaks
+    answered by a record-only correction."""
+    unread = RECORD.replace("Read cold by Codex (01a08a3c) on ac1823d, call 14: complete\n", "")
+    review = review_of(unread, "r.md")
+    faults = record_faults(review, "r.md")
+    assert len(faults) == 1 and "the fix that answers it was never read cold" in faults[0]
+    assert "broke 1.2" in faults[0]
+    assert record_faults(review_of(RECORD, "r.md"), "r.md") == [], "read again, complete"
+    corrected = unread.replace(
+        "3. [seam] [repair of 1.2] **The nightly job reads the table too.** — FIXED in ac1823d;\n"
+        "   reaches the nightly job and the sweep; assumes the two never run at once.",
+        "3. [record] [repair of 1.2] The reach line named the sweep alone where the nightly job "
+        "reads the table too — CORRECTED in the record.",
+    )
+    review = review_of(corrected, "r.md")
+    assert review.dispositions[2].fate is Fate.CORRECTED
+    assert record_faults(review, "r.md") == [], "a correction is the writer's own re-read"
+
+
+def test_a_bare_mark_a_verdict_that_says_neither_and_findings_without_the_section_are_faults():
+    bare = RECORD.replace(
+        "3. [seam] [repair of 1.2] **The nightly job reads the table too.** — FIXED in ac1823d;\n"
+        "   reaches the nightly job and the sweep; assumes the two never run at once.",
+        "3. [seam] [repair of 1.2] Still broken; no repair has been made.",
+    )
+    faults = record_faults(review_of(bare, "r.md"), "r.md")
+    assert any(
+        "no disposition marked `[repair of 1.2]` says what became of it" in f for f in faults
+    )
+    neither = RECORD.replace(
+        "Read cold by Codex (01a08a3b) on ac1823d, call 13: complete",
+        "Read cold by Codex (01a08a3b) on ac1823d, call 13: unable to read the files",
+    )
+    faults = record_faults(review_of(neither, "r.md"), "r.md")
+    assert any("has not read the round" in f for f in faults)
+    renamed = RECORD.replace("## Dispositions", "## Findings")
+    review = review_of(renamed, "r.md")
+    assert review.dispositions == [] and review.found == 5
+    faults = record_faults(review, "r.md")
+    assert any("counts 5 finding(s) and no `## Dispositions`" in f for f in faults)
+
+
+def test_the_counts_are_findings_in_pass_order():
+    """Two full-pass findings on one repair are two escapes; a break a
+    reader named before the pass makes the later finding one caught
+    event; a break named only after the pass leaves the finding escaped."""
+    two = RECORD.replace(
+        "1. [record] The earlier FIXED claim on the mailer was wrong — NO CHANGE",
+        "1. [record] [repair of 1.1] The mailer's fix missed its twin — FIXED in bcd; reaches "
+        "the twin; assumes nothing.\n3. [seam] [repair of 1.1] And its other twin — FIXED in "
+        "bcd; reaches it; assumes nothing.",
+    )
+    review = review_of(two, "r.md")
+    assert (review.caught, review.escaped) == (1, 2)
+    later = two.replace(
+        "Read cold by Codex (01a08a3b) on ac1823d, call 13: complete",
+        "Read cold by Codex (01a08a3b) on ac1823d, call 13: broke 1.1 — the twins",
+    )
+    review = review_of(later, "r.md")
+    assert (review.caught, review.escaped) == (2, 0), (
+        "a break named under the pass makes its findings caught"
+    )
 
 
 def _call(number: int, slot: str, *, landed: bool) -> Call:
@@ -230,7 +303,11 @@ def _call(number: int, slot: str, *, landed: bool) -> Call:
 
 def test_the_call_table_faults_a_missing_row_the_own_kind_and_an_answer_that_never_landed():
     review = review_of(RECORD, "r.md")
-    rows = {12: _call(12, "codex", landed=True), 13: _call(13, "codex", landed=True)}
+    rows = {
+        12: _call(12, "codex", landed=True),
+        13: _call(13, "codex", landed=True),
+        14: _call(14, "codex", landed=True),
+    }
     ok = verdict_faults(
         review,
         "r.md",
@@ -240,15 +317,25 @@ def test_the_call_table_faults_a_missing_row_the_own_kind_and_an_answer_that_nev
     )
     assert ok == []
     missing = verdict_faults(
-        review, "r.md", call_of={12: rows[12]}.get, lane_slot="hrclaude", landed=lambda c: True
+        review,
+        "r.md",
+        call_of={12: rows[12], 14: rows[14]}.get,
+        lane_slot="hrclaude",
+        landed=lambda c: True,
     )
     assert len(missing) == 1 and "names call 13, which the board has no row for" in missing[0]
     own = verdict_faults(review, "r.md", call_of=rows.get, lane_slot="codex", landed=lambda c: True)
-    assert len(own) == 2 and all("of the lane's own kind" in f for f in own)
-    claude_rows = {12: _call(12, "hrclaude", landed=True), 13: _call(13, "hrclaude", landed=True)}
+    assert len(own) == 3 and all("of the lane's own kind" in f for f in own)
+    claude_rows = {n: _call(n, "hrclaude", landed=True) for n in (12, 13, 14)}
     other = verdict_faults(
         review, "r.md", call_of=claude_rows.get, lane_slot="codex", landed=lambda c: True
     )
     assert other == [], "a Codex lane's cold reader is of Claude's make"
-    never = verdict_faults(review, "r.md", call_of=rows.get, lane_slot=None, landed=lambda c: False)
-    assert len(never) == 2 and all("never landed after the call" in f for f in never)
+    never = verdict_faults(
+        review, "r.md", call_of=rows.get, lane_slot="hrclaude", landed=lambda c: False
+    )
+    assert len(never) == 3 and all("never landed after the call" in f for f in never)
+    unknown = verdict_faults(
+        review, "r.md", call_of=rows.get, lane_slot=None, landed=lambda c: True
+    )
+    assert len(unknown) == 1 and "holds no session for this lane" in unknown[0]

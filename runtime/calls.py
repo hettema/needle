@@ -86,7 +86,15 @@ def judge(
         )
     session = by_id.get(call.session_id)
     short = call.session_id.split("-")[0]
-    if tool_error and (session is None or session.pid is None or session.state in _TURN_OVER):
+    # The runtime's own reason for an ending — a signal, a boot — stands
+    # above an error the log holds, which the worker may have recovered
+    # from before it ended (pass two's reader): the error is the ending's
+    # words only when nothing else names the ending.
+    if (
+        tool_error
+        and not why_ended
+        and (session is None or session.pid is None or session.state in _TURN_OVER)
+    ):
         return CallVerdict(
             outcome=CallOutcome.ENDED,
             words=f"{short}'s turn ended on a tool error, with no final message: {tool_error}",

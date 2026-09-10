@@ -124,6 +124,10 @@ class Fate(StrEnum):
     FIXED = "fixed"
     NO_CHANGE = "no_change"
     FILED = "filed"
+    CORRECTED = "corrected"
+    """A record-only correction — the record's words off, which the writer
+    fixes and re-reads alone (HOW-WE-WORK §13): the one answer to a broken
+    claim that closes a round without another cold read (card #110)."""
 
 
 class Disposition(BaseModel):
@@ -206,9 +210,10 @@ class Review(BaseModel):
     """Repair-caused findings a cold reader named before the round shipped:
     the addresses its verdicts broke, each once."""
     escaped: int
-    """Repair-caused findings a full pass found that no verdict had named:
-    the addresses the `[repair of …]` marks cite that no verdict broke, each
-    once."""
+    """Repair-caused findings a full pass made that no cold reader had
+    caught by then: every disposition marked `[repair of <address>]` whose
+    address no verdict under that pass or an earlier one broke — a finding,
+    not an address, so two findings on one repair are two escapes."""
 
 
 class DocumentState(StrEnum):

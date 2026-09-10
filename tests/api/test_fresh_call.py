@@ -123,3 +123,38 @@ def test_a_turn_that_ends_on_a_tool_error_is_reported_as_that_error(
     ), said
     assert "collab spawn failed: no thread with id: 01a07bcf" in said
     assert "without its note" not in said
+
+
+def test_a_resumed_turn_keeps_a_missing_setting_missing(
+    client: TestClient, machine_floor: Floor, repo: Path, capsys
+):
+    """Pass two's reader: the fake's resume carried an earlier turn's word
+    into a latest context whose effort was null, concealing an absent
+    setting from every test reading the row. A real worker's context
+    carried effort null on 2026-09-07; the row says unknown for it."""
+    import json
+
+    rollout = machine_floor.write_rollout(WORKER, cwd=str(repo), effort="high", sandbox="read-only")
+    with rollout.open("a", encoding="utf-8") as f:
+        f.write(
+            json.dumps(
+                {
+                    "type": "turn_context",
+                    "payload": {"turn_id": "t2", "effort": None, "sandbox_policy": {"type": None}},
+                }
+            )
+            + "\n"
+        )
+    machine_floor.script_codex({"then": "answer", "text": "words", "after": 0.5})
+    note = a_note(machine_floor)
+    assert main(["call", WORKER[:8], str(note)]) == 0
+    capsys.readouterr()
+    contexts = [
+        json.loads(line)["payload"]
+        for line in rollout.read_text(encoding="utf-8").splitlines()
+        if '"turn_context"' in line
+    ]
+    assert len(contexts) == 3 and contexts[-1]["effort"] is None
+    assert contexts[-1]["sandbox_policy"]["type"] is None
+    picked = next(s for s in client.app.state.loops.runtime.sessions() if s.short_id == WORKER[:8])
+    assert picked.effort is None and picked.sandbox is None
