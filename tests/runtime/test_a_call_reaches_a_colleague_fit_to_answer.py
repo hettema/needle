@@ -102,3 +102,26 @@ def test_a_turn_that_ended_on_a_tool_error_is_judged_as_that_error(
     assert landed is not None and landed.outcome is CallOutcome.LANDED, (
         "an answer that landed after the call is the answer, whatever the log says"
     )
+
+
+def test_a_turn_context_still_being_written_is_read_whole_next_time_and_a_rewrite_is_seen(
+    machine_floor: Floor, runtime: Runtime
+):
+    """The cold read of round one (call 69): a scan that lands on a line
+    still being written must not step past it, and a rollout rewritten in
+    place — the floor does, Codex does not — must not answer from what it
+    read before."""
+    path = machine_floor.write_rollout(WORKER, cwd="/tmp/lane", effort="high", sandbox="read-only")
+    whole = path.read_bytes()
+    cut = whole.index(b'"turn_context"') + 40
+    path.write_bytes(whole[:cut])
+    assert runtime.session(WORKER[:8]).effort is None, "half a line is no line"
+    with path.open("ab") as f:
+        f.write(whole[cut:])
+    row = runtime.session(WORKER[:8])
+    assert row.effort is Gate.HIGH and row.sandbox == "read-only", "read whole once complete"
+    machine_floor.write_rollout(WORKER, cwd="/tmp/lane", effort="low", sandbox="workspace-write")
+    again = runtime.session(WORKER[:8])
+    assert again.effort is Gate.LOW and again.sandbox == "workspace-write", "the rewrite is seen"
+    machine_floor.write_rollout(WORKER, cwd="/tmp/lane")
+    assert runtime.session(WORKER[:8]).effort is None, "a rewrite without a turn says nothing"

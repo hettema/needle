@@ -102,11 +102,27 @@ turn has not begun has none. The scan stops at the first one found and its
 answer is kept per file, so the one list, read every two seconds while a
 caller waits, never reads a long transcript twice."""
 
-_CONTEXT: dict[Path, tuple[int, str | None, str | None, bool]] = {}
-"""Per rollout path: bytes scanned so far, the effort and the sandbox found,
-and whether the first `turn_context` was found — a rollout is appended to
-and never rewritten, so a found answer stands and a scan that found nothing
-resumes where it stopped."""
+
+@dataclass
+class _Context:
+    """What one rollout's scan for its first `turn_context` has found so
+    far: the bytes scanned to the last complete line, the record's place
+    and bytes once found, and the two words read from it. A rollout is
+    appended to and never rewritten by Codex, but a scan can land on a
+    line still being written and the test floor rewrites a rollout in
+    place (the cold read of round one, call 69), so a scan that found
+    nothing resumes only from the last complete line, and a found answer
+    is trusted only while the bytes at its place still read the same."""
+
+    scanned: int
+    effort: str | None
+    sandbox: str | None
+    at: int | None
+    """Where the found record begins; None while none is found."""
+    record: bytes
+
+
+_CONTEXT: dict[Path, _Context] = {}
 
 
 def is_worker(rollout: Rollout) -> bool:
@@ -169,17 +185,27 @@ def _context_of(path: Path) -> tuple[str | None, str | None]:
     """The effort and the sandbox of the rollout's first turn, from its
     first `turn_context` record within the head; (None, None) when there
     is none or the head cannot be read."""
-    scanned, effort, sandbox, found = _CONTEXT.get(path, (0, None, None, False))
-    if found or scanned >= CONTEXT_SCAN_BYTES:
-        return effort, sandbox
+    known = _CONTEXT.get(path) or _Context(0, None, None, None, b"")
     try:
         with path.open("rb") as f:
-            f.seek(scanned)
-            while scanned < CONTEXT_SCAN_BYTES:
+            if known.at is not None:
+                # Found before: trust it while the bytes at its place still
+                # read the same, else the file was rewritten — start over.
+                f.seek(known.at)
+                if f.read(len(known.record)) == known.record:
+                    return known.effort, known.sandbox
+                known = _Context(0, None, None, None, b"")
+            f.seek(0, 2)
+            if f.tell() < known.scanned:
+                known = _Context(0, None, None, None, b"")
+            f.seek(known.scanned)
+            while known.scanned < CONTEXT_SCAN_BYTES:
                 raw = f.readline()
-                if not raw:
+                if not raw.endswith(b"\n"):
+                    # A line still being written is read next time, whole.
                     break
-                scanned += len(raw)
+                start = known.scanned
+                known.scanned += len(raw)
                 if b'"turn_context"' not in raw:
                     continue
                 try:
@@ -193,14 +219,15 @@ def _context_of(path: Path) -> tuple[str | None, str | None]:
                     named = payload.get("effort")
                     policy = payload.get("sandbox_policy")
                     kind = policy.get("type") if isinstance(policy, dict) else None
-                    effort = named if isinstance(named, str) and named else None
-                    sandbox = kind if isinstance(kind, str) and kind else None
-                found = True
+                    known.effort = named if isinstance(named, str) and named else None
+                    known.sandbox = kind if isinstance(kind, str) and kind else None
+                known.at = start
+                known.record = raw
                 break
     except OSError:
         return None, None
-    _CONTEXT[path] = (scanned, effort, sandbox, found)
-    return effort, sandbox
+    _CONTEXT[path] = known
+    return known.effort, known.sandbox
 
 
 def last_error(log: Path) -> str | None:
