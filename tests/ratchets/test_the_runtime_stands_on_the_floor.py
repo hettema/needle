@@ -9,13 +9,12 @@ one door the floor redirects — a second door would be a path around it.
 """
 
 import ast
-import subprocess
 from pathlib import Path
 
 import pytest
 
 from runtime import machine
-from tests.floor import FAKE_BIN, Floor
+from tests.floor import FAKE_BIN, IN_MEMORY, Floor, filesystem_of
 from tests.ratchets.paths import REPO, python_files
 
 THE_ONE_DOOR = REPO / "runtime" / "machine.py"
@@ -58,24 +57,6 @@ def test_every_path_the_runtime_reads_is_under_the_floor(machine_floor: Floor):
     assert machine.machine_id() == machine_floor.machine_id
     assert machine.machine_id() != Path("/etc/machine-id").read_text().strip()
     assert not machine.slot_root().resolve().is_relative_to(Path.home() / ".claude-accounts")
-
-
-IN_MEMORY = {"tmpfs", "ramfs"}
-
-
-def filesystem_of(path: Path) -> str:
-    """The kind of filesystem the path stands on, as the kernel answers for
-    that path (`statfs`, printed by `stat -f %T`): "tmpfs", "btrfs", ...
-    Why the kernel and not the mount table: three review passes in a row
-    found a way the table's order or spelling misled a reader — an escaped
-    name, a mount hidden under a later one on its parent, a moved mount that
-    keeps its earlier entry — and the kernel's own answer for the path has
-    no order to misread (card #109, the review's third round). devtmpfs
-    answers "tmpfs" here, being one."""
-    done = subprocess.run(
-        ["stat", "-f", "-c", "%T", str(path)], capture_output=True, text=True, check=True
-    )
-    return done.stdout.strip()
 
 
 def test_the_floors_stand_on_disk(tmp_path_factory: pytest.TempPathFactory):

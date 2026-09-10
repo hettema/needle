@@ -13,6 +13,7 @@ import fcntl
 import json
 import os
 import signal
+import subprocess
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -464,6 +465,25 @@ def is_sleep(pid: int, start: str | None) -> bool:
 
 def proc_start(pid: int) -> str:
     return (Path("/proc") / str(pid) / "stat").read_text().rsplit(")", 1)[1].split()[19]
+
+
+IN_MEMORY = {"tmpfs", "ramfs"}
+
+
+def filesystem_of(path: Path) -> str:
+    """The kind of filesystem the path stands on, as the kernel answers for
+    that path (`statfs`, printed by `stat -f %T`): "tmpfs", "btrfs", ...
+    Why the kernel and not the mount table: three review reads in a row
+    found a way the table's order or spelling misled a reader — an escaped
+    name, a mount hidden under a later one on its parent, a moved mount that
+    keeps its earlier entry — and the kernel's own answer for the path has
+    no order to misread (card #109). devtmpfs answers "tmpfs", being one.
+    The floor check refuses a root whose answer is in IN_MEMORY, and every
+    run writes its answer to the ledger the plan's loop reads."""
+    done = subprocess.run(
+        ["stat", "-f", "-c", "%T", str(path)], capture_output=True, text=True, check=True
+    )
+    return done.stdout.strip()
 
 
 def lay(root: Path) -> Floor:
