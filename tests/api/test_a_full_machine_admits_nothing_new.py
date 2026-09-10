@@ -160,7 +160,7 @@ def test_a_session_with_hands_on_a_lane_is_put_back_in_its_scope_once_and_the_ca
     assert sets == [
         ["--user", "set-property", "--runtime", UNIT, f"MemoryHigh={MEMORY_FLOOR_BYTES}"]
     ]
-    assert len([h for h in scoped if h["detail"].startswith(f"Held {UNIT} at the floor")]) == 1
+    assert len([h for h in scoped if h["detail"].startswith(f"Held {UNIT} at 5 GB (the high mark")]) == 1
     assert machine_floor.state()["scopes"][UNIT]["MemoryHigh"] == str(MEMORY_FLOOR_BYTES)
 
 

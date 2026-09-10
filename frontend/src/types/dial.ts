@@ -77,6 +77,7 @@ export interface Headroom {
   read_at: string;
   marked?: string[];
   total?: number;
+  mark?: number;
 }
 
 export interface Meminfo {

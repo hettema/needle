@@ -512,8 +512,8 @@ class Loops:
                         number,
                         AuditKind.SCOPED,
                         Actor.MACHINE,
-                        f"Held {unit} at the floor ({MEMORY_FLOOR_BYTES // 1024**3} GB high mark) "
-                        f"on {reading.machine.name}: the scope stood without it.",
+                        f"Held {unit} at {reading.room.mark // 1024**3} GB (the high mark for "
+                        f"a lane on {reading.machine.name}): the scope stood without it.",
                     )
             if reading.room.total > 0:
                 self.live.store.note_high_water(

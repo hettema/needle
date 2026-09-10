@@ -118,6 +118,56 @@ class ScopeState(BaseModel):
         return bool(self.pids) and not self.home
 
 
+MEMORY_FLOOR_BYTES = 5 * 1024**3
+"""Below this much available memory, or free swap on a machine that has
+swap, the beat takes nothing. It shipped at 3 GB, because a fix lane peaked
+at 3.1 GB on the dial's first night (Hello Revenue #385, `systemctl show
+MemoryCurrent`, 2026-09-05) and systemd-oomd acts at 90 percent of both
+memory and swap. It rose to 5 GB the same day: forty seconds after the
+board restarted on the floor, oomd killed Hello Revenue #386's lane, whose
+scope peaked at 4.7 GB after the dial had let it in — the plan's loop said
+the floor rises by a killed scope's peak, the reading said so, and the owner
+set 5 GB (the peak with headroom) rather than the rule's 7.7 GB, which would
+have let the dial open little on a 16 GB machine. Since plan 53 the floor
+is read on every pass of the lane loop, not only at the beat, and each
+lane's scope is read beside it: a scope holding as much as the floor is the
+lane the floor was set from, again, and the machine reads full until it
+shrinks or folds — the board stops admitting; it never stops a lane (that
+plan's ruling 1). No code path raises the number; the loop in that plan
+says when the owner should.
+
+On 2026-09-09 the owner handed the number to the colleague ("it's a tech
+thing so you own it"), remembering crashes since it came in. Read that day:
+three kills by the userspace out-of-memory killer since 09-08, each of a
+window he was using at 90 percent of memory and swap, while the floor held
+six walled lanes parked. The floor was never the cause: it gates what the
+board admits and chooses nothing about who is killed. It stays 5 GB — a
+third of a 15.6 GB laptop that runs a browser, an editor and half its swap
+beside the lanes; lower trades idle lanes for a slower machine, not a
+crash. Since card #107 it is also the high mark of every lane's own space
+(`MemoryHigh` on the scope, `runtime/machine.py::adopt`): past it the kernel
+throttles the lane and reclaims inside its space — a throttle the kernel may
+still let a lane exceed under pressure, never a hard cap and never a kill —
+so a runaway lane presses on itself first rather than on a window; and a
+walled lane gives its memory back the moment it waits for room. It lives
+here so the runtime, which cannot import the board, sets the same number
+it reads (the layers ratchet)."""
+
+
+def lane_mark(desktop: bool, total: int, floor: int = MEMORY_FLOOR_BYTES) -> int:
+    """What one lane's group may hold on a machine before the kernel slows
+    it (`MemoryHigh`): on the desktop, the floor — a lane shares the machine
+    with the owner's screen and the other lanes (card #107); on a machine
+    rented for its memory, everything above the floor, since holding it to
+    the desktop's rule slowed Hello Revenue #503 for two hours on a machine
+    with 24 GB free (2026-09-10, the first evening a lane ran there). A
+    total nobody read is the floor: the rule never hands out room it has
+    not seen."""
+    if desktop or total <= floor:
+        return floor
+    return total - floor
+
+
 class Headroom(BaseModel):
     """The board's reading of the machine's memory against the floor (the
     plan "as many lanes as the machine can hold", item 3; read on every
@@ -142,6 +192,9 @@ class Headroom(BaseModel):
     stood without it (card #107, read on every machine since card #83)."""
     total: int = 0
     """`MemTotal` at this read, so a mark can be said as memory used (card #83)."""
+    mark: int = MEMORY_FLOOR_BYTES
+    """What a lane's group is held to on this machine (`lane_mark`): the
+    floor on the desktop, what the machine has above it on the horsepower."""
 
 
 class DialState(BaseModel):
@@ -278,42 +331,6 @@ class Fixes(BaseModel):
     sample the loop's cold audit reads."""
 
 
-MEMORY_FLOOR_BYTES = 5 * 1024**3
-"""Below this much available memory, or free swap on a machine that has
-swap, the beat takes nothing. It shipped at 3 GB, because a fix lane peaked
-at 3.1 GB on the dial's first night (Hello Revenue #385, `systemctl show
-MemoryCurrent`, 2026-09-05) and systemd-oomd acts at 90 percent of both
-memory and swap. It rose to 5 GB the same day: forty seconds after the
-board restarted on the floor, oomd killed Hello Revenue #386's lane, whose
-scope peaked at 4.7 GB after the dial had let it in — the plan's loop said
-the floor rises by a killed scope's peak, the reading said so, and the owner
-set 5 GB (the peak with headroom) rather than the rule's 7.7 GB, which would
-have let the dial open little on a 16 GB machine. Since plan 53 the floor
-is read on every pass of the lane loop, not only at the beat, and each
-lane's scope is read beside it: a scope holding as much as the floor is the
-lane the floor was set from, again, and the machine reads full until it
-shrinks or folds — the board stops admitting; it never stops a lane (that
-plan's ruling 1). No code path raises the number; the loop in that plan
-says when the owner should.
-
-On 2026-09-09 the owner handed the number to the colleague ("it's a tech
-thing so you own it"), remembering crashes since it came in. Read that day:
-three kills by the userspace out-of-memory killer since 09-08, each of a
-window he was using at 90 percent of memory and swap, while the floor held
-six walled lanes parked. The floor was never the cause: it gates what the
-board admits and chooses nothing about who is killed. It stays 5 GB — a
-third of a 15.6 GB laptop that runs a browser, an editor and half its swap
-beside the lanes; lower trades idle lanes for a slower machine, not a
-crash. Since card #107 it is also the high mark of every lane's own space
-(`MemoryHigh` on the scope, `runtime/machine.py::adopt`): past it the kernel
-throttles the lane and reclaims inside its space — a throttle the kernel may
-still let a lane exceed under pressure, never a hard cap and never a kill —
-so a runaway lane presses on itself first rather than on a window; and a
-walled lane gives its memory back the moment it waits for room. It lives
-here so the runtime, which cannot import the board, sets the same number
-it reads (the layers ratchet)."""
-
-
 def _gb(byte_count: int) -> str:
     return f"{byte_count / 1024**3:.1f} GB"
 
@@ -339,14 +356,18 @@ def headroom(
     *,
     scopes: Sequence[ScopeMemory] | None = (),
     marked: Sequence[str] = (),
+    mark: int | None = None,
 ) -> Headroom:
     """The machine against the floor, and every lane's scope beside it
     (plan 53, item 1). A reading the runtime could not make — the memory,
     or the scopes when there were lanes to read — is full: the beat waits
     until the machine can be read, and the head says so, rather than
     opening a lane on a number nobody has. Full names what is short and
-    which lane is growing — the one past the floor, else the biggest — with
-    what it holds, so the owner reads which lane the machine waits on."""
+    which lane is growing — the one past the mark, else the biggest — with
+    what it holds, so the owner reads which lane the machine waits on. The
+    mark is what a lane may hold here (`lane_mark`); None means the floor,
+    which is the desktop's."""
+    mark = floor if mark is None else mark
     if meminfo is None:
         return Headroom(
             available=0,
@@ -355,6 +376,7 @@ def headroom(
             full=True,
             sentence="the machine is full: its memory could not be read",
             read_at=now,
+            mark=mark,
         )
     if scopes is None:
         return Headroom(
@@ -365,6 +387,7 @@ def headroom(
             sentence="the machine is full: what its lanes hold could not be read",
             read_at=now,
             total=meminfo.total,
+            mark=mark,
         )
     ranked = sorted(scopes, key=lambda s: (-s.held, s.unit))
     short: list[str] = []
@@ -376,10 +399,13 @@ def headroom(
     if short:
         parts.append(f"{', '.join(short)}, {floor // 1024**3} GB needed")
     biggest = ranked[0] if ranked else None
-    if biggest is not None and biggest.held >= floor:
-        parts.append(
-            f"{_lane_of(biggest)} holds {_gb(biggest.held)}, past the {floor // 1024**3} GB floor"
+    if biggest is not None and biggest.held >= mark:
+        limit = (
+            f"the {floor // 1024**3} GB floor"
+            if mark == floor
+            else f"the {mark // 1024**3} GB a lane may hold here"
         )
+        parts.append(f"{_lane_of(biggest)} holds {_gb(biggest.held)}, past {limit}")
     elif short and biggest is not None:
         parts.append(f"the biggest lane is {_lane_of(biggest)} at {_gb(biggest.held)}")
     return Headroom(
@@ -392,4 +418,5 @@ def headroom(
         read_at=now,
         marked=list(marked),
         total=meminfo.total,
+        mark=mark,
     )

@@ -17,7 +17,15 @@ from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 from domain.call import Call, CallVerdict
-from domain.dial import MEMORY_FLOOR_BYTES, Headroom, Meminfo, ScopeHeld, ScopeMemory, headroom
+from domain.dial import (
+    MEMORY_FLOOR_BYTES,
+    Headroom,
+    Meminfo,
+    ScopeHeld,
+    ScopeMemory,
+    headroom,
+    lane_mark,
+)
 from domain.ending import Boot, Cause, Named, Sighting
 from domain.gate import Gate
 from domain.handout import Dispatch
@@ -250,8 +258,12 @@ class Runtime:
     ) -> Headroom:
         """This machine against the floor: its memory, and what every group
         of ours holds, read by the one rule the head uses. With `hold`,
-        every group that stands without the floor as its high mark is given
-        it first (card #107), and the reading says which. `owners` names
+        every group that stands without this machine's mark as its high
+        mark is given it first (card #107; the mark is `lane_mark`'s — the
+        floor on the desktop, what the machine has above it on the
+        horsepower, since the desktop's 5 GB slowed Hello Revenue #503 for
+        two hours on a machine with 24 GB free, 2026-09-10), and the
+        reading says which. `owners` names
         the card each unit is, when the caller (the board's loop) knows;
         `read` names the units asked for whether or not the manager lists
         them — every lane with hands on, by the name it was given at Start
@@ -265,7 +277,9 @@ class Runtime:
         # scope with no value is not a lane, and the read is what says so.
         if units is not None and read:
             units |= set(read)
-        marked = self.hold_scopes_at(sorted(units), MEMORY_FLOOR_BYTES) if hold and units else []
+        info = self.meminfo()
+        mark = lane_mark(self.here().desktop, info.total if info is not None else 0)
+        marked = self.hold_scopes_at(sorted(units), mark) if hold and units else []
         held = self.scope_memory(sorted(units)) if units else {}
         named = owners or {}
         scopes = (
@@ -283,7 +297,7 @@ class Runtime:
             else None
         )
         return headroom(
-            self.meminfo(), MEMORY_FLOOR_BYTES, clock.now(), scopes=scopes, marked=marked
+            info, MEMORY_FLOOR_BYTES, clock.now(), scopes=scopes, marked=marked, mark=mark
         )
 
     def rooms(
@@ -1141,8 +1155,9 @@ class Runtime:
             return None
 
     def hold_scopes_at(self, units: list[str], memory_high: int) -> list[str]:
-        """The lane scopes among `units` just given the floor as their high
-        mark (card #107); empty when the manager could not be asked."""
+        """The lane scopes among `units` just given this machine's mark as
+        their high mark (card #107); empty when the manager could not be
+        asked."""
         try:
             return machine.hold_scopes_at(units, memory_high)
         except (OSError, machine.Timeout, machine.CommandMissing):
