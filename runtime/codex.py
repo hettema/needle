@@ -92,11 +92,21 @@ class Rollout:
     `workspace-write`, …); None when the head carries none."""
 
 
-HEAD_BYTES = 64 * 1024
-"""How far into a rollout the first `turn_context` is looked for: it follows
-the session head and the developer messages, within the first few records;
-a rollout whose first turn has not begun has none, and a larger read would
-open the whole transcript of a long session for two words."""
+CONTEXT_SCAN_BYTES = 4 * 1024 * 1024
+"""How far into a rollout the first `turn_context` is looked for. It follows
+the session head, the developer messages and a `world_state` record that
+carries the whole doctrine chain, so it sits at 24 KB in a bare thread and
+at 275 KB in one started in a lane (forty real rollouts measured on
+2026-09-10, the farthest a forked thread's at 3.1 MB); a rollout whose first
+turn has not begun has none. The scan stops at the first one found and its
+answer is kept per file, so the one list, read every two seconds while a
+caller waits, never reads a long transcript twice."""
+
+_CONTEXT: dict[Path, tuple[int, str | None, str | None, bool]] = {}
+"""Per rollout path: bytes scanned so far, the effort and the sandbox found,
+and whether the first `turn_context` was found — a rollout is appended to
+and never rewritten, so a found answer stands and a scan that found nothing
+resumes where it stopped."""
 
 
 def is_worker(rollout: Rollout) -> bool:
@@ -159,31 +169,38 @@ def _context_of(path: Path) -> tuple[str | None, str | None]:
     """The effort and the sandbox of the rollout's first turn, from its
     first `turn_context` record within the head; (None, None) when there
     is none or the head cannot be read."""
+    scanned, effort, sandbox, found = _CONTEXT.get(path, (0, None, None, False))
+    if found or scanned >= CONTEXT_SCAN_BYTES:
+        return effort, sandbox
     try:
         with path.open("rb") as f:
-            text = f.read(HEAD_BYTES).decode("utf-8", errors="replace")
+            f.seek(scanned)
+            while scanned < CONTEXT_SCAN_BYTES:
+                raw = f.readline()
+                if not raw:
+                    break
+                scanned += len(raw)
+                if b'"turn_context"' not in raw:
+                    continue
+                try:
+                    record = json.loads(raw.decode("utf-8", errors="replace"))
+                except ValueError:
+                    continue
+                if not isinstance(record, dict) or record.get("type") != "turn_context":
+                    continue
+                payload = record.get("payload")
+                if isinstance(payload, dict):
+                    named = payload.get("effort")
+                    policy = payload.get("sandbox_policy")
+                    kind = policy.get("type") if isinstance(policy, dict) else None
+                    effort = named if isinstance(named, str) and named else None
+                    sandbox = kind if isinstance(kind, str) and kind else None
+                found = True
+                break
     except OSError:
         return None, None
-    for line in text.splitlines():
-        if '"turn_context"' not in line:
-            continue
-        try:
-            record = json.loads(line)
-        except ValueError:
-            continue
-        if not isinstance(record, dict) or record.get("type") != "turn_context":
-            continue
-        payload = record.get("payload")
-        if not isinstance(payload, dict):
-            return None, None
-        effort = payload.get("effort")
-        policy = payload.get("sandbox_policy")
-        sandbox = policy.get("type") if isinstance(policy, dict) else None
-        return (
-            effort if isinstance(effort, str) and effort else None,
-            sandbox if isinstance(sandbox, str) and sandbox else None,
-        )
-    return None, None
+    _CONTEXT[path] = (scanned, effort, sandbox, found)
+    return effort, sandbox
 
 
 def last_error(log: Path) -> str | None:

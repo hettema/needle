@@ -129,11 +129,10 @@ def test_a_record_dated_on_or_before_the_fold_closes_as_before(
     client: TestClient, machine_floor: Floor, repo: Path, capsys
 ):
     a_code_lane(client, machine_floor, repo)
-    bare = (
-        "# Review\n\n**Plan:** "
-        + PLAN
-        + "\n\n## Dispositions\n\n1. The meter — FIXED in abc1234.\n"
-    )
+    # Hello Revenue's template headed a record with `**Card:**` and no plan
+    # line until this card: a record written under the old form is history,
+    # its stem included (ruling 3; the author's first pass).
+    bare = "# Review\n\n**Card:** #253\n\n## Dispositions\n\n1. The meter — FIXED in abc1234.\n"
     path = write(repo, "2026-09-10-the-meter.md", bare)
     code, out, _ = close(path, capsys)
     assert code == 0, out

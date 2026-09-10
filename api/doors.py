@@ -1732,6 +1732,18 @@ class Doors:
                 f"#{number}'s review record {review} is not in the project's tree; expected "
                 f"{project.path}/{review}."
             )
+        name = given.name
+        if review_rules.dated(name) is None:
+            raise DoorRefused(
+                f"#{number}'s review record {review} carries no date in its name; the README's "
+                "shape is docs/reviews/YYYY-MM-DD-<topic>.md."
+            )
+        if not review_rules.held(name):
+            # Written under the old form, which Hello Revenue's template
+            # headed with `**Card:**` and no plan line until this card: the
+            # date decides, and the stem is part of the form (ruling 3; the
+            # author's first pass).
+            return
         if card.link is not None:
             named = plan_stem_of(text)
             if named != card.link.stem:
@@ -1740,14 +1752,6 @@ class Doors:
                     f"{named or 'nothing'} on its `**Plan:**` line, and #{number}'s plan is "
                     f"{card.link.stem}; a record is its card's word about its own diff."
                 )
-        name = given.name
-        if review_rules.dated(name) is None:
-            raise DoorRefused(
-                f"#{number}'s review record {review} carries no date in its name; the README's "
-                "shape is docs/reviews/YYYY-MM-DD-<topic>.md."
-            )
-        if not review_rules.held(name):
-            return
         read = review_of(text, review)
         lane_slot = lane.session.slot if lane is not None and lane.session is not None else None
         faults = review_rules.record_faults(read, review) + review_rules.verdict_faults(
