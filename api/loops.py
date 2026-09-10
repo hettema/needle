@@ -2336,7 +2336,12 @@ class Loops:
         terminal's `needle machines` read the one record (Codex's ninth
         pass) — never as the trunk's own state, which is the board's
         checkout's alone (the eighth)."""
-        stale: dict[str, dict[str, str | None]] = {}
+        # Every other machine gets its whole set written, an empty one when
+        # the board has no projects, so no row outlives the project it was
+        # about (Codex's eleventh pass).
+        stale: dict[str, dict[str, str | None]] = {
+            m.name: {} for m in self.runtime.machines() if not self.runtime.is_here(m)
+        }
         for live in list(self.live.projects.values()):
             for m, levelled in self.runtime.level_elsewhere(live.project.path):
                 words = (

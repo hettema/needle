@@ -369,6 +369,10 @@ def test_the_notes_are_read_oldest_change_first_with_their_first_lines(machine_f
     os.utime(first, (old, old))
     second = machine_floor.discussion / "from-claude-topic.md"
     second.write_text("\n# From Claude\n", encoding="utf-8")
+    # Its own moment, set: two writes in one tick share a timestamp on a
+    # filesystem with coarse ones (the rented machine's, 2026-09-10) and
+    # the order under test is then the name's, not the change's.
+    os.utime(second, (old + 10, old + 10))
     (machine_floor.discussion / "notes.txt").write_text("not a note", encoding="utf-8")
     third = machine_floor.discussion / "from-01a07bae-re-topic.md"
     third.write_text(

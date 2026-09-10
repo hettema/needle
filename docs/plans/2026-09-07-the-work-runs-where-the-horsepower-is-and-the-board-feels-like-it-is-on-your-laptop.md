@@ -159,8 +159,9 @@ cross with the rest; a machine that hands its verbs away answers the
 board for itself alone, never fanning out over the rows it copied. Proven
 on the floor: `tests/runtime/test_board_elsewhere.py`; read cold on its
 first commit by the other make and then for the completeness of each
-round's repairs (the record's eighth to tenth passes, thirty findings,
-repaired in the lane and the two machine records). The live half — the
+round's repairs (the record's eighth to eleventh passes, thirty-two
+findings, repaired in the lane and the two machine records; the record
+says which repairs its last pass read as partial and what was done). The live half — the
 store moved at a quiet moment with both services stopped, the laptop's
 `127.0.0.1:8480` made the tunnel's end by a socket unit that proxies to
 the machine's `tailscale serve`, the laptop's own `needle-serve` disabled

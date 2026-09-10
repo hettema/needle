@@ -1947,10 +1947,14 @@ class Store:
         """What the board found levelling one machine's clones this pass:
         per project, why the clone is not level, or None — the machine's
         whole set, so a project no longer on the board leaves no row
-        behind (Codex's tenth pass). True when the words changed for any
-        project."""
+        behind (Codex's tenth pass). Nothing is written for a machine the
+        board no longer knows: a levelling that began before the machine
+        was forgotten would otherwise put its rows back (the eleventh
+        pass). True when the words changed for any project."""
         changed = False
         with self._session() as session, session.begin():
+            if session.get(MachineRow, machine) is None:
+                return False
             for row in session.scalars(select(CloneRow).where(CloneRow.machine == machine)):
                 if row.project not in projects:
                     changed = changed or row.note is not None

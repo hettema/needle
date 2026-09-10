@@ -231,6 +231,35 @@ def test_the_head_says_which_clones_are_not_level_on_each_machines_own_line(
         machine_floor.host_down("rented", False)
         assert store.remove_machine("rented")
         assert store.clones("rented") == []
+        # A levelling that began before the machine was forgotten writes
+        # nothing back.
+        assert not store.record_clones("rented", {"p": "1 behind"}, NOW)
+        assert store.clones("rented") == []
+    finally:
+        store.close()
+
+
+def test_with_no_project_the_levelling_writes_every_other_machine_an_empty_set(
+    machine_floor: Floor, ground: Path, tmp_path: Path
+):
+    """A row about a project the board no longer has goes at the next
+    levelling even when nothing is left to level (Codex's eleventh pass)."""
+    from api.board_cli import _board
+
+    machine_floor.lay_host("rented", available_gb=24.0)
+    assert main(["machine", "add", "laptop", "--desktop", "--ground", str(ground)]) == 0
+    assert main(["machine", "add", "rented", "--host", "rented"]) == 0
+    store = Store(tmp_path / "board.db")
+    try:
+        store.record_clones("rented", {"gone": "2 behind"}, NOW)
+        assert store.clones("rented") == ["gone: 2 behind"]
+    finally:
+        store.close()
+    store, _, _, loops, _ = _board()
+    try:
+        assert store.projects() == []
+        loops.level_clones_now()
+        assert store.clones("rented") == []
     finally:
         store.close()
 
@@ -381,7 +410,7 @@ def test_a_path_the_caller_gave_relative_to_its_directory_crosses_absolute(
 ):
     """The other side runs in a login's directory, not ours: `add .` and
     `fold --worktree .` are resolved here before they cross."""
-    machine_floor.lay_host("rented")
+    other = machine_floor.lay_host("rented")
     assert main(["machine", "add", "rented", "--host", "rented"]) == 0
     assert main(["board", "rented"]) == 0
     corpus = tmp_path / "near-corpus"
@@ -405,11 +434,22 @@ def test_a_path_the_caller_gave_relative_to_its_directory_crosses_absolute(
     assert any(f"needle add --slug project {twin.resolve()}" in w for w in words)
     # A machine's ground crosses absolute too, since `machine add` is the
     # board's verb now.
-    main(["machine", "add", "far", "--host", "rented", "--ground", "."])
+    assert (
+        main(["machine", "add", "far", "--host", "rented", "--command", "nd", "--ground", "."]) == 0
+    )
     words = [" ".join(c["words"]) for c in machine_floor.state().get("ssh_calls", [])]
     assert any(
-        f"needle machine add far --host rented --ground {corpus.resolve()}" in w for w in words
+        f"needle machine add far --host rented --command nd --ground {corpus.resolve()}" in w
+        for w in words
     ), words[-3:]
+    # The receiving side keeps what crossed: the ground resolved, the
+    # command as given (its own dest, Codex's eleventh pass).
+    theirs = Store(other.root / "needle.db")
+    try:
+        far = next(m for m in theirs.machines() if m.name == "far")
+        assert far.ground == str(corpus.resolve()) and far.command == "nd"
+    finally:
+        theirs.close()
     # Which words are an option's value is the parser's knowledge, not a
     # list: an abbreviated option still takes its value, `--` ends the
     # options and a resolved option lands before it, and a nested verb's
