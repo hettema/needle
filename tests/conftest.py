@@ -53,6 +53,15 @@ def pytest_configure(config: pytest.Config) -> None:
         root = floors_root()
         root.mkdir(parents=True, exist_ok=True)
         os.environ[TEMP_ROOT_VARIABLE] = str(root)
+    # pytest wipes a given --basetemp at first use; one that holds the ledger
+    # would erase the record of every earlier run, so it is refused before
+    # any use (Codex's seventh read, card #109).
+    given = config.option.basetemp
+    if given is not None and FLOOR_RUNS_LEDGER.is_relative_to(Path(given).resolve()):
+        raise pytest.UsageError(
+            f"--basetemp={given} holds the floors ledger {FLOOR_RUNS_LEDGER}, which pytest "
+            "would wipe with it; point it elsewhere"
+        )
 
 
 FLOOR_RUNS_LEDGER = Path.home() / ".local" / "state" / "needle" / "floor-runs.log"
