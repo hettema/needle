@@ -461,6 +461,19 @@ def test_a_verdict_quotes_the_answer_the_board_holds_and_a_call_from_elsewhere_i
         within="/tmp/lan",
     )
     assert len(sibling) == 3 and all("outside this project" in f for f in sibling)
+    # The answer's own first word, and the loop's wrapping only at the head
+    # (the cold read of round twelve): "completely broken" is not complete,
+    # a raw answer carrying "landed at" in its prose is read whole, and a
+    # numbered list under "broke 1.2" is prose and not an address.
+    from board.review_rules import answer_outcome
+
+    assert answer_outcome("completely broken") is None
+    assert answer_outcome("completeness is unverified") is None
+    assert answer_outcome("Complete.") == "complete"
+    assert answer_outcome("/tmp/a.md landed at 2026-09-11T09:01:00+00:00: complete") == "complete"
+    assert answer_outcome("broke 1.2 — /b landed at 2026-09-11T09:01:00+00:00: complete") == ["1.2"]
+    assert answer_outcome("broke 1.2\n1. the omitted sibling") == ["1.2"]
+    assert answer_outcome("Broke 1.2, 1.20 — two") == ["1.2", "1.20"]
     unstored = {n: rows[n].model_copy(update={"words": None}) for n in rows}
     from_file = verdict_faults(
         review,

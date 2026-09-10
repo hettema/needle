@@ -398,6 +398,36 @@ def test_a_lane_whose_worktree_is_only_on_the_second_machine_is_asked_there(
     assert any("lane-docs" in a and elsewhere in a for a in asked), asked
 
 
+def test_the_readers_answer_outranks_a_rows_stale_words(
+    client: TestClient, machine_floor: Floor, repo: Path, capsys
+):
+    """The cold read of round twelve: a row ended for another reason before
+    the answer landed keeps those words for good, since a row ends once;
+    the answer file, landed after the call, is the reader's word and the
+    close reads it first."""
+    a_code_lane(client, machine_floor, repo)
+    store = client.app.state.loops.live.store
+    answer = machine_floor.discussion / "from-01a08a3a-re-round-late.md"
+    row = store.record_call(
+        session_id=CODEX_SESSION,
+        slot="codex",
+        name="codex-01a08a3a",
+        note=str(machine_floor.discussion / "round-late.md"),
+        answer=str(answer),
+        brief="read the round",
+        caller=str(repo),
+        at=datetime(2026, 9, 1, 0, 0, tzinfo=UTC),
+    )
+    store.end_call(row.id, NOW, "01a08a3a ended without its note: the process disappeared")
+    answer.write_text(
+        '{"answer": "complete", "how_known": "checked", "sources": ["the round"]}',
+        encoding="utf-8",
+    )
+    path = write(repo, "2026-09-11-the-meter.md", record(call=row.id))
+    code, out, _ = close(path, capsys)
+    assert code == 0, out
+
+
 def test_the_lanes_brief_says_what_the_cold_read_of_a_round_is(
     client: TestClient, machine_floor: Floor
 ):

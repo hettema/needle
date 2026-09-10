@@ -258,8 +258,15 @@ def verdict_faults(
     return faults
 
 
-_LANDED_WORDS = re.compile(r"\blanded at \S+: ", re.S)
-_ANSWER_BROKE = re.compile(r"^\s*broke\b(?P<addresses>[\d.,\s]*)", re.I)
+_LANDED_WORDS = re.compile(r"^\S+ landed at \S+: ", re.S)
+"""The loop's own wrapping of a landed answer, at the head of the stored
+words and nowhere else: an answer whose prose carries the same words is
+the reader's, and is read whole (the cold read of round twelve)."""
+_ANSWER_BROKE = re.compile(r"^\s*broke\b(?P<addresses>[\d., \t]*)", re.I)
+"""The addresses a `broke` answer opens with, on its first line only — a
+numbered list under it is the reader's prose, not an address."""
+_ANSWER_COMPLETE = re.compile(r"^\s*complete\b", re.I)
+"""The word itself, not a prefix: "completely broken" is not complete."""
 
 
 def _row_words(call: Call) -> str | None:
@@ -276,8 +283,8 @@ def answer_outcome(words: str | None) -> str | list[str] | None:
     "1.2" (the cold read of round eleven)."""
     if not words:
         return None
-    answer = _LANDED_WORDS.split(words, maxsplit=1)[-1].strip()
-    if answer.lower().startswith("complete"):
+    answer = _LANDED_WORDS.sub("", words, count=1).strip()
+    if _ANSWER_COMPLETE.match(answer):
         return "complete"
     broke = _ANSWER_BROKE.match(answer)
     if broke:
