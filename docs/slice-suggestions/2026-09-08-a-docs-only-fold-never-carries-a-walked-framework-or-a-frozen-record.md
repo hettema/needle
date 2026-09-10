@@ -1,4 +1,4 @@
-# A docs-only fold never carries a walked framework or a frozen record
+# A docs-only landing on the shared branch never carries a walked framework or a frozen record
 
 **Kind:** defect
 **Fix:** now — the intent it breaks is written in Hello Revenue's CLAUDE.md twice (a changed prompt or framework owes a role-play walk before the suite is green, held by `tests/ratchets/test_prompt_qa_walk_manifest.py`; the first board's record under `docs/board/done/` is frozen, held by `tests/ratchets/test_first_board_record_is_frozen.py`); the fix stays inside the door the sweep used to reach the trunk without a green suite, once that door is traced (the first step below); and it removes the class — any corpus rewrite from a Needle card that reaches a walked or frozen path in a project — not the one sweep that hit it.
