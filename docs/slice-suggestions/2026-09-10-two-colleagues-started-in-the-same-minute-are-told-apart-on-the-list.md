@@ -2,7 +2,7 @@
 
 **Kind:** defect
 **Fix:** now — the intent it breaks is written (plan 57: the one list names every colleague of either kind so a caller can name one), the fix stays inside the short id a Codex row is shown by (`runtime/codex.py::SHORT_LENGTH`, the first eight characters of a time-ordered id), and it removes the class — a prefix that two ids minted in one minute share — by showing the shortest prefix that is unique on the list, as a session id's prefix already resolves a call
-**Found by:** the lane on card #110 (docs/plans/2026-09-10-a-fix-says-who-else-it-reaches-and-what-it-assumes-and-a-colleague-checks-both-before-it-ships.md), calling two cold readers of the other kind fourteen seconds apart
+**Found by:** the lane on card #110 (docs/plans/done/2026-09-10-a-fix-says-who-else-it-reaches-and-what-it-assumes-and-a-colleague-checks-both-before-it-ships.md), calling two cold readers of the other kind fourteen seconds apart
 
 ## The intent it breaks
 

@@ -2,7 +2,7 @@
 
 **Kind:** defect
 **Fix:** now — the intent it breaks is written (`CLAUDE.md`: the board reads what runs; `docs/INTENT.md`: the card's state is a machine fact with named evidence), the fix stays inside the one selector that matches a session to a card's work, and it removes a class — matching by name where a name carries no project — rather than an instance: match by the path of the session's own copy of the code, which is the project's
-**Found by:** the lane on card #110 (docs/plans/2026-09-10-a-fix-says-who-else-it-reaches-and-what-it-assumes-and-a-colleague-checks-both-before-it-ships.md), in the review's cold read of round eight (call 77)
+**Found by:** the lane on card #110 (docs/plans/done/2026-09-10-a-fix-says-who-else-it-reaches-and-what-it-assumes-and-a-colleague-checks-both-before-it-ships.md), in the review's cold read of round eight (call 77)
 
 ## The intent it breaks
 

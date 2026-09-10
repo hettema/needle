@@ -2,7 +2,7 @@
 
 **Kind:** defect
 **Fix:** now — the intent it breaks is written (plan 17: `needle wait` and the loop make one reading of a call, so the two cannot drift apart; card #110, ruling 5: a landed answer the board saw arrive stands on the row), the fix stays inside the one reading `runtime/calls.py::judge` makes, and it removes the class — two readers of one row disagreeing about whether its answer landed — by having the judge read the row's own landed words before the file, as `runtime/calls.py::landed` already does
-**Found by:** the lane on card #110 (docs/plans/2026-09-10-a-fix-says-who-else-it-reaches-and-what-it-assumes-and-a-colleague-checks-both-before-it-ships.md), in the review's cold read of round twelve (call 81), beside its finding
+**Found by:** the lane on card #110 (docs/plans/done/2026-09-10-a-fix-says-who-else-it-reaches-and-what-it-assumes-and-a-colleague-checks-both-before-it-ships.md), in the review's cold read of round twelve (call 81), beside its finding
 
 ## The intent it breaks
 

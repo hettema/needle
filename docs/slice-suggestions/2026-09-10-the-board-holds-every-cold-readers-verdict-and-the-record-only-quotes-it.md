@@ -2,7 +2,7 @@
 
 **Kind:** defect
 **Fix:** now — the intent it breaks is written (`docs/HOW-WE-WORK.md` §5: a trace the actor can write without doing the act is a place to lie; §13 as card #110 rewrote it: every round's repairs are read cold and the verdict is on the record before the round ships), the fix stays inside the call the board already records and the door that reads it, and it removes the class — a verdict the writer types and the board checks by clauses — rather than an instance: the call carries the round it reads and the board keeps the reader's answer whole, so the door consumes the answer and never the writer's quotation
-**Found by:** the lane on card #110 (docs/plans/2026-09-10-a-fix-says-who-else-it-reaches-and-what-it-assumes-and-a-colleague-checks-both-before-it-ships.md), in the review's cold read of round ten, asked the representation question after three rounds on one shape
+**Found by:** the lane on card #110 (docs/plans/done/2026-09-10-a-fix-says-who-else-it-reaches-and-what-it-assumes-and-a-colleague-checks-both-before-it-ships.md), in the review's cold read of round ten, asked the representation question after three rounds on one shape
 
 ## The intent it breaks
 

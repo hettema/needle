@@ -1,5 +1,5 @@
 # A fix says who else it reaches and what it assumes, and a colleague checks both before it ships
-**Carried by:** docs/plans/2026-09-10-a-fix-says-who-else-it-reaches-and-what-it-assumes-and-a-colleague-checks-both-before-it-ships.md
+**Carried by:** docs/plans/done/2026-09-10-a-fix-says-who-else-it-reaches-and-what-it-assumes-and-a-colleague-checks-both-before-it-ships.md
 
 **Kind:** idea
 **Fix:** his — it edits §13 of the one text (a fix line carries its reach and its premise; the reader's fourth question is the premise) and sets a loop's cadence (read at the fifth carded close on Hello Revenue after it ships); the owner ruled to try it in conversation on 2026-09-10 ("I want to try this way of working … have it as a card so we can close the loop after developing say 5 features … this is something we need to nail before we continue developing other things"), and the words of the edit are his to rule at Start

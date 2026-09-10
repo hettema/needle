@@ -2,7 +2,7 @@
 
 **Kind:** defect
 **Fix:** now — the intent it breaks is written (`docs/INTENT.md`: the board's state is a machine fact with named evidence; plan 11: the board's own record of where a session it started runs), the fix stays inside the one row the runtime writes when it starts a session on a card, and it removes the class — a fact overwritten by a later, unrelated write — by keeping the card a session was started on beside the scope it runs in now, rather than in one field a call re-uses
-**Found by:** the lane on card #110 (docs/plans/2026-09-10-a-fix-says-who-else-it-reaches-and-what-it-assumes-and-a-colleague-checks-both-before-it-ships.md), in the review's fourth pass (call 83)
+**Found by:** the lane on card #110 (docs/plans/done/2026-09-10-a-fix-says-who-else-it-reaches-and-what-it-assumes-and-a-colleague-checks-both-before-it-ships.md), in the review's fourth pass (call 83)
 
 ## The intent it breaks
 
