@@ -183,7 +183,10 @@ both machines, `rented (here)` and `laptop`; the laptop's `needle-serve`
 is disabled and the revert is `tools/board-back` in the rented record; a
 session on the laptop — this lane's — appears on it as working, and its
 `needle lanes` from the laptop runs on the rented machine over the wire
-(44 s, every read of the laptop crossing back). The clause not yet shown:
+(44 s, every read of the laptop crossing back). The fold's routing is live too: at 16:2xZ this lane's `needle fold`,
+run on the laptop, crossed to the board on the rented machine, which
+pushed from the laptop over the wire (`needle push`) and levelled its own
+checkout (`folded: origin/develop is 3338e4d`). The clause not yet shown:
 a session on the rented machine appearing on it, which is the first card
 the board places there (item 4's live half, the owner's Start).
 The first live move (2026-09-10, 15:20Z) crossed the store and stopped
