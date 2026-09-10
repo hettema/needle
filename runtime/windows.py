@@ -48,6 +48,13 @@ focus asked of the moved board, 2026-09-10). The newest instance directory
 is the running one."""
 
 
+def _lua_string(text: str) -> str:
+    """`text` as a single-quoted Lua string literal, for the compositor's
+    `eval`: backslashes and quotes escaped, newlines spelled."""
+    escaped = text.replace("\\", "\\\\").replace("'", "\\'").replace("\n", "\\n")
+    return f"'{escaped}'"
+
+
 def _hyprctl(args: list[str], host: str | None) -> machine.Completed:
     """Ask the compositor here, or on the desktop machine when the board runs
     elsewhere (card #83): the command is resolved here only when it runs
@@ -335,9 +342,22 @@ def open_fresh(
     app_id = app_id_for(kind, card)
     before = set(present(app_id, host))
     try:
-        launcher = machine.which("omarchy-launch-tui") if host is None else "omarchy-launch-tui"
-        machine.spawn([launcher, f"--app-id={app_id}", "bash", "-lc", command], host=host)
-    except (machine.CommandMissing, machine.Unreachable, OSError) as missing:
+        if host is None:
+            launcher = machine.which("omarchy-launch-tui")
+            machine.spawn([launcher, f"--app-id={app_id}", "bash", "-lc", command])
+        else:
+            # A shell reached over ssh has no display: the launcher there
+            # answered "failed to connect to wayland" (the first Talk it
+            # through from the moved board, 2026-09-10). The compositor
+            # itself runs the launcher inside the session's environment.
+            line = shlex.join(["omarchy-launch-tui", f"--app-id={app_id}", "bash", "-lc", command])
+            done = _hyprctl(["eval", f"hl.exec_cmd({_lua_string(line)})"], host)
+            if done.returncode != 0:
+                raise WindowRefused(
+                    f"the desktop's compositor did not run the terminal: "
+                    f"{(done.stderr or done.stdout).strip()[:200]}"
+                )
+    except (machine.CommandMissing, machine.Unreachable, machine.Timeout, OSError) as missing:
         raise WindowRefused(f"the terminal did not open: {missing}") from missing
     deadline = time.time() + WINDOW_VERIFY_SECONDS
     while time.time() < deadline:

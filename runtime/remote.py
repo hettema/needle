@@ -34,11 +34,16 @@ from runtime import git, machine
 
 T = TypeVar("T", bound=BaseModel)
 
-READ_SECONDS = 20.0
-"""A read answers in a second; twenty bounds what a stalled machine can
+READ_SECONDS = 45.0
+"""A read answers in a second, and the bound is what a stalled machine can
 hold the board's beat for, per read (Codex's reading of card #83's second
 pass: the beat holds the door lock, so every remote read is a bound on
-the doors)."""
+the doors). Twenty was the first bound; the laptop under its memory floor
+answered `sessions` and `worktrees` in more than twenty seconds in bursts
+on the moved board's first afternoon (2026-09-10, 16:38–17:25Z, the same
+reads answering in a second between), and every such miss read the
+laptop as unread and its lanes as unchanged — worse for the board than a
+door held a little longer."""
 VERB_SECONDS = 60.0
 """A verb that walks the ladder can take a minute."""
 START_SECONDS = 240.0

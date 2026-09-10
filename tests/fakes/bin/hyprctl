@@ -7,11 +7,15 @@ test set `focus_works` false), and `activewindow -j` reports it."""
 import json
 import os
 import re
+import subprocess
 import sys
 from pathlib import Path
 
 _FOCUS = re.compile(r"hl\.get_window\('address:(0x[0-9A-Za-z]+)'\)")
 
+_EXEC = re.compile(r"^hl\.exec_cmd\('((?:[^'\\]|\\.)*)'\)$")
+"""The compositor running a command for a board elsewhere (card #83, item
+4): a single-quoted Lua string, its escapes undone before the shell."""
 STATE = Path(os.environ["NEEDLE_FAKE_STATE"])
 
 
@@ -21,6 +25,22 @@ def main(argv: list[str]) -> int:
         print(json.dumps(blob.get("clients", [])))
         return 0
     if argv[:1] == ["eval"]:
+        run = _EXEC.search(argv[1] if len(argv) > 1 else "")
+        if run is not None:
+            command = run.group(1).replace("\\'", "'").replace("\\\\", "\\")
+            blob.setdefault("exec_calls", []).append(command)
+            STATE.write_text(json.dumps(blob, indent=1), encoding="utf-8")
+            # Detached, as the compositor runs it; the stand-in launcher on
+            # PATH then plays the window as it does for a local spawn.
+            subprocess.Popen(
+                ["bash", "-c", command],
+                stdin=subprocess.DEVNULL,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+                start_new_session=True,
+            )
+            print("ok")
+            return 0
         wanted = _FOCUS.search(argv[1] if len(argv) > 1 else "")
         if wanted is not None:
             address = wanted.group(1)
