@@ -125,3 +125,34 @@ def test_a_turn_context_still_being_written_is_read_whole_next_time_and_a_rewrit
     assert again.effort is Gate.LOW and again.sandbox == "workspace-write", "the rewrite is seen"
     machine_floor.write_rollout(WORKER, cwd="/tmp/lane")
     assert runtime.session(WORKER[:8]).effort is None, "a rewrite without a turn says nothing"
+
+
+def test_the_latest_turns_context_answers_not_the_first(machine_floor: Floor, runtime: Runtime):
+    """The cold read of round three (call 71) on two real rollouts: a
+    worker whose first turn carried no context and a later turn did, and a
+    fork carrying its parent's context before its own turn — the row says
+    what the session runs at now, which is its latest turn's."""
+    import json
+
+    path = machine_floor.write_rollout(WORKER, cwd="/tmp/lane", effort="low", sandbox="read-only")
+    later = {
+        "timestamp": "2026-09-05T10:00:00.000Z",
+        "ordinal": 9,
+        "type": "turn_context",
+        "payload": {
+            "turn_id": "t2",
+            "cwd": "/tmp/lane",
+            "sandbox_policy": {"type": "workspace-write"},
+            "effort": "high",
+        },
+    }
+    with path.open("a", encoding="utf-8") as f:
+        f.write(json.dumps(later) + "\n")
+        f.write(json.dumps({"type": "event_msg", "payload": {"type": "task_started"}}) + "\n")
+        f.write("x" * 70000 + "\n")  # a long tool record after the context, past one block
+    row = runtime.session(WORKER[:8])
+    assert row.effort is Gate.HIGH and row.sandbox == "workspace-write"
+    with path.open("a", encoding="utf-8") as f:
+        f.write('{"type": "turn_context", "payload": {"effort": "medium"')  # in flight
+    again = runtime.session(WORKER[:8])
+    assert again.effort is Gate.HIGH, "a line in flight is not read"

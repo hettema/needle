@@ -90,9 +90,9 @@ class Session(BaseModel):
     registry, which knows nothing of other machines. Empty for a row read
     by a runtime that has not been told its own name."""
     sandbox: str | None = None
-    """The sandbox a Codex session's turn ran in, in Codex's own word
-    (`read-only`, `workspace-write`); None for a row that does not say —
-    every Claude row, and a Codex rollout whose first turn has not begun.
+    """The sandbox a Codex session's latest turn ran in, in Codex's own
+    word (`read-only`, `workspace-write`); None for a row that does not say
+    — every Claude row, and a Codex rollout no turn of which carries one.
     Read so a caller told which session a bare-name call picked can see
     whether it can run the probe the question needs (card #110, item 5)."""
 

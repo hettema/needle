@@ -83,29 +83,29 @@ class Rollout:
     updated_at: datetime
     """The file's last change: the last thing the session wrote."""
     effort: str | None = None
-    """The reasoning effort the session's first turn ran at, from its
-    `turn_context` record (`effort`, read from a 0.153.4 rollout on
-    2026-09-10); None when the head carries none, which the caller is told
-    rather than guessed (card #110, item 5)."""
+    """The reasoning effort the session's latest turn ran at, from the last
+    `turn_context` record in the rollout (`effort`, read from a 0.153.4
+    rollout on 2026-09-10); None when no turn carries one, which the
+    caller is told rather than guessed (card #110, item 5)."""
     sandbox: str | None = None
     """The sandbox the same turn ran in (`sandbox_policy.type`: `read-only`,
-    `workspace-write`, …); None when the head carries none."""
+    `workspace-write`, …); None when no turn carries one."""
 
 
 CONTEXT_SCAN_BYTES = 4 * 1024 * 1024
-"""How far into a rollout the first `turn_context` is looked for. It follows
-the session head, the developer messages and a `world_state` record that
-carries the whole doctrine chain, so it sits at 24 KB in a bare thread and
-at 275 KB in one started in a lane (forty real rollouts measured on
-2026-09-10, the farthest a forked thread's at 3.1 MB); a rollout whose first
-turn has not begun has none. Every read scans afresh from the head: a cache
-was tried twice and broken twice by the cold readers of rounds one and two
+"""How far back from a rollout's end its latest `turn_context` is looked
+for. A turn's context opens the turn and the turn's records follow it, so
+the last one sits within the last turn — near the end for a short turn,
+megabytes back for a long one (the farthest first context measured on
+2026-09-10 sat 3.1 MB into a forked thread); a rollout whose first turn
+has not begun has none. Every read scans afresh: a cache was tried twice
+and broken twice by the cold readers of rounds one and two of card #110
 (a line still being written stepped past for good; a rollout rewritten in
 place answering from before; a resumed scan skipping a context written
-before its offset; identical bytes at one place not proving the record is
-still the first), so the representation changed — the scan is the answer,
-and its cost over every rollout of the last day is measured in the review
-record of card #110."""
+before its offset; identical bytes at one place not proving the record's
+place), so the representation changed — the scan is the answer, and its
+cost over every rollout of the last day is measured in that card's review
+record."""
 
 
 def is_worker(rollout: Rollout) -> bool:
@@ -165,39 +165,63 @@ def _rollout_of(path: Path) -> Rollout | None:
 
 
 def _context_of(path: Path) -> tuple[str | None, str | None]:
-    """The effort and the sandbox of the rollout's first turn, from its
-    first `turn_context` record within the head; (None, None) when there
-    is none or the head cannot be read."""
-    scanned = 0
+    """The effort and the sandbox of the rollout's latest turn, from the
+    last complete `turn_context` record in the file; (None, None) when
+    there is none or the file cannot be read. The last, not the first: a
+    worker's first turn may carry no context and a fork inherits its
+    parent's before its own turn begins (the cold read of round three,
+    call 71, on two real rollouts), and what a caller asks is what the
+    session runs at now. Read backwards in growing blocks from the end, so
+    a session whose last turn is short costs one small read and one whose
+    last turn is long costs the turn; a line without a newline at the end
+    is a line in flight and is not read."""
     try:
+        size = path.stat().st_size
         with path.open("rb") as f:
-            while scanned < CONTEXT_SCAN_BYTES:
-                raw = f.readline()
-                if not raw.endswith(b"\n"):
-                    # The end, or a line still being written: read whole next time.
-                    break
-                scanned += len(raw)
-                if b'"turn_context"' not in raw:
-                    continue
-                try:
-                    record = json.loads(raw.decode("utf-8", errors="replace"))
-                except ValueError:
-                    continue
-                if not isinstance(record, dict) or record.get("type") != "turn_context":
-                    continue
-                payload = record.get("payload")
-                if not isinstance(payload, dict):
-                    return None, None
-                named = payload.get("effort")
-                policy = payload.get("sandbox_policy")
-                kind = policy.get("type") if isinstance(policy, dict) else None
-                return (
-                    named if isinstance(named, str) and named else None,
-                    kind if isinstance(kind, str) and kind else None,
-                )
+            end = size
+            block = 64 * 1024
+            carry = b""
+            while end > 0 and size - end < CONTEXT_SCAN_BYTES:
+                start = max(0, end - block)
+                f.seek(start)
+                data = f.read(end - start) + carry
+                lines = data.split(b"\n")
+                if end == size:
+                    lines.pop()  # the bytes after the last newline: nothing, or a line in flight
+                whole = lines if start == 0 else lines[1:]
+                for raw in reversed(whole):
+                    if b'"turn_context"' not in raw:
+                        continue
+                    found = _turn_context(raw)
+                    if found is not None:
+                        return found
+                carry = b"" if start == 0 else lines[0]
+                end = start
+                block *= 2
     except OSError:
         return None, None
     return None, None
+
+
+def _turn_context(raw: bytes) -> tuple[str | None, str | None] | None:
+    """The two words of one `turn_context` line; None when the line is
+    not one."""
+    try:
+        record = json.loads(raw.decode("utf-8", errors="replace"))
+    except ValueError:
+        return None
+    if not isinstance(record, dict) or record.get("type") != "turn_context":
+        return None
+    payload = record.get("payload")
+    if not isinstance(payload, dict):
+        return None, None
+    named = payload.get("effort")
+    policy = payload.get("sandbox_policy")
+    kind = policy.get("type") if isinstance(policy, dict) else None
+    return (
+        named if isinstance(named, str) and named else None,
+        kind if isinstance(kind, str) and kind else None,
+    )
 
 
 def last_error(log: Path) -> str | None:
