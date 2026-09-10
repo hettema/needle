@@ -1840,6 +1840,10 @@ class Store:
                     f"({recent.session_id[:8]}…, {recent.card}); a machine with work on it is "
                     "not forgotten until a day has passed"
                 )
+            # Its clone rows go with it: a shortfall recorded for a machine
+            # the board forgot is nobody's (Codex's tenth pass).
+            for clone in session.scalars(select(CloneRow).where(CloneRow.machine == name)):
+                session.delete(clone)
             session.delete(row)
             return True
 
@@ -1941,10 +1945,16 @@ class Store:
 
     def record_clones(self, machine: str, projects: dict[str, str | None], at: datetime) -> bool:
         """What the board found levelling one machine's clones this pass:
-        per project, why the clone is not level, or None. True when the
-        words changed for any project."""
+        per project, why the clone is not level, or None — the machine's
+        whole set, so a project no longer on the board leaves no row
+        behind (Codex's tenth pass). True when the words changed for any
+        project."""
         changed = False
         with self._session() as session, session.begin():
+            for row in session.scalars(select(CloneRow).where(CloneRow.machine == machine)):
+                if row.project not in projects:
+                    changed = changed or row.note is not None
+                    session.delete(row)
             for project, note in projects.items():
                 row = session.get(CloneRow, (machine, project))
                 if row is None:

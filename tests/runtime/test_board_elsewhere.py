@@ -216,6 +216,23 @@ def test_the_head_says_which_clones_are_not_level_on_each_machines_own_line(
     assert main(["machines", "--json"]) == 0
     rows = {r["machine"]["name"]: r["clones"] for r in json.loads(capsys.readouterr().out)}
     assert rows["laptop"] == [] and rows["rented"] == rented.clones
+    # The record has a life: a project gone from the board leaves no row,
+    # the board's own machine never shows one (its checkout is the trunk's
+    # state), and a machine forgotten takes its rows with it.
+    store = Store(tmp_path / "board.db")
+    try:
+        store.record_clones("rented", {"q": "2 behind"}, NOW)
+        assert store.clones("rented") == ["q: 2 behind"]
+        store.record_clones("rented", {"p": None}, NOW)
+        assert store.clones("rented") == []
+        store.record_clones("laptop", {"p": "3 behind"}, NOW)
+        assert [r.clones for r in Runtime(store).rooms() if r.here] == [[]]
+        store.record_clones("rented", {"p": "1 behind"}, NOW)
+        machine_floor.host_down("rented", False)
+        assert store.remove_machine("rented")
+        assert store.clones("rented") == []
+    finally:
+        store.close()
 
 
 def test_a_machines_host_is_rewritten_only_when_the_host_is_that_machine(
@@ -392,6 +409,25 @@ def test_a_path_the_caller_gave_relative_to_its_directory_crosses_absolute(
     words = [" ".join(c["words"]) for c in machine_floor.state().get("ssh_calls", [])]
     assert any(
         f"needle machine add far --host rented --ground {corpus.resolve()}" in w for w in words
+    ), words[-3:]
+    # Which words are an option's value is the parser's knowledge, not a
+    # list: an abbreviated option still takes its value, `--` ends the
+    # options and a resolved option lands before it, and a nested verb's
+    # `--command` never reads as the top-level verb (Codex's tenth pass).
+    assert main(["add", "--sl", "project", "project"]) == 0
+    capfd.readouterr()
+    words = [" ".join(c["words"]) for c in machine_floor.state()["ssh_calls"]]
+    assert any(f"needle add --sl project {twin.resolve()}" in w for w in words), words[-2:]
+    main(["machine", "add", "--ground", ".", "--", "dashed"])
+    words = [" ".join(c["words"]) for c in machine_floor.state()["ssh_calls"]]
+    assert any(f"needle machine add --ground {corpus.resolve()} -- dashed" in w for w in words), (
+        words[-3:]
+    )
+    main(["machine", "add", "near", "--host", "rented", "--command", "fold", "--ground", "."])
+    words = [" ".join(c["words"]) for c in machine_floor.state()["ssh_calls"]]
+    assert any(
+        f"needle machine add near --host rented --command fold --ground {corpus.resolve()}" in w
+        for w in words
     ), words[-3:]
     # A placement across machines is the board's question; the rule for
     # this machine alone stays here.

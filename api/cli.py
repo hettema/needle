@@ -282,60 +282,114 @@ def main(argv: list[str] | None = None) -> int:
             print(str(wrong), file=sys.stderr)
             return 1
         if elsewhere is not None:
-            return machine.forward(elsewhere, _absolute(args, words))
+            return machine.forward(elsewhere, _absolute(args, words, _verb_parser(sub, words)))
     return int(args.run(args))
 
 
-def _absolute(args: argparse.Namespace, words: list[str]) -> list[str]:
+def _verb_parser(sub: argparse._SubParsersAction, words: list[str]) -> argparse.ArgumentParser:
+    """The parser of the verb the words name, nested verbs included: what
+    knows which options take a value, so no list of them is written by
+    hand (Codex's tenth pass on card #83)."""
+    chosen = sub.choices[words[0]]
+    nested = next((a for a in chosen._actions if isinstance(a, argparse._SubParsersAction)), None)
+    if nested is not None and len(words) > 1 and words[1] in nested.choices:
+        return nested.choices[words[1]]
+    return chosen
+
+
+def _absolute(
+    args: argparse.Namespace, words: list[str], verb: argparse.ArgumentParser
+) -> list[str]:
     """The verb's words with every caller-relative path made absolute: the
-    fold's worktree, a project's path, a machine's ground. An option is
-    stripped and re-added resolved; a positional is replaced at its place,
-    never every equal word (Codex's ninth pass: `add project --slug
-    project` rewrote the slug)."""
+    fold's worktree, a project's path, a machine's ground, a placement's
+    repo. An option is stripped and re-added resolved before any `--`; a
+    positional is replaced at its place, never every equal word (Codex's
+    ninth pass: `add project --slug project` rewrote the slug). Which
+    words are an option's value is the verb's parser's knowledge — the
+    options that take one, and their abbreviations, which argparse
+    accepts (the tenth pass)."""
+    takers = _Takers(verb)
     if args.command == "fold":
-        return [*_without(words, "--worktree"), "--worktree", _resolved(args.worktree or ".")]
+        return _with_option(words, "--worktree", _resolved(args.worktree or "."), takers)
     if args.command == "add":
-        return _positional(words, args.path, _resolved(args.path), taking=("--slug", "--name"))
-    # argparse leaves `command` None under a nested subparser, so the
-    # machine verbs are known by their own dest.
+        return _positional(words, args.path, _resolved(args.path), takers)
     if getattr(args, "machine_verb", None) == "add" and args.ground:
-        return [*_without(words, "--ground"), "--ground", _resolved(args.ground)]
+        return _with_option(words, "--ground", _resolved(args.ground), takers)
     if args.command == "where" and args.repo:
-        return [*_without(words, "--repo"), "--repo", _resolved(args.repo)]
+        return _with_option(words, "--repo", _resolved(args.repo), takers)
     return words
+
+
+class _Takers:
+    """The option strings of one verb that take a value, and the test for
+    a word being one — spelled in full, abbreviated, never `--opt=value`,
+    which carries its value in the same word."""
+
+    def __init__(self, verb: argparse.ArgumentParser):
+        self.options = {
+            spelling
+            for action in verb._actions
+            for spelling in action.option_strings
+            if action.nargs != 0
+        }
+
+    def __call__(self, word: str) -> bool:
+        if "=" in word:
+            return False
+        return word in self.options or (
+            word.startswith("--") and any(o.startswith(word) for o in self.options)
+        )
 
 
 def _resolved(path: str) -> str:
     return str(Path(path).expanduser().resolve())
 
 
-def _without(words: list[str], option: str) -> list[str]:
-    """The words with one value-taking option and its value removed."""
+def _with_option(words: list[str], option: str, value: str, takers: _Takers) -> list[str]:
+    """The words with one value-taking option, however it was spelled,
+    replaced by `option value` before any `--`; the words after `--` are
+    positionals and stay as they are."""
+    head, tail = _split_dashes(words)
     kept: list[str] = []
     skip = False
-    for word in words:
+    for word in head:
         if skip:
             skip = False
-        elif word == option:
+        elif word.startswith("--") and "=" not in word and option.startswith(word) and takers(word):
             skip = True
         elif not word.startswith(option + "="):
             kept.append(word)
-    return kept
+    return [*kept, option, value, *tail]
 
 
-def _positional(
-    words: list[str], value: str, replacement: str, *, taking: tuple[str, ...]
-) -> list[str]:
+def _positional(words: list[str], value: str, replacement: str, takers: _Takers) -> list[str]:
     """The first word after the verb equal to `value` that is not an
-    option's value, replaced; the verb's own word (index 0) never is."""
-    out = list(words)
+    option's value, replaced; the verb's own word (index 0) never is; a
+    word after `--` is a positional whatever it looks like."""
+    head, tail = _split_dashes(words)
+    out = list(head)
     previous = ""
+    found = False
     for index in range(1, len(out)):
-        if out[index] == value and previous not in taking:
+        if out[index] == value and not takers(previous):
             out[index] = replacement
+            found = True
             break
         previous = out[index]
-    return out
+    if not found and tail:
+        for index, word in enumerate(tail):
+            if word == value:
+                tail = [*tail[:index], replacement, *tail[index + 1 :]]
+                break
+    return [*out, *tail]
+
+
+def _split_dashes(words: list[str]) -> tuple[list[str], list[str]]:
+    """The words before the first `--`, and it with everything after."""
+    if "--" in words:
+        at = words.index("--")
+        return words[:at], words[at:]
+    return words, []
 
 
 if __name__ == "__main__":

@@ -701,7 +701,7 @@ def machine_add(runtime: Runtime, args: argparse.Namespace) -> int:
         host=args.host,
         desktop=args.desktop,
         ground=ground,
-        command=args.command or machine.needle_command(),
+        command=args.needle_command or machine.needle_command(),
         added_at=clock.now(),
     )
     try:
@@ -1114,7 +1114,11 @@ def register(sub: "argparse._SubParsersAction[argparse.ArgumentParser]") -> None
     p_add.add_argument("--host", help="the ssh name the board reaches it by; none for this one")
     p_add.add_argument("--desktop", action="store_true", help="it holds the owner's screen")
     p_add.add_argument("--ground", help="the project that is its own record; its cards run there")
-    p_add.add_argument("--command", help="how needle runs there, as a shell line")
+    # Its own dest: `command` is the top-level verb's, and an option under
+    # a nested verb with the same dest overwrote it (Codex's tenth pass).
+    p_add.add_argument(
+        "--command", dest="needle_command", help="how needle runs there, as a shell line"
+    )
     p_add.add_argument("--json", action="store_true", help="answer as JSON")
     p_add.set_defaults(board=True, run=_with_runtime(machine_add))
     p_rm = machine_sub.add_parser("rm", help="forget a machine")

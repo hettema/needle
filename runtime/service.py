@@ -328,7 +328,10 @@ class Runtime:
                         )
                     ),
                     timings=sorted(latest.values(), key=lambda t: t.what),
-                    clones=self.store.clones(m.name),
+                    # The board's own checkout is the trunk's state, never a
+                    # clone: a row about this machine from before it was the
+                    # board's is history (Codex's tenth pass).
+                    clones=[] if self.is_here(m) else self.store.clones(m.name),
                 )
             )
         return found
