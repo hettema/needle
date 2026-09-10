@@ -96,8 +96,9 @@ class Session(BaseModel):
     """The sandbox a Codex session's latest turn ran in, in Codex's own
     word (`read-only`, `workspace-write`); None for a row that does not say
     — every Claude row, and a Codex rollout no turn of which carries one.
-    Read so a caller told which session a bare-name call picked can see
-    whether it can run the probe the question needs (card #110, item 5)."""
+    Read so a caller told which session a bare-name call picked sees what
+    that session's latest turn ran in before choosing it — history, not a
+    promise about the next turn (card #110, item 5)."""
 
 
 class TranscriptSize(BaseModel):

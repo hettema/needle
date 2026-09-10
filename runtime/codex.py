@@ -171,8 +171,10 @@ def _context_of(path: Path) -> tuple[str | None, str | None]:
     there is none or the file cannot be read. The last, not the first: a
     worker's first turn may carry no context and a fork inherits its
     parent's before its own turn begins (the cold read of round three,
-    call 71, on two real rollouts), and what a caller asks is what the
-    session runs at now. Read backwards in growing blocks from the end, so
+    call 71, on two real rollouts), and what a caller is told is what the
+    session's latest turn ran at — history, never a prediction of the
+    next turn, which Codex resolves when the resume runs (the cold read of
+    round five). Read backwards in growing blocks from the end, so
     a session whose last turn is short costs one small read and one whose
     last turn is long costs the turn; a line without a newline at the end
     is a line in flight and is not read."""
