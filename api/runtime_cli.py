@@ -204,6 +204,11 @@ def describe_launch(launch: Launch) -> str:
 
 def sessions(runtime: Runtime, args: argparse.Namespace) -> int:
     rows = runtime.sessions()
+    if args.lean:
+        # The brief a session opened with is what the machine that resumes
+        # it reads, never the board over the wire: 474 rows carried 3.6 MB
+        # of it on the first live move (2026-09-10).
+        rows = [r.model_copy(update={"intent": ""}) for r in rows]
     now = clock.now()
     text = "\n".join(describe_session(s, now) for s in rows) or "no session in any registry"
     unreadable = runtime.handoffs().unreadable
@@ -1041,7 +1046,12 @@ def register(sub: "argparse._SubParsersAction[argparse.ArgumentParser]") -> None
         p.set_defaults(run=_with_runtime(verb))
         return p
 
-    parser("sessions", "every session on this machine, across every slot, as one list", sessions)
+    p_sessions = parser(
+        "sessions", "every session on this machine, across every slot, as one list", sessions
+    )
+    p_sessions.add_argument(
+        "--lean", action="store_true", help="without each session's brief: what the wire asks"
+    )
     p_scopes = parser(
         "scopes", "every process group of ours, who is home in it, and what else it holds", scopes
     )

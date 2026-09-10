@@ -171,7 +171,11 @@ round's repairs (the record's eighth to twelfth passes, thirty-three
 findings; the loop for this half ended under §13's three-passes rule
 with one corner of the clone record filed as a defect and the revert
 script's last five repaired for the rehearsal to prove; the record says
-which and why). The live half — the
+which and why). The first live move (2026-09-10, 15:20Z) crossed the store and stopped
+at the rented board's first read — the record's thirteenth pass, seven
+findings no cold read had, two in the code and five in the procedure,
+repaired the same hour — and the laptop's board was brought back; the
+second move follows the fold of the two. The live half — the
 store moved at a quiet moment with both services stopped, the laptop's
 `127.0.0.1:8480` made the tunnel's end by a socket unit that proxies to
 the machine's `tailscale serve`, the laptop's own `needle-serve` disabled

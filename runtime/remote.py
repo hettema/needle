@@ -121,7 +121,10 @@ class Remote:
     # ── reading ────────────────────────────────────────────────────────
 
     def sessions(self) -> list[Session]:
-        return self._ask_list(["sessions"], Session)
+        """Every session there, without the brief each opened with: the
+        board never reads it from another machine, and with it the answer
+        was megabytes (the first live move, 2026-09-10)."""
+        return self._ask_list(["sessions", "--lean"], Session)
 
     def where(self, from_slot: str | None, tried: list[Rung], *, cached: bool) -> Where:
         argv = ["where"]
@@ -133,9 +136,7 @@ class Remote:
             argv += ["--tried", _tried_argument(tried)]
         return self._ask(argv, Where, timeout=VERB_SECONDS)
 
-    def room(
-        self, *, hold: bool, owners: dict[str, tuple[str, int]] | None = None
-    ) -> Headroom:
+    def room(self, *, hold: bool, owners: dict[str, tuple[str, int]] | None = None) -> Headroom:
         argv = ["room", *(["--hold"] if hold else [])]
         for unit, (slug, number) in (owners or {}).items():
             argv += ["--owner", f"{unit}={slug}:{number}"]

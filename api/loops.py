@@ -486,7 +486,14 @@ class Loops:
         grows after the beat let it in is seen here before oomd sees it,
         and the head says which lane and how far; the dial's beat and the
         terminal read the machine through this one call."""
-        owners = self._names()
+        # The names handed to every machine's room: the units of the cards
+        # with hands on, in their three kinds, and not every card the board
+        # ever had — 480 cards' worth was a line of 135 KB, more than one
+        # argument may carry to `ssh` (E2BIG at 128 KB; the first live move,
+        # 2026-09-10). A group with no card among these is named by its
+        # unit, which is what it is.
+        busy = set(self._owners().values())
+        owners = {unit: card for unit, card in self._names().items() if card in busy}
         # Every machine is read on every pass (card #83): the rooms place
         # the next card, the head shows each machine, and the day's
         # high-water mark is kept per machine. Every lane's scope carries
