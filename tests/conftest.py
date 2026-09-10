@@ -24,6 +24,34 @@ from tests import floor as floor_mod
 
 FIXTURES = Path(__file__).parent / "fixtures"
 
+TEMP_ROOT_VARIABLE = "PYTEST_DEBUG_TEMPROOT"
+
+
+def floors_root() -> Path:
+    """Where this suite's floors go when nothing on the command line or in the
+    environment says otherwise: a directory on disk under the user's cache.
+
+    Why not pytest's default: the system temp folder is memory on this
+    laptop (`/tmp` is a tmpfs of 7.7 GB), so every floor laid there was RAM
+    the board's 5 GB floor could not see and the memory killer answered —
+    2.9 GB of floors at the moment card #83's whole group was killed,
+    2026-09-09 (card #109). Why the cache and not a per-run `--basetemp`:
+    pytest wipes a given base and uses it bare, so two suites given one
+    collide; a root keeps pytest's own numbering, lock and pruning."""
+    cache = os.environ.get("XDG_CACHE_HOME") or str(Path.home() / ".cache")
+    return Path(cache) / "needle" / "floors"
+
+
+def pytest_configure(config: pytest.Config) -> None:
+    """Move the temp root onto disk by pytest's own knob, and only when neither
+    `--basetemp` nor the variable already names one — an explicit choice
+    wins, as it always did, and the laptop-wide setting the machine's board
+    carries (card #109, item 3) is that same variable."""
+    if config.option.basetemp is None and TEMP_ROOT_VARIABLE not in os.environ:
+        root = floors_root()
+        root.mkdir(parents=True, exist_ok=True)
+        os.environ[TEMP_ROOT_VARIABLE] = str(root)
+
 
 @pytest.fixture(autouse=True)
 def machine_floor(
