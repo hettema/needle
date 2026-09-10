@@ -187,6 +187,7 @@ def verdict_faults(
     call_of: Callable[[int], Call | None],
     lane_slot: str | None,
     landed: Callable[[Call], bool],
+    within: str | None = None,
 ) -> list[str]:
     """The faults only the board's call table shows (item 2, ruling 5): a
     verdict's call has a row, its colleague is of the other kind — `codex`
@@ -226,5 +227,29 @@ def verdict_faults(
             faults.append(
                 f"{name}:{verdict.line} call {verdict.call}'s answer never landed after the "
                 "call — a verdict quotes an answer the board saw arrive"
+            )
+            continue
+        # The board holds the answer's words (the loop ends a landed call
+        # with them); the verdict quotes them. A verdict saying complete
+        # over an answer that broke, or naming addresses the answer did
+        # not, is the writer's word and not the reader's (the cold read of
+        # round eleven drove the door with another project's call whose
+        # stored answer said "broke 9.9" and the record said otherwise).
+        words = (call.words or "").lower()
+        if verdict.complete and "complete" not in words:
+            faults.append(
+                f"{name}:{verdict.line} says call {verdict.call} read complete, and the answer "
+                "the board holds for that call does not"
+            )
+        missing = [address for address in verdict.broke if address not in words]
+        if missing:
+            faults.append(
+                f"{name}:{verdict.line} says call {verdict.call} broke {', '.join(missing)}, "
+                "and the answer the board holds for that call names no such address"
+            )
+        if within is not None and not call.caller.startswith(within.rstrip("/")):
+            faults.append(
+                f"{name}:{verdict.line} call {verdict.call} was made from {call.caller}, outside "
+                "this project — a round's cold read is called from the lane or its project"
             )
     return faults

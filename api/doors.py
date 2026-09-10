@@ -1673,11 +1673,14 @@ class Doors:
         birth = record.birth if record is not None else None
         tip = record.tip if record is not None else None
         files = self.runtime.lane_files(where, birth=birth, tip=None) if standing else set()
-        if not files and not standing and birth is None:
-            # Neither the tree nor a birth to diff the checkout from: the
+        if not files and birth is None:
+            # Nothing in the tree — gone here, gone on the machine that held
+            # it, or level — and no birth to diff the checkout from: the
             # board cannot say what the lane folded, and says so rather than
-            # reading an empty diff as docs-only (the cold read of round
-            # nine — a level checkout with no birth answers nothing).
+            # reading an empty diff as docs-only (the cold reads of rounds
+            # nine and ten — a level checkout with no birth answers nothing,
+            # and a remote lane stands by placement whether its tree is
+            # there or not).
             if not review:
                 raise DoorRefused(
                     f"#{number}'s lane is gone and the board recorded neither its birth nor its "
@@ -1814,6 +1817,7 @@ class Doors:
             call_of=self.live.store.call,
             lane_slot=lane_slot,
             landed=calls.landed,
+            within=project.path,
         )
         if faults:
             more = f"; and {len(faults) - 4} more" if len(faults) > 4 else ""

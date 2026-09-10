@@ -339,7 +339,7 @@ def test_the_counts_are_findings_in_pass_order():
     )
 
 
-def _call(number: int, slot: str, *, landed: bool) -> Call:
+def _call(number: int, slot: str, *, landed: bool, words: str = "complete") -> Call:
     return Call(
         id=number,
         session_id="01a08a3a-0000-7000-8000-000000000000",
@@ -352,7 +352,7 @@ def _call(number: int, slot: str, *, landed: bool) -> Call:
         called_at=NOW,
         moved=None,
         ended_at=NOW if landed else None,
-        words="/tmp/none/answer.md landed at 2026-09-11T09:01:00+00:00: complete"
+        words=f"/tmp/none/answer.md landed at 2026-09-11T09:01:00+00:00: {words}"
         if landed
         else None,
     )
@@ -361,7 +361,7 @@ def _call(number: int, slot: str, *, landed: bool) -> Call:
 def test_the_call_table_faults_a_missing_row_the_own_kind_and_an_answer_that_never_landed():
     review = review_of(RECORD, "r.md")
     rows = {
-        12: _call(12, "codex", landed=True),
+        12: _call(12, "codex", landed=True, words="broke 1.2 — x"),
         13: _call(13, "codex", landed=True),
         14: _call(14, "codex", landed=True),
     }
@@ -383,7 +383,10 @@ def test_the_call_table_faults_a_missing_row_the_own_kind_and_an_answer_that_nev
     assert len(missing) == 1 and "names call 13, which the board has no row for" in missing[0]
     own = verdict_faults(review, "r.md", call_of=rows.get, lane_slot="codex", landed=lambda c: True)
     assert len(own) == 3 and all("of the lane's own kind" in f for f in own)
-    claude_rows = {n: _call(n, "hrclaude", landed=True) for n in (12, 13, 14)}
+    claude_rows = {
+        n: _call(n, "hrclaude", landed=True, words="broke 1.2 — x" if n == 12 else "complete")
+        for n in (12, 13, 14)
+    }
     other = verdict_faults(
         review, "r.md", call_of=claude_rows.get, lane_slot="codex", landed=lambda c: True
     )
@@ -396,3 +399,44 @@ def test_the_call_table_faults_a_missing_row_the_own_kind_and_an_answer_that_nev
         review, "r.md", call_of=rows.get, lane_slot=None, landed=lambda c: True
     )
     assert len(unknown) == 1 and "holds no session for this lane" in unknown[0]
+
+
+def test_a_verdict_quotes_the_answer_the_board_holds_and_a_call_from_elsewhere_is_not_this_lanes():
+    """The cold read of round eleven drove the door with another project's
+    call whose stored answer said `broke 9.9` while the record said
+    otherwise, and it was accepted: the verdict's words are checked
+    against the answer the board holds, and the call's caller against the
+    project."""
+    review = review_of(RECORD, "r.md")
+    rows = {n: _call(n, "codex", landed=True) for n in (12, 13, 14)}
+    rows[12] = rows[12].model_copy(
+        update={"words": "/tmp/none/answer.md landed at 2026-09-11T09:01:00+00:00: broke 1.2 — x"}
+    )
+    ok = verdict_faults(
+        review,
+        "r.md",
+        call_of=rows.get,
+        lane_slot="hrclaude",
+        landed=lambda c: True,
+        within="/tmp",
+    )
+    assert ok == []
+    lying = dict(rows)
+    lying[12] = rows[13]  # a complete answer under a verdict that says broke 1.2
+    lying[13] = rows[12]  # a broke answer under a verdict that says complete
+    faults = verdict_faults(
+        review, "r.md", call_of=lying.get, lane_slot="hrclaude", landed=lambda c: True
+    )
+    assert any("broke 1.2, and the answer the board holds" in f for f in faults)
+    assert any(
+        "read complete, and the answer the board holds for that call does not" in f for f in faults
+    )
+    elsewhere = verdict_faults(
+        review,
+        "r.md",
+        call_of=rows.get,
+        lane_slot="hrclaude",
+        landed=lambda c: True,
+        within="/home/other/project",
+    )
+    assert len(elsewhere) == 3 and all("outside this project" in f for f in elsewhere)

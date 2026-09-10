@@ -71,9 +71,11 @@ def a_code_lane(client: TestClient, machine_floor: Floor, repo: Path) -> Path:
     return worktree
 
 
-def a_landed_codex_call(client: TestClient, machine_floor: Floor, repo: Path) -> int:
-    """A call row of the other make whose answer landed: what a verdict
-    line names."""
+def a_landed_codex_call(
+    client: TestClient, machine_floor: Floor, repo: Path, words: str = "complete"
+) -> int:
+    """A call row of the other make whose answer landed, with the answer's
+    words the board keeps: what a verdict line names and quotes."""
     store = client.app.state.loops.live.store
     answer = machine_floor.discussion / "from-01a08a3a-re-round-one.md"
     row = store.record_call(
@@ -86,7 +88,7 @@ def a_landed_codex_call(client: TestClient, machine_floor: Floor, repo: Path) ->
         caller=str(repo),
         at=NOW,
     )
-    store.end_call(row.id, NOW, f"{answer} landed at 2026-09-11T09:01:00+00:00: complete")
+    store.end_call(row.id, NOW, f"{answer} landed at 2026-09-11T09:01:00+00:00: {words}")
     return row.id
 
 
@@ -203,14 +205,25 @@ def test_a_round_without_a_verdict_a_verdict_without_its_row_and_a_broken_claim_
     code, _, err = close(path, capsys)
     assert code == 1 and f"names call {call + 7}, which the board has no row for" in err
 
+    # The board holds the answer's words, and the verdict quotes them (the
+    # cold read of round eleven): a break the record names is one the
+    # answer named, so the broke verdicts here quote a call that broke.
+    broke = a_landed_codex_call(client, machine_floor, repo, words="broke 1.2 — the nightly job")
     write(repo, "2026-09-11-the-meter.md", record(call=call, verdict="broke 1.2 — the nightly job"))
+    code, _, err = close(path, capsys)
+    assert code == 1
+    assert f"says call {call} broke 1.2, and the answer the board holds" in err, err
+
+    write(
+        repo, "2026-09-11-the-meter.md", record(call=broke, verdict="broke 1.2 — the nightly job")
+    )
     code, _, err = close(path, capsys)
     assert code == 1
     assert "broke 1.2 and no disposition marked `[repair of 1.2]` under pass 1 or later" in err
 
     # A fix that answers a break is a new repair, and a new repair is read
     # (pass two's reader): the round ends on a verdict that says complete.
-    fixed = record(call=call, verdict="broke 1.2 — the nightly job") + (
+    fixed = record(call=broke, verdict="broke 1.2 — the nightly job") + (
         "3. [seam] [repair of 1.2] The nightly job reads the table too — FIXED in bcd2345; "
         "reaches the nightly job and the sweep; assumes the two never run at once.\n"
     )
