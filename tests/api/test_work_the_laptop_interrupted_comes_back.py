@@ -747,3 +747,45 @@ def test_a_handoff_naming_a_finished_lane_expires(
     assert len(words) == 1 and words[0].startswith(
         f"A request to move {launched['short']} expired unacted: the work is closed"
     )
+
+
+def test_a_parked_lanes_fresh_room_read_hands_the_wire_only_the_busy_cards_names(
+    client: TestClient, machine_floor, repo: Path
+):
+    """The pass bounds the names it hands `room --owner` to the cards with
+    hands on (E2BIG at 128 KB on the first live move); the park's own
+    fresh read handed every card's names until 2026-09-10 evening, so
+    Hello Revenue #503, parked on the rented machine with 30 GB free, read
+    its room as unreadable for twenty-five minutes and never came back.
+    Both reads hand the same bounded names."""
+    loops = client.app.state.loops
+    start(client)
+    reconcile(client)
+    handed: list[dict] = []
+    real = loops.runtime.rooms
+
+    def rooms(**kwargs):
+        handed.append(kwargs)
+        return real(**kwargs)
+
+    # A card the board once had a lane for, with no hands on it now: the
+    # name an unbounded read would hand the wire and a bounded one never.
+    names = dict(loops._names())
+    names["needle-card-999-long-gone.scope"] = ("proj", 999)
+    loops.runtime.rooms = rooms
+    all_names = loops._names
+    loops._names = lambda: names
+    try:
+        loops.headroom_now()
+        loops._room_of(loops.runtime.here().name)
+    finally:
+        loops.runtime.rooms = real
+        loops._names = all_names
+    assert len(handed) == 2
+    busy = set(loops._owners().values())
+    assert busy, "the started lane has hands on"
+    for kwargs in handed:
+        assert set(kwargs["owners"].values()) <= busy
+        assert "needle-card-999-long-gone.scope" not in kwargs["owners"]
+        assert kwargs["read"] == set(loops._owners())
+    assert handed[0]["owners"] == handed[1]["owners"]

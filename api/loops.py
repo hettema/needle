@@ -486,14 +486,7 @@ class Loops:
         grows after the beat let it in is seen here before oomd sees it,
         and the head says which lane and how far; the dial's beat and the
         terminal read the machine through this one call."""
-        # The names handed to every machine's room: the units of the cards
-        # with hands on, in their three kinds, and not every card the board
-        # ever had — 480 cards' worth was a line of 135 KB, more than one
-        # argument may carry to `ssh` (E2BIG at 128 KB; the first live move,
-        # 2026-09-10). A group with no card among these is named by its
-        # unit, which is what it is.
-        busy = set(self._owners().values())
-        owners = {unit: card for unit, card in self._names().items() if card in busy}
+        owners = self._busy_owners()
         # Every machine is read on every pass (card #83): the rooms place
         # the next card, the head shows each machine, and the day's
         # high-water mark is kept per machine. Every lane's scope carries
@@ -655,7 +648,7 @@ class Loops:
         machine's floor — a full rented machine is not admitted because the
         laptop has room, nor held because the laptop is full (Codex's
         reading of the second pass)."""
-        rooms = self.runtime.rooms(owners=self._names(), read=self._owners())
+        rooms = self.runtime.rooms(owners=self._busy_owners(), read=set(self._owners()))
         self._rooms = rooms
         wanted = self.runtime.machine_named(machine_name).name
         reading = next((r for r in rooms if r.machine.name == wanted), None)
@@ -668,6 +661,19 @@ class Loops:
         reading's, its planning's — to the card, so a group the machine
         lists is named by its card on the head, whatever kind it is."""
         return {unit: (slug, number) for unit, (slug, number, _) in self._lanes_by_unit().items()}
+
+    def _busy_owners(self) -> dict[str, tuple[str, int]]:
+        """The names handed to every machine's room, on the pass and on a
+        parked lane's fresh read alike: the units of the cards with hands
+        on, in their three kinds, and not every card the board ever had —
+        480 cards' worth was a line of 135 KB, more than one argument may
+        carry to `ssh` (E2BIG at 128 KB; the first live move, 2026-09-10).
+        The park's read handed every name until 2026-09-10 evening, so a
+        lane parked on the rented machine read its room as unreadable for
+        twenty-five minutes and never came back. A group with no card among
+        these is named by its unit, which is what it is."""
+        busy = set(self._owners().values())
+        return {unit: card for unit, card in self._names().items() if card in busy}
 
     def _owners(self) -> dict[str, tuple[str, int]]:
         """Every lane with hands on, by the unit it was given at Start: what
