@@ -26,6 +26,13 @@ from runtime import launch, machine
 from runtime.launch import PROMPTS_SETTLED
 
 WINDOW_VERIFY_SECONDS = 8.0
+ATTACH_VERIFY_SECONDS = 30.0
+"""How long the multiplexer on the other machine gets to hold the session
+the window attached to, counted from the window's appearance: an ssh
+handshake, a login shell there and tmux take seconds, and under the
+window's own eight the first Talk it through from the moved board was
+refused while its session stood attached on the rented machine
+(2026-09-10, 17:43Z)."""
 """A window appeared in 0.3 s on 2026-09-04; eight is generous for a busy machine."""
 WINDOW_POLL_SECONDS = 0.3
 FOCUS_VERIFY_SECONDS = 3.0
@@ -257,7 +264,7 @@ def _prove_attached(proof: str, deadline: float) -> None:
         time.sleep(WINDOW_POLL_SECONDS)
     raise WindowRefused(
         f"the terminal opened but {host} holds no multiplexer session {name} "
-        f"within {WINDOW_VERIFY_SECONDS:.0f} s"
+        f"within {ATTACH_VERIFY_SECONDS:.0f} s of it"
     )
 
 
@@ -364,7 +371,7 @@ def open_fresh(
         new = [address for address in present(app_id, host) if address not in before]
         if new:
             if proof is not None:
-                _prove_attached(proof, deadline)
+                _prove_attached(proof, time.time() + ATTACH_VERIFY_SECONDS)
             window = store.record_window(session_id, kind, app_id, new[0], clock.now())
             return Opened(window=window, fresh=fresh, banner=banner)
         time.sleep(WINDOW_POLL_SECONDS)
