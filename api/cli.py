@@ -287,25 +287,55 @@ def main(argv: list[str] | None = None) -> int:
 
 
 def _absolute(args: argparse.Namespace, words: list[str]) -> list[str]:
-    """The verb's words with every caller-relative path made absolute."""
+    """The verb's words with every caller-relative path made absolute: the
+    fold's worktree, a project's path, a machine's ground. An option is
+    stripped and re-added resolved; a positional is replaced at its place,
+    never every equal word (Codex's ninth pass: `add project --slug
+    project` rewrote the slug)."""
     if args.command == "fold":
-        kept: list[str] = []
-        skip = False
-        for word in words:
-            if skip:
-                skip = False
-                continue
-            if word == "--worktree":
-                skip = True
-                continue
-            if word.startswith("--worktree="):
-                continue
-            kept.append(word)
-        return [*kept, "--worktree", str(Path(args.worktree or ".").resolve())]
+        return [*_without(words, "--worktree"), "--worktree", _resolved(args.worktree or ".")]
     if args.command == "add":
-        resolved = str(Path(args.path).expanduser().resolve())
-        return [resolved if word == args.path else word for word in words]
+        return _positional(words, args.path, _resolved(args.path), taking=("--slug", "--name"))
+    # argparse leaves `command` None under a nested subparser, so the
+    # machine verbs are known by their own dest.
+    if getattr(args, "machine_verb", None) == "add" and args.ground:
+        return [*_without(words, "--ground"), "--ground", _resolved(args.ground)]
+    if args.command == "where" and args.repo:
+        return [*_without(words, "--repo"), "--repo", _resolved(args.repo)]
     return words
+
+
+def _resolved(path: str) -> str:
+    return str(Path(path).expanduser().resolve())
+
+
+def _without(words: list[str], option: str) -> list[str]:
+    """The words with one value-taking option and its value removed."""
+    kept: list[str] = []
+    skip = False
+    for word in words:
+        if skip:
+            skip = False
+        elif word == option:
+            skip = True
+        elif not word.startswith(option + "="):
+            kept.append(word)
+    return kept
+
+
+def _positional(
+    words: list[str], value: str, replacement: str, *, taking: tuple[str, ...]
+) -> list[str]:
+    """The first word after the verb equal to `value` that is not an
+    option's value, replaced; the verb's own word (index 0) never is."""
+    out = list(words)
+    previous = ""
+    for index in range(1, len(out)):
+        if out[index] == value and previous not in taking:
+            out[index] = replacement
+            break
+        previous = out[index]
+    return out
 
 
 if __name__ == "__main__":

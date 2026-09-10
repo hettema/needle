@@ -155,8 +155,10 @@ def forward(board: BoardMachine, argv: list[str]) -> int:
     what it is — the line was lost, before or after the verb ran there, so
     a write is repeated only after the board is read (Codex's eighth pass
     on card #83). A signal that ended `ssh` here is answered as a shell
-    answers it, 128 plus the signal; the verb on the other side runs on to
-    its end, and a write there is one row, whole or absent."""
+    answers it, 128 plus the signal; what the verb on the other side did
+    after the line dropped is not known here either — a fold is a push
+    and several rows — so the board is read before anything is repeated
+    (the ninth pass)."""
     done = subprocess.run(
         remote_argv(board.host, f"{board.command} {shlex.join(argv)}"),
         stdin=subprocess.DEVNULL,

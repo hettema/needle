@@ -258,9 +258,6 @@ class Loops:
         self._notes: list[Note] = []
         """The machine's watercooler as the last read saw it (plan 17)."""
         self._rooms: list[MachineRoom] = []
-        self._clones: dict[str, list[str]] = {}
-        """Per machine, the projects whose clone there was not level at the
-        last levelling (card #83, item 3); shown on the head's machine line."""
         """Every machine against the floor as the last read saw it (card
         #83): what places work between passes, and what the head shows."""
         self._parties: dict[tuple[str, int], set[str]] = {}
@@ -495,10 +492,7 @@ class Loops:
         # high-water mark is kept per machine. Every lane's scope carries
         # the floor as its high mark, whoever made the scope (card #107):
         # set where it is missing on every machine, said once on the card.
-        self._rooms = [
-            r.model_copy(update={"clones": self._clones.get(r.machine.name, [])})
-            for r in self.runtime.rooms(hold=True, owners=owners, read=set(self._owners()))
-        ]
+        self._rooms = self.runtime.rooms(hold=True, owners=owners, read=set(self._owners()))
         now = clock.now()
         for reading in self._rooms:
             if reading.room is None:
@@ -2337,18 +2331,22 @@ class Loops:
 
     def level_clones_now(self) -> None:
         """Keep every other machine's clone of every project level with the
-        trunk (card #83, item 3), and remember per machine which clones were
-        not, for the head's machine line — never for the trunk's own state,
-        which is the board's checkout's alone (Codex's eighth pass)."""
-        stale: dict[str, list[str]] = {}
+        trunk (card #83, item 3), and record per machine and project which
+        clone was not — in the store, so the head's machine line and the
+        terminal's `needle machines` read the one record (Codex's ninth
+        pass) — never as the trunk's own state, which is the board's
+        checkout's alone (the eighth)."""
+        stale: dict[str, dict[str, str | None]] = {}
         for live in list(self.live.projects.values()):
             for m, levelled in self.runtime.level_elsewhere(live.project.path):
-                if levelled.level is True:
-                    continue
-                words = levelled.note or f"{levelled.behind} behind"
-                stale.setdefault(m.name, []).append(f"{live.project.slug}: {words}")
-        if stale != self._clones:
-            self._clones = stale
+                words = (
+                    None if levelled.level is True else levelled.note or f"{levelled.behind} behind"
+                )
+                stale.setdefault(m.name, {})[live.project.slug] = words
+        changed = False
+        for name, projects in stale.items():
+            changed = self.live.store.record_clones(name, projects, clock.now()) or changed
+        if changed:
             self.live.bump()
 
     def level_project(self, live: LiveProject) -> TrunkState:

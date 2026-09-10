@@ -149,14 +149,17 @@ that holds the lane, `Runtime.fold`), and every other machine's clone is
 levelled on the trunk's beat outside the loop's lock, a stale one said on
 that machine's line of the head and never as the board's own checkout's
 state (`Runtime.level_elsewhere`, `needle level`, `MachineRoom.clones`;
-the seam the first evening showed). `needle machine host NAME HOST`
+the seam the first evening showed; the finding is a row per machine and
+project in the store, so the head and `needle machines` read one record).
+`needle machine host NAME HOST`
 rewrites how the board reaches a machine once it has moved, proved by
 that machine's id as `machine add` proves it. The registry verbs
 (`machines`, `machine …`, `where --high-water`) are the board's too and
 cross with the rest; a machine that hands its verbs away answers the
 board for itself alone, never fanning out over the rows it copied. Proven
 on the floor: `tests/runtime/test_board_elsewhere.py`; read cold on its
-first commit by the other make (the record's eighth pass, fourteen
+first commit by the other make and then for the completeness of each
+round's repairs (the record's eighth and ninth passes, twenty-seven
 findings, repaired in the lane and the two machine records). The live half — the
 store moved at a quiet moment with both services stopped, the laptop's
 `127.0.0.1:8480` made the tunnel's end by a socket unit that proxies to
@@ -313,10 +316,15 @@ reach (every path below is in Needle's repository unless said):
   through `Remote.push`; `Runtime.level` levels the board's own checkout
   under the loop's lock and `Runtime.level_elsewhere` every other
   machine's through `Remote.level` outside it (`api/loops.py::
-  level_clones_now`), a shortfall kept per machine on `MachineRoom.clones`
-  for the head's machine line. `needle machine host` sets a registered
+  level_clones_now`), the finding a row per machine and project in the
+  store (`Store.record_clones`, `Store.clones`, migration 0018) read into
+  `MachineRoom.clones` for the head's machine line and `needle machines`. `needle machine host` sets a registered
   row's host after the id read over ssh matches the row's. `Runtime.
-  machines` answers this machine alone while `board.json` names another.
+  machines` keeps this machine's own row alone while `board.json` names
+  another, so a lane recorded under its name still routes here and it
+  never fans out over the rows it copied. `api/cli.py::_absolute` resolves
+  a caller-relative path before it crosses: the fold's worktree, a
+  project's path, a machine's ground, `where --repo`.
 - **The loop reads every machine on every pass.** `api/loops.py::
   headroom_now` reads `Runtime.rooms(hold=True)`, sets the floor's high
   mark on every machine's lane scopes, writes the day's high-water mark

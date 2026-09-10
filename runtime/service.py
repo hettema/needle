@@ -133,8 +133,13 @@ class Runtime:
         fanned out over its rows would ask the board's machine, which would
         ask back (Codex's eighth pass on card #83, the copied store's
         topology)."""
-        rows = [] if machine.board_elsewhere() is not None else self.store.machines()
         own = machine.machine_id()
+        rows = self.store.machines()
+        if machine.board_elsewhere() is not None:
+            # Its own row stays, by the name the board's records use for it
+            # — a lane recorded as the laptop's must still route here — and
+            # every other row goes (Codex's ninth pass on card #83).
+            rows = [m for m in rows if m.machine_id == own]
         if any(m.machine_id == own for m in rows):
             return rows
         return [
@@ -323,6 +328,7 @@ class Runtime:
                         )
                     ),
                     timings=sorted(latest.values(), key=lambda t: t.what),
+                    clones=self.store.clones(m.name),
                 )
             )
         return found
@@ -1015,9 +1021,11 @@ class Runtime:
         for m in self.machines():
             if self.is_here(m):
                 continue
-            if m.name in self.unread:
-                note = f"not levelled: {self.unread[m.name]}"
-                found.append((m, _unlevelled(note)))
+            # One read of the shared dict: the locked session read rewrites
+            # it while this runs outside the lock (Codex's ninth pass).
+            unread = self.unread.get(m.name)
+            if unread is not None:
+                found.append((m, _unlevelled(f"not levelled: {unread}")))
                 continue
             try:
                 found.append((m, self._remote(m).level(repo)))

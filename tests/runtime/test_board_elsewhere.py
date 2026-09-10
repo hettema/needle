@@ -170,7 +170,7 @@ def test_a_fold_asked_of_the_board_pushes_from_the_machine_that_holds_the_lane(
 
 
 def test_the_head_says_which_clones_are_not_level_on_each_machines_own_line(
-    machine_floor: Floor, ground: Path, tmp_path: Path
+    machine_floor: Floor, ground: Path, tmp_path: Path, capsys
 ):
     """The trunk's state is the board's own checkout's; another machine's
     stale clone is that machine's fact on the head's machine line (Codex's
@@ -206,8 +206,16 @@ def test_the_head_says_which_clones_are_not_level_on_each_machines_own_line(
         rented = next(r for r in loops._rooms if r.machine.name == "rented")
         assert rented.clones and rented.clones[0].startswith("p: ")
         assert live.store.trunk("p").level is True and live.store.trunk("p").note is None
+        # The terminal reads the same record, in its own process.
+        assert [r.clones for r in runtime.rooms() if r.machine.name == "rented"] == [rented.clones]
     finally:
         store.close()
+    assert main(["machines"]) == 0
+    out = capsys.readouterr().out
+    assert "rented  horsepower  did not answer" in out and "; clone not level — p: " in out
+    assert main(["machines", "--json"]) == 0
+    rows = {r["machine"]["name"]: r["clones"] for r in json.loads(capsys.readouterr().out)}
+    assert rows["laptop"] == [] and rows["rented"] == rented.clones
 
 
 def test_a_machines_host_is_rewritten_only_when_the_host_is_that_machine(
@@ -254,7 +262,7 @@ def test_a_machines_host_is_rewritten_only_when_the_host_is_that_machine(
 
 
 def test_a_machine_that_is_not_the_boards_answers_for_itself_alone(
-    machine_floor: Floor, ground: Path, tmp_path: Path
+    machine_floor: Floor, ground: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ):
     """The moved store carries both machine rows on both machines. The
     board asks the other machine `sessions`; a runtime there that fanned
@@ -287,6 +295,45 @@ def test_a_machine_that_is_not_the_boards_answers_for_itself_alone(
     hosts = [c["host"] for c in machine_floor.state().get("ssh_calls", [])]
     assert "rented" in hosts and "laptop" not in hosts
     assert "rented" not in runtime.unread
+    # Its own row stays under its registered name: a lane the board recorded
+    # as the laptop's still routes here, not to an unknown machine (Codex's
+    # ninth pass); a lane recorded as rented's is not here.
+    from domain.lane import LaneRecord
+
+    # Read as the rented floor's own `needle` would, in its environment:
+    # its store, its identity, its board file beside its store.
+    monkeypatch.setenv("NEEDLE_DB", str(other.root / "needle.db"))
+    monkeypatch.setenv("NEEDLE_MACHINE_ID", other.machine_id)
+    theirs_only = Store(other.root / "needle.db")
+    try:
+        for number, name in ((7, "laptop"), (8, "rented")):
+            theirs_only.record_lane(
+                LaneRecord(
+                    project="p",
+                    card_number=number,
+                    name=f"card-{number}-x",
+                    path=f"{tmp_path}/repo/.claude/worktrees/card-{number}-x",
+                    branch=f"card-{number}-x",
+                    birth=None,
+                    tip=None,
+                    first_seen=NOW,
+                    last_seen=NOW,
+                    gone_at=None,
+                    folded_at=None,
+                    trunk_synced_at=None,
+                    main_synced_at=None,
+                    machine=name,
+                )
+            )
+        away = Runtime(theirs_only)
+        assert [m.name for m in away.machines()] == ["rented"], "the rented floor's own row alone"
+        assert away.is_here(away.lane_machine(f"{tmp_path}/repo/.claude/worktrees/card-8-x"))
+        stranger = away.lane_machine(f"{tmp_path}/repo/.claude/worktrees/card-7-x")
+        assert stranger.name == "laptop" and stranger.host is None and not away.is_here(stranger)
+    finally:
+        theirs_only.close()
+        monkeypatch.setenv("NEEDLE_DB", str(tmp_path / "board.db"))
+        monkeypatch.setenv("NEEDLE_MACHINE_ID", machine_floor.machine_id)
     # From the other side — the board now on the rented floor, this one
     # handing its verbs there — a registry write goes to the board and not
     # the ledger here: `machine timing` writes the board's row.
@@ -331,3 +378,27 @@ def test_a_path_the_caller_gave_relative_to_its_directory_crosses_absolute(
     main(["fold", "--worktree", "."])
     words = [" ".join(c["words"]) for c in machine_floor.state().get("ssh_calls", [])]
     assert any(f"needle fold --worktree {corpus.resolve()}" in w for w in words)
+    # Only the path is replaced, at its place: a slug equal to the path's
+    # word stays a slug, and the verb's own word is never a path.
+    twin = corpus / "project"
+    (twin / "docs" / "plans").mkdir(parents=True)
+    assert main(["add", "--slug", "project", "project"]) == 0
+    capfd.readouterr()
+    words = [" ".join(c["words"]) for c in machine_floor.state().get("ssh_calls", [])]
+    assert any(f"needle add --slug project {twin.resolve()}" in w for w in words)
+    # A machine's ground crosses absolute too, since `machine add` is the
+    # board's verb now.
+    main(["machine", "add", "far", "--host", "rented", "--ground", "."])
+    words = [" ".join(c["words"]) for c in machine_floor.state().get("ssh_calls", [])]
+    assert any(
+        f"needle machine add far --host rented --ground {corpus.resolve()}" in w for w in words
+    ), words[-3:]
+    # A placement across machines is the board's question; the rule for
+    # this machine alone stays here.
+    count = len(machine_floor.state()["ssh_calls"])
+    main(["where", "--repo", "."])
+    words = [" ".join(c["words"]) for c in machine_floor.state()["ssh_calls"][count:]]
+    assert any(f"needle where --repo {corpus.resolve()}" in w for w in words), words
+    count = len(machine_floor.state()["ssh_calls"])
+    main(["where"])
+    assert len(machine_floor.state()["ssh_calls"]) == count

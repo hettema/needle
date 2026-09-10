@@ -79,6 +79,7 @@ from infrastructure.schema import (
     CallRow,
     CardRow,
     CardRowRow,
+    CloneRow,
     CorpusLaneRow,
     DeathRow,
     DialChangeRow,
@@ -1937,6 +1938,35 @@ class Store:
                     machine=timing.machine, what=timing.what, seconds=timing.seconds, at=timing.at
                 )
             )
+
+    def record_clones(self, machine: str, projects: dict[str, str | None], at: datetime) -> bool:
+        """What the board found levelling one machine's clones this pass:
+        per project, why the clone is not level, or None. True when the
+        words changed for any project."""
+        changed = False
+        with self._session() as session, session.begin():
+            for project, note in projects.items():
+                row = session.get(CloneRow, (machine, project))
+                if row is None:
+                    session.add(CloneRow(machine=machine, project=project, note=note, at=at))
+                    changed = changed or note is not None
+                    continue
+                if row.note != note:
+                    changed = True
+                row.note = note
+                row.at = at
+        return changed
+
+    def clones(self, machine: str) -> list[str]:
+        """The projects whose clone on the machine was not level at the last
+        levelling, as `project: why`, for the machine's line."""
+        with self._session() as session:
+            rows = session.scalars(
+                select(CloneRow)
+                .where(CloneRow.machine == machine, CloneRow.note.is_not(None))
+                .order_by(CloneRow.project)
+            )
+            return [f"{r.project}: {r.note}" for r in rows]
 
     def timings(self, machine: str | None = None) -> list[Timing]:
         """Every timing written, oldest first; one machine's when named."""

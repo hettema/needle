@@ -804,6 +804,20 @@ class HighWaterRow(Base):
     at: Mapped[datetime] = mapped_column(UtcDateTime)
 
 
+class CloneRow(Base):
+    """One project's clone on one machine, as the board last levelled it
+    (card #83, item 3): `note` is why it is not level, None when it is.
+    In the store so the head's machine line and the terminal's `needle
+    machines` read one record (Codex's ninth pass)."""
+
+    __tablename__ = "clones"
+
+    machine: Mapped[str] = mapped_column(String(40), primary_key=True)
+    project: Mapped[str] = mapped_column(String(80), primary_key=True)
+    note: Mapped[str | None] = mapped_column(Text, nullable=True)
+    at: Mapped[datetime] = mapped_column(UtcDateTime)
+
+
 class TimingRow(Base):
     """One measured wall-clock of a build step on a machine (card #83,
     item 5), written by hand from a measurement."""

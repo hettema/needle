@@ -955,9 +955,10 @@ def register(sub: "argparse._SubParsersAction[argparse.ArgumentParser]") -> None
     p_scopes.add_argument("--stop", dest="stop_unit", help="ask the manager to end one group")
 
     p_where = parser("where", "where work runs next, as claude-acct's one rule answers it", where)
-    # `where` answers for this machine and the board asks it over the wire;
-    # only its high-water reading is the board's own measurement.
-    p_where.set_defaults(board=lambda a: bool(a.high_water))
+    # `where` answers for this machine and the board asks it over the wire
+    # (never with --repo); a placement across machines (--repo) and the
+    # high-water reading are the board's own questions (Codex's ninth pass).
+    p_where.set_defaults(board=lambda a: bool(a.high_water or a.repo))
     p_where.add_argument("--from", dest="from_slot", help="the slot to ask first")
     p_where.add_argument(
         "--repo", help="the project the card is in: picks the machine first (card #83)"
