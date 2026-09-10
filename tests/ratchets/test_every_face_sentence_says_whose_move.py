@@ -78,13 +78,13 @@ def _literals_handed_to_builders(path: Path) -> list[tuple[int, str]]:
     return found
 
 
-def _fixture_sentences() -> list[tuple[str, Meaning | None, str]]:
+def _fixture_sentences(tmp_path: Path) -> list[tuple[str, Meaning | None, str]]:
     """Every sentence the test board builds, as (where, meaning, text): the
     meaning is the state's for a detail, None for a door's reason and a
     lane's sentence, whose opening only has to be one of the five."""
     from tools.board_fixture import snapshot
 
-    shot = snapshot()
+    shot = snapshot(tmp_path)
     out: list[tuple[str, Meaning | None, str]] = []
     board = shot["board"]
     assert isinstance(board, dict)
@@ -145,9 +145,9 @@ def test_no_literal_handed_to_a_sentence_uses_a_word_the_board_defines():
     )
 
 
-def test_every_sentence_the_test_board_builds_opens_with_whose_move_and_says_it_plainly():
+def test_every_sentence_the_test_board_builds_opens_with_whose_move_and_says_it_plainly(tmp_path):
     words = read_vocabulary()
-    sentences = _fixture_sentences()
+    sentences = _fixture_sentences(tmp_path)
     assert len(sentences) > 100, f"the test board built {len(sentences)} sentences"
     wrong_opening = [
         f"{where}: {text!r}"

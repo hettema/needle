@@ -572,115 +572,117 @@ def progress_cases() -> dict[str, object]:
     }
 
 
-def snapshot() -> dict[str, object]:
-    with tempfile.TemporaryDirectory() as tmp:
-        root = Path(tmp) / "harbourmaster"
-        shutil.copytree(HARBOURMASTER, root)
-        arrival = root / ARRIVAL
-        held_back = arrival.read_text(encoding="utf-8")
-        arrival.unlink()
+def snapshot(into: Path) -> dict[str, object]:
+    """The board as served over the synthetic project, built on a copy laid
+    under `into`. The caller names the directory so a test's copy and store
+    land on pytest's floor and never in the system temp folder, which is
+    memory on this laptop (card #109, Codex's finding); the hand run below
+    lays its own, short-lived one."""
+    tmp = str(into)
+    root = Path(tmp) / "harbourmaster"
+    shutil.copytree(HARBOURMASTER, root)
+    arrival = root / ARRIVAL
+    held_back = arrival.read_text(encoding="utf-8")
+    arrival.unlink()
 
-        store = Store(Path(tmp) / "needle.db")
-        project = Project(
-            slug="harbourmaster", name="Harbourmaster", path=str(root), registered_at=NOW
-        )
-        store.add_project(project)
-        card_file = json.loads((root / "docs/board/needle-board.json").read_text(encoding="utf-8"))
-        store.import_01(project.slug, read_01(card_file, scan(root, NOW)), NOW)
-        sweep(store, project, origin=CardOrigin.FOUNDING, at=NOW)
+    store = Store(Path(tmp) / "needle.db")
+    project = Project(slug="harbourmaster", name="Harbourmaster", path=str(root), registered_at=NOW)
+    store.add_project(project)
+    card_file = json.loads((root / "docs/board/needle-board.json").read_text(encoding="utf-8"))
+    store.import_01(project.slug, read_01(card_file, scan(root, NOW)), NOW)
+    sweep(store, project, origin=CardOrigin.FOUNDING, at=NOW)
 
-        arrival.write_text(held_back, encoding="utf-8")
-        live = Live(store, now=lambda: NOW)
-        live.load()
-        # The snapshot is the board as served: the watcher is on. Without a
-        # running loop there is no watcher task, so its two facts are set here.
-        live.projects[project.slug].watching = True
-        live.projects[project.slug].watch_note = None
-        # The machine as the loop would have read it: every command found,
-        # and the two roles the machine's roles file names today (plan 12).
-        live.set_machine(
-            MachineState(missing=[], roles=["top", "downgrade", "execution", "search"])
-        )
+    arrival.write_text(held_back, encoding="utf-8")
+    live = Live(store, now=lambda: NOW)
+    live.load()
+    # The snapshot is the board as served: the watcher is on. Without a
+    # running loop there is no watcher task, so its two facts are set here.
+    live.projects[project.slug].watching = True
+    live.projects[project.slug].watch_note = None
+    # The machine as the loop would have read it: every command found,
+    # and the two roles the machine's roles file names today (plan 12).
+    live.set_machine(MachineState(missing=[], roles=["top", "downgrade", "execution", "search"]))
 
-        # A focus chosen on the fixture's own document, checked by the other
-        # kind and read against a few cards, so the snapshot carries the
-        # strip in its chosen state and an arrangement with moves in it.
-        focus = live.projects[project.slug].index.focus
-        assert focus is not None and focus.complete, "the fixture's FOCUS.md reads whole"
-        store.record_focus_check(
+    # A focus chosen on the fixture's own document, checked by the other
+    # kind and read against a few cards, so the snapshot carries the
+    # strip in its chosen state and an arrangement with moves in it.
+    focus = live.projects[project.slug].index.focus
+    assert focus is not None and focus.complete, "the fixture's FOCUS.md reads whole"
+    store.record_focus_check(
+        project.slug,
+        fingerprint=focus.fingerprint,
+        at=NOW,
+        verdict=FocusVerdict.STANDS,
+        line="the office log shows the late invoices are the ones with no reading",
+        how_known=None,
+        session_id=None,
+    )
+    store.record_focus_ruling(
+        project.slug,
+        fingerprint=focus.fingerprint,
+        what_matters=focus.what_matters or "",
+        at=NOW,
+    )
+    readings = {
+        253: (
+            Leverage.HELPS_REMOVE,
+            Likelihood.HIGH,
+            "it bills the reading the invoice waits on",
+        ),
+        196: (
+            Leverage.HELPS_REMOVE,
+            Likelihood.LOW,
+            "a berth let sooner is invoiced sooner, if it is invoiced",
+        ),
+        174: (
+            Leverage.DOES_NOT_ADDRESS,
+            None,
+            "the office file's size does not delay an invoice",
+        ),
+        241: (Leverage.PROTECTS, None, "a gate code before arrival keeps a paid berth usable"),
+        109: (
+            Leverage.NEEDS_EVIDENCE,
+            None,
+            "the plan does not say what showing the price moves",
+        ),
+    }
+    for number, (leverage, likelihood, words) in readings.items():
+        card = store.card(project.slug, number)
+        assert card is not None and card.link is not None
+        document = live.projects[project.slug].index.find(card.link.kind, card.link.stem)
+        assert document is not None
+        store.record_leverage_reading(
             project.slug,
-            fingerprint=focus.fingerprint,
+            number,
             at=NOW,
-            verdict=FocusVerdict.STANDS,
-            line="the office log shows the late invoices are the ones with no reading",
-            how_known=None,
+            leverage=leverage,
+            likelihood=likelihood,
+            words=words,
+            focus_fingerprint=focus.fingerprint,
+            document_fingerprint=document.fingerprint,
             session_id=None,
         )
-        store.record_focus_ruling(
-            project.slug,
-            fingerprint=focus.fingerprint,
-            what_matters=focus.what_matters or "",
-            at=NOW,
-        )
-        readings = {
-            253: (
-                Leverage.HELPS_REMOVE,
-                Likelihood.HIGH,
-                "it bills the reading the invoice waits on",
-            ),
-            196: (
-                Leverage.HELPS_REMOVE,
-                Likelihood.LOW,
-                "a berth let sooner is invoiced sooner, if it is invoiced",
-            ),
-            174: (
-                Leverage.DOES_NOT_ADDRESS,
-                None,
-                "the office file's size does not delay an invoice",
-            ),
-            241: (Leverage.PROTECTS, None, "a gate code before arrival keeps a paid berth usable"),
-            109: (
-                Leverage.NEEDS_EVIDENCE,
-                None,
-                "the plan does not say what showing the price moves",
-            ),
-        }
-        for number, (leverage, likelihood, words) in readings.items():
-            card = store.card(project.slug, number)
-            assert card is not None and card.link is not None
-            document = live.projects[project.slug].index.find(card.link.kind, card.link.stem)
-            assert document is not None
-            store.record_leverage_reading(
-                project.slug,
-                number,
-                at=NOW,
-                leverage=leverage,
-                likelihood=likelihood,
-                words=words,
-                focus_fingerprint=focus.fingerprint,
-                document_fingerprint=document.fingerprint,
-                session_id=None,
-            )
-        board = live.board(project.slug)
-        board.project = board.project.model_copy(update={"path": SHOWN_PATH})
-        numbers = [c.number for col in board.columns for g in col.groups for c in g.cards]
-        details = {str(n): live.detail(project.slug, n).model_dump(mode="json") for n in numbers}
-        store.close()
-        return {
-            "board": board.model_dump(mode="json"),
-            "details": details,
-            "language": language_cases(),
-            "progress": progress_cases(),
-        }
+    board = live.board(project.slug)
+    board.project = board.project.model_copy(update={"path": SHOWN_PATH})
+    numbers = [c.number for col in board.columns for g in col.groups for c in g.cards]
+    details = {str(n): live.detail(project.slug, n).model_dump(mode="json") for n in numbers}
+    store.close()
+    return {
+        "board": board.model_dump(mode="json"),
+        "details": details,
+        "language": language_cases(),
+        "progress": progress_cases(),
+    }
 
 
-def render() -> str:
-    return json.dumps(snapshot(), indent=2, ensure_ascii=False) + "\n"
+def render(into: Path) -> str:
+    return json.dumps(snapshot(into), indent=2, ensure_ascii=False) + "\n"
 
 
 def write() -> bool:
     """True when the file changed."""
-    content = render()
+    with tempfile.TemporaryDirectory() as tmp:
+        content = render(Path(tmp))
     if FIXTURE.is_file() and FIXTURE.read_text(encoding="utf-8") == content:
         return False
     FIXTURE.write_text(content, encoding="utf-8")

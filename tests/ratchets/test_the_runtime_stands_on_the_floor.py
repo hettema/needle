@@ -60,28 +60,54 @@ def test_every_path_the_runtime_reads_is_under_the_floor(machine_floor: Floor):
 
 
 MOUNT_TABLE = Path("/proc/mounts")
-IN_MEMORY = {"tmpfs", "ramfs"}
+# The kernel's memory-backed filesystems: tmpfs and ramfs hold files in page
+# cache and swap, devtmpfs is a tmpfs the kernel mounts on /dev.
+IN_MEMORY = {"tmpfs", "ramfs", "devtmpfs"}
+
+
+def unescape_mount(field: str) -> Path:
+    """A mount-table field with the kernel's octal escapes (`\\040` for a
+    space) undone, then read as UTF-8 — `unicode_escape` alone would leave a
+    non-ASCII name mangled and the mount unmatched (Codex's finding, card #109)."""
+    return Path(field.encode("utf-8").decode("unicode_escape").encode("latin-1").decode("utf-8"))
 
 
 def mount_under(path: Path) -> tuple[Path, str]:
     """The mount point the resolved path stands on and its filesystem type:
-    the longest mount-point prefix in the kernel's own table. The type is
-    read from the table and never guessed from the path, so a machine whose
-    temp folder is a disk passes and a `--basetemp` given by hand into
-    memory is refused wherever it points (card #109, ruling 4)."""
+    the longest mount-point prefix in the kernel's own table, and among
+    mounts on one point the latest, which is the one that shows (the table
+    is in mount order). The type is read from the table and never guessed
+    from the path, so a machine whose temp folder is a disk passes and a
+    `--basetemp` given by hand into memory is refused wherever it points
+    (card #109, ruling 4)."""
     resolved = path.resolve()
     best: tuple[Path, str] | None = None
     for line in MOUNT_TABLE.read_text(encoding="utf-8").splitlines():
         fields = line.split()
         if len(fields) < 3:
             continue
-        point = Path(fields[1].encode("utf-8").decode("unicode_escape"))
+        point = unescape_mount(fields[1])
         if resolved.is_relative_to(point) and (
-            best is None or len(point.parts) > len(best[0].parts)
+            best is None or len(point.parts) >= len(best[0].parts)
         ):
             best = (point, fields[2])
     assert best is not None, f"{resolved} is under no mount in {MOUNT_TABLE}"
     return best
+
+
+def test_the_mount_reader_undoes_escapes_and_takes_the_mount_that_shows(monkeypatch, tmp_path):
+    table = tmp_path / "mounts"
+    table.write_text(
+        "/dev/sda1 / ext4 rw 0 0\n"
+        "tmpfs /scratch\\040\\303\\251 tmpfs rw 0 0\n"
+        "/dev/sdb1 /over ext4 rw 0 0\n"
+        "tmpfs /over tmpfs rw 0 0\n",
+        encoding="utf-8",
+    )
+    monkeypatch.setattr("tests.ratchets.test_the_runtime_stands_on_the_floor.MOUNT_TABLE", table)
+    assert mount_under(Path("/scratch é/x")) == (Path("/scratch é"), "tmpfs")
+    assert mount_under(Path("/over/x")) == (Path("/over"), "tmpfs")
+    assert mount_under(Path("/elsewhere")) == (Path("/"), "ext4")
 
 
 def test_the_floors_stand_on_disk(tmp_path_factory: pytest.TempPathFactory):
@@ -95,8 +121,9 @@ def test_the_floors_stand_on_disk(tmp_path_factory: pytest.TempPathFactory):
     assert kind not in IN_MEMORY, (
         f"the floors' root {root} stands on {point}, a {kind} filesystem in memory: "
         "a test run must never take the memory the work needs (card #109). "
-        "Point --basetemp or PYTEST_DEBUG_TEMPROOT at a directory on disk, or unset both "
-        "and the suite chooses one under the cache (tests/conftest.py::floors_root)."
+        "The root is --basetemp when given, else PYTEST_DEBUG_TEMPROOT, else the suite's own "
+        "under the cache (tests/conftest.py::floors_root): point the one in force at a "
+        "directory on disk, or drop it."
     )
 
 

@@ -195,10 +195,10 @@ def test_the_ratchet_sees_a_fingerprinted_title():
         del FINGERPRINTS[fingerprint(title)]
 
 
-def test_the_frontend_snapshot_is_the_synthetic_project_as_served():
+def test_the_frontend_snapshot_is_the_synthetic_project_as_served(tmp_path):
     from tools.board_fixture import FIXTURE, render
 
-    assert FIXTURE.is_file() and FIXTURE.read_text(encoding="utf-8") == render(), (
+    assert FIXTURE.is_file() and FIXTURE.read_text(encoding="utf-8") == render(tmp_path), (
         "frontend/tests/fixture.json is not what tools/board_fixture.py generates; "
         "run `uv run python tools/board_fixture.py`"
     )

@@ -47,7 +47,9 @@ def pytest_configure(config: pytest.Config) -> None:
     `--basetemp` nor the variable already names one — an explicit choice
     wins, as it always did, and the laptop-wide setting the machine's board
     carries (card #109, item 3) is that same variable."""
-    if config.option.basetemp is None and TEMP_ROOT_VARIABLE not in os.environ:
+    # An empty variable is absent to pytest too (`from_env or gettempdir()`),
+    # so it is absent here, or an empty setting would re-open the memory default.
+    if config.option.basetemp is None and not os.environ.get(TEMP_ROOT_VARIABLE):
         root = floors_root()
         root.mkdir(parents=True, exist_ok=True)
         os.environ[TEMP_ROOT_VARIABLE] = str(root)
