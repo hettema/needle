@@ -554,7 +554,11 @@ def board(runtime: Runtime, args: argparse.Namespace) -> int:
         machine.set_board(None)
         print("the board serves from this machine: every verb opens the store here")
         return 0
-    row = next((m for m in runtime.machines() if m.name == args.name), None)
+    # The rows in the store here, not the runtime's list: on a machine that
+    # already hands its verbs away the runtime answers for itself alone,
+    # and the file is rewritten from what this store recorded of the board
+    # before the move — the last board this machine was.
+    row = next((m for m in runtime.store.machines() if m.name == args.name), None)
     if row is None:
         print(f"no machine named {args.name!r} is on the board", file=sys.stderr)
         return 1
@@ -576,7 +580,10 @@ def machine_host(runtime: Runtime, args: argparse.Namespace) -> int:
     """How the board reaches a machine, rewritten after the board moved:
     the host is proved to be that machine by its own machine id before the
     row changes, as `machine add` proves it (card #83, item 3)."""
-    row = next((m for m in runtime.machines() if m.name == args.name), None)
+    # A registered row only: the runtime names this machine from its
+    # hostname when no row is it, and that name has nothing to rewrite
+    # (Codex's eighth pass on card #83).
+    row = next((m for m in runtime.store.machines() if m.name == args.name), None)
     if row is None:
         print(f"no machine named {args.name!r} is on the board", file=sys.stderr)
         return 1
@@ -593,7 +600,9 @@ def machine_host(runtime: Runtime, args: argparse.Namespace) -> int:
             file=sys.stderr,
         )
         return 1
-    runtime.store.set_machine_host(args.name, args.host)
+    if not runtime.store.set_machine_host(args.name, args.host):
+        print(f"no machine named {args.name!r} is on the board", file=sys.stderr)
+        return 1
     print(f"{args.name}: reached as {args.host}")
     return 0
 
@@ -649,7 +658,11 @@ def describe_room(reading: MachineRoom) -> str:
         state = f"{_gb(reading.room.available)} available"
     mark = reading.high_water
     marks = f", high-water {_gb(mark.used)} used" if mark is not None else ""
-    return f"{reading.machine.name}{where}  {what}  {state}{marks}, {reading.killed} killed today"
+    clones = f"; clone not level — {', '.join(reading.clones)}" if reading.clones else ""
+    return (
+        f"{reading.machine.name}{where}  {what}  {state}{marks}, "
+        f"{reading.killed} killed today{clones}"
+    )
 
 
 def machines(runtime: Runtime, args: argparse.Namespace) -> int:
@@ -942,6 +955,9 @@ def register(sub: "argparse._SubParsersAction[argparse.ArgumentParser]") -> None
     p_scopes.add_argument("--stop", dest="stop_unit", help="ask the manager to end one group")
 
     p_where = parser("where", "where work runs next, as claude-acct's one rule answers it", where)
+    # `where` answers for this machine and the board asks it over the wire;
+    # only its high-water reading is the board's own measurement.
+    p_where.set_defaults(board=lambda a: bool(a.high_water))
     p_where.add_argument("--from", dest="from_slot", help="the slot to ask first")
     p_where.add_argument(
         "--repo", help="the project the card is in: picks the machine first (card #83)"
@@ -1085,7 +1101,11 @@ def register(sub: "argparse._SubParsersAction[argparse.ArgumentParser]") -> None
         help="unit=slug:number — the card a group is, so the reading names it (the wire's form)",
     )
 
-    parser("machines", "every machine the board knows, with what each holds", machines)
+    p_machines = parser("machines", "every machine the board knows, with what each holds", machines)
+    # The registry and its measurements are the board's (Codex's eighth
+    # pass on card #83): on a machine that is not the board's these run
+    # there, like every verb that opens the board's store.
+    p_machines.set_defaults(board=True)
     p_machine = sub.add_parser("machine", help="register or forget a machine, or write a timing")
     machine_sub = p_machine.add_subparsers(dest="machine_verb", required=True)
     p_add = machine_sub.add_parser("add", help="register a machine on the board")
@@ -1095,22 +1115,22 @@ def register(sub: "argparse._SubParsersAction[argparse.ArgumentParser]") -> None
     p_add.add_argument("--ground", help="the project that is its own record; its cards run there")
     p_add.add_argument("--command", help="how needle runs there, as a shell line")
     p_add.add_argument("--json", action="store_true", help="answer as JSON")
-    p_add.set_defaults(run=_with_runtime(machine_add))
+    p_add.set_defaults(board=True, run=_with_runtime(machine_add))
     p_rm = machine_sub.add_parser("rm", help="forget a machine")
     p_rm.add_argument("name")
     p_rm.add_argument("--json", action="store_true", help="answer as JSON")
-    p_rm.set_defaults(run=_with_runtime(machine_rm))
+    p_rm.set_defaults(board=True, run=_with_runtime(machine_rm))
     p_timing = machine_sub.add_parser("timing", help="write one measured build time for a machine")
     p_timing.add_argument("name")
     p_timing.add_argument("what", help="npm ci, vitest, pytest")
     p_timing.add_argument("seconds", type=float)
     p_timing.add_argument("--json", action="store_true", help="answer as JSON")
-    p_timing.set_defaults(run=_with_runtime(machine_timing))
+    p_timing.set_defaults(board=True, run=_with_runtime(machine_timing))
     p_host = machine_sub.add_parser("host", help="how the board reaches a machine, by its id")
     p_host.add_argument("name")
     p_host.add_argument("host", help="the ssh name")
     p_host.add_argument("--json", action="store_true", help="answer as JSON")
-    p_host.set_defaults(run=_with_runtime(machine_host))
+    p_host.set_defaults(board=True, run=_with_runtime(machine_host))
 
     p_rescues = parser("rescues", "a session's rescue history in the runtime's ledger", rescues)
     p_rescues.add_argument("short")

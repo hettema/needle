@@ -145,12 +145,19 @@ runs the verb there with its output flowing back, `needle serve` on such
 a machine refuses, and `needle board here` takes the board back. The fold
 is the one verb whose git must run where the lane is, so the board's
 `fold` pushes through the wire (`needle push --worktree` on the machine
-that holds the lane, `Runtime.fold`), and every machine's clone is
-levelled at each pass under its own name (`Runtime.level_everywhere`,
-`needle level`; the seam the first evening showed). `needle machine host
-NAME HOST` rewrites how the board reaches a machine once it has moved,
-proved by that machine's id as `machine add` proves it. Proven on the
-floor: `tests/runtime/test_board_elsewhere.py`. The live half — the
+that holds the lane, `Runtime.fold`), and every other machine's clone is
+levelled on the trunk's beat outside the loop's lock, a stale one said on
+that machine's line of the head and never as the board's own checkout's
+state (`Runtime.level_elsewhere`, `needle level`, `MachineRoom.clones`;
+the seam the first evening showed). `needle machine host NAME HOST`
+rewrites how the board reaches a machine once it has moved, proved by
+that machine's id as `machine add` proves it. The registry verbs
+(`machines`, `machine …`, `where --high-water`) are the board's too and
+cross with the rest; a machine that hands its verbs away answers the
+board for itself alone, never fanning out over the rows it copied. Proven
+on the floor: `tests/runtime/test_board_elsewhere.py`; read cold on its
+first commit by the other make (the record's eighth pass, fourteen
+findings, repaired in the lane and the two machine records). The live half — the
 store moved at a quiet moment with both services stopped, the laptop's
 `127.0.0.1:8480` made the tunnel's end by a socket unit that proxies to
 the machine's `tailscale serve`, the laptop's own `needle-serve` disabled
@@ -303,11 +310,13 @@ reach (every path below is in Needle's repository unless said):
   runtime verbs are never forwarded, since the board asks them of this
   machine. `fold` from a lane names its worktree on the way over, and the
   board's `Runtime.fold` routes the push back to `lane_machine(worktree)`
-  through `Remote.push`; `Runtime.level_everywhere` levels the board's
-  checkout first, then every other machine's through `Remote.level`, and
-  `api/loops.py::level_project` writes another machine's shortfall into
-  the trunk note under that machine's name. `needle machine host` sets a
-  row's host after the id read over ssh matches the row's.
+  through `Remote.push`; `Runtime.level` levels the board's own checkout
+  under the loop's lock and `Runtime.level_elsewhere` every other
+  machine's through `Remote.level` outside it (`api/loops.py::
+  level_clones_now`), a shortfall kept per machine on `MachineRoom.clones`
+  for the head's machine line. `needle machine host` sets a registered
+  row's host after the id read over ssh matches the row's. `Runtime.
+  machines` answers this machine alone while `board.json` names another.
 - **The loop reads every machine on every pass.** `api/loops.py::
   headroom_now` reads `Runtime.rooms(hold=True)`, sets the floor's high
   mark on every machine's lane scopes, writes the day's high-water mark

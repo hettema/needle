@@ -151,7 +151,12 @@ def forward(board: BoardMachine, argv: list[str]) -> int:
     """Run one `needle` verb on the board's machine with its output flowing
     here as if it had run here, and answer its exit code. Nothing is read
     from stdin on either side: no verb reads it, and an open one would hold
-    the other side's shell. An unreachable board is said in its name."""
+    the other side's shell. `ssh`'s 255 is said in the board's name and as
+    what it is — the line was lost, before or after the verb ran there, so
+    a write is repeated only after the board is read (Codex's eighth pass
+    on card #83). A signal that ended `ssh` here is answered as a shell
+    answers it, 128 plus the signal; the verb on the other side runs on to
+    its end, and a write there is one row, whole or absent."""
     done = subprocess.run(
         remote_argv(board.host, f"{board.command} {shlex.join(argv)}"),
         stdin=subprocess.DEVNULL,
@@ -159,10 +164,13 @@ def forward(board: BoardMachine, argv: list[str]) -> int:
     )
     if done.returncode == SSH_UNREACHABLE:
         print(
-            f"the board serves from {board.name} ({board.host}) and it could not be reached; "
-            f"`needle {argv[0]}` did not run",
+            f"the board serves from {board.name} ({board.host}) and the line to it was lost: "
+            f"whether `needle {argv[0]}` ran there is not known here; read the board before "
+            "repeating a write",
             file=sys.stderr,
         )
+    if done.returncode < 0:
+        return 128 - done.returncode
     return done.returncode
 
 

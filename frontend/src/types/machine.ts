@@ -33,6 +33,7 @@ export interface MachineRoom {
   high_water: HighWater | null;
   killed: number;
   timings?: Timing[];
+  clones?: string[];
 }
 
 export interface Timing {

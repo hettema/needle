@@ -22,10 +22,14 @@ import { ago } from "./time";
  * floor, or that it did not answer — the board's runtime read it, the page
  * only repeats the words. */
 function machineWords(m: MachineRoom): string {
-  if (m.room === null) return `did not answer${m.why ? ` (${m.why})` : ""}`;
-  if (m.room.full) return m.room.sentence ?? "full";
+  // A clone there that is not level with the trunk is that machine's own
+  // fact, said on its line and never as the board's checkout's state.
+  const stale = m.clones ?? [];
+  const clones = stale.length ? `; clone not level — ${stale.join(", ")}` : "";
+  if (m.room === null) return `did not answer${m.why ? ` (${m.why})` : ""}${clones}`;
+  if (m.room.full) return `${m.room.sentence ?? "full"}${clones}`;
   const gb = (m.room.available / 1024 ** 3).toFixed(1);
-  return `${gb} GB free${m.killed ? `, ${m.killed} killed today` : ""}`;
+  return `${gb} GB free${m.killed ? `, ${m.killed} killed today` : ""}${clones}`;
 }
 
 export const WIDE_SCREEN = "(min-width: 2300px)";

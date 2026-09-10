@@ -104,6 +104,13 @@ class MachineRoom(BaseModel):
     killed: int
     """Lanes the system killed on it over the loop's window."""
     timings: list[Timing] = []
+    """The latest measured time per build step on this machine, for the
+    plan's item 5."""
+    clones: list[str] = []
+    """Each project whose clone on this machine was not level with the
+    trunk when the board last levelled it (`needle: 2 behind`), so a
+    machine's stale checkout is said on its own line and never as the
+    board's own checkout's state (Codex's eighth pass on card #83)."""
     """The latest measured build time per step on it (the plan's item 5)."""
 
 

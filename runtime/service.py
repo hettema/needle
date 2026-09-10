@@ -81,6 +81,11 @@ _EPOCH = datetime.min.replace(tzinfo=UTC)
 _UNREACHABLE = (machine.Unreachable, RemoteRefused)
 
 
+def _unlevelled(note: str) -> git.Levelled:
+    """A clone that could not be levelled, with the words why."""
+    return git.Levelled(level=None, behind=0, note=note, fetched=False, main_updated=False)
+
+
 class NoSuchSession(Exception):
     """No registry on this machine holds the session named."""
 
@@ -121,8 +126,14 @@ class Runtime:
 
     def machines(self) -> list[Machine]:
         """Every machine the board knows, this one included: the registered
-        rows, with this machine named from its hostname when no row is it."""
-        rows = self.store.machines()
+        rows, with this machine named from its hostname when no row is it.
+        On a machine that is not the board's (`needle board NAME` written)
+        the rows are the ledger's history and this runtime answers for this
+        machine alone: the board asks it `sessions`, and a runtime that
+        fanned out over its rows would ask the board's machine, which would
+        ask back (Codex's eighth pass on card #83, the copied store's
+        topology)."""
+        rows = [] if machine.board_elsewhere() is not None else self.store.machines()
         own = machine.machine_id()
         if any(m.machine_id == own for m in rows):
             return rows
@@ -180,8 +191,14 @@ class Runtime:
         )
 
     def lane_machine(self, path: str) -> Machine:
-        """The machine a worktree was last seen on, by its path; this one
-        when no read has placed it."""
+        """The machine a worktree was last seen on, by its path: the pass's
+        read, else the board's own record of where it was last seen — a
+        verb in its own process has read no lane yet, and a fold asked
+        through the board must push where the lane is (Codex's eighth pass
+        on card #83; the same seed as #110's close) — else this one."""
+        if path not in self._lane_machines:
+            for known, name in self.store.lane_paths_by_machine().items():
+                self._lane_machines.setdefault(known, name)
         return self.machine_named(self._lane_machines.get(path, ""))
 
     def machine_of(self, session: Session) -> Machine:
@@ -984,35 +1001,37 @@ class Runtime:
     def level(self, repo: str) -> git.Levelled:
         return git.level(repo)
 
-    def level_everywhere(self, repo: str) -> list[tuple[Machine, git.Levelled]]:
-        """The project's clone brought level with the trunk on every machine,
-        this one first (card #83, item 3): the board's checkout is the corpus
-        it reads, and each other machine's is what its `needle` reads and its
-        lanes are born from — a fold that changed the wire was not live on
-        the rented machine until its clone was pulled by hand (2026-09-10).
-        A machine that does not answer is a note under its name, never a
-        stop for the rest."""
-        found = [(self.here(), self.level(repo))]
+    def level_elsewhere(self, repo: str) -> list[tuple[Machine, git.Levelled]]:
+        """The project's clone brought level with the trunk on every other
+        machine (card #83, item 3): each machine's clone is what its
+        `needle` reads and its lanes are born from — a fold that changed the
+        wire was not live on the rented machine until its clone was pulled
+        by hand (2026-09-10). The board's own checkout is `level`, kept
+        apart because the loop levels it under its lock and the others
+        outside it. A machine that did not answer this pass's reads is not
+        asked (its wait was paid once); one that fails is a note under its
+        name, never a stop for the rest."""
+        found: list[tuple[Machine, git.Levelled]] = []
         for m in self.machines():
             if self.is_here(m):
+                continue
+            if m.name in self.unread:
+                note = f"not levelled: {self.unread[m.name]}"
+                found.append((m, _unlevelled(note)))
                 continue
             try:
                 found.append((m, self._remote(m).level(repo)))
             except _UNREACHABLE as error:
-                found.append(
-                    (
-                        m,
-                        git.Levelled(
-                            level=None, behind=0, note=str(error), fetched=False, main_updated=False
-                        ),
-                    )
-                )
+                found.append((m, _unlevelled(str(error))))
         return found
 
     def fold(self, worktree: str, *, promote_main: bool) -> git.Folded:
         """The lane's branch pushed to the trunk from the machine that holds
         the lane: a fold asked of the board runs its git where the worktree
-        is (card #83, item 3)."""
+        is (card #83, item 3). A reply that never came is not a push that
+        never happened — the machine may have pushed and lost the line — so
+        the words say so and the loop's next read of the lane's tip against
+        the trunk settles it, as it settles every fold."""
         on = self.lane_machine(worktree)
         if not self.is_here(on):
             try:
@@ -1020,7 +1039,11 @@ class Runtime:
             except _UNREACHABLE as error:
                 return git.Folded(
                     pushed=False,
-                    words=f"{on.name} holds the lane and could not push it: {error}",
+                    words=(
+                        f"{on.name} holds the lane and did not answer the push ({error}); "
+                        "whether it pushed is unknown until the board reads the lane's tip "
+                        "against origin/develop"
+                    ),
                     tip=None,
                     main_pushed=None,
                 )

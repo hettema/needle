@@ -13,7 +13,6 @@ so a rescan is always one command away.
 
 import argparse
 import json
-import os
 import re
 import signal
 import sys
@@ -268,23 +267,45 @@ def main(argv: list[str] | None = None) -> int:
 
     words = list(sys.argv[1:] if argv is None else argv)
     args = parser.parse_args(words)
-    if getattr(args, "board", False):
+    marked = getattr(args, "board", False)
+    if marked(args) if callable(marked) else marked:
         # A verb that opens the board's store runs on the machine the board
         # serves from (card #83, item 3): the store here is this machine's
         # own ledger the moment `needle board NAME` was written, and a row
-        # written into it would be one the board never reads. The fold
-        # names its worktree, since the other side has no working directory
-        # of ours; its git runs back here over the wire.
+        # written into it would be one the board never reads. A path the
+        # caller gave relative to its own directory is made absolute first,
+        # since the other side runs in a login's directory and not ours
+        # (Codex's eighth pass): the fold's worktree and a project's path.
         try:
             elsewhere = machine.board_elsewhere()
         except machine.BoardUnreadable as wrong:
             print(str(wrong), file=sys.stderr)
             return 1
         if elsewhere is not None:
-            if args.command == "fold" and not args.worktree:
-                words += ["--worktree", os.getcwd()]
-            return machine.forward(elsewhere, words)
+            return machine.forward(elsewhere, _absolute(args, words))
     return int(args.run(args))
+
+
+def _absolute(args: argparse.Namespace, words: list[str]) -> list[str]:
+    """The verb's words with every caller-relative path made absolute."""
+    if args.command == "fold":
+        kept: list[str] = []
+        skip = False
+        for word in words:
+            if skip:
+                skip = False
+                continue
+            if word == "--worktree":
+                skip = True
+                continue
+            if word.startswith("--worktree="):
+                continue
+            kept.append(word)
+        return [*kept, "--worktree", str(Path(args.worktree or ".").resolve())]
+    if args.command == "add":
+        resolved = str(Path(args.path).expanduser().resolve())
+        return [resolved if word == args.path else word for word in words]
+    return words
 
 
 if __name__ == "__main__":

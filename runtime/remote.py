@@ -230,8 +230,11 @@ class Remote:
         return self._ask(argv, git.Folded, timeout=START_SECONDS)
 
     def level(self, repo: str) -> git.Levelled:
-        """That machine's clone of a project brought level with the trunk."""
-        return self._ask(["level", repo], git.Levelled, timeout=START_SECONDS)
+        """That machine's clone of a project brought level with the trunk:
+        a fetch and a fast-forward, bounded like any verb — a stalled
+        machine costs the beat a minute per project, not four (Codex's
+        eighth pass on card #83)."""
+        return self._ask(["level", repo], git.Levelled, timeout=VERB_SECONDS)
 
     def stop(self, short_id: str, *, keep_handoff: bool) -> Stopped:
         argv = ["stop", short_id, *(["--keep-handoff"] if keep_handoff else [])]

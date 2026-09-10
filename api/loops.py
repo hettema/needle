@@ -258,6 +258,9 @@ class Loops:
         self._notes: list[Note] = []
         """The machine's watercooler as the last read saw it (plan 17)."""
         self._rooms: list[MachineRoom] = []
+        self._clones: dict[str, list[str]] = {}
+        """Per machine, the projects whose clone there was not level at the
+        last levelling (card #83, item 3); shown on the head's machine line."""
         """Every machine against the floor as the last read saw it (card
         #83): what places work between passes, and what the head shows."""
         self._parties: dict[tuple[str, int], set[str]] = {}
@@ -352,6 +355,10 @@ class Loops:
     async def level_trunks(self) -> None:
         async with self._lock:
             await asyncio.to_thread(self.level_trunks_now)
+        # The other machines' clones are levelled outside the lock: a
+        # stalled machine would otherwise hold every door for the sum of
+        # its waits (Codex's eighth pass on card #83, after finding 17).
+        await asyncio.to_thread(self.level_clones_now)
 
     async def hooks(self, posted: list[HookPosted]) -> list[HookEvent]:
         recorded = self.record_hooks(posted)
@@ -488,7 +495,10 @@ class Loops:
         # high-water mark is kept per machine. Every lane's scope carries
         # the floor as its high mark, whoever made the scope (card #107):
         # set where it is missing on every machine, said once on the card.
-        self._rooms = self.runtime.rooms(hold=True, owners=owners, read=set(self._owners()))
+        self._rooms = [
+            r.model_copy(update={"clones": self._clones.get(r.machine.name, [])})
+            for r in self.runtime.rooms(hold=True, owners=owners, read=set(self._owners()))
+        ]
         now = clock.now()
         for reading in self._rooms:
             if reading.room is None:
@@ -2325,6 +2335,22 @@ class Loops:
         for live in list(self.live.projects.values()):
             self.level_project(live)
 
+    def level_clones_now(self) -> None:
+        """Keep every other machine's clone of every project level with the
+        trunk (card #83, item 3), and remember per machine which clones were
+        not, for the head's machine line — never for the trunk's own state,
+        which is the board's checkout's alone (Codex's eighth pass)."""
+        stale: dict[str, list[str]] = {}
+        for live in list(self.live.projects.values()):
+            for m, levelled in self.runtime.level_elsewhere(live.project.path):
+                if levelled.level is True:
+                    continue
+                words = levelled.note or f"{levelled.behind} behind"
+                stale.setdefault(m.name, []).append(f"{live.project.slug}: {words}")
+        if stale != self._clones:
+            self._clones = stale
+            self.live.bump()
+
     def level_project(self, live: LiveProject) -> TrunkState:
         slug, path = live.project.slug, live.project.path
         now = clock.now()
@@ -2333,18 +2359,10 @@ class Loops:
                 level=None, behind=0, note=f"{path} is not a git repository", read_at=now
             )
         else:
-            levelled = self.runtime.level_everywhere(path)
-            _, result = levelled[0]
-            # Another machine's clone that is not level is said under its
-            # name beside this checkout's own state; the board's level is
-            # its own checkout's, which is the corpus it reads.
-            elsewhere = [
-                f"{m.name}: {r.note or f'{r.behind} behind'}"
-                for m, r in levelled[1:]
-                if r.level is not True
-            ]
-            note = "; ".join(([result.note] if result.note else []) + elsewhere) or None
-            state = TrunkState(level=result.level, behind=result.behind, note=note, read_at=now)
+            result = self.runtime.level(path)
+            state = TrunkState(
+                level=result.level, behind=result.behind, note=result.note, read_at=now
+            )
         before = self.live.store.trunk(slug)
         self.live.store.record_trunk(slug, state)
         if (before.level, before.behind, before.note) != (state.level, state.behind, state.note):
