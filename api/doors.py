@@ -1809,7 +1809,17 @@ class Doors:
             and where in (s.worktree, s.cwd)
             and (s.machine == lane_on.name if s.machine else self.runtime.is_here(lane_on))
         ]
-        on_lane.sort(key=lambda s: s.worktree != where)
+        # Ownership first: the runtime's own record of who it started on
+        # this card names the session that holds the lane, whatever make
+        # it is — a Codex lane's row carries no worktree and a Claude reader
+        # called into its directory carries none either, so directory and
+        # slot order cannot tell author from reader (pass three's reader).
+        owners = {
+            s.session_id
+            for s in self.live.store.session_slots()
+            if where is not None and s.card == Path(where).name
+        }
+        on_lane.sort(key=lambda s: (s.session_id not in owners, s.worktree != where))
         lane_slot = on_lane[0].slot if on_lane else None
         faults = review_rules.record_faults(read, review) + review_rules.verdict_faults(
             read,

@@ -236,7 +236,7 @@ def verdict_faults(
         # not, is the writer's word and not the reader's (the cold read of
         # round eleven drove the door with another project's call whose
         # stored answer said "broke 9.9" and the record said otherwise).
-        said = answer_outcome((words_of or _row_words)(call))
+        said = answer_outcome((words_of or _row_words)(call), wrapped_as=call.answer)
         if verdict.complete and said != "complete":
             faults.append(
                 f"{name}:{verdict.line} says call {verdict.call} read complete, and the answer "
@@ -258,10 +258,12 @@ def verdict_faults(
     return faults
 
 
-_LANDED_WORDS = re.compile(r"^\S+ landed at \S+: ", re.S)
-"""The loop's own wrapping of a landed answer, at the head of the stored
-words and nowhere else: an answer whose prose carries the same words is
-the reader's, and is read whole (the cold read of round twelve)."""
+_LANDED_AT = " landed at "
+"""The loop's own wrapping of a landed answer — `<the call's answer file>
+landed at <when>: <the answer>` — recognised only when the stored words
+open with that call's own file, whatever its name holds (pass three's
+reader: a path with a space; round twelve's: an answer whose prose carries
+the same words is the reader's, and is read whole)."""
 _ANSWER_BROKE = re.compile(r"^\s*broke\b(?P<addresses>[\d., \t]*)", re.I)
 """The addresses a `broke` answer opens with, on its first line only — a
 numbered list under it is the reader's prose, not an address."""
@@ -273,7 +275,7 @@ def _row_words(call: Call) -> str | None:
     return call.words
 
 
-def answer_outcome(words: str | None) -> str | list[str] | None:
+def answer_outcome(words: str | None, *, wrapped_as: str | None = None) -> str | list[str] | None:
     """What a reader's answer said, from its first words: `"complete"`,
     the addresses after `broke`, or None when it said neither. The loop
     stores a landed answer as `<file> landed at <when>: <the answer's
@@ -283,7 +285,11 @@ def answer_outcome(words: str | None) -> str | list[str] | None:
     "1.2" (the cold read of round eleven)."""
     if not words:
         return None
-    answer = _LANDED_WORDS.sub("", words, count=1).strip()
+    answer = words
+    prefix = f"{wrapped_as}{_LANDED_AT}" if wrapped_as else None
+    if prefix is not None and words.startswith(prefix):
+        answer = words[len(prefix) :].split(": ", 1)[-1]
+    answer = answer.strip()
     if _ANSWER_COMPLETE.match(answer):
         return "complete"
     broke = _ANSWER_BROKE.match(answer)

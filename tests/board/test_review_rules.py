@@ -155,6 +155,17 @@ def test_a_fix_line_without_a_half_is_named_by_its_line():
     text = text.replace("— FIXED in b14c0cb; reaches the sweep alone.", "— FIXED in b14c0cb.")
     faults = record_faults(review_of(text, "r.md"), "r.md")
     assert faults[0].startswith("r.md:29 FIXED says no reaches or assumes")
+    # An empty half is a missing half, never the next clause's words (pass
+    # three's reader: `reaches ; assumes …` read the assumes clause as the reach).
+    empty = RECORD.replace(
+        "— FIXED in b14c0cb; reaches\n   the sweep alone; assumes nobody else reads the table.",
+        "— FIXED in b14c0cb; reaches ; assumes nobody else reads the table.",
+    )
+    review = review_of(empty, "r.md")
+    assert review.dispositions[1].reaches is None
+    assert review.dispositions[1].assumes == "nobody else reads the table"
+    faults = record_faults(review, "r.md")
+    assert len(faults) == 1 and faults[0].startswith("r.md:29 FIXED says no reaches")
 
 
 def test_a_round_of_repairs_without_a_verdict_is_a_fault_and_a_zero_finding_record_is_not():
@@ -470,8 +481,10 @@ def test_a_verdict_quotes_the_answer_the_board_holds_and_a_call_from_elsewhere_i
     assert answer_outcome("completely broken") is None
     assert answer_outcome("completeness is unverified") is None
     assert answer_outcome("Complete.") == "complete"
-    assert answer_outcome("/tmp/a.md landed at 2026-09-11T09:01:00+00:00: complete") == "complete"
-    assert answer_outcome("broke 1.2 — /b landed at 2026-09-11T09:01:00+00:00: complete") == ["1.2"]
+    wrapped = "/tmp/a b.md landed at 2026-09-11T09:01:00+00:00: complete"
+    assert answer_outcome(wrapped, wrapped_as="/tmp/a b.md") == "complete", "a space in the path"
+    raw = "broke 1.2 — /b landed at 2026-09-11T09:01:00+00:00: complete"
+    assert answer_outcome(raw, wrapped_as="/tmp/a.md") == ["1.2"], "the reader's own prose"
     assert answer_outcome("broke 1.2\n1. the omitted sibling") == ["1.2"]
     assert answer_outcome("Broke 1.2, 1.20 — two") == ["1.2", "1.20"]
     unstored = {n: rows[n].model_copy(update={"words": None}) for n in rows}

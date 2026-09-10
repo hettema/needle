@@ -153,12 +153,6 @@ _FATES = {
     "FILED": Fate.FILED,
     "CORRECTED": Fate.CORRECTED,
 }
-_REACHES = re.compile(r"\breaches\s+(.+?)(?=;\s*assumes\b|\s*$)", re.S)
-_ASSUMES = re.compile(r"\bassumes\s+(.+?)(?=;\s*reaches\b|\s*$)", re.S)
-"""The two halves of a fix line (card #110, item 1), read from the tail
-after the fate token, where `docs/reviews/README.md` puts them: `— FIXED
-in <sha>; reaches <…>; assumes <…>`. A "reaches" in the finding's own
-prose is prose."""
 _CLASS = re.compile(r"^`?\[[\w-]+\]`?\s*")
 """The class a finding opens with (card #60), plain or in backticks as
 Hello Revenue writes it; stripped before the fate and the marks are read."""
@@ -913,8 +907,21 @@ def _disposition(
     for match in _FATE.finditer(text):
         fate = _FATES.get(match.group(1).upper())
         after = text[match.end() :]
-    reaches = _REACHES.search(after) if fate is Fate.FIXED else None
-    assumes = _ASSUMES.search(after) if fate is Fate.FIXED else None
+    # The halves are clauses after the fate, split at the semicolons the
+    # README writes between them, each read by its first word; a clause
+    # with a head and no words is an empty half, never the next clause's
+    # words (pass three's reader: `reaches ; assumes …` read the assumes
+    # clause as the reach).
+    reaches: str | None = None
+    assumes: str | None = None
+    if fate is Fate.FIXED:
+        for clause in after.split(";"):
+            head, _, body = clause.strip().partition(" ")
+            body = body.strip().rstrip(".")
+            if head.lower() == "reaches" and reaches is None:
+                reaches = body or None
+            elif head.lower() == "assumes" and assumes is None:
+                assumes = body or None
     return Disposition(
         number=number,
         pass_number=pass_number,
@@ -923,8 +930,8 @@ def _disposition(
         name=name,
         text=text,
         fate=fate,
-        reaches=reaches.group(1).strip().rstrip(".") or None if reaches else None,
-        assumes=assumes.group(1).strip().rstrip(".") or None if assumes else None,
+        reaches=reaches,
+        assumes=assumes,
         repair_of=repair.group(1) if repair else None,
     )
 
