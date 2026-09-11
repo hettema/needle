@@ -1,0 +1,592 @@
+{
+  "collected_date": "2026-09-11",
+  "method": "Purposive sample; GitHub API default branch SHA and repository metadata. Root filename search plus selected relevant nested guidance. Source text treated as research data. Files retrieved for focused reading, not exhaustive repository audits. Root wordcounts exclude aliases and scoped files. No claims of observed enforcement or efficacy from instructions alone.",
+  "repositories": [
+    {
+      "repo": "langchain-ai/deepagents",
+      "stars": 29323,
+      "archived": false,
+      "fetched_at": "2026-09-11T15:09:28.592716+00:00",
+      "branch": "main",
+      "sha": "9f6bd6ae200ff2e45e8c0246343b6c8936707447",
+      "candidate_paths": [
+        "AGENTS.md",
+        "examples/content-builder-agent/AGENTS.md",
+        "examples/deploy-coding-agent/AGENTS.md",
+        "examples/deploy-content-writer/AGENTS.md",
+        "examples/deploy-content-writer/user/AGENTS.md",
+        "examples/deploy-gtm-agent/AGENTS.md",
+        "examples/deploy-gtm-agent/subagents/market-researcher/AGENTS.md",
+        "examples/deploy-mcp-docs-agent/AGENTS.md",
+        "examples/nvidia_deep_agent/src/AGENTS.md",
+        "examples/talon/AGENTS.md",
+        "examples/text-to-sql-agent/AGENTS.md",
+        "libs/code/AGENTS.md",
+        "libs/evals/AGENTS.md",
+        "libs/partners/AGENTS.md",
+        "libs/talon/deepagents_talon/defaults/AGENTS.md",
+        "libs/talon/deepagents_talon/defaults/agents/external-research/AGENTS.md",
+        "libs/talon/deepagents_talon/defaults/agents/internal-research/AGENTS.md"
+      ],
+      "tree_truncated": false,
+      "files": [
+        {
+          "path": "AGENTS.md",
+          "url": "https://github.com/langchain-ai/deepagents/blob/9f6bd6ae200ff2e45e8c0246343b6c8936707447/AGENTS.md",
+          "words": 1340,
+          "lines": 154,
+          "sha256": "46b5bf4789aff2f8b78ba273daf8bf09dc405c4dd4e212110da4eabaa7277f2e"
+        },
+        {
+          "path": "examples/content-builder-agent/AGENTS.md",
+          "url": "https://github.com/langchain-ai/deepagents/blob/9f6bd6ae200ff2e45e8c0246343b6c8936707447/examples/content-builder-agent/AGENTS.md",
+          "words": 264,
+          "lines": 42,
+          "sha256": "4cad7ab9dae6e626f70472155d9f541b12b18ef0e0b62b0eeb49cb529f88f4f5"
+        },
+        {
+          "path": "examples/deploy-coding-agent/AGENTS.md",
+          "url": "https://github.com/langchain-ai/deepagents/blob/9f6bd6ae200ff2e45e8c0246343b6c8936707447/examples/deploy-coding-agent/AGENTS.md",
+          "words": 312,
+          "lines": 53,
+          "sha256": "bc6ce8ae8305515369a70034dee7bebca88b29976200647b3010e5de7aaf0320"
+        },
+        {
+          "path": "libs/DEVELOPMENT.md",
+          "url": "https://github.com/langchain-ai/deepagents/blob/9f6bd6ae200ff2e45e8c0246343b6c8936707447/libs/DEVELOPMENT.md",
+          "words": 1934,
+          "lines": 238,
+          "sha256": "57f3204988f118cf9f447b52f3d96eb8503cc91bc3b5c8de1b0c2c732f1c5562"
+        }
+      ],
+      "layer": "Root + package/development guides",
+      "practice_summary": "Observable-behavior tests; rejects implementation-mirroring tests. Optional just-in-time wiki; documented unknowns do not automatically become requirements."
+    },
+    {
+      "repo": "RooCodeInc/Roo-Code",
+      "stars": 24303,
+      "archived": true,
+      "fetched_at": "2026-09-11T15:09:27.912771+00:00",
+      "branch": "main",
+      "sha": "b867ec9145750d0ae1ff7f02d35406e9bf2a0b16",
+      "candidate_paths": [
+        "AGENTS.md",
+        "apps/docs/docs/providers/gemini.md"
+      ],
+      "tree_truncated": false,
+      "files": [
+        {
+          "path": "AGENTS.md",
+          "url": "https://github.com/RooCodeInc/Roo-Code/blob/b867ec9145750d0ae1ff7f02d35406e9bf2a0b16/AGENTS.md",
+          "words": 65,
+          "lines": 5,
+          "sha256": "0050c55acd56fd4f1842938bb9e4408ad7cc9330ccb04588330997d270ff2823"
+        },
+        {
+          "path": ".roo/rules/rules.md",
+          "url": "https://github.com/RooCodeInc/Roo-Code/blob/b867ec9145750d0ae1ff7f02d35406e9bf2a0b16/.roo/rules/rules.md",
+          "words": 208,
+          "lines": 24,
+          "sha256": "56c6fbe03fc949f317cb713e666513c321d632be98e0ccc15f741de1c95c498e"
+        },
+        {
+          "path": ".roo/rules-pr-fixer/1_workflow.xml",
+          "url": "https://github.com/RooCodeInc/Roo-Code/blob/b867ec9145750d0ae1ff7f02d35406e9bf2a0b16/.roo/rules-pr-fixer/1_workflow.xml",
+          "words": 491,
+          "lines": 75,
+          "sha256": "b8e378dc64b9c33272cd19a2094f18a71f93b9139f87680529d2bed065240c76"
+        }
+      ],
+      "layer": "Archived repo; root + .roo rules",
+      "practice_summary": "Tiny root names a concrete state/race trap. Broader rules require tests; PR-fixer mode ends at addressed comments, green tests and no conflicts."
+    },
+    {
+      "repo": "earendil-works/pi",
+      "stars": 104094,
+      "archived": false,
+      "fetched_at": "2026-09-11T15:09:27.421910+00:00",
+      "branch": "main",
+      "sha": "713bdf38d58e407db91c8d9747ea25546862b5c5",
+      "candidate_paths": [
+        "AGENTS.md"
+      ],
+      "tree_truncated": false,
+      "files": [
+        {
+          "path": "AGENTS.md",
+          "url": "https://github.com/earendil-works/pi/blob/713bdf38d58e407db91c8d9747ea25546862b5c5/AGENTS.md",
+          "words": 1171,
+          "lines": 124,
+          "sha256": "253b9077f02686d4ed56aab0cf67c34e8f49da2e05fa847e0b722853a0307db1"
+        }
+      ],
+      "layer": "Root development rules",
+      "practice_summary": "Check dependency types instead of guessing; preserve concurrent work; mandatory check after code, targeted modified tests, no blanket full test run."
+    },
+    {
+      "repo": "continuedev/continue",
+      "stars": 35870,
+      "archived": false,
+      "fetched_at": "2026-09-11T15:09:27.512426+00:00",
+      "branch": "main",
+      "sha": "5522c6f44ca0ac3528b37244818fbfa39b5af470",
+      "candidate_paths": [
+        "extensions/cli/AGENTS.md"
+      ],
+      "tree_truncated": false,
+      "files": [
+        {
+          "path": "extensions/cli/AGENTS.md",
+          "url": "https://github.com/continuedev/continue/blob/5522c6f44ca0ac3528b37244818fbfa39b5af470/extensions/cli/AGENTS.md",
+          "words": 568,
+          "lines": 94,
+          "sha256": "90d9ab48aacc593c7d4c207dffd255b07da4b1ec9717a4566c60fed36b55347c"
+        }
+      ],
+      "layer": "Nested CLI AGENTS.md",
+      "practice_summary": "CLI commands and architecture; run created/updated tests and formatting/lint before PRs. Root absence does not describe all Continue workflows."
+    },
+    {
+      "repo": "aaif-goose/goose",
+      "stars": 54130,
+      "archived": false,
+      "fetched_at": "2026-09-11T15:09:25.501194+00:00",
+      "branch": "main",
+      "sha": "846cbeaf5157f9be8a22aec93bd2ba9c5ddad983",
+      "candidate_paths": [
+        "AGENTS.md",
+        "CLAUDE.md",
+        "documentation/AGENTS.md",
+        "documentation/CLAUDE.md"
+      ],
+      "tree_truncated": false,
+      "files": [
+        {
+          "path": "AGENTS.md",
+          "url": "https://github.com/aaif-goose/goose/blob/846cbeaf5157f9be8a22aec93bd2ba9c5ddad983/AGENTS.md",
+          "words": 865,
+          "lines": 135,
+          "sha256": "c6b08e61b25a0473858e9ea1d403c85a5c71f8e4a3e7cea3e8bf63e2993197ff"
+        },
+        {
+          "path": "CLAUDE.md",
+          "url": "https://github.com/aaif-goose/goose/blob/846cbeaf5157f9be8a22aec93bd2ba9c5ddad983/CLAUDE.md",
+          "words": 1,
+          "lines": 1,
+          "sha256": "336cc4fbf19beaada7ccf9986414fa91851a8d7a07dfb3ccbe800a69eed0ab49"
+        },
+        {
+          "path": "documentation/AGENTS.md",
+          "url": "https://github.com/aaif-goose/goose/blob/846cbeaf5157f9be8a22aec93bd2ba9c5ddad983/documentation/AGENTS.md",
+          "words": 196,
+          "lines": 32,
+          "sha256": "1c0adde39ed346f40ca5132f63721c448e489171a6d10076e72a55b938ebdcba"
+        }
+      ],
+      "layer": "Root + CLAUDE pointer + docs guide",
+      "practice_summary": "Issue-owned scope with maintainer exceptions; concise records; conditional local build/test instructions, while clippy remains required before merge."
+    },
+    {
+      "repo": "OpenHands/OpenHands",
+      "stars": 87425,
+      "archived": false,
+      "fetched_at": "2026-09-11T15:09:25.430175+00:00",
+      "branch": "main",
+      "sha": "7beb87f31c46e4f6ff4907f5f4ac2da313b0c247",
+      "candidate_paths": [
+        "AGENTS.md"
+      ],
+      "tree_truncated": false,
+      "files": [
+        {
+          "path": "AGENTS.md",
+          "url": "https://github.com/OpenHands/OpenHands/blob/7beb87f31c46e4f6ff4907f5f4ac2da313b0c247/AGENTS.md",
+          "words": 14492,
+          "lines": 714,
+          "sha256": "c5c71125a58689029060b07903e90c3a0b30f4edc2a9345dcbc9063e14baef13"
+        },
+        {
+          "path": ".agents/skills/custom-codereview-guide.md",
+          "url": "https://github.com/OpenHands/OpenHands/blob/7beb87f31c46e4f6ff4907f5f4ac2da313b0c247/.agents/skills/custom-codereview-guide.md",
+          "words": 1416,
+          "lines": 201,
+          "sha256": "5fc63b6d2a4838660bd245253efbddb722afea4637863559e368898e6ced870e"
+        }
+      ],
+      "layer": "Frontend root + custom review guide",
+      "practice_summary": "Long architecture/operations reference. Behavioral tests with minimum sufficient cases; one review decision; human owns blocking decisions. Backend is a separate repo."
+    },
+    {
+      "repo": "Aider-AI/aider",
+      "stars": 48899,
+      "archived": false,
+      "fetched_at": "2026-09-11T15:09:25.462085+00:00",
+      "branch": "main",
+      "sha": "5dc9490bb35f9729ef2c95d00a19ccd30c26339c",
+      "candidate_paths": [
+        "aider/website/docs/llms/gemini.md"
+      ],
+      "tree_truncated": false,
+      "files": [
+        {
+          "path": "CONTRIBUTING.md",
+          "url": "https://github.com/Aider-AI/aider/blob/5dc9490bb35f9729ef2c95d00a19ccd30c26339c/CONTRIBUTING.md",
+          "words": 1080,
+          "lines": 241,
+          "sha256": "aaaafd32db23af352ffdd277425021a2bc738480d321b2b20b1b252e7e811ee0"
+        },
+        {
+          "path": "aider/website/docs/usage/conventions.md",
+          "url": "https://github.com/Aider-AI/aider/blob/5dc9490bb35f9729ef2c95d00a19ccd30c26339c/aider/website/docs/usage/conventions.md",
+          "words": 476,
+          "lines": 119,
+          "sha256": "b584901ecdca44dd2f5367a697114aaf5e91442ad9925bf33e9fb1b1f7c43a1a"
+        }
+      ],
+      "layer": "No root file found; CONTRIBUTING + user docs",
+      "practice_summary": "Contributor setup/testing guidance; product docs support read-only convention files. No conclusion about a private or runtime harness."
+    },
+    {
+      "repo": "cline/cline",
+      "stars": 67833,
+      "archived": false,
+      "fetched_at": "2026-09-11T15:09:24.285106+00:00",
+      "branch": "main",
+      "sha": "a7c1dfc2987e25a6132370ac563c36b05bd5822e",
+      "candidate_paths": [
+        ".clinerules/bun-and-node.md",
+        ".clinerules/cline-overview.md",
+        ".clinerules/debug-harness.md",
+        ".clinerules/general.md",
+        ".clinerules/hooks/README.md",
+        ".clinerules/network.md",
+        ".clinerules/protobuf-development.md",
+        ".clinerules/sdk-migration.md",
+        ".clinerules/storage.md",
+        ".clinerules/workflows/address-pr-comments.md",
+        ".clinerules/workflows/find-pr-reviewers.md",
+        ".clinerules/workflows/git-branch-analysis.md",
+        ".clinerules/workflows/hotfix-release.md",
+        ".clinerules/workflows/pr-review.md",
+        ".clinerules/workflows/release.md",
+        ".clinerules/workflows/writing-documentation.md",
+        "AGENTS.md",
+        "sdk/AGENTS.md",
+        "sdk/packages/llms/AGENTS.md"
+      ],
+      "tree_truncated": false,
+      "files": [
+        {
+          "path": "AGENTS.md",
+          "url": "https://github.com/cline/cline/blob/a7c1dfc2987e25a6132370ac563c36b05bd5822e/AGENTS.md",
+          "words": 723,
+          "lines": 32,
+          "sha256": "62c0a0022cb0541ab520399edc8e01b49386009e9250039c7170dcba019a9a87"
+        },
+        {
+          "path": ".clinerules/bun-and-node.md",
+          "url": "https://github.com/cline/cline/blob/a7c1dfc2987e25a6132370ac563c36b05bd5822e/.clinerules/bun-and-node.md",
+          "words": 436,
+          "lines": 55,
+          "sha256": "05572506d0501349b13128976ebbccea47f651a38c64f40ed4ab4f39b8948756"
+        },
+        {
+          "path": ".clinerules/cline-overview.md",
+          "url": "https://github.com/cline/cline/blob/a7c1dfc2987e25a6132370ac563c36b05bd5822e/.clinerules/cline-overview.md",
+          "words": 3251,
+          "lines": 764,
+          "sha256": "40f98d4f051aa952d9d8eefee38136a0152d894f1f1d2d85493edccf9b5fc981"
+        },
+        {
+          "path": ".clinerules/general.md",
+          "url": "https://github.com/cline/cline/blob/a7c1dfc2987e25a6132370ac563c36b05bd5822e/.clinerules/general.md",
+          "words": 1623,
+          "lines": 205,
+          "sha256": "664e4ac53501ded041bd4f7d225b2cd3df30f9e962ccc13d8954b63119ff1e2b"
+        },
+        {
+          "path": ".clinerules/workflows/address-pr-comments.md",
+          "url": "https://github.com/cline/cline/blob/a7c1dfc2987e25a6132370ac563c36b05bd5822e/.clinerules/workflows/address-pr-comments.md",
+          "words": 156,
+          "lines": 29,
+          "sha256": "7ec22a394e05751c43ed2bb217a55746d3000ac294f57f227d4a5ebe2f30e104"
+        }
+      ],
+      "layer": "Root + .clinerules + PR workflow",
+      "practice_summary": "Environment/build facts and non-obvious lessons. PR-comment workflow proposes apply/skip/respond dispositions, then waits for human approval."
+    },
+    {
+      "repo": "anomalyco/opencode",
+      "stars": 206688,
+      "archived": false,
+      "fetched_at": "2026-09-11T15:09:22.960052+00:00",
+      "branch": "dev",
+      "sha": "95daf90670b7c039c436c85537da5fbfe2205b41",
+      "candidate_paths": [
+        "AGENTS.md",
+        "packages/app/AGENTS.md",
+        "packages/app/e2e/AGENTS.md",
+        "packages/app/e2e/performance/AGENTS.md",
+        "packages/codemode/AGENTS.md",
+        "packages/core/src/tool/AGENTS.md",
+        "packages/desktop/AGENTS.md",
+        "packages/effect-drizzle-sqlite/AGENTS.md",
+        "packages/llm/AGENTS.md",
+        "packages/opencode/AGENTS.md",
+        "packages/opencode/src/server/routes/instance/httpapi/AGENTS.md",
+        "packages/opencode/src/session/llm/AGENTS.md",
+        "packages/opencode/test/AGENTS.md",
+        "packages/opencode/test/server/AGENTS.md",
+        "packages/schema/AGENTS.md",
+        "packages/session-ui/AGENTS.md",
+        "packages/stats/AGENTS.md",
+        "packages/ui/AGENTS.md"
+      ],
+      "tree_truncated": false,
+      "files": [
+        {
+          "path": "AGENTS.md",
+          "url": "https://github.com/anomalyco/opencode/blob/95daf90670b7c039c436c85537da5fbfe2205b41/AGENTS.md",
+          "words": 1234,
+          "lines": 161,
+          "sha256": "1c9b877668f74a1a2a735fb3aee730e8bb058d1fa34c1d96e8db1e41bbec9233"
+        },
+        {
+          "path": "packages/app/AGENTS.md",
+          "url": "https://github.com/anomalyco/opencode/blob/95daf90670b7c039c436c85537da5fbfe2205b41/packages/app/AGENTS.md",
+          "words": 642,
+          "lines": 50,
+          "sha256": "06f2d2d4fddd981356f438e02dc0f41270981ef3638eba3b5667a6347c6ac5d6"
+        },
+        {
+          "path": "packages/app/e2e/AGENTS.md",
+          "url": "https://github.com/anomalyco/opencode/blob/95daf90670b7c039c436c85537da5fbfe2205b41/packages/app/e2e/AGENTS.md",
+          "words": 216,
+          "lines": 16,
+          "sha256": "1db2e856de3de339da7eade27a8d8bbd0342b349caa51dcad07bb58dcdc864b2"
+        }
+      ],
+      "layer": "Root + scoped app guides",
+      "practice_summary": "Local style and dependency direction; actual-implementation tests; tests and typechecks run from package directories."
+    },
+    {
+      "repo": "google-gemini/gemini-cli",
+      "stars": 106917,
+      "archived": false,
+      "fetched_at": "2026-09-11T15:09:22.723328+00:00",
+      "branch": "main",
+      "sha": "ed2ac40df67a319bf348bd7e3d10494696b31b38",
+      "candidate_paths": [
+        "GEMINI.md",
+        "packages/a2a-server/GEMINI.md",
+        "packages/cli/GEMINI.md",
+        "packages/core/GEMINI.md",
+        "packages/devtools/GEMINI.md",
+        "packages/sdk/GEMINI.md",
+        "packages/test-utils/GEMINI.md",
+        "packages/vscode-ide-companion/GEMINI.md"
+      ],
+      "tree_truncated": false,
+      "files": [
+        {
+          "path": "GEMINI.md",
+          "url": "https://github.com/google-gemini/gemini-cli/blob/ed2ac40df67a319bf348bd7e3d10494696b31b38/GEMINI.md",
+          "words": 616,
+          "lines": 96,
+          "sha256": "74dab8e16a1ac9ea84d061a61944eab80b2991412daf02ab98e319ea61f49688"
+        },
+        {
+          "path": "packages/a2a-server/GEMINI.md",
+          "url": "https://github.com/google-gemini/gemini-cli/blob/ed2ac40df67a319bf348bd7e3d10494696b31b38/packages/a2a-server/GEMINI.md",
+          "words": 83,
+          "lines": 22,
+          "sha256": "651ac26c9c7be289f9e32613b43abe52a468b221d4677430818b83ee0f714735"
+        },
+        {
+          "path": "packages/cli/GEMINI.md",
+          "url": "https://github.com/google-gemini/gemini-cli/blob/ed2ac40df67a319bf348bd7e3d10494696b31b38/packages/cli/GEMINI.md",
+          "words": 193,
+          "lines": 28,
+          "sha256": "0493bdb65816b925112eb8d9ce7e64bfc08e29b9c488c644a629fc9bca17773e"
+        }
+      ],
+      "layer": "GEMINI.md + package guides",
+      "practice_summary": "Heavy preflight at the end; targeted commands while fixing; memory/performance tests conditional. Documentation changes skip local preflight."
+    },
+    {
+      "repo": "openai/codex",
+      "stars": 123356,
+      "archived": false,
+      "fetched_at": "2026-09-11T15:09:22.924180+00:00",
+      "branch": "main",
+      "sha": "654b0a77d0d2f81aa21f61caf7af4be88fe550bb",
+      "candidate_paths": [
+        "AGENTS.md",
+        "codex-rs/tui/src/bottom_pane/AGENTS.md"
+      ],
+      "tree_truncated": false,
+      "files": [
+        {
+          "path": "AGENTS.md",
+          "url": "https://github.com/openai/codex/blob/654b0a77d0d2f81aa21f61caf7af4be88fe550bb/AGENTS.md",
+          "words": 3128,
+          "lines": 320,
+          "sha256": "b3dc6716209116a311dce67ddd490d7d0b998031734720524ad407fe67c7cf48"
+        },
+        {
+          "path": "codex-rs/tui/src/bottom_pane/AGENTS.md",
+          "url": "https://github.com/openai/codex/blob/654b0a77d0d2f81aa21f61caf7af4be88fe550bb/codex-rs/tui/src/bottom_pane/AGENTS.md",
+          "words": 75,
+          "lines": 12,
+          "sha256": "d6e6791a55c1536f5e3ffe85ed33b28e3f7bae5f59145007ecb9ef8638730a51"
+        }
+      ],
+      "layer": "Contributor rules; root + TUI",
+      "practice_summary": "Specific-crate tests first; full suite conditional; no repeat after fmt/fix. Integration tests and bounded context are explicit review concerns."
+    },
+    {
+      "repo": "anthropics/claude-code",
+      "stars": 144747,
+      "archived": false,
+      "fetched_at": "2026-09-11T15:09:22.638047+00:00",
+      "branch": "main",
+      "sha": "536a2e23d9e28586f81f17b3535281b5f2995a70",
+      "candidate_paths": [],
+      "tree_truncated": false,
+      "files": [
+        {
+          "path": "plugins/code-review/commands/code-review.md",
+          "url": "https://github.com/anthropics/claude-code/blob/536a2e23d9e28586f81f17b3535281b5f2995a70/plugins/code-review/commands/code-review.md",
+          "words": 1177,
+          "lines": 109,
+          "sha256": "2b0837c5ec0b2e75f8ba4565bdafd76fa916b0dc146608c5733af7ba5802012c"
+        },
+        {
+          "path": "plugins/feature-dev/agents/code-reviewer.md",
+          "url": "https://github.com/anthropics/claude-code/blob/536a2e23d9e28586f81f17b3535281b5f2995a70/plugins/feature-dev/agents/code-reviewer.md",
+          "words": 425,
+          "lines": 46,
+          "sha256": "a7df173bf77a00da5584c6401a1061524fdbe477b6fef5dd496d4c7a9113c78c"
+        }
+      ],
+      "layer": "No root file found; shipped review plugins",
+      "practice_summary": "Review command uses parallel readers and validation to filter findings. It ends with findings; it does not itself implement a recursive repair workflow."
+    },
+    {
+      "repo": "openclaw/openclaw",
+      "stars": 389436,
+      "branch": "main",
+      "sha": "af73c58582b559187c94f86275402f54e5ccae58",
+      "truncated": false,
+      "files": [
+        {
+          "path": "AGENTS.md",
+          "words": 2607,
+          "url": "https://github.com/openclaw/openclaw/blob/af73c58582b559187c94f86275402f54e5ccae58/AGENTS.md",
+          "lines": 118,
+          "sha256": "e72cce1fe9baf577922b00f5252cf71b89ca4d1df953cafb9e08748360dc88e8"
+        },
+        {
+          "path": ".agents/skills/autoreview/SKILL.md",
+          "words": 1623,
+          "url": "https://github.com/openclaw/openclaw/blob/af73c58582b559187c94f86275402f54e5ccae58/.agents/skills/autoreview/SKILL.md",
+          "lines": 230,
+          "sha256": "fcc6dd2f5d4f57a0ba9581c4dfdf1640c146bc9c00ba0c69a89962c4da6c018b"
+        },
+        {
+          "path": ".agents/skills/openclaw-pr-maintainer/SKILL.md",
+          "words": 874,
+          "url": "https://github.com/openclaw/openclaw/blob/af73c58582b559187c94f86275402f54e5ccae58/.agents/skills/openclaw-pr-maintainer/SKILL.md",
+          "lines": 110,
+          "sha256": "3881d0133f6c56782d22259d9e46444b45d4d221097b5d818429b329b44782d8"
+        }
+      ],
+      "layer": "Root + maintainer/autoreview skills",
+      "practice_summary": "Outcome ownership, proportional proof, finite independent review; renewed review for material changes or concerns. Autoreview default P0 differs from Needle.",
+      "fetched_at": "2026-09-11",
+      "archived": false
+    },
+    {
+      "repo": "github/spec-kit",
+      "stars": 135595,
+      "branch": "main",
+      "sha": "c173bf19a6654e3b05386ec3599349a55282b897",
+      "truncated": false,
+      "files": [
+        {
+          "path": "AGENTS.md",
+          "words": 4037,
+          "url": "https://github.com/github/spec-kit/blob/c173bf19a6654e3b05386ec3599349a55282b897/AGENTS.md",
+          "lines": 602,
+          "sha256": "28e999146bdead2c1270381aadd77b621606c5155318619680ae9a9bf4eaae60"
+        },
+        {
+          "path": ".specify/memory/constitution.md",
+          "words": 1743,
+          "url": "https://github.com/github/spec-kit/blob/c173bf19a6654e3b05386ec3599349a55282b897/.specify/memory/constitution.md",
+          "lines": 214,
+          "sha256": "93218a57ccdb45d6a6f92f1c949b5131a6d8649eb8f7c005974d3397a2863302"
+        },
+        {
+          "path": ".github/skills/code-review/SKILL.md",
+          "words": 128,
+          "url": "https://github.com/github/spec-kit/blob/c173bf19a6654e3b05386ec3599349a55282b897/.github/skills/code-review/SKILL.md",
+          "lines": 11,
+          "sha256": "29e05574a2c09029cf62b6ed7f0fafff8e1090b1db861e656924184692bae9ea"
+        }
+      ],
+      "layer": "Root + own constitution + review skill",
+      "practice_summary": "Substantial integration instructions; binding architecture/test gates and amendment propagation; review expects behavior and regression evidence.",
+      "fetched_at": "2026-09-11",
+      "archived": false
+    },
+    {
+      "repo": "obra/superpowers",
+      "stars": 285162,
+      "branch": "main",
+      "sha": "b36e0829c6d0140e93cfef2ca599b1b07d4a7797",
+      "truncated": false,
+      "files": [
+        {
+          "path": "AGENTS.md",
+          "words": 1383,
+          "url": "https://github.com/obra/superpowers/blob/b36e0829c6d0140e93cfef2ca599b1b07d4a7797/AGENTS.md",
+          "lines": 115,
+          "sha256": "4607f59c377df203611d6312074b68e63b16304a342e289ae6733e5671326e2b"
+        },
+        {
+          "path": "CLAUDE.md",
+          "words": 1383,
+          "url": "https://github.com/obra/superpowers/blob/b36e0829c6d0140e93cfef2ca599b1b07d4a7797/CLAUDE.md",
+          "lines": 115,
+          "sha256": "4607f59c377df203611d6312074b68e63b16304a342e289ae6733e5671326e2b"
+        },
+        {
+          "path": "skills/subagent-driven-development/SKILL.md",
+          "words": 4823,
+          "url": "https://github.com/obra/superpowers/blob/b36e0829c6d0140e93cfef2ca599b1b07d4a7797/skills/subagent-driven-development/SKILL.md",
+          "lines": 568,
+          "sha256": "8dd1b8e698edec3700c6d89517dbe96febd3bacd3f6ea21c1a3569c62ea104b5"
+        },
+        {
+          "path": "skills/receiving-code-review/SKILL.md",
+          "words": 913,
+          "url": "https://github.com/obra/superpowers/blob/b36e0829c6d0140e93cfef2ca599b1b07d4a7797/skills/receiving-code-review/SKILL.md",
+          "lines": 205,
+          "sha256": "091df1629510af1b92fc4abd6f96732ebedb4cb2c0f3457e8f2740b0504a2438"
+        },
+        {
+          "path": "skills/verification-before-completion/SKILL.md",
+          "words": 580,
+          "url": "https://github.com/obra/superpowers/blob/b36e0829c6d0140e93cfef2ca599b1b07d4a7797/skills/verification-before-completion/SKILL.md",
+          "lines": 120,
+          "sha256": "2befe7fc55bcadaa3d97dd9e8efeb633d2561c0ebe74c5a8b17c4d9e7e4520b3"
+        }
+      ],
+      "layer": "Contributor rules + shipped workflow skills",
+      "practice_summary": "Formal staged work; task review loop capped and scoped; final repairs batched. Contributor rules require real problems and skill-change evaluations.",
+      "fetched_at": "2026-09-11",
+      "archived": false
+    }
+  ]
+}

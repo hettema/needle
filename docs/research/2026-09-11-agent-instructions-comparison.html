@@ -1,0 +1,324 @@
+<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Agent instructions and the cost of working well</title><style>@page{size:A4;margin:18mm 17mm}body{font-family:Arial,sans-serif;font-size:10.5pt;line-height:1.43;color:#202020;max-width:1050px;margin:36px auto;padding:0 24px}h1{font-size:25pt;line-height:1.15;margin-bottom:24px}h2{font-size:16pt;margin-top:26px;break-after:avoid}h3{font-size:12pt;margin-top:20px;break-after:avoid}p{margin:9px 0}table{border-collapse:collapse;width:100%;font-size:8.3pt;line-height:1.32;margin:16px 0}th,td{text-align:left;border:1px solid #ccc;padding:6px;vertical-align:top}th{background:#eee}tr{break-inside:avoid}a{color:#234c72;overflow-wrap:anywhere}.footnote{font-size:8.5pt}li{margin:6px 0}code{font-size:.92em}@media print{body{margin:0;padding:0;max-width:none}a{text-decoration:none}}</style><body><h1>Agent instructions and the cost of working well</h1>
+<h2>Assessment</h2>
+<p>Needle's central idea remains sound: make intent, ownership, current state and evidence available to colleagues who arrive without the previous session's context. Those concerns have close counterparts in contemporary agent projects. They are not evidence that the system needs rebuilding.</p>
+<p>The strongest locally demonstrated defect was the recursive review obligation. A repair could create a new reading obligation, whose findings created more repairs, without a reliable boundary around the work. The former validator also failed to accept a justified rejection of certain allegations. That combination could turn quality assurance into work generation. The September 11 finite-review change addresses that mechanism directly. It does not yet establish how much of total execution cost it caused.<sup id="fnref:1"><a class="footnote-ref" href="#fn:1">1</a></sup></p>
+<p>The remaining doctrine is <strong>mostly sensible in purpose, but not merely a collaboration and ground-truth agreement in effect</strong>. It also prescribes consolidation, delegation, records, searches, checks, integration and closure. Those actions consume real capacity. Several can expand the task even when the original intent is already satisfied. The next improvement should be selective simplification of those methods, with their useful guarantees preserved.</p>
+<p>This assessment recommends keeping the finite workflow, observing its actual use, and then testing a lighter delivery of the remaining instructions. It does not recommend Needle 2, abandoning Kanban, removing all ratchets, or importing another project's workflow wholesale.</p>
+<h2>Scope and evidence</h2>
+<p>The public-source snapshot was collected on September 11, 2026. The core sample comprises twelve widely used coding-agent repositories spanning provider tools, independent products and different architectures; one, Roo Code, is now archived and is retained as a labeled historical comparison. Three additional projects broaden the comparison: OpenClaw as a general agent platform, and Superpowers and Spec Kit as workflow systems. This is a purposive sample of popular and relevant projects, not an exhaustive ranking. Star counts measure visibility, not software quality or instruction effectiveness.</p>
+<p>Repository instruction files answer <strong>how contributors should work on the agent project</strong>. They do not necessarily expose the agent's own runtime prompts, a user's private global instructions, or the production team's complete operating practice. The comparison follows relevant nested files and workflow skills where available and labels those layers separately. Missing root files are recorded as missing evidence, never as proof of an instruction-free system. The accompanying inventory records default-branch revisions, retrieved paths and source links. Reading focused on the sections relevant to this comparison; long references were not audited exhaustively, and CI enforcement was not independently executed.</p>
+<p>Three kinds of evidence have different weight. Public instructions establish a published practice. Vendor engineering accounts establish what their authors report trying. Controlled experiments estimate effects in their tested settings. None directly measures the cost or defect rate of Dennis's current system. The local doctrine was read at the post-#131 revision, a6eb528; the historical loop diagnosis was used as historical evidence rather than treated as today's behavior.<sup id="fnref2:1"><a class="footnote-ref" href="#fn:1">1</a></sup><sup id="fnref:2"><a class="footnote-ref" href="#fn:2">2</a></sup></p>
+<h2>Public repository comparison</h2>
+<table>
+<thead>
+<tr>
+<th>Project</th>
+<th style="text-align: right;">Stars at collection</th>
+<th style="text-align: right;">Root instruction words</th>
+<th>Inspected layer</th>
+<th>Relevant published practice</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a href="https://github.com/openclaw/openclaw/blob/af73c58582b559187c94f86275402f54e5ccae58/AGENTS.md">openclaw/openclaw</a></td>
+<td style="text-align: right;">389,436</td>
+<td style="text-align: right;">2607</td>
+<td>Root + maintainer/autoreview skills</td>
+<td>Outcome ownership, proportional proof, finite independent review; renewed review for material changes or concerns. Autoreview default P0 differs from Needle.</td>
+</tr>
+<tr>
+<td><a href="https://github.com/obra/superpowers/blob/b36e0829c6d0140e93cfef2ca599b1b07d4a7797/AGENTS.md">obra/superpowers</a></td>
+<td style="text-align: right;">285,162</td>
+<td style="text-align: right;">1383</td>
+<td>Contributor rules + shipped workflow skills</td>
+<td>Formal staged work; task review loop capped and scoped; final repairs batched. Contributor rules require real problems and skill-change evaluations.</td>
+</tr>
+<tr>
+<td><a href="https://github.com/anomalyco/opencode/blob/95daf90670b7c039c436c85537da5fbfe2205b41/AGENTS.md">anomalyco/opencode</a></td>
+<td style="text-align: right;">206,688</td>
+<td style="text-align: right;">1234</td>
+<td>Root + scoped app guides</td>
+<td>Local style and dependency direction; actual-implementation tests; tests and typechecks run from package directories.</td>
+</tr>
+<tr>
+<td><a href="https://github.com/anthropics/claude-code/blob/536a2e23d9e28586f81f17b3535281b5f2995a70/plugins/code-review/commands/code-review.md">anthropics/claude-code</a></td>
+<td style="text-align: right;">144,747</td>
+<td style="text-align: right;">Absent</td>
+<td>No root file found; shipped review plugins</td>
+<td>Review command uses parallel readers and validation to filter findings. It ends with findings; it does not itself implement a recursive repair workflow.</td>
+</tr>
+<tr>
+<td><a href="https://github.com/github/spec-kit/blob/c173bf19a6654e3b05386ec3599349a55282b897/AGENTS.md">github/spec-kit</a></td>
+<td style="text-align: right;">135,595</td>
+<td style="text-align: right;">4037</td>
+<td>Root + own constitution + review skill</td>
+<td>Substantial integration instructions; binding architecture/test gates and amendment propagation; review expects behavior and regression evidence.</td>
+</tr>
+<tr>
+<td><a href="https://github.com/openai/codex/blob/654b0a77d0d2f81aa21f61caf7af4be88fe550bb/AGENTS.md">openai/codex</a></td>
+<td style="text-align: right;">123,356</td>
+<td style="text-align: right;">3128</td>
+<td>Contributor rules; root + TUI</td>
+<td>Specific-crate tests first; full suite conditional; no repeat after fmt/fix. Integration tests and bounded context are explicit review concerns.</td>
+</tr>
+<tr>
+<td><a href="https://github.com/google-gemini/gemini-cli/blob/ed2ac40df67a319bf348bd7e3d10494696b31b38/GEMINI.md">google-gemini/gemini-cli</a></td>
+<td style="text-align: right;">106,917</td>
+<td style="text-align: right;">616</td>
+<td>GEMINI.md + package guides</td>
+<td>Heavy preflight at the end; targeted commands while fixing; memory/performance tests conditional. Documentation changes skip local preflight.</td>
+</tr>
+<tr>
+<td><a href="https://github.com/earendil-works/pi/blob/713bdf38d58e407db91c8d9747ea25546862b5c5/AGENTS.md">earendil-works/pi</a></td>
+<td style="text-align: right;">104,094</td>
+<td style="text-align: right;">1171</td>
+<td>Root development rules</td>
+<td>Check dependency types instead of guessing; preserve concurrent work; mandatory check after code, targeted modified tests, no blanket full test run.</td>
+</tr>
+<tr>
+<td><a href="https://github.com/OpenHands/OpenHands/blob/7beb87f31c46e4f6ff4907f5f4ac2da313b0c247/AGENTS.md">OpenHands/OpenHands</a></td>
+<td style="text-align: right;">87,425</td>
+<td style="text-align: right;">14492</td>
+<td>Frontend root + custom review guide</td>
+<td>Long architecture/operations reference. Behavioral tests with minimum sufficient cases; one review decision; human owns blocking decisions. Backend is a separate repo.</td>
+</tr>
+<tr>
+<td><a href="https://github.com/cline/cline/blob/a7c1dfc2987e25a6132370ac563c36b05bd5822e/AGENTS.md">cline/cline</a></td>
+<td style="text-align: right;">67,833</td>
+<td style="text-align: right;">723</td>
+<td>Root + .clinerules + PR workflow</td>
+<td>Environment/build facts and non-obvious lessons. PR-comment workflow proposes apply/skip/respond dispositions, then waits for human approval.</td>
+</tr>
+<tr>
+<td><a href="https://github.com/aaif-goose/goose/blob/846cbeaf5157f9be8a22aec93bd2ba9c5ddad983/AGENTS.md">aaif-goose/goose</a></td>
+<td style="text-align: right;">54,130</td>
+<td style="text-align: right;">865</td>
+<td>Root + CLAUDE pointer + docs guide</td>
+<td>Issue-owned scope with maintainer exceptions; concise records; conditional local build/test instructions, while clippy remains required before merge.</td>
+</tr>
+<tr>
+<td><a href="https://github.com/Aider-AI/aider/blob/5dc9490bb35f9729ef2c95d00a19ccd30c26339c/CONTRIBUTING.md">Aider-AI/aider</a></td>
+<td style="text-align: right;">48,899</td>
+<td style="text-align: right;">Absent</td>
+<td>No root file found; CONTRIBUTING + user docs</td>
+<td>Contributor setup/testing guidance; product docs support read-only convention files. No conclusion about a private or runtime harness.</td>
+</tr>
+<tr>
+<td><a href="https://github.com/continuedev/continue/blob/5522c6f44ca0ac3528b37244818fbfa39b5af470/extensions/cli/AGENTS.md">continuedev/continue</a></td>
+<td style="text-align: right;">35,870</td>
+<td style="text-align: right;">Absent; nested 568</td>
+<td>Nested CLI AGENTS.md</td>
+<td>CLI commands and architecture; run created/updated tests and formatting/lint before PRs. Root absence does not describe all Continue workflows.</td>
+</tr>
+<tr>
+<td><a href="https://github.com/langchain-ai/deepagents/blob/9f6bd6ae200ff2e45e8c0246343b6c8936707447/AGENTS.md">langchain-ai/deepagents</a></td>
+<td style="text-align: right;">29,323</td>
+<td style="text-align: right;">1340</td>
+<td>Root + package/development guides</td>
+<td>Observable-behavior tests; rejects implementation-mirroring tests. Optional just-in-time wiki; documented unknowns do not automatically become requirements.</td>
+</tr>
+<tr>
+<td><a href="https://github.com/RooCodeInc/Roo-Code/blob/b867ec9145750d0ae1ff7f02d35406e9bf2a0b16/AGENTS.md">RooCodeInc/Roo-Code</a></td>
+<td style="text-align: right;">24,303</td>
+<td style="text-align: right;">65</td>
+<td>Archived repo; root + .roo rules</td>
+<td>Tiny root names a concrete state/race trap. Broader rules require tests; PR-fixer mode ends at addressed comments, green tests and no conflicts.</td>
+</tr>
+</tbody>
+</table>
+<p>Counts are whitespace-delimited words in the named root, not total loaded guidance. Duplicate CLAUDE aliases are not added to the root count. Roo Code is archived at collection and is a historical comparison, not evidence of an active current team. Goose and Pi links use their current canonical repository names. Full inspected-file links and content hashes are in the <a href="2026-09-11-agent-instructions-inventory.json">source inventory</a>.</p>
+<h3>What the examples establish</h3>
+<p>There is no single prevailing amount of process. Some projects put concrete commands and local conventions in short entry files. Others carry substantial architectural rules and elaborate workflows. Length is therefore a useful inventory measure, not a quality score: a small entry file can load a large instruction tree, and a long file can contain valuable project-specific facts.</p>
+<p>The closest comparison to Needle is a system that coordinates continued work across sessions, not a repository accepting occasional contributions from human developers. Contributor approval and disclosure rules often protect a public maintainer from unsolicited work. Dennis has already authorized a team to execute inside his projects; copying those external approval steps would add a barrier without preserving the same intent.</p>
+<p>Superpowers demonstrates both sides of the issue. Its root contributor guidance demands evidence of a real problem and evaluations for changes to behavior-shaping skills. Its development skill still mandates review, but scopes repair readings, limits task fix rounds to five and specifies a decision when that limit is reached. It discourages rerunning tests already evidenced on the same revision and batches a final repair wave, citing repeated setup and testing as a cost. This is published workflow design, not a measured guarantee that five rounds are optimal.<sup id="fnref:3"><a class="footnote-ref" href="#fn:3">3</a></sup></p>
+<p>OpenClaw provides a closer match to the finite workflow. Its maintainer skill calls for independent review of nontrivial code, resolution of verified findings, and renewed review for substantive changes or unresolved concerns. It explicitly rejects an additional mandatory review pass. However, its separate autoreview skill defaults to a P0-only threshold. That threshold is a material difference from Dennis's instruction to fix all verified in-scope findings; the useful similarity is the stop rule, not a reason to adopt its severity policy.<sup id="fnref:4"><a class="footnote-ref" href="#fn:4">4</a></sup></p>
+<p>Spec Kit is a counterexample to the idea that sophisticated projects have abandoned formal rules. Its own constitution binds architecture, behavioral tests, integration parity and security checks, and requires justified complexity and propagated amendments. Its small code-review skill asks for positive and negative behavior tests and before/after regression evidence. These show that detailed constraints remain in active use; they do not establish the payoff of every constraint.<sup id="fnref:5"><a class="footnote-ref" href="#fn:5">5</a></sup></p>
+<h3>Concrete safeguards that also limit unnecessary work</h3>
+<p>The Codex contributor guide combines extensive rules with selective checking: package tests first, broader tests for shared-core changes, and no repeat after formatting or lint fixes. Gemini CLI similarly reserves its heaviest preflight for the end and uses targeted checks during repair. These are useful examples of preserving integration confidence while avoiding the same expensive work after every edit.<sup id="fnref:14"><a class="footnote-ref" href="#fn:14">14</a></sup></p>
+<p>Deep Agents explicitly rejects tests that mirror implementation details and treats generated wiki material as optional context. Cline records non-obvious lessons but excludes easily discoverable facts. Its PR-feedback workflow allows recommending that a comment be skipped. Pi combines source inspection and concurrent-work protection with explicit limits on build/test execution. These examples support ground truth and collaboration while also distinguishing useful verification from routine activity.<sup id="fnref:15"><a class="footnote-ref" href="#fn:15">15</a></sup></p>
+<p>None is free of tradeoffs. A short Roo root sits alongside broader mode-specific rules; OpenHands carries a much longer root than Needle; and Goose distinguishes local development testing from merge checks. We should compare effective obligations across layers, not reward a short filename in isolation.</p>
+<h3>Vendor experience is informative, not unanimous</h3>
+<p>OpenAI's February engineering account describes an agent-built product supported by a repository knowledge base, isolated worktrees, observable running software and mechanical architecture checks. It also reports that a large injected instruction manual failed, replacing it with an approximately 100-line entry map and deeper documentation. Crucially, the same account describes repeated agent review until reviewers are satisfied. It also favors minimal blocking merge gates. This is evidence against claiming that the industry has rejected review loops, and evidence for assessing each mechanism in its operating context.<sup id="fnref:6"><a class="footnote-ref" href="#fn:6">6</a></sup></p>
+<p>Anthropic's March account is especially relevant to harness subtraction. Removing many components together initially lost performance and made attribution difficult. The author then removed components individually as model capability improved: context resets and sprint structure became unnecessary, while planning and evaluation retained value in harder cases. Evaluation moved to the end of the build rather than every sprint, but the example still includes multiple build/QA rounds. The lesson is conditional, measured simplification, not a universal one-pass recipe.<sup id="fnref:7"><a class="footnote-ref" href="#fn:7">7</a></sup></p>
+<p>Claude Code's current guidance recommends concise broadly applicable instructions, on-demand skills for occasional workflows, and project facts the agent cannot infer. It recommends observing behavior after instruction changes. It also includes a targeted-test example and warns about oversized instruction files. These are practical recommendations, not controlled evidence that a particular file length or disclosure structure is optimal for Needle.<sup id="fnref:8"><a class="footnote-ref" href="#fn:8">8</a></sup></p>
+<h2>What empirical research can establish</h2>
+<h3>Repository instructions can increase activity without improving completion</h3>
+<p>Gloaguen and colleagues' June revision evaluates four model/agent pairings on 300 SWE-bench Lite tasks and 138 CTXbench tasks from twelve Python repositories. Context files increased cost by over 20% on average. Developer-written files had a marginal success gain and generated files a marginal loss; neither was statistically significant against no file. Instructions were followed and caused more exploration and testing. The study does not measure long-term coordination, security or owner oversight. Its length/category ablations do not establish a universal ideal file size. The revised paper, rather than the more easily quoted February wording, governs this assessment.<sup id="fnref:9"><a class="footnote-ref" href="#fn:9">9</a></sup></p>
+<h3>Instructions can also reduce work</h3>
+<p>Lulla and colleagues examine 124 small pull-request tasks across ten repositories using a Codex configuration. With instruction files, median runtime fell 28.64% and median output tokens fell 16.58%. However, semantic correctness was outside scope; a manual sanity check of fifty tasks established nontrivial task-related output, not equivalent quality. This is useful counterevidence to “instructions always waste tokens,” but not proof that faster output was equally correct. Output-token reductions are not the same as total cost or subscription allowance savings.<sup id="fnref:10"><a class="footnote-ref" href="#fn:10">10</a></sup></p>
+<h3>A later two-agent study still leaves substantial uncertainty</h3>
+<p>Khatri's July preprint tests Claude Sonnet 4.6 and Codex with GPT-5.5 on seventeen tasks from three Python repositories, with fifteen tasks shared across agents and 288 valid correctness evaluations. It finds no measurable correctness difference between absent, always-on and selectively retrieved context. The small number of tasks limits power; selective context is larger in two repositories, and injection channels differ between agents. Its narrower process observations are more actionable than a blanket verdict about context. It does not test Needle's long-lived team or September models.<sup id="fnref:11"><a class="footnote-ref" href="#fn:11">11</a></sup></p>
+<h3>Better guidance sometimes helps, under specific conditions</h3>
+<p>Shepard and Albrecht's June probe-and-refine study reports 33.0% mean resolution versus 28.3% with static guidance and 25.5% without guidance, across four trials with Qwen3.5-35B-A3B at a 200-step budget. Improvements chiefly helped the agent reach a patch rather than increase patch precision. Guidance length remains a confound; the positive result is demonstrated on one model, with a constrained context, and a second model did not reproduce the benefit. This is evidence that useful guidance can be learned from failure, not support for continually appending rules to every session.<sup id="fnref:12"><a class="footnote-ref" href="#fn:12">12</a></sup></p>
+<h3>Harness components can overlap and dilute each other</h3>
+<p>Lin and colleagues' May AHE preprint varies tools, middleware, memory and system prompts in a controlled harness. On Terminal-Bench 2, memory-, tool- and middleware-only variants each improve on the seed; the evolved prompt alone regresses. The authors describe redundant verification when components overlap and report that the model's prediction of future regressions is weak. This supports inspecting interactions rather than assuming individually reasonable rules add up to a better system. It remains a benchmark research prototype, not a production validation of autonomous rule-making or a result about Needle.<sup id="fnref:13"><a class="footnote-ref" href="#fn:13">13</a></sup></p>
+<p>Together, these studies give no credible universal answer of “more harness” or “less harness.” They support asking what information a rule adds, what behavior it changes, what that behavior costs, and what independently judged outcome improves. A task can comply perfectly with its instructions and still be harder to finish because of them.</p>
+<h2>Needle's remaining rules</h2>
+<p>The current shared doctrine contains 3,849 whitespace-delimited words across 402 lines; Needle's project file adds 957 words, and the holder register adds 1,106. These are file measurements, not a measured prompt size: what is loaded, repeated, cached or retrieved differs by session. They also exclude skills, reminders and task briefs.<sup id="fnref2:2"><a class="footnote-ref" href="#fn:2">2</a></sup></p>
+<table>
+<thead>
+<tr>
+<th>Rule family</th>
+<th>Useful intent</th>
+<th>Remaining source of work</th>
+<th>Assessment</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Intent and decision ownership (§1–2)</td>
+<td>Dennis chooses outcomes; agents execute within that authority</td>
+<td>Repeated backbriefs or invented decisions can interrupt authorized work</td>
+<td>Keep the ownership distinction; routine implementation should remain autonomous</td>
+</tr>
+<tr>
+<td>Session economics (§3)</td>
+<td>Avoid careless shortcuts and unfinished promises</td>
+<td>Says rereading and rerunning checks cost nothing; requires consolidation and broad delegation</td>
+<td>Highest-priority wording to revisit: its literal economic premise conflicts with observed finite capacity</td>
+</tr>
+<tr>
+<td>Durable records (§4)</td>
+<td>Another session can resume accurately</td>
+<td>Recording every decision and rejected alternative can create substantial paperwork</td>
+<td>Keep consequential decisions and handoff state; scale detail to what a later reader needs</td>
+</tr>
+<tr>
+<td>Mechanical protection (§5)</td>
+<td>Important failures are caught without memory</td>
+<td>A rule may produce a brittle text check, more maintenance and false alarms</td>
+<td>Keep behavior and boundary checks; judge each check by the failure it detects</td>
+</tr>
+<tr>
+<td>Truthful completeness (§6)</td>
+<td>Dennis can trust status</td>
+<td>Can be misread as resolving all nearby imperfections</td>
+<td>Keep; completeness refers to the agreed promise and truthful remaining gaps</td>
+</tr>
+<tr>
+<td>Outcome learning (§7)</td>
+<td>Learn whether changes worked</td>
+<td>Every bet can become another artifact, watcher or unclosed obligation</td>
+<td>Keep meaningful outcome checks; avoid making routine facts into experiments</td>
+</tr>
+<tr>
+<td>Ground truth and reuse (§8)</td>
+<td>Avoid invented interfaces and duplicate mechanisms</td>
+<td>Universal re-verification and proof-of-search can repeat available evidence or expand exploration</td>
+<td>Keep direct evidence for consequential claims; make search and rechecking responsive to uncertainty</td>
+</tr>
+<tr>
+<td>Method improvement (§9)</td>
+<td>Repeated failure changes the approach</td>
+<td>Each annoyance can add a rule, mechanism and follow-up</td>
+<td>Preserve the feedback; make removal and simplification first-class candidate fixes</td>
+</tr>
+<tr>
+<td>Plans and routing (§10)</td>
+<td>Work is visible and has an owner</td>
+<td>Detailed plan and independent-routing requirements can dominate tiny tasks</td>
+<td>Keep a shared corpus; test proportional detail, not removal of ownership</td>
+</tr>
+<tr>
+<td>Truthful board (§11)</td>
+<td>Oversight matches actual work</td>
+<td>Extra state reconciliation can cost effort, but serves a core product promise</td>
+<td>Keep; improve automation rather than outsource truth to Dennis</td>
+</tr>
+<tr>
+<td>Isolation and integration (§12)</td>
+<td>Concurrent agents do not destroy work or land failures</td>
+<td>Repeated full suites, duplicated delegated work and coordination startup</td>
+<td>Keep isolation and applicable integration checks; inspect repeated execution on unchanged inputs</td>
+</tr>
+<tr>
+<td>Finite review (§13)</td>
+<td>Independent challenge and verified repairs</td>
+<td>Extra review remains possible for a named risk</td>
+<td>Keep the restored rule; measure whether completion now converges</td>
+</tr>
+<tr>
+<td>Closure (§14)</td>
+<td>Work and its evidence survive the session</td>
+<td>Archive/citation/branch/record housekeeping can be disproportionate</td>
+<td>Keep trustworthy closure; consolidate and automate the paperwork where useful</td>
+</tr>
+</tbody>
+</table>
+<p>These categories overlap. It would be misleading to count the sections and say a particular percentage is “good collaboration.” The important distinction is between <strong>what must remain true</strong> and <strong>what an agent must repeatedly do to demonstrate it</strong>.</p>
+<h3>The economic premise matters beyond review</h3>
+<p>“Cost nothing” was intended to prevent agents from rationalizing incomplete work. But as an instruction it removes the basis for deciding that a second identical test run, another general search or another document has little value. Even after the review loop is removed, it can still encourage unnecessary work.</p>
+<p>The replacement principle worth discussing is: <strong>complete the agreed outcome and verify consequential risks; spend additional work where it can change the result or confidence in it.</strong> That preserves quality without treating every possible check as free. This report proposes that direction; it does not amend the doctrine.</p>
+<h3>Ground truth needs a stopping condition too</h3>
+<p>Direct evidence is valuable when a claim will determine an action. Re-reading an unchanged file simply because another agent read it is not automatically the best use of the coordinator. Verification should match the consequence and the reliability of the evidence. A cheap consequential spot-check may be necessary; replaying an entire completed search can defeat the purpose of delegation.</p>
+<p>The same applies to uncertainty. A statement such as “this behavior has not been measured” can be the accurate endpoint of a bounded investigation. Treating every expression of uncertainty as an order for further research can turn truthful reporting into indefinite exploration. The present doctrine already permits distinguishing checked facts, recall and inference; that allowance should remain operationally real.</p>
+<h3>Ratchets are a mixed set, not one treatment</h3>
+<p>A test proving that the board cannot launch processes protects an architectural boundary. A text match that mistakes a card number for a CSS color produces different value and cost. The local September 11 diagnosis records exactly that false-positive class in #124. This is evidence that friction exists outside review, not that all architectural tests are harmful.<sup id="fnref3:1"><a class="footnote-ref" href="#fn:1">1</a></sup></p>
+<p>Similarly, checking that a review record contains a reader's name and verification evidence helps preserve accountability, but does not prove the reader actually reviewed the code. The holder register itself distinguishes a named mechanism from proof that the whole intent is held. Preserve that distinction when evaluating existing checks; otherwise a record can become the target instead of the behavior it represents.<sup id="fnref3:2"><a class="footnote-ref" href="#fn:2">2</a></sup></p>
+<h2>The review-loop hypothesis</h2>
+<p>The evidence supports three separate conclusions:</p>
+<ol>
+<li><strong>Confirmed local mechanism:</strong> recursive repair readings and inadequate disposition paths could keep work open and force needless repair activity. This justified fixing the workflow without waiting for a broad benchmark.</li>
+<li><strong>Strong but unquantified hypothesis:</strong> that mechanism was a major contributor to recent slowdowns. Long review histories support investigation, but their finding counts also include real defects. No valid cost share has been measured.</li>
+<li><strong>Not established:</strong> everything else is efficient, or repeated review generally makes software worse. The local pilot did not complete the comparisons needed to show either. External projects and experiments show benefits and costs depending on scope, task and model.</li>
+</ol>
+<p>The earlier broad HR trial and the missing-page review-policy pilot should therefore remain evidence records, not be promoted into a verdict. The September 11 diagnosis records that the broad trial produced no builders and the pilot did not complete the model-policy pairs. This report did not rerun those trials or re-audit their live state.<sup id="fnref4:1"><a class="footnote-ref" href="#fn:1">1</a></sup></p>
+<p>It also cannot establish historical originality. Today's sample shows that repository memory, explicit intent, isolation, scoped autonomy and verification are shared approaches. Determining who first developed a particular combination would require a separate dated historical study and would add little to the immediate decision.</p>
+<h2>Recommended next step</h2>
+<p><strong>First, let the finite workflow produce ordinary completed work.</strong> Read the next small batch of suitable cards using records already generated. Look for a return of compulsory review recurrence, repeated suite runs on unchanged code, time waiting for colleagues, and record-only repair work. Also check for escaped defects and owner rework. This is operational monitoring, not a causal trial; differences in task difficulty and machine availability must remain visible.</p>
+<p><strong>Then test the smallest credible remaining concern: the instruction burden around an otherwise unchanged workflow.</strong> Use the existing frozen research assets where they remain suitable. Compare the current post-#131 rules with a short entry layer that preserves decision ownership, boundaries, commands, truthful handoff and finite review, while placing explanations and occasional procedures behind specific pointers. Both conditions should retain the same implementation acceptance and final checks. Changing instruction delivery is a distinct experiment from disabling tests or removing review.</p>
+<p>A first experiment should answer one question rather than rebuild the experiment platform. Use tasks with an already working environment and independent acceptance evidence. Keep model, effort, base revision and runner stable within each pair; preserve the first handoff before any repair; record actual usage and infrastructure failures separately. A small pilot can reveal gross overhead or regression, but cannot certify that two workflows have equal quality. If setup stops, fix or bound the setup problem before interpreting model behavior.</p>
+<p>If that comparison yields little benefit, the next candidate is duplicated verification and text-based process ratchets, evaluated individually. Keep the checks that defend meaningful behavior. Remove, narrow or replace a check only when its claimed invariant and observed failures justify that change. There is no need to add a mandatory “proof of value” form to every task to implement this recommendation.</p>
+<p>Dennis's intended system is still a useful target: one place to see the work, give direction and trust its progress, while capable agents execute remotely. The strongest research-supported change is to preserve those guarantees and reduce obligations that do not contribute evidence or progress. The doctrine should give agents room to make technical judgments and require them to account for outcomes, without making every act of diligence generate another act of diligence.</p>
+<h2>Sources</h2>
+<div class="footnote">
+<hr />
+<ol>
+<li id="fn:1">
+<p><a href="2026-09-11-review-fix-loop-diagnosis.md">Needle review-loop diagnosis</a>, historical assessment made September 11 before #131; <a href="../plans/done/2026-09-11-work-finishes-after-review-and-verified-fixes.md">finite workflow implementation plan</a> and <a href="../reviews/2026-09-11-work-finishes-after-review-and-verified-fixes.md">verification record</a>.&#160;<a class="footnote-backref" href="#fnref:1" title="Jump back to footnote 1 in the text">&#8617;</a><a class="footnote-backref" href="#fnref2:1" title="Jump back to footnote 1 in the text">&#8617;</a><a class="footnote-backref" href="#fnref3:1" title="Jump back to footnote 1 in the text">&#8617;</a><a class="footnote-backref" href="#fnref4:1" title="Jump back to footnote 1 in the text">&#8617;</a></p>
+</li>
+<li id="fn:2">
+<p>Needle at a6eb528: <a href="../HOW-WE-WORK.md">shared doctrine</a>, <a href="../HOW-WE-HOLD-IT.md">holder register</a>, <a href="../../CLAUDE.md">project rules</a>, and <a href="../INTENT.md">founding intent</a>. Word counts measured from these local files with whitespace splitting; current links can evolve.&#160;<a class="footnote-backref" href="#fnref:2" title="Jump back to footnote 2 in the text">&#8617;</a><a class="footnote-backref" href="#fnref2:2" title="Jump back to footnote 2 in the text">&#8617;</a><a class="footnote-backref" href="#fnref3:2" title="Jump back to footnote 2 in the text">&#8617;</a></p>
+</li>
+<li id="fn:3">
+<p>Superpowers, inspected revision b36e0829c6d0140e93cfef2ca599b1b07d4a7797: <a href="https://github.com/obra/superpowers/blob/b36e0829c6d0140e93cfef2ca599b1b07d4a7797/AGENTS.md">contributor guidance</a> and <a href="https://github.com/obra/superpowers/blob/b36e0829c6d0140e93cfef2ca599b1b07d4a7797/skills/subagent-driven-development/SKILL.md#L308-L468">development workflow, review and fix stages</a>.&#160;<a class="footnote-backref" href="#fnref:3" title="Jump back to footnote 3 in the text">&#8617;</a></p>
+</li>
+<li id="fn:4">
+<p>OpenClaw, inspected revision af73c58582b559187c94f86275402f54e5ccae58: <a href="https://github.com/openclaw/openclaw/blob/af73c58582b559187c94f86275402f54e5ccae58/AGENTS.md">working agreement</a>, <a href="https://github.com/openclaw/openclaw/blob/af73c58582b559187c94f86275402f54e5ccae58/.agents/skills/openclaw-pr-maintainer/SKILL.md#L84-L96">maintainer review policy</a>, <a href="https://github.com/openclaw/openclaw/blob/af73c58582b559187c94f86275402f54e5ccae58/.agents/skills/autoreview/SKILL.md#L64-L75">autoreview scope and severity</a>.&#160;<a class="footnote-backref" href="#fnref:4" title="Jump back to footnote 4 in the text">&#8617;</a></p>
+</li>
+<li id="fn:5">
+<p>Spec Kit, inspected revision c173bf19a6654e3b05386ec3599349a55282b897: <a href="https://github.com/github/spec-kit/blob/c173bf19a6654e3b05386ec3599349a55282b897/AGENTS.md">contributor instructions</a>, <a href="https://github.com/github/spec-kit/blob/c173bf19a6654e3b05386ec3599349a55282b897/.specify/memory/constitution.md">project constitution</a>, <a href="https://github.com/github/spec-kit/blob/c173bf19a6654e3b05386ec3599349a55282b897/.github/skills/code-review/SKILL.md">code-review skill</a>.&#160;<a class="footnote-backref" href="#fnref:5" title="Jump back to footnote 5 in the text">&#8617;</a></p>
+</li>
+<li id="fn:6">
+<p>Ryan Lopopolo, OpenAI, <a href="https://openai.com/index/harness-engineering/">Harness engineering: leveraging Codex in an agent-first world</a>, February 11, 2026. Engineering experience report; reviewed September 11.&#160;<a class="footnote-backref" href="#fnref:6" title="Jump back to footnote 6 in the text">&#8617;</a></p>
+</li>
+<li id="fn:7">
+<p>Prithvi Rajasekaran, Anthropic, <a href="https://www.anthropic.com/engineering/harness-design-long-running-apps">Harness design for long-running application development</a>, March 24, 2026. Engineering experience report; reviewed September 11.&#160;<a class="footnote-backref" href="#fnref:7" title="Jump back to footnote 7 in the text">&#8617;</a></p>
+</li>
+<li id="fn:8">
+<p>Anthropic, <a href="https://code.claude.com/docs/en/best-practices#write-an-effective-claude-md">Best practices for Claude Code</a>, current documentation reviewed September 11, 2026.&#160;<a class="footnote-backref" href="#fnref:8" title="Jump back to footnote 8 in the text">&#8617;</a></p>
+</li>
+<li id="fn:9">
+<p>Gloaguen et al., <a href="https://arxiv.org/html/2602.11988v2">Evaluating AGENTS.md: Are Repository-Level Context Files Helpful for Coding Agents?</a>, June 23, 2026 revision, especially §§4–5. February v1 is superseded for this assessment.&#160;<a class="footnote-backref" href="#fnref:9" title="Jump back to footnote 9 in the text">&#8617;</a></p>
+</li>
+<li id="fn:10">
+<p>Lulla et al., <a href="https://arxiv.org/html/2601.20404v1">On the Impact of AGENTS.md Files on the Efficiency of AI Coding Agents</a>, January 28, 2026, especially §§3.1.8–4. <a href="https://assets.empirical-software.engineering/pdf/jaws26-agents.md-efficiency.pdf">Authors' workshop PDF</a>.&#160;<a class="footnote-backref" href="#fnref:10" title="Jump back to footnote 10 in the text">&#8617;</a></p>
+</li>
+<li id="fn:11">
+<p>Prakhar Khatri, <a href="https://arxiv.org/html/2607.27250v1">Do Context Files Help Coding Agents? A Two-Agent Ablation Study on Real Repositories</a>, July 28, 2026, especially §§3.3–3.4, 4.1 and 4.5. Preprint; small task sample and injection/corpus confounds.&#160;<a class="footnote-backref" href="#fnref:11" title="Jump back to footnote 11 in the text">&#8617;</a></p>
+</li>
+<li id="fn:12">
+<p>Asa Shepard and Jeannie Albrecht, <a href="https://arxiv.org/html/2606.20512v2">Probe-and-Refine Tuning of Repository Guidance for Coding Agents</a>, June 19, 2026 revision, especially results and §9 limitations.&#160;<a class="footnote-backref" href="#fnref:12" title="Jump back to footnote 12 in the text">&#8617;</a></p>
+</li>
+<li id="fn:13">
+<p>Lin et al., <a href="https://arxiv.org/html/2604.25850v4">Agentic Harness Engineering: Observability-Driven Automatic Evolution of Coding-Agent Harnesses</a>, May 18, 2026 revision, especially §4.4, component ablations and limitations. Research prototype.&#160;<a class="footnote-backref" href="#fnref:13" title="Jump back to footnote 13 in the text">&#8617;</a></p>
+</li>
+<li id="fn:14">
+<p><a href="https://github.com/openai/codex/blob/654b0a77d0d2f81aa21f61caf7af4be88fe550bb/AGENTS.md#L64-L70">Codex test selection</a>; <a href="https://github.com/google-gemini/gemini-cli/blob/ed2ac40df67a319bf348bd7e3d10494696b31b38/GEMINI.md#L44-L68">Gemini CLI validation guidance</a>.&#160;<a class="footnote-backref" href="#fnref:14" title="Jump back to footnote 14 in the text">&#8617;</a></p>
+</li>
+<li id="fn:15">
+<p><a href="https://github.com/langchain-ai/deepagents/blob/9f6bd6ae200ff2e45e8c0246343b6c8936707447/AGENTS.md">Deep Agents testing and context</a>; <a href="https://github.com/cline/cline/blob/a7c1dfc2987e25a6132370ac563c36b05bd5822e/.clinerules/general.md#L1-L13">Cline knowledge selection</a>; <a href="https://github.com/cline/cline/blob/a7c1dfc2987e25a6132370ac563c36b05bd5822e/.clinerules/workflows/address-pr-comments.md">Cline comment dispositions</a>; <a href="https://github.com/earendil-works/pi/blob/713bdf38d58e407db91c8d9747ea25546862b5c5/AGENTS.md">Pi development rules</a>.&#160;<a class="footnote-backref" href="#fnref:15" title="Jump back to footnote 15 in the text">&#8617;</a></p>
+</li>
+</ol>
+</div></body></html>
