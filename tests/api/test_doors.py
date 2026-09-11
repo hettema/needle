@@ -7,6 +7,7 @@ a limit moves the lane and a death carries the machine's reason.
 
 import json
 import os
+import re
 import shutil
 import subprocess
 import time
@@ -854,10 +855,14 @@ def test_a_lane_that_dies_on_a_limit_is_moved_and_the_card_says_where(
     ], rescued
     assert moved["lane"]["session"]["slot"] == "beta"
     assert moved["summary"]["state"]["word"].endswith("beta")
-    assert moved["summary"]["state"]["detail"] == (
-        "Happening now: a session is working on it, beta, for 0 s. "
-        "It moved to beta, and a new window opened. Starting…"
-    )
+    # How many seconds it has run depends on how many reads follow the move
+    # (card #123: a pass reads the machine again after its own act); the
+    # sentence's shape is what the card promises.
+    assert re.fullmatch(
+        r"Happening now: a session is working on it, beta, for \d s\. "
+        r"It moved to beta, and a new window opened\. Starting…",
+        moved["summary"]["state"]["detail"],
+    ), moved["summary"]["state"]["detail"]
     assert column_of(client, CARD) == "Executing"
     assert len(machine_floor.state()["spawned"]) == 2
 
