@@ -6,6 +6,8 @@ from datetime import UTC, datetime, timedelta
 from board.dial import (
     LIVE_STAGES,
     dial_state,
+    filed_against,
+    filed_by_the_card,
     filer_of,
     held_lanes,
     is_quiet,
@@ -90,6 +92,42 @@ def test_the_filer_is_read_from_the_opening_words_of_found_by():
     )
     # "reading card #196's open face" is the owner reading, not a reading session.
     assert filer_of("the owner, reading card #196's open face") == Filer.OWNER
+
+
+def test_a_defect_the_cards_own_lane_filed_is_by_the_card_not_against_it():
+    assert filed_by_the_card(54, "the lane on card #54 (docs/plans/x.md), in the walk")
+    assert filed_by_the_card(59, "the lane on card #59 (x), at its own close")
+    assert filed_by_the_card(27, "card #27's lane (the colour language), in the review's pass")
+    assert filed_by_the_card(249, "the review of card #249 (`docs/reviews/x.md`, finding 1)")
+    assert not filed_by_the_card(54, "the owner's session in Needle on 2026-09-07, counting #54")
+    assert not filed_by_the_card(54, "the lane on card #540, in the review")
+    assert not filed_by_the_card(3, "the reading on card #3")
+    assert not filed_by_the_card(3, None)
+
+
+def test_filed_against_counts_defects_only_and_the_archived_on_request(tmp_path):
+    def doc(name: str, kind: str, archived: bool, found_by: str):
+        folder = "docs/slice-suggestions/done" if archived else "docs/slice-suggestions"
+        text = f"# T\n\n**Kind:** {kind}\n**Found by:** {found_by}\n\nbody\n"
+        return parse_document(
+            text,
+            kind=DocumentKind.SUGGESTION,
+            path=f"{folder}/{name}.md",
+            archived=archived,
+            read_at=datetime(2026, 9, 11, tzinfo=UTC),
+        )
+
+    documents = [
+        doc("a", "defect", False, "the owner, reading #7's work"),
+        doc("b", "idea", False, "the owner, thinking about #7"),
+        doc("c", "defect", True, "#7's review, later"),
+        doc("d", "defect", False, "the lane on card #70"),
+    ]
+    assert [d.stem for d in filed_against(7, "card-7-x", documents)] == ["a"]
+    assert [d.stem for d in filed_against(7, "card-7-x", documents, live_only=False)] == [
+        "a",
+        "c",
+    ]
     assert filer_of("the meter reconcile of 2026-08-29.") == Filer.UNKNOWN
     assert filer_of(None) == Filer.UNKNOWN
 

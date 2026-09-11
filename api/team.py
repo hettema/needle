@@ -15,7 +15,7 @@ from pathlib import Path
 
 from board.assemble import document_of
 from board.brief import lane_name, lane_path
-from board.dial import filed_against
+from board.dial import filed_against, filed_by_the_card
 from board.parse import head_fields_of, plan_stem_of, review_of
 from board.team import (
     CardFacts,
@@ -160,6 +160,7 @@ class Team:
                 _defect(d, born_by_stem.get(d.stem))
                 for d in filed_against(card.number, name, live.index.documents, live_only=False)
                 if d.stem != (document.stem if document is not None else None)
+                and not filed_by_the_card(card.number, d.found_by)
             ],
             reverted=reverted,
             fixes_after=fixes_after,

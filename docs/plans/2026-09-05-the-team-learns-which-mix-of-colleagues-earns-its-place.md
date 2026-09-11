@@ -27,7 +27,7 @@ Before a card starts, the board assigns exactly one composition: accountable han
 
 For comparable design work, read and attribute: material corrections made before build; review findings by inside, adjacent and outside ring; defects later filed against the card; send-backs and stops; commits within a week that fix or revert the fold; tokens and wall-clock from the existing burn and lane timestamps. Do not copy these facts into a new event stream. Done means: one generated reading can be reproduced from corpus, board and git facts; deleting or changing a source fact changes the reading; there is no hand-maintained scorecard.
 
-**Met:** `board/team.py::observation_of` joins, per closed card: the team declared (the store's row, else the plan's or the record's `Composition:` line — #59's and #54's, the founding observations), corrections before build from the plan's `Challenged:` line (None, and a named confound, when a challenged card left no line — never a zero), the review record's findings by ring from each disposition's class (`feature` inside, `seam` adjacent, `boundary` outside; records older than the class token count without rings), escapes as live defects naming the card within fourteen days of its close (`board/dial.py::filed_against`, the same reading `needle fixes` makes), stops from the card's history, a reverting commit on the trunk (`runtime.reverted`), hours from the first Start to the close on the card's history, and tokens from the lane's transcripts counted once by request (`runtime/transcripts.py::tokens`, `machine burn`'s definition, read on the machine that holds the lane through a `needle tokens` verb). Every observation lists the files and facts it read. `needle team needle` on a copy of the store on 2026-09-11 read #54 and #59 from those facts alone; `tests/board/test_team.py::test_changing_or_deleting_a_source_fact_changes_the_observation` holds the second clause; the store keeps no count. What is unread and says so: tokens for a lane whose machine is silent or whose make keeps no transcript the reader knows (Codex rollouts), and the send-back count, which is the owner's moves out of Executed and is not separated from his other moves — stops are.
+**Met:** `board/team.py::observation_of` joins, per closed card: the team declared (the store's row, else the plan's or the record's `Composition:` line — #59's and #54's, the founding observations), corrections before build from the plan's `Challenged:` line (None, and a named confound, when a challenged card left no line — never a zero), the review record's findings by ring from each disposition's class (`feature` inside, `seam` adjacent, `boundary` outside; records older than the class token count without rings), escapes as live defects naming the card within fourteen days of its close (`board/dial.py::filed_against`, the same reading `needle fixes` makes), stops from the card's history, a reverting commit on the trunk (`runtime.reverted`), hours from the first Start to the close on the card's history, and tokens from the lane's transcripts counted once by request (`runtime/transcripts.py::tokens`, `machine burn`'s definition, read on the machine that holds the lane through a `needle tokens` verb). Every observation lists the files and facts it read. `needle team needle` on a copy of the store on 2026-09-11 read #54 and #59 from those facts alone; `tests/board/test_team.py::test_changing_or_deleting_a_source_fact_changes_the_observation` holds the second clause; the store keeps no count. Send-backs are the owner's moves of the card out of Executed or Done after its close, from the history; the fold's rework is a reverting commit and the trunk's commits naming the card within a week of the lane's tip (`runtime/git.py::fixes_after`). Escapes count defects only — never ideas — live or archived since, born after the close by the board's own birth of the defect's card, to the day of its stem when it has no card. What is unread and says so: tokens for a lane whose machine is silent or whose make keeps no transcript the reader knows (Codex rollouts), and a round's corrections when the plan carries no Challenged line.
 
 ### 3. Quality decides first; efficiency breaks a quality tie
 
@@ -84,29 +84,43 @@ Written by the lane: the three observations and why their work shape is comparab
     its Composition line — one Claude lane, one Codex thread called four times.
     Corrections before build: unread, because the record predates the
     `Challenged:` grammar (its own words: nine findings changed the table, three
-    rows reached the owner contested — read by hand, not counted). Escapes: 0.
-    Stops: 0; fold stands; 2.2 h from the first Start to the close on the card's
-    history; tokens unread (the lane ran on the laptop and the reading ran on
-    the rented machine).
+    rows reached the owner contested — read by hand, not counted). **One
+    escape**: `docs/slice-suggestions/done/2026-09-07-a-finished-cards-lane-is-gone-from-the-disk-once-its-work-is-folded.md`,
+    filed by the owner's session two days after the close and naming the card
+    among twelve whose worktrees were left behind (since fixed, still an
+    escape); the defect the lane itself filed in the walk is by the card, not
+    against it, and is not counted. Stops: 0; no send-back; fold stands; three
+    commits naming the card landed on the trunk within a week of its tip;
+    2.2 h from the first Start to the close on the card's history; tokens
+    unread (the lane ran on the laptop and the reading ran on the rented
+    machine).
   - **#59** (a defect's mark is verified before it routes): declared in its plan's
     Composition line, before the challenge ran. Twelve material corrections
     before build (its Challenged line). Fourteen review findings, no rings (the
-    record predates the class token). **Two escapes**: `docs/slice-suggestions/2026-09-05-a-short-job-the-board-opened-for-itself-is-cleaned-up-when-it-ends.md`
-    and `…/2026-09-05-one-word-never-names-two-different-things-on-the-board.md`,
-    both live and naming the card within fourteen days of its close. One stop;
-    fold stands; 2.6 h; tokens unread.
+    record predates the class token). **One escape**: the same worktrees defect,
+    naming this card too; the three defects the lane filed from its own review
+    and close (`…a-short-job-the-board-opened-for-itself…`, `…one-word-never-names-two-different-things…`,
+    `done/…a-loop-cannot-close-itself…`) are by the card and not counted. One
+    stop; no send-back; fold stands; no fixing commit within a week; 2.6 h;
+    tokens unread.
   - **#58** (this card): declared in this plan's head at the lane's own start.
     One material correction before build (the Challenged line). Its findings,
     escapes and hours become readable when this close lands and the fourteen
     days pass; the reading counts it then, by the same reader.
-- **Send-backs and rework:** none on #54 or #59 as the reader counts them (a
-  stop on #59). Rework is the fold's reverts: none.
+- **Send-backs and rework:** none on #54 or #59 (one stop on #59); no revert;
+  three fixing commits within a week on #54, none on #59 — read again after
+  the review's repairs by the same reader on the same copy, escapes now by
+  the board's own birth of each defect's card and never a defect the card's
+  own lane filed.
 - **The conclusion:** insufficient evidence — `judgment: exploring`, two trials
   under different-make and none under the other two compositions, with two
   named confounds (an unread round, a sample of two). No composition is called
-  a winner. The two escapes on #59 are already what the threshold reads: a
-  different-make challenge that escapes a defect within fourteen days does not
-  earn the lead however many corrections it made.
+  a winner. The one escape each on #54 and #59 is already what the threshold
+  reads: a different-make challenge that escapes a defect within fourteen days
+  does not earn the lead however many corrections it made — and both escapes
+  are one defect about the close ritual leaving worktrees behind, which the
+  reader cannot tell from a defect in the work; that is a confound the
+  owner reads off the sources, not one the number hides.
 - **`Fix: his` suggestions:** none. The one decision this card met that was
   his — whether an `alone` composition may skip the independent review — was
   answered by his ruling of 2026-09-11 (§13) before the lane began, and the
@@ -116,7 +130,10 @@ Written by the lane: the three observations and why their work shape is comparab
   alone, then same-make; the bounded shape begins alone. The first card started
   after this fold is assigned by the board, not by anyone's memory.
 - **The model-change trigger:** an observation whose hand model differs from the
-  rule's current answer makes the shape `stale` and returns it to exploration;
-  today the rule names no model for a top rung, so the trigger arms when the
-  machine's card makes `claude-acct best` name it (#63's close-out, the
-  machine-side card).
+  rule's current answer, or whose challenger's model differs from what a fresh
+  call would run now, is set aside and the shape reads `stale` until a fresh
+  cohort of three trials per composition judges again; the record keeps the
+  old trials. Today the rule names no model for a top rung and Codex's
+  configuration names no model, so the trigger arms when the machine's card
+  makes `claude-acct best` name the rung (#63's close-out, the machine-side
+  card) or `~/.codex/config.toml` names one.

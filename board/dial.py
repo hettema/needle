@@ -100,6 +100,24 @@ def filed_against(
     ]
 
 
+_BY_THE_CARD = (
+    r"^\W*(?:the\s+)?(?:lane|review|close|session)\s+(?:on|of)\s+(?:card\s+)?#{n}\b"
+    r"|^\W*(?:card\s+)?#{n}'?s\s+(?:lane|review|close|session)\b"
+)
+
+
+def filed_by_the_card(number: int, found_by: str | None) -> bool:
+    """Whether the `Found by:` line says the card's own lane, review or
+    close filed it: a defect the card found in something else, which
+    names the card without being about its work. The team's reader keeps
+    those out of a card's escapes (card #58, from its independent review),
+    since a lane filing what its review found outside its change is
+    doing what §13 asks, not escaping a defect."""
+    if not found_by:
+        return False
+    return re.search(_BY_THE_CARD.format(n=number), found_by.strip(), re.I) is not None
+
+
 def rail_defects(cards: list[Card], index: CorpusIndex) -> list[tuple[Card, Document]]:
     """Every card standing on its own on the project's defects rail — a
     Backlog card behind a live suggestion whose document says defect."""
