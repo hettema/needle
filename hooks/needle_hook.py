@@ -164,7 +164,12 @@ def drain(queue: Path, lock) -> None:
 
     fcntl.flock(lock, fcntl.LOCK_EX)
     try:
-        lines = queue.read_text(encoding="utf-8").splitlines() if queue.is_file() else []
+        # Lines are written unescaped, so a write cut short can end in half a
+        # character; decoded strictly, that one tail would fail every drain
+        # after it and the queue would never empty (card #124). Decoded
+        # leniently, the torn line fails to parse and is skipped below.
+        raw = queue.read_bytes() if queue.is_file() else b""
+        lines = raw.decode("utf-8", errors="replace").splitlines()
         horizon = time.time() - KEEP_SECONDS
         events = []
         for line in lines:
@@ -283,8 +288,15 @@ def main() -> int:
             if event is not None:
                 fcntl.flock(lock, fcntl.LOCK_EX)
                 try:
-                    with queue.open("a", encoding="utf-8") as f:
-                        f.write(json.dumps(event, ensure_ascii=False) + "\n")
+                    # A write cut short leaves a line with no end; appended
+                    # onto it, this event would join the torn line and be
+                    # dropped with it at the drain (card #124).
+                    with queue.open("a+b") as f:
+                        if f.seek(0, os.SEEK_END):
+                            f.seek(-1, os.SEEK_END)
+                            if f.read(1) != b"\n":
+                                f.write(b"\n")
+                        f.write((json.dumps(event, ensure_ascii=False) + "\n").encode("utf-8"))
                 finally:
                     fcntl.flock(lock, fcntl.LOCK_UN)
             # The board being down is not an error: the queue drains on the

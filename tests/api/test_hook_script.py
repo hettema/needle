@@ -153,6 +153,47 @@ def test_the_hook_queues_while_the_board_is_down_and_drains_when_it_is_up(tmp_pa
         board.server_close()
 
 
+def test_a_queue_whose_last_write_was_cut_off_still_drains(tmp_path: Path):
+    """Card #124: the hook writes its lines unescaped, so a write cut short
+    can end the queue in half a character with no line end. The next firing
+    starts its event on a line of its own, drains every whole line to the
+    board and empties the queue, rather than joining the torn line and being
+    dropped with it, or failing the decode on every firing after it."""
+    board, url = serving()
+    queue = tmp_path / "hook-queue.jsonl"
+    whole = {
+        "hook_event_name": "Stop",
+        "session_id": "bbbb0124-0000-4000-8000-000000000000",
+        "cwd": LANE,
+        "last_assistant_message": "déjà vu",
+        "at": time.time(),
+    }
+    torn = '{"hook_event_name": "Stop", "last_assistant_message": "é'.encode()[:-1]
+    queue.write_bytes((json.dumps(whole, ensure_ascii=False) + "\n").encode() + torn)
+    try:
+        board.up = True
+        done = run_hook(
+            {
+                "hook_event_name": "SessionEnd",
+                "session_id": "bbbb0124-0000-4000-8000-000000000000",
+                "cwd": LANE,
+                "reason": "other",
+            },
+            tmp_path,
+            url,
+        )
+        assert done.returncode == 0
+        assert len(board.posts) == 1
+        assert [(e["kind"], e["message"]) for e in board.posts[0]] == [
+            ("Stop", "déjà vu"),
+            ("SessionEnd", None),
+        ]
+        assert queue.read_bytes() == b"", "drained past the torn line"
+    finally:
+        board.shutdown()
+        board.server_close()
+
+
 def test_the_hook_never_raises_on_garbage(tmp_path: Path):
     done = subprocess.run(
         [sys.executable, str(HOOK)],
