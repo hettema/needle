@@ -4,8 +4,8 @@
 **Reviewer:** Independent Codex session 01a090ab-7288-73b1-a71e-7f30accdb36d, Needle call 84, read-only.
 **Diff range:** Needle base 1ecfa89 plus the frozen uncommitted implementation read by call 84; external instruction diffs at HR b8c0099f3, machine 3cda66b and HR3 a3a6a56. Repairs below were subsequently verified by the implementing colleagues, not represented as part of that earlier independent reading.
 **Findings:** 3
-**Verification:** Initial close-path checks: 22 passed; final absolute shared-pointer test passed. After the fenced-evidence repair, all 13 review-rule tests passed. Template parsed through review_of and progress_line: 3 found, 1 fixed, 1 no change, 1 filed. Full suite and distribution are still in progress.
-**Completion:** Not complete yet: waiting for full suite and canonical-source distribution on both machines.
+**Verification:** Initial close-path checks: 22 passed; final absolute shared-pointer test passed. After the fenced-evidence repair, all 13 review-rule tests passed. Template parsed through review_of and progress_line: 3 found, 1 fixed, 1 no change, 1 filed. The complete remote suite passed across 93 modules and 719 tests at 9bbd860; distribution remains in progress.
+**Completion:** Not complete yet: waiting only for canonical-source distribution on both machines.
 
 ## Dispositions
 
@@ -26,3 +26,9 @@ Existing worktrees contain historical instruction snapshots. Their target files 
 The earlier research is preserved separately as historical evidence. It did not complete a controlled policy comparison and does not establish the token savings or final quality of this change. This change tests removal of mandatory recursive obligations, not the rest of the harness or a Kanban redesign.
 
 Compatibility verification against the actual remote records: #124 was accepted unchanged; #504 exposed verification interleaved under Dispositions, which is now recognised as a legacy evidence container. This remains a presence check, not a claim that every disposition proves a test. A regression covers that old layout and an empty section. Seventeen targeted tests passed after compatibility and brief-fixture repairs. The partial local full run then exposed two bare # Review fixtures in test_dial; it was interrupted to move the comprehensive run to the rented machine in isolated module processes. This is not reported as a full-suite pass.
+
+Final comprehensive verification: on rented, 93 isolated module runs covered 719 tests at `9bbd860880bf96fb83d6294abe67586a2c87f131`, Python 3.14.7, with zero remaining failures, errors or skips. The initial launch omitted `.venv/bin` from PATH, causing 17 failures in four modules that use the nested fake Needle command. Those four complete modules (50 tests) were rerun with the proper environment and all passed; no product code changed for that setup error. Initial run: 697.74 seconds; reruns: 135.28 seconds. Raw logs, JUnit XML, initial/rerun summaries and the combined result are under `/home/dennis/.cache/needle/card-131-suite{,-rerun}/` on rented. The initial failed run is retained and not represented as green. Subsequent source changes are documentation only. Ruff passed for every changed Python file.
+
+The last instruction inventory found no mandatory recursive review wording in active canonical instructions, relevant skills or hooks across Needle, HR, HR3, machine, dennis-os, rented-machine and portfolio. Historical material and worktree snapshots were explicitly excluded. HR3's required hosted Verify run passed for 476da5b: https://github.com/hettema/hr3/actions/runs/34605188865 . HR, machine and HR3 current roots are synchronized on both machines.
+
+Dennis reported clicking Watch on #131 and seeing a dead session. The actual implementation continued in the local card-131-review-once worktree and verification on rented. No Watch/session-status bug was changed.
