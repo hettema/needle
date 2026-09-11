@@ -1302,6 +1302,16 @@ def test_a_post_is_answered_while_a_pass_is_stalled_and_the_passes_it_causes_coa
     state["state"] = "done"
     state_file.write_text(json.dumps(state))
     loops: loops_mod.Loops = client.app.state.loops
+    # The page's wake belongs to the loop's thread: a post that recorded
+    # something new wakes it from there, never from the store's worker.
+    import threading
+
+    loop_thread = client.portal.call(threading.get_ident)
+    woken_from: list[int] = []
+    real_bump = loops.live.bump
+    monkeypatch.setattr(
+        loops.live, "bump", lambda: (woken_from.append(threading.get_ident()), real_bump())
+    )
     passes: list[float] = []
     real_reconcile_now = loops.reconcile_now
     monkeypatch.setattr(
@@ -1345,6 +1355,7 @@ def test_a_post_is_answered_while_a_pass_is_stalled_and_the_passes_it_causes_coa
         assert response.json()["received"] == (0 if posted is question and answered[2:] else 1)
     assert max(answered) < 1.0, f"answered in {answered} with the pass stalled"
     assert passes == [], "no pass ran while stalled"
+    assert woken_from and set(woken_from) == {loop_thread}, "the page is woken from the loop"
 
     client.portal.call(lifted.set)
     stall.result(timeout=5)

@@ -379,9 +379,17 @@ class Loops:
         the pass it causes run after the answer (card #124). The record is
         off the loop's thread and outside the loops' lock, which a pass in
         flight holds for its whole read: the hook's two seconds are the
-        bound, and the store's write is milliseconds."""
-        recorded = await asyncio.to_thread(self.record_hooks, posted)
-        self.ask_for_a_pass()
+        bound, and the store's write is milliseconds. Only the write leaves
+        the loop's thread: which card a directory is reads the projects the
+        loop's own sync mutates, and the page's wake sets futures that
+        belong to this loop. A batch that holds nothing new — a hook
+        re-sending what the store already has — asks for no pass, since the
+        pass that read those events already ran."""
+        attributed = self._attributed(posted)
+        recorded = await asyncio.to_thread(self.live.store.record_hook_events, attributed)
+        if recorded:
+            self.live.bump()
+            self.ask_for_a_pass()
         return recorded
 
     def ask_for_a_pass(self) -> None:
@@ -486,17 +494,17 @@ class Loops:
                 named.update((call.note, call.answer))
         return named
 
-    def record_hooks(self, posted: list[HookPosted]) -> list[HookEvent]:
+    def _attributed(
+        self, posted: list[HookPosted]
+    ) -> list[tuple[HookPosted, str | None, int | None]]:
+        """Each posted event with the project and card its directory is."""
         attributed: list[tuple[HookPosted, str | None, int | None]] = []
         for event in posted:
             project = project_of_cwd(event.cwd, self.live.projects)
             slug = project.project.slug if project else None
             number = card_of_cwd(event.cwd, project.project.path) if project else None
             attributed.append((event, slug, number))
-        recorded = self.live.store.record_hook_events(attributed)
-        if recorded:
-            self.live.bump()
-        return recorded
+        return attributed
 
     # ── the lane loop ──────────────────────────────────────────────────
 
