@@ -327,14 +327,20 @@ def hook_queue_moments() -> list[float] | None:
     since the epoch, one JSON object a line as `hooks/needle_hook.py`
     appends and drains it (card #124). Empty when there is no queue or
     nothing readable in it; None when the file is there and could not be
-    read, which is no count at all and never a zero."""
+    read, which is no count at all and never a zero. The hook writes its
+    lines unescaped (`ensure_ascii=False`), so a write cut short can leave
+    half a character at the end: the bytes are decoded leniently, the torn
+    line fails to parse and is skipped as the hook's own drain skips it, and
+    every whole line still counts (Codex's cold read of card #124, call 95,
+    2.2)."""
     queue = hook_queue_path()
     try:
-        lines = queue.read_text(encoding="utf-8").splitlines()
+        raw = queue.read_bytes()
     except FileNotFoundError:
         return []
     except OSError:
         return None
+    lines = raw.decode("utf-8", errors="replace").splitlines()
     moments: list[float] = []
     for line in lines:
         try:

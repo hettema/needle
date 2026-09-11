@@ -302,6 +302,15 @@ def test_a_queue_holding_an_event_older_than_an_hour_is_counted_on_the_machines_
     older = Headroom.model_validate(laptop.room.model_dump(mode="json", exclude={"stale_queue"}))
     assert older.stale_queue is None
 
+    # A write the hook was cut off in leaves half a character at the end;
+    # the whole lines still count and the room is read (call 95, 2.2).
+    (machine_floor.data_dir / "hook-queue.jsonl").rmdir()
+    whole = f'{{"at": {old}, "session_id": "s4", "message": "déjà vu"}}\n'.encode()
+    torn = '{"at": 1, "message": "é'.encode()[:-1]
+    (machine_floor.data_dir / "hook-queue.jsonl").write_bytes(whole + torn)
+    laptop = next(r for r in runtime.rooms() if r.machine.name == "laptop")
+    assert laptop.room is not None and laptop.room.stale_queue == 1
+
 
 def test_a_machine_that_does_not_answer_is_a_room_of_none_with_the_transports_words(
     two_machines, machine_floor: Floor
