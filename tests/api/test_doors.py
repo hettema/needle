@@ -1384,6 +1384,49 @@ def test_a_post_is_answered_while_a_pass_is_stalled_and_the_passes_it_causes_coa
     }
 
 
+def test_a_write_that_committed_and_then_failed_still_asks_for_its_pass(
+    client: TestClient, monkeypatch
+):
+    """Codex's cold read of card #124 (call 91, 1.5): the pass follows the
+    write's end however it ended, so an event the store holds after a post
+    that failed is read by a pass, and the hook's re-send, answering zero
+    new, asks for none."""
+    loops: loops_mod.Loops = client.app.state.loops
+    store = loops.live.store
+    passes: list[float] = []
+    real_reconcile_now = loops.reconcile_now
+    monkeypatch.setattr(
+        loops, "reconcile_now", lambda: (passes.append(time.monotonic()), real_reconcile_now())
+    )
+    real_record = store.record_hook_events
+
+    def committed_then_failed(attributed):
+        real_record(attributed)
+        raise RuntimeError("the answer was lost after the write")
+
+    monkeypatch.setattr(store, "record_hook_events", committed_then_failed)
+    event = {
+        "kind": "Stop",
+        "session_id": "cafe0124-0000-4000-8000-000000000000",
+        "cwd": "/elsewhere",
+        "at": datetime.now(UTC).replace(microsecond=0).isoformat(),
+        "source": None,
+        "message": "Lost.",
+        "reason": None,
+        "error": None,
+        "transcript_path": None,
+    }
+    with pytest.raises(RuntimeError, match="lost after the write"):
+        client.post("/api/hooks", json=[event])
+    settle(client)
+    assert len(passes) == 1, "the committed event is read by a pass"
+    monkeypatch.setattr(store, "record_hook_events", real_record)
+    passes.clear()
+    assert client.post("/api/hooks", json=[event]).json() == {"received": 0, "attributed": 0}
+    settle(client)
+    assert passes == [], "a re-send holding nothing new asks for no pass"
+
+
 # ── plan 06: the board at a glance ─────────────────────────────────────
 
 

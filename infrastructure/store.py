@@ -899,42 +899,47 @@ class Store:
         and only what was new comes back: the intake's answer counts it, so
         a re-sent batch reads as a small number and a fresh post as its
         count."""
-        out: list[HookEvent] = []
-        with self._session() as session, session.begin():
-            for posted, slug, number in events:
-                held = session.scalar(
-                    select(HookEventRow.id).where(
-                        HookEventRow.session_id == posted.session_id,
-                        HookEventRow.kind == posted.kind.value,
-                        HookEventRow.at == posted.at,
-                    )
-                )
-                if held is not None:
-                    continue
-                row = HookEventRow(
-                    at=posted.at,
-                    kind=posted.kind.value,
-                    session_id=posted.session_id,
-                    cwd=posted.cwd,
-                    project_slug=slug,
-                    card_number=number,
-                    source=posted.source,
-                    message=posted.message,
-                    reason=posted.reason,
-                    error=posted.error,
-                    transcript_path=posted.transcript_path,
-                )
-                # Two posts carrying the same event at once — the index, not
-                # the read above, is what holds it; the loser skips the row
-                # and the rest of its batch still lands.
-                try:
-                    with session.begin_nested():
+        # One transaction for the batch, so a batch that fails holds nothing
+        # of itself; two posts carrying the same event at once meet at the
+        # unique index, and the loser runs its batch again, where the read
+        # finds the winner's row (the shape of `note_high_water`). A savepoint
+        # per row committed each row on its own under this driver (Codex's
+        # cold read of card #124, call 91, 1.1).
+        for attempt in range(2):
+            out: list[HookEvent] = []
+            try:
+                with self._session() as session, session.begin():
+                    for posted, slug, number in events:
+                        held = session.scalar(
+                            select(HookEventRow.id).where(
+                                HookEventRow.session_id == posted.session_id,
+                                HookEventRow.kind == posted.kind.value,
+                                HookEventRow.at == posted.at,
+                            )
+                        )
+                        if held is not None:
+                            continue
+                        row = HookEventRow(
+                            at=posted.at,
+                            kind=posted.kind.value,
+                            session_id=posted.session_id,
+                            cwd=posted.cwd,
+                            project_slug=slug,
+                            card_number=number,
+                            source=posted.source,
+                            message=posted.message,
+                            reason=posted.reason,
+                            error=posted.error,
+                            transcript_path=posted.transcript_path,
+                        )
                         session.add(row)
                         session.flush()
-                except IntegrityError:
-                    continue
-                out.append(_hook_event(row))
-        return out
+                        out.append(_hook_event(row))
+                return out
+            except IntegrityError:
+                if attempt:
+                    raise
+        return []
 
     def hook_events(self, slug: str, number: int | None = None) -> list[HookEvent]:
         with self._session() as session:

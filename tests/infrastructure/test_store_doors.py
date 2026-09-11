@@ -182,6 +182,33 @@ def test_the_same_event_posted_twice_is_held_once_and_the_second_answer_counts_n
     assert len(board.hook_events("proj", 253)) == 3
 
 
+def test_a_batch_that_fails_holds_none_of_its_events(board: Store):
+    """Codex's cold read of card #124 (call 91, 1.1): a batch is one write,
+    so an event the store refuses leaves the batch's other events unheld and
+    the hook's re-send records them, rather than a row committed on its own
+    that the answer never counted."""
+    from datetime import datetime
+
+    posted = HookPosted(
+        kind=HookKind.STOP,
+        session_id="aaaa0003-0000-4000-8000-000000000000",
+        cwd="/srv/p/.claude/worktrees/card-253-x",
+        at=NOW,
+        source=None,
+        message="Done.",
+        reason=None,
+        error=None,
+        transcript_path=None,
+    )
+    refused = posted.model_copy(
+        update={"session_id": "bbbb0003-0000-4000-8000-000000000000", "at": datetime(2026, 9, 11)}
+    )
+    with pytest.raises(Exception, match="aware datetimes"):
+        board.record_hook_events([(posted, "proj", 253), (refused, "proj", 253)])
+    assert board.hook_events_of_session(posted.session_id) == []
+    assert len(board.record_hook_events([(posted, "proj", 253)])) == 1
+
+
 def test_discussions_lanes_readings_and_the_trunk_round_trip(board: Store):
     talk = board.record_discussion(
         "proj", 253, "dddd0001-0000-4000-8000-000000000000", "alpha", NOW

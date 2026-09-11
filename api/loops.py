@@ -385,12 +385,22 @@ class Loops:
         belong to this loop. A batch that holds nothing new — a hook
         re-sending what the store already has — asks for no pass, since the
         pass that read those events already ran."""
-        attributed = self._attributed(posted)
-        recorded = await asyncio.to_thread(self.live.store.record_hook_events, attributed)
-        if recorded:
+        write = asyncio.ensure_future(
+            asyncio.to_thread(self.live.store.record_hook_events, self._attributed(posted))
+        )
+        write.add_done_callback(self._written)
+        return await asyncio.shield(write)
+
+    def _written(self, write: asyncio.Future[list[HookEvent]]) -> None:
+        """The wake and the pass follow the write's end, however it ended:
+        a write that failed, or whose post was cancelled while the worker
+        ran on, may have committed, so only a clean write with nothing new
+        asks for nothing. Every event the store holds then had a pass asked
+        after it was written — a re-sent batch answering zero never has to
+        (Codex's cold read of card #124, call 91, 1.5)."""
+        if write.cancelled() or write.exception() is not None or write.result():
             self.live.bump()
             self.ask_for_a_pass()
-        return recorded
 
     def ask_for_a_pass(self) -> None:
         """One more pass after the one in flight, whoever asks and however
