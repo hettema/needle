@@ -24,7 +24,17 @@ from api.cli import main
 from domain.notice import Told
 from infrastructure import clock
 from tests.api import test_doors as doors
-from tests.api.test_doors import CARD, LANE, archive_plan, column_of, detail, lane_path, post_hook, reconcile, start
+from tests.api.test_doors import (
+    CARD,
+    archive_plan,
+    column_of,
+    detail,
+    lane_path,
+    post_hook,
+    reconcile,
+    settle,
+    start,
+)
 from tests.floor import Floor
 
 client = doors.client
@@ -117,6 +127,9 @@ def test_a_ring_the_record_owes_is_made_at_the_next_reconcile_and_a_failed_one_i
     client: TestClient, machine_floor: Floor, monkeypatch: pytest.MonkeyPatch
 ):
     start(client)
+    # The pass the Start asked for has run (card #123): the crash below is
+    # the one pass the test controls, never a pass still pending behind it.
+    settle(client)
     launched = machine_floor.state()["launch_log"][0]
     runtime = client.app.state.loops.runtime
     real_tell = runtime.tell

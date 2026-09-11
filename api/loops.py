@@ -424,7 +424,7 @@ class Loops:
         and moves the card on it (plan 68, items 1 and 5). A machine the pass
         does not wait for is applied when its answer lands."""
         self._event_loop = asyncio.get_running_loop()
-        began = clock.now()
+        began = self.runtime.next_sequence()
         here = await asyncio.to_thread(lambda: self.runtime.here().name)
         asks = await asyncio.to_thread(self._asks)
         pending = await asyncio.to_thread(self.runtime.ask_machines, asks)
@@ -440,7 +440,7 @@ class Loops:
             stale = {
                 name
                 for name, f in wanted.items()
-                if f.exception() is None and f.result().asked_at < began
+                if f.exception() is None and f.result().asked_seq < began
             }
             if stale:
                 async with self._lock:

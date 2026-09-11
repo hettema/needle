@@ -446,10 +446,10 @@ def test_the_newest_act_on_a_session_stands_over_an_older_answer(lay):
     rented = b.runtime.machine_named("rented")
     seen = b.runtime.observed["rented"]
     session = next(s for s in seen.observation.sessions if s.pid is not None)
-    asked = clock.now()
+    asked = b.runtime.next_sequence()
     b.runtime._put_acted(rented, session)
     b.runtime._put_acted(rented, session.model_copy(update={"pid": None}))
-    old_answer = Answer(rented, seen.observation, False, None, asked, 0.1)
+    old_answer = Answer(rented, seen.observation, False, None, clock.now(), 0.1, asked)
     assert b.runtime._accept(old_answer)
     rows = [s for s in b.runtime.sessions() if s.session_id == session.session_id]
     assert [r.pid for r in rows] == [None], "the stop is newer than the launch"

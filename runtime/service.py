@@ -11,6 +11,7 @@ Which machine is which is the store's knowledge (`needle machine add`), and
 which row is this machine is the kernel's (`machine.machine_id`)."""
 
 import contextlib
+import itertools
 import logging
 import threading
 import time
@@ -115,7 +116,10 @@ class Answer(NamedTuple):
     """One machine's reply to one question, before the board accepts it:
     the observation, or the transport's words when there is none, and when
     the question went out — so an answer to an older question never
-    replaces the answer to a newer one."""
+    replaces the answer to a newer one. `asked_seq` orders it against every
+    other question and act: a clock can stand still or step back, a count
+    cannot (a held clock gave an act and a question one time, and the act
+    was dropped)."""
 
     machine: Machine
     observation: Observation | None
@@ -123,6 +127,7 @@ class Answer(NamedTuple):
     error: str | None
     asked_at: datetime
     seconds: float
+    asked_seq: int
 
 
 def _unlevelled(note: str) -> git.Levelled:
@@ -164,7 +169,14 @@ class Runtime:
         accepts its answer: a machine is never asked twice at once, so a
         slow one costs one thread and one ssh, however many passes wait."""
         self._asking_lock = threading.Lock()
-        self._acted: dict[str, list[tuple[datetime, Session]]] = {}
+        self._sequence = itertools.count(1)
+        """One count for every question and every act, so an act and an
+        answer are ordered whatever the clock does (card #123)."""
+        self._asking_seq: dict[str, int] = {}
+        self._held_seq: dict[str, int] = {}
+        """The question number of the observation the board holds, by
+        machine: an answer to an earlier question never replaces it."""
+        self._acted: dict[str, list[tuple[int, Session]]] = {}
         """Each session an act changed on a machine since its observation
         was asked, as the act left it, by machine: a launch's new session,
         and a stopped or moved session with no process. A door's re-read
@@ -312,8 +324,14 @@ class Runtime:
         ended without reading the machine again (card #123)."""
         stamped = self._stamped(m, launch_, card)
         if stamped.session is not None and stamped.session.session_id != old.session_id:
-            self._put_acted(m, old.model_copy(update={"pid": None}))
+            # Ended, and its handoff acted on: an answer asked before the
+            # comeback must not park the lane again on that wall (#123).
+            self._put_acted(m, old.model_copy(update={"pid": None, "wall": None}))
         return stamped
+
+    def next_sequence(self) -> int:
+        """The next number in the one count of questions and acts."""
+        return next(self._sequence)
 
     def _put_acted(self, m: Machine, session: Session) -> None:
         """A session as an act just left it on a machine — launched, or
@@ -325,7 +343,7 @@ class Runtime:
         entries = [
             (at, s) for at, s in self._acted.get(m.name, []) if s.session_id != session.session_id
         ]
-        entries.append((clock.now(), session))
+        entries.append((self.next_sequence(), session))
         self._acted[m.name] = entries
         seen = self.observed.get(m.name)
         if seen is not None and seen.observation is not None:
@@ -553,16 +571,17 @@ class Runtime:
             windows=held,
         )
 
-    def _answer(self, m: Machine, ask: Ask) -> Answer:
+    def _answer(self, m: Machine, ask: Ask, seq: int) -> Answer:
         """Ask one machine and wait for its reply, never raising for a
-        machine that does not answer: the reply says why."""
+        machine that does not answer: the reply says why. `seq` is the
+        question's number, taken when it went out."""
         asked_at = clock.now()
         started = time.monotonic()
         try:
             observation, behind = self.observe(m, ask)
         except (*_UNREACHABLE, machine.Timeout, OSError) as error:
-            return Answer(m, None, False, str(error), asked_at, time.monotonic() - started)
-        return Answer(m, observation, behind, None, asked_at, time.monotonic() - started)
+            return Answer(m, None, False, str(error), asked_at, time.monotonic() - started, seq)
+        return Answer(m, observation, behind, None, asked_at, time.monotonic() - started, seq)
 
     def ask_machines(
         self, asks: dict[str, Ask], *, only: set[str] | None = None
@@ -595,9 +614,11 @@ class Runtime:
                         self.unread[m.name] = why
                     pending = Future()
                     pending.set_running_or_notify_cancel()
+                    seq = self.next_sequence()
+                    self._asking_seq[m.name] = seq
                     threading.Thread(
                         target=self._answer_into,
-                        args=(pending, m, asks.get(m.name, Ask())),
+                        args=(pending, m, asks.get(m.name, Ask()), seq),
                         name=f"needle-ask-{m.name}",
                         daemon=True,
                     ).start()
@@ -605,9 +626,9 @@ class Runtime:
                 out[m.name] = pending
         return out
 
-    def _answer_into(self, future: Future[Answer], m: Machine, ask: Ask) -> None:
+    def _answer_into(self, future: Future[Answer], m: Machine, ask: Ask, seq: int) -> None:
         try:
-            future.set_result(self._answer(m, ask))
+            future.set_result(self._answer(m, ask, seq))
         except BaseException as error:  # noqa: BLE001 — a fault is an answer, never a dead thread
             future.set_exception(error)
 
@@ -634,7 +655,15 @@ class Runtime:
             error = future.exception()
             if error is not None:
                 log.warning("asking %s failed (%s: %s)", name, type(error).__name__, error)
-                answer = Answer(self.machine_named(name), None, False, str(error), clock.now(), 0.0)
+                answer = Answer(
+                    self.machine_named(name),
+                    None,
+                    False,
+                    str(error),
+                    clock.now(),
+                    0.0,
+                    self._asking_seq.get(name, 0),
+                )
             else:
                 answer = future.result()
             if self._accept(answer):
@@ -649,8 +678,14 @@ class Runtime:
         machines = [m for m in self.machines() if only is None or m.name in only]
         if not machines:
             return {}
+        numbered = [(m, self.next_sequence()) for m in machines]
+
+        def one(pair: tuple[Machine, int]) -> Answer:
+            m, seq = pair
+            return self._answer(m, asks.get(m.name, Ask()), seq)
+
         with ThreadPoolExecutor(max_workers=len(machines)) as askers:
-            answers = list(askers.map(lambda m: self._answer(m, asks.get(m.name, Ask())), machines))
+            answers = list(askers.map(one, numbered))
         return {a.machine.name: a.seconds for a in answers if self._accept(a)}
 
     def _accept(self, answer: Answer) -> bool:
@@ -664,7 +699,8 @@ class Runtime:
         is dropped, and False says so."""
         m = answer.machine
         old = self.observed.get(m.name)
-        if old is not None and old.asked_at is not None and answer.asked_at < old.asked_at:
+        held = self._held_seq.get(m.name)
+        if held is not None and answer.asked_seq < held:
             return False
         if answer.observation is None:
             seen = Observed(
@@ -682,7 +718,8 @@ class Runtime:
             )
         else:
             rows = [r.model_copy(update={"machine": m.name}) for r in answer.observation.sessions]
-            kept = [(at, s) for at, s in self._acted.get(m.name, []) if at > answer.asked_at]
+            kept = [(seq, s) for seq, s in self._acted.get(m.name, []) if seq > answer.asked_seq]
+            self._held_seq[m.name] = answer.asked_seq
             self._acted[m.name] = kept
             observation = self._laid_by_acts(
                 m,
@@ -1072,7 +1109,7 @@ class Runtime:
         if stamped.session is not None and stamped.session.session_id != session.session_id:
             # The session moved from has ended there (card #123): the card
             # says so at once, not a pass later.
-            self._put_acted(on, session.model_copy(update={"pid": None}))
+            self._put_acted(on, session.model_copy(update={"pid": None, "wall": None}))
         if stamped.session is not None and stamped.placement is not None:
             self.store.record_rescue(
                 stamped.session.session_id,
@@ -1094,14 +1131,24 @@ class Runtime:
         if self.is_here(on):
             stopped = launch.stop(session)
             if stopped.gone:
-                self._put_acted(on, session.model_copy(update={"pid": None}))
+                self._put_acted(
+                    on,
+                    session.model_copy(
+                        update={"pid": None, "wall": session.wall if keep_handoff else None}
+                    ),
+                )
         else:
             try:
                 stopped = self._remote(on).stop(session.short_id, keep_handoff=keep_handoff)
                 if stopped.gone:
                     # Proven gone there (card #123): the card says so at
                     # once, not when the machine next answers.
-                    self._put_acted(on, session.model_copy(update={"pid": None}))
+                    self._put_acted(
+                        on,
+                        session.model_copy(
+                            update={"pid": None, "wall": session.wall if keep_handoff else None}
+                        ),
+                    )
             except _UNREACHABLE as error:
                 stopped = Stopped(
                     short_id=session.short_id,
