@@ -600,7 +600,10 @@ def test_a_lane_that_folded_and_closed_gives_its_memory_back_and_no_other_ending
     # Closed: the session goes, the card says why, and the memory is back.
     done = archive_plan(repo)
     (repo / "docs" / "reviews").mkdir(exist_ok=True)
-    (repo / "docs" / "reviews" / "2026-09-05-the-meter.md").write_text("# Review\n")
+    (repo / "docs" / "reviews" / "2026-09-05-the-meter.md").write_text(
+        "# Review\n\n**Reviewer:** Independent test reader\n"
+        "**Verification:** Close-door fixture checks passed.\n"
+    )
     watch = f"the plan is archived — file {done.relative_to(repo)} by 2026-12-31 every 1h"
     assert (
         main(
@@ -877,7 +880,10 @@ def test_a_code_lane_cannot_close_without_a_review_record_and_a_docs_lane_can(
     assert "is not in the project's tree; expected" in err
     assert f"{repo}/docs/reviews/2026-09-05-the-meter.md" in err
     (repo / "docs" / "reviews").mkdir(exist_ok=True)
-    (repo / "docs" / "reviews" / "2026-09-05-the-meter.md").write_text("# Review\n")
+    (repo / "docs" / "reviews" / "2026-09-05-the-meter.md").write_text(
+        "# Review\n\n**Reviewer:** Independent test reader\n"
+        "**Verification:** Close-door fixture checks passed.\n"
+    )
     assert (
         main(
             [

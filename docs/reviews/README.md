@@ -45,7 +45,8 @@ rounds and repeated completeness verdicts are no longer mandatory.
 
 The close checks a nonempty Reviewer and verification evidence (a Verification
 head or recognised evidence section; historical What was checked and Tests
-sections remain accepted). It retains path, date and applicable plan-identity
+sections remain accepted, as does legacy verification interleaved under
+Dispositions). It retains path, date and applicable plan-identity
 checks. This checks that evidence was recorded, not that a written claim is
 true or that the named reader was independent. Actual independent review and
 verification remain the implementing colleague's responsibility.

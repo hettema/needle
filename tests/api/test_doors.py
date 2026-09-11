@@ -544,7 +544,10 @@ def test_executed_needs_a_signal_and_the_close_writes_rows_and_moves(
     # (card #110): a dated name, in the project's tree, naming this plan.
     (repo / "docs" / "reviews").mkdir(exist_ok=True)
     (repo / "docs" / "reviews" / "2026-09-05-r.md").write_text(
-        f"# Review\n\n**Plan:** {done.relative_to(repo)}\n**Findings:** 0\n", encoding="utf-8"
+        f"# Review\n\n**Plan:** {done.relative_to(repo)}\n**Findings:** 0\n"
+        "**Reviewer:** Independent test reader\n"
+        "**Verification:** Close-door fixture checks passed.\n",
+        encoding="utf-8",
     )
     assert (
         main(
@@ -1111,7 +1114,7 @@ def test_the_card_counts_the_lanes_own_copy_and_its_record_and_nothing_once_the_
     assert "end it in your plan with `**Met:** <what shows it>`" in brief
     assert "`**Deviated:** <pointer>` when it landed otherwise" in brief
     assert (
-        "Write the review record pass by pass" in brief
+        "/home/dennis/Work/needle/docs/HOW-WE-WORK.md §13" in brief
         and "`**Plan:**` line naming your plan" in brief
     )
     assert "never by editing the board's own files" in brief
@@ -1630,7 +1633,10 @@ def test_the_close_refuses_executed_while_the_archived_plan_carries_an_unstanced
     watch = f"the plan is archived — file {done.relative_to(repo)} by 2026-12-31 every 1h"
     (repo / "docs" / "reviews").mkdir(exist_ok=True)
     (repo / "docs" / "reviews" / "2026-09-05-r.md").write_text(
-        f"# Review\n\n**Plan:** {done.relative_to(repo)}\n**Findings:** 0\n", encoding="utf-8"
+        f"# Review\n\n**Plan:** {done.relative_to(repo)}\n**Findings:** 0\n"
+        "**Reviewer:** Independent test reader\n"
+        "**Verification:** Close-door fixture checks passed.\n",
+        encoding="utf-8",
     )
     close = ["close", "proj", str(CARD), "--delivered", "d", "--watch", watch]
     close += ["--review", "docs/reviews/2026-09-05-r.md"]

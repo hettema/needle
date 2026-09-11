@@ -41,8 +41,9 @@ def record_faults(text: str, name: str) -> list[str]:
 
     This is a presence check, not proof that the reader was independent or
     that the checks passed: those judgments belong to the review and its
-    author. The older `What was checked` section remains valid evidence,
-    including for unfinished records closing under the new doctrine.
+    author. Older `What was checked` sections and verification interleaved
+    under `Dispositions` remain valid evidence containers, including for
+    unfinished records closing under the new doctrine.
     """
     evidence_names = {
         "verification",
@@ -50,6 +51,7 @@ def record_faults(text: str, name: str) -> list[str]:
         "what was checked",
         "tests",
         "evidence",
+        "dispositions",
     }
     # Fenced metadata examples cannot identify a reader or open a section.
     # Commands and output fenced inside a real evidence section still count.
@@ -85,6 +87,6 @@ def record_faults(text: str, name: str) -> list[str]:
     if not evidence:
         faults.append(
             f"{name}: record verification evidence in `**Verification:**` or a nonempty "
-            "Verification, What was checked, Tests, or Evidence section"
+            "Verification, What was checked, Tests, Evidence, or legacy Dispositions section"
         )
     return faults

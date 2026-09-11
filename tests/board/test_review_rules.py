@@ -191,8 +191,18 @@ def test_fences_cannot_supply_metadata_or_move_evidence_into_another_section():
     assert len(record_faults(examples, "r.md")) == 1
     outside = (
         "**Reviewer:** Codex\n## Verification evidence\n```text\n\n```\n"
-        "## Dispositions\n```text\n42 passed\n```\n"
+        "## Notes\n```text\n42 passed\n```\n"
     )
     assert len(record_faults(outside, "r.md")) == 1
     no_reader = "```markdown\n**Reviewer:** Codex\n```\n## Tests\n42 passed\n"
     assert len(record_faults(no_reader, "r.md")) == 1
+
+
+def test_legacy_dispositions_can_carry_verification_without_reformatting():
+    text = (
+        "**Reviewer:** Independent Codex reader\n\n## Dispositions\n"
+        "1. [feature] Missing setting report — FIXED in 734e71e.\n"
+        "tests/test_machine.py: 48 checks passing on 734e71e.\n"
+    )
+    assert record_faults(text, "2026-09-10-legacy.md") == []
+    assert len(record_faults("**Reviewer:** Codex\n## Dispositions\n", "r.md")) == 1
