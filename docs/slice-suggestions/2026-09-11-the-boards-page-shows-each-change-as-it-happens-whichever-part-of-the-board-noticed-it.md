@@ -26,7 +26,7 @@ a board that is behind by that tick while the board already knows better.
   `read_signals_now` → `_land` (a signal landing), and the two bumps in the
   trunk levelling (`level_trunks_now` / `level_project`).
 - Card #124 moved the hook intake's store write onto a worker thread and
-  kept its bump on the loop for this reason (its commit fb7a5ba, held by
+  kept its bump on the loop for this reason (its commit 8b74152, held by
   `tests/api/test_doors.py::test_a_post_is_answered_while_a_pass_is_stalled_and_the_passes_it_causes_coalesce`);
   the callers above predate that card and were left as they were, since
   changing `Live` is outside that card's change.
