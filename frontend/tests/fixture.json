@@ -51,7 +51,8 @@
         "execution",
         "search"
       ],
-      "machines": []
+      "machines": [],
+      "beat": null
     },
     "dial": {
       "dial": {

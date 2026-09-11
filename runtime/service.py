@@ -574,12 +574,22 @@ class Runtime:
         except BaseException as error:  # noqa: BLE001 — a fault is an answer, never a dead thread
             future.set_exception(error)
 
-    def accept_ready(self) -> dict[str, float]:
+    def accept_ready(
+        self, *, only: set[str] | None = None, exclude: set[str] | None = None
+    ) -> dict[str, float]:
         """Every answer that has arrived becomes what the board holds of its
         machine; answers how long each accepted one took. Called under the
-        loop's lock, so acceptance never races a pass that reads."""
+        loop's lock, so acceptance never races a pass that reads. `only`
+        takes the answers of those machines alone — the ones a pass waited
+        for — and `exclude` leaves those a running pass is waiting for to
+        that pass, so its one apply is the one that applies them."""
+        skip = exclude or set()
         with self._asking_lock:
-            ready = {name: f for name, f in self._asking.items() if f.done()}
+            ready = {
+                name: f
+                for name, f in self._asking.items()
+                if f.done() and (only is None or name in only) and name not in skip
+            }
             for name in ready:
                 del self._asking[name]
         seconds: dict[str, float] = {}
@@ -1168,9 +1178,18 @@ class Runtime:
         on = self.machine_named(machine_name)
         if self.is_here(on):
             handoffs.remove(handoff)
-            return
-        with contextlib.suppress(*_UNREACHABLE):
-            self._remote(on).expire_handoff(handoff.session_id)
+        else:
+            with contextlib.suppress(*_UNREACHABLE):
+                self._remote(on).expire_handoff(handoff.session_id)
+        # The session's standing row no longer carries it (card #123): an
+        # apply before the machine answers again reads it gone, never twice.
+        seen = self._seen(on)
+        if seen is not None and seen.observation is not None:
+            row = next(
+                (s for s in seen.observation.sessions if s.session_id == handoff.session_id), None
+            )
+            if row is not None and row.wall is not None:
+                self._put_acted(on, row.model_copy(update={"wall": None}))
 
     def boots(self, machine_name: str = "") -> list[Boot]:
         """The machine's boots, newest first; none when another machine

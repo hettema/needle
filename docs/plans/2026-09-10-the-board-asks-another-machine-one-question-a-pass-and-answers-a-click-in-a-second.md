@@ -146,15 +146,22 @@ the same.
   Rejected: reading the old way when no observation stands — that is the
   wire under the lock on the first pass a machine is down, which is the
   minute this plan removes.
-- **Each machine's answer is applied as it arrives; what the timer, the
-  registries, a hook and a corpus change wait for is the board's own
-  machine** (the lane's ruling, 2026-09-11). Rejected: a pass that asks
-  every machine and applies once all have answered — a stalled machine
-  then holds the board's own lanes for its whole deadline, forty-five
-  seconds, which is item 2's done-means broken with the doors free. A
-  machine is never asked twice at once; its late answer is applied when
-  it lands, and an answer to an older question never replaces a newer
-  one. The first read and the tests wait for every machine.
+- **A pass applies once; what the timer, the registries, a hook and a
+  corpus change wait for is the board's own machine, and a machine the
+  pass does not wait for is applied when its answer lands** (the lane's
+  ruling, 2026-09-11). Rejected, first: a pass that asks every machine and
+  applies once all have answered — a stalled machine then holds the
+  board's own lanes for its whole deadline, forty-five seconds, which is
+  item 2's done-means broken with the doors free. Rejected, second: a pass
+  that applies every answer as it lands, re-applies after re-asking a
+  machine and again after naming an ending — the suite showed what counts
+  "once a pass" breaking: a card moved before its ending was named, a
+  group's note said on the pass that asked, a handoff's expiry said twice.
+  A machine is never asked twice at once; an answer to a question that
+  went out before the pass began is taken without an apply and the machine
+  is asked again; an answer to an older question never replaces a newer
+  one; and the endings the apply will name are asked outside the lock
+  before it. The first read and the tests wait for every machine.
 - **A door applies what stands with its own act in it, and a pass
   follows** (the lane's ruling, 2026-09-11, on the lock probe below).
   Every act the runtime makes — a launch, a stop, a move, a resume, a

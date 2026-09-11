@@ -374,36 +374,59 @@ def test_a_stop_on_either_machine_is_on_the_card_and_its_ending_is_named_outside
     def watched() -> None:
         before = len(ssh_words(machine_floor))
         applying()
-        # A question out to a machine runs beside the apply; anything else
-        # the wire carried meanwhile was asked under the lock.
+        # A question out to a machine runs beside the apply, and an act the
+        # pass makes (a launch, a stop, a session put back in its group) is
+        # the lock's by the plan's ruling; a read the wire carried meanwhile
+        # was asked under the lock.
+        reads = (
+            "sessions",
+            "boots",
+            "room",
+            "tip",
+            "edits",
+            "lane-docs",
+            "worktrees",
+            "cause",
+            "limits",
+            "where",
+            "dispatches",
+            "transcript-size",
+            "scopes --held",
+        )
         asked_under_lock.extend(
-            w for w in ssh_words(machine_floor, before) if "observe --ask" not in w
+            w
+            for w in ssh_words(machine_floor, before)
+            if any(f"needle {verb} " in w or f"needle {verb}'" in w for verb in reads)
         )
 
     b.loops.apply_now = watched  # type: ignore[method-assign]
+    stopped: dict[int, object] = {}
 
-    async def passes(count: int) -> None:
-        for _ in range(count):
+    async def story() -> None:
+        # One event loop for the whole story: the loops' lock belongs to the
+        # loop that first waited on it.
+        for _ in range(2):
+            await b.loops.reconcile()
+        lanes = lanes_of(b)
+        (far,), (near,) = list(b.far), list(b.near)
+        for number in (far, near):
+            session = lanes[number].session
+            assert session is not None and lanes[number].state in HANDS_ON
+            stopped[number] = session
+            assert b.runtime.stop(session.short_id).gone
+        # The door's apply: the acts stand in the observations, no machine read.
+        before = len(ssh_words(machine_floor))
+        applying()
+        assert ssh_words(machine_floor, before) == []
+        after = lanes_of(b)
+        assert after[far].state not in HANDS_ON, after[far].sentence
+        assert after[near].state not in HANDS_ON, after[near].sentence
+        # The passes that follow name both endings, and ask nothing under the lock.
+        for _ in range(2):
             await b.loops.reconcile()
 
-    asyncio.run(passes(2))
-    lanes = lanes_of(b)
-    (far,), (near,) = list(b.far), list(b.near)
-    sessions = {}
-    for number in (far, near):
-        session = lanes[number].session
-        assert session is not None and lanes[number].state in HANDS_ON
-        sessions[number] = session
-        assert b.runtime.stop(session.short_id).gone
-    # The door's apply: the acts stand in the observations, no machine read.
-    before = len(ssh_words(machine_floor))
-    b.loops.apply_now()
-    assert ssh_words(machine_floor, before) == []
-    after = lanes_of(b)
-    assert after[far].state not in HANDS_ON, after[far].sentence
-    assert after[near].state not in HANDS_ON, after[near].sentence
-    # The passes that follow name both endings, and ask nothing under the lock.
-    asyncio.run(passes(2))
+    asyncio.run(story())
     assert asked_under_lock == [], asked_under_lock
+    sessions = stopped
     deaths = b.store.deaths(b.slug)
-    assert sessions[far].session_id in deaths and sessions[near].session_id in deaths
+    assert all(s.session_id in deaths for s in sessions.values())  # type: ignore[attr-defined]

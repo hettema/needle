@@ -306,6 +306,10 @@ class Loops:
         """Every folded lane's tip against the stable branch, proved with
         the trunk's fetch outside the lock."""
         self._door_passes: set[asyncio.Task[None]] = set()
+        self._awaited: dict[str, int] = {}
+        """How many running passes wait for each machine's answer, by name:
+        an answer that lands for one is that pass's to apply, never the
+        late applier's, so a pass applies once (card #123)."""
         self._causes: dict[str, Named] | None = None
         """Why each ended session ended, asked by the pass outside the lock
         (card #123, item 3): the journal and the transcript of the machine
@@ -410,44 +414,60 @@ class Loops:
                     self._first_door = (name, waited, time.monotonic() - began)
 
     async def reconcile(self, *, every: bool = True) -> None:
-        """One pass (card #123, items 2 and 3): every machine asked its one
-        question outside the lock, and each answer applied under the lock
-        as it arrives, so the board's own lanes never wait on a machine that
-        is slow. With `every` the pass returns once every machine has
-        answered or failed and been applied — the first read, a test.
-        Without it the pass returns once the board's own machine is applied,
-        and another machine's answer is applied whenever it comes."""
+        """One pass, one apply (card #123, items 2 and 3). Every machine is
+        asked its one question outside the lock; the pass waits for the
+        board's own machine — and with `every` for every machine, the first
+        read and a test — and applies what came back under the lock once. A
+        machine whose shared question went out before the pass began answers
+        from before what the caller heard (a hook, a registry write, a door's
+        act): that answer is taken without an apply and the machine is asked
+        once more. Before the apply, every ending the apply will name has its
+        cause asked outside the lock, so the pass that sees a death names it
+        and moves the card on it (plan 68, items 1 and 5). A machine the pass
+        does not wait for is applied when its answer lands."""
         self._event_loop = asyncio.get_running_loop()
+        # A post's ask is met by the first pass that reads the store after it
+        # (card #124): cleared where the pass starts reading.
+        self._pass_asked = False
         began = clock.now()
         here = await asyncio.to_thread(lambda: self.runtime.here().name)
-        only: set[str] | None = None
-        # Three rounds at most, each ending in an apply. A machine whose
-        # question was already out when this pass began answers from before
-        # what the caller heard — a hook, a registry write, a door's act — so
-        # its answer is applied and it is asked once more (one question at a
-        # time per machine still). An apply that finds an ending it could not
-        # name has it asked outside the lock and applied in the same pass, so
-        # the pass that sees a death names it and brings the lane back (plan
-        # 68, items 1 and 5).
-        for _ in range(3):
-            asks = await asyncio.to_thread(self._asks)
-            pending = await asyncio.to_thread(self.runtime.ask_machines, asks, only=only)
-            self._proofs = await asyncio.to_thread(self._prove)
-            named = bool(self._causes_wanted)
-            await asyncio.to_thread(self._ask_causes)
-            for future in pending.values():
+        asks = await asyncio.to_thread(self._asks)
+        pending = await asyncio.to_thread(self.runtime.ask_machines, asks)
+        wanted = {name: f for name, f in pending.items() if every or name == here}
+        for name, future in pending.items():
+            if name not in wanted:
                 future.add_done_callback(self._arrived)
-            wanted = {name: f for name, f in pending.items() if every or name == here}
+        for name in wanted:
+            self._awaited[name] = self._awaited.get(name, 0) + 1
+        try:
             if wanted:
                 await asyncio.wait([asyncio.wrap_future(f) for f in wanted.values()])
-            await self._apply_arrived(force=named)
-            only = {
+            stale = {
                 name
                 for name, f in wanted.items()
                 if f.exception() is None and f.result().asked_at < began
             }
-            if not only and not self._causes_wanted:
-                return
+            if stale:
+                async with self._lock:
+                    await asyncio.to_thread(self.runtime.accept_ready, only=stale)
+                again = await asyncio.to_thread(self.runtime.ask_machines, asks, only=stale)
+                if again:
+                    await asyncio.wait([asyncio.wrap_future(f) for f in again.values()])
+            self._proofs = await asyncio.to_thread(self._prove)
+            async with self._lock:
+                accepting = time.monotonic()
+                collection = await asyncio.to_thread(self.runtime.accept_ready, only=set(wanted))
+                held = time.monotonic() - accepting
+            endings = await asyncio.to_thread(self._endings_to_name)
+            await asyncio.to_thread(self._ask_causes, endings)
+            async with self._lock:
+                applying = time.monotonic()
+                await asyncio.to_thread(self.apply_now)
+                held += time.monotonic() - applying
+        finally:
+            for name in wanted:
+                self._awaited[name] -= 1
+        await asyncio.to_thread(self._record_beat, collection, held)
 
     def _prove(self) -> dict[tuple[str, str | None, str, str | None], bool | None]:
         """Outside any lock (card #123, item 3): every lane not yet proved
@@ -462,17 +482,66 @@ class Loops:
                     proofs[key] = self.runtime.lane_folded(*key)
         return proofs
 
-    def _ask_causes(self) -> None:
-        """Outside any lock (card #123, item 3): every ending the last apply
-        could not name, asked of the machine it happened on. The answers
-        wait for the next apply."""
-        causes = self._causes if self._causes is not None else {}
-        wanted, self._causes_wanted = self._causes_wanted, {}
+    def _endings_to_name(self) -> dict[str, tuple[Session, list[str], Sighting | None, list[Boot]]]:
+        """Outside any lock (card #123, item 3): the endings the apply that
+        follows will name — every lane the last read had hands on whose
+        session the answers just taken show without a process, every ended
+        lane with no ending recorded, and every recorded ending not settled
+        while evidence may still arrive — read from the standing answers and
+        the store, never from a machine."""
+        rows = {
+            s.session_id: s
+            for seen in list(self.runtime.observed.values())
+            if seen.observation is not None
+            for s in seen.observation.sessions
+        }
+        now = clock.now()
+        found: dict[str, tuple[Session, list[str], Sighting | None, list[Boot]]] = {}
+        for slug, live in list(self.live.projects.items()):
+            snapshot = live.snapshot
+            if snapshot is None:
+                continue
+            deaths = self.live.store.deaths(slug)
+            for lane in snapshot.lanes.values():
+                last = lane.session
+                if last is None or last.machine in self.runtime.unread:
+                    continue
+                row = rows.get(last.session_id)
+                session = row if row is not None else last.model_copy(update={"pid": None})
+                if session.pid is not None:
+                    continue
+                death = deaths.get(last.session_id)
+                young = death is not None and (
+                    not death.settled
+                    and (now - (death.last_alive_at or death.named_at)).total_seconds()
+                    <= RESCUE_HORIZON_SECONDS
+                )
+                if last.pid is None and death is not None and not young:
+                    continue
+                found[last.session_id] = (
+                    session,
+                    self._units_of(lane, session),
+                    self.live.store.sighting(last.session_id),
+                    self.runtime.boots(session.machine),
+                )
+        return found
+
+    def _ask_causes(
+        self, endings: dict[str, tuple[Session, list[str], Sighting | None, list[Boot]]]
+    ) -> None:
+        """Outside any lock (card #123, item 3): the endings the pass found,
+        and any an apply since the last pass could not name, asked of the
+        machine each happened on, for the apply that follows."""
+        wanted, self._causes_wanted = {**self._causes_wanted, **endings}, {}
+        causes: dict[str, Named] = {}
         for session_id, (session, units, sighting, boots) in wanted.items():
             causes[session_id] = self.runtime.cause_of(
                 session, units=units, sighting=sighting, boots_seen=boots, now=clock.now()
             )
-        self._causes = causes
+        # Merged, never replaced: a door's pass or a post's pass may ask
+        # between this pass's question and its apply, and the answers this
+        # pass asked for are its apply's to name.
+        self._causes = {**(self._causes or {}), **causes}
 
     def _ask_pass_soon(self) -> None:
         """From a door's thread: a pass right after it, so what the act
@@ -533,24 +602,22 @@ class Loops:
         except Exception as error:  # noqa: BLE001 — a late answer never kills the loop
             log.warning("applying an answer failed (%s: %s)", type(error).__name__, error)
 
-    async def _apply_arrived(self, *, force: bool = False) -> None:
-        """Every answer that has arrived, accepted and applied under the lock
-        in one step, and the beat recorded; nothing when no answer arrived
-        since the last apply — a door's re-read may have taken it."""
+    async def _apply_arrived(self) -> None:
+        """An answer no running pass waits for, applied when it lands — a
+        machine slower than the board's own — and the beat recorded; nothing
+        when none landed, or a door's apply took it first."""
         async with self._lock:
             began = time.monotonic()
-            collection = await asyncio.to_thread(self._accept_and_apply, force)
+            collection = await asyncio.to_thread(self._accept_late)
             held = time.monotonic() - began
-        if collection is not None:
+        if collection:
             await asyncio.to_thread(self._record_beat, collection, held)
 
-    def _accept_and_apply(self, force: bool = False) -> dict[str, float] | None:
-        """`force` applies with no new answer: the endings asked outside the
-        lock are the news."""
-        collection = self.runtime.accept_ready()
-        if not collection and not force and self.live.machine.beat is not None:
-            return None
-        self.apply_now()
+    def _accept_late(self) -> dict[str, float]:
+        awaited = {name for name, count in self._awaited.items() if count > 0}
+        collection = self.runtime.accept_ready(exclude=awaited)
+        if collection:
+            self.apply_now()
         return collection
 
     def _record_beat(self, collection: dict[str, float], held: float) -> None:
@@ -569,7 +636,10 @@ class Loops:
 
     async def read_signals(self) -> None:
         """The signals read outside the lock — a URL, a file, a command are
-        waits on another process — and landed under it (card #123, item 3)."""
+        waits on another process — and landed under it (card #123, item 3).
+        The board's own machine is read first: a reading that died since the
+        last pass reads ended, and a live one holds its slot."""
+        await self.pass_now()
         read = await asyncio.to_thread(self.read_signals_outside_now)
         async with self._lock:
             await asyncio.to_thread(self.land_signals_now, read)
@@ -623,7 +693,7 @@ class Loops:
     async def _passes_asked_for(self) -> None:
         while self._pass_asked and not self._stop.is_set():
             try:
-                await self.reconcile()
+                await self.pass_now()
             except Exception as error:  # noqa: BLE001 — a failed pass never ends the asking
                 log.warning(
                     "the pass a post asked for failed (%s: %s)", type(error).__name__, error
@@ -1345,8 +1415,8 @@ class Loops:
             elif session.session_id in self._causes:
                 named = self._causes.pop(session.session_id)
             else:
-                # Asked outside the lock before the next apply (card #123):
-                # the ending is named a pass after it is found.
+                # A door's apply, or an answer applied late: the next pass
+                # asks it outside the lock before its apply (card #123).
                 self._causes_wanted[session.session_id] = (session, units, sighting, boots)
                 continue
             if death is not None and (death.cause, death.words) == (named.cause, named.words):
@@ -2472,7 +2542,7 @@ class Loops:
         self.land_signals_now(self.read_signals_outside_now())
 
     def _signals_due(self) -> list[tuple[LiveProject, Card, Signal, bool]]:
-        """Every card whose signal or trigger the cadence asks for now, with
+        """Every card whose signal or trigger the cadence says is due, with
         the signal and whether it is a trigger's."""
         due: list[tuple[LiveProject, Card, Signal, bool]] = []
         now = clock.now()

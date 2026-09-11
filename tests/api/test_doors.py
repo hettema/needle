@@ -1321,9 +1321,10 @@ def test_a_post_is_answered_while_a_pass_is_stalled_and_the_passes_it_causes_coa
         loops.live, "bump", lambda: (woken_from.append(threading.get_ident()), real_bump())
     )
     passes: list[float] = []
-    real_reconcile_now = loops.reconcile_now
+    # A pass applies once under the lock (card #123): its apply is the count.
+    real_apply_now = loops.apply_now
     monkeypatch.setattr(
-        loops, "reconcile_now", lambda: (passes.append(time.monotonic()), real_reconcile_now())
+        loops, "apply_now", lambda: (passes.append(time.monotonic()), real_apply_now())
     )
 
     lifted = asyncio.Event()
@@ -1402,9 +1403,10 @@ def test_a_write_that_committed_and_then_failed_still_asks_for_its_pass(
     loops: loops_mod.Loops = client.app.state.loops
     store = loops.live.store
     passes: list[float] = []
-    real_reconcile_now = loops.reconcile_now
+    # A pass applies once under the lock (card #123): its apply is the count.
+    real_apply_now = loops.apply_now
     monkeypatch.setattr(
-        loops, "reconcile_now", lambda: (passes.append(time.monotonic()), real_reconcile_now())
+        loops, "apply_now", lambda: (passes.append(time.monotonic()), real_apply_now())
     )
     real_record = store.record_hook_events
 
