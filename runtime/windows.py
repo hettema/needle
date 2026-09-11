@@ -14,6 +14,7 @@ import json
 import re
 import shlex
 import time
+from datetime import datetime
 
 from domain.gate import Gate
 from domain.machine import Machine
@@ -202,14 +203,18 @@ def addresses(host: str | None = None) -> list[str]:
 def reconcile(store: Store, *, host: str | None = None) -> None:
     """Windows the runtime recorded open that the compositor no longer has
     were closed by the owner; record the close so they are never reopened."""
-    reconcile_with(store, addresses(host))
+    reconcile_with(store, addresses(host), asked_at=None)
 
 
-def reconcile_with(store: Store, held: list[str]) -> None:
+def reconcile_with(store: Store, held: list[str], *, asked_at: datetime | None) -> None:
     """The same, against a list of addresses read elsewhere — the desktop's
-    own observation (card #123)."""
+    own observation (card #123). A window opened after that question went
+    out is not in its answer and is not closed: the list is older than the
+    window."""
     present = set(held)
     for window in store.windows(open_only=True):
+        if asked_at is not None and window.opened_at >= asked_at:
+            continue
         if window.address not in present:
             store.window_closed(window.id, clock.now())
 

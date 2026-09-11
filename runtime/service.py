@@ -323,8 +323,30 @@ class Runtime:
         self._acted.setdefault(m.name, []).append((clock.now(), session))
         seen = self.observed.get(m.name)
         if seen is not None and seen.observation is not None:
-            rows = [s for s in seen.observation.sessions if s.session_id != session.session_id]
-            seen.observation = seen.observation.model_copy(update={"sessions": [*rows, session]})
+            seen.observation = self._laid_by_acts(m, seen.observation, [session])
+
+    def _laid_by_acts(
+        self, m: Machine, observation: Observation, acted: list[Session]
+    ) -> Observation:
+        """The observation with every act newer than it written in: each
+        acted session's row in place of the one read, and the worktree a
+        launch laid among the checkouts until the machine lists it — a lane
+        whose worktree the answer predates reads as gone, and a gone lane
+        moves its card (card #123). The branch is the machine's to say on
+        its next answer."""
+        replaced = {a.session_id for a in acted}
+        rows = [r for r in observation.sessions if r.session_id not in replaced] + acted
+        checkouts = {repo: dict(paths) for repo, paths in observation.checkouts.items()}
+        for session in acted:
+            if not session.worktree or session.pid is None:
+                continue
+            repo = next(
+                (r for r in checkouts if session.worktree.startswith(r.rstrip("/") + "/")), None
+            )
+            if repo is not None:
+                checkouts[repo].setdefault(session.worktree, None)
+                self._lane_machines[session.worktree] = m.name
+        return observation.model_copy(update={"sessions": rows, "checkouts": checkouts})
 
     def room(
         self,
@@ -610,14 +632,13 @@ class Runtime:
             )
         else:
             rows = [r.model_copy(update={"machine": m.name}) for r in answer.observation.sessions]
-            kept: list[tuple[datetime, Session]] = []
-            for at, session in self._acted.get(m.name, []):
-                if at > answer.asked_at:
-                    kept.append((at, session))
-                    rows = [r for r in rows if r.session_id != session.session_id]
-                    rows.append(session)
+            kept = [(at, s) for at, s in self._acted.get(m.name, []) if at > answer.asked_at]
             self._acted[m.name] = kept
-            observation = answer.observation.model_copy(update={"sessions": rows})
+            observation = self._laid_by_acts(
+                m,
+                answer.observation.model_copy(update={"sessions": rows}),
+                [s for _, s in kept],
+            )
             for checkouts in observation.checkouts.values():
                 for path in checkouts:
                     if not self.is_here(m) and self._lane_machines.get(path) == self.here().name:
@@ -774,6 +795,7 @@ class Runtime:
                 for r in [*rows, *codex.sessions(clock.now())]
             ]
         held: list[str] | None = None
+        held_at: datetime | None = None
         for m in self.machines():
             if self.is_here(m):
                 continue
@@ -786,6 +808,7 @@ class Runtime:
                     rows += seen.observation.sessions
                     if m.desktop and seen.observation.windows is not None:
                         held = seen.observation.windows
+                        held_at = seen.asked_at
                 continue
             try:
                 read = [
@@ -804,8 +827,9 @@ class Runtime:
         rows = registry.merge(rows)
         if seen_here is not None and seen_here.observation is not None and here.desktop:
             held = seen_here.observation.windows
+            held_at = seen_here.asked_at
         if held is not None:
-            windows.reconcile_with(self.store, held)
+            windows.reconcile_with(self.store, held, asked_at=held_at)
         elif seen_here is None or self.desktop_host() is None:
             # With no compositor to ask, the windows' state stays as last
             # recorded. A board that observes (seen_here stands) never asks
