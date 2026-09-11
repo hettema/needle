@@ -421,27 +421,32 @@ class Loops:
         began = clock.now()
         here = await asyncio.to_thread(lambda: self.runtime.here().name)
         only: set[str] | None = None
-        # Twice at most: a machine whose question was already out when this
-        # pass began answers from before what the caller heard — a hook, a
-        # registry write, a door's act — so its answer is applied and it is
-        # asked once more. Still one question at a time per machine.
-        for _ in range(2):
+        # Three rounds at most, each ending in an apply. A machine whose
+        # question was already out when this pass began answers from before
+        # what the caller heard — a hook, a registry write, a door's act — so
+        # its answer is applied and it is asked once more (one question at a
+        # time per machine still). An apply that finds an ending it could not
+        # name has it asked outside the lock and applied in the same pass, so
+        # the pass that sees a death names it and brings the lane back (plan
+        # 68, items 1 and 5).
+        for _ in range(3):
             asks = await asyncio.to_thread(self._asks)
             pending = await asyncio.to_thread(self.runtime.ask_machines, asks, only=only)
             self._proofs = await asyncio.to_thread(self._prove)
+            named = bool(self._causes_wanted)
             await asyncio.to_thread(self._ask_causes)
             for future in pending.values():
                 future.add_done_callback(self._arrived)
             wanted = {name: f for name, f in pending.items() if every or name == here}
             if wanted:
                 await asyncio.wait([asyncio.wrap_future(f) for f in wanted.values()])
-            await self._apply_arrived()
+            await self._apply_arrived(force=named)
             only = {
                 name
                 for name, f in wanted.items()
                 if f.exception() is None and f.result().asked_at < began
             }
-            if not only:
+            if not only and not self._causes_wanted:
                 return
 
     def _prove(self) -> dict[tuple[str, str | None, str, str | None], bool | None]:
@@ -528,20 +533,22 @@ class Loops:
         except Exception as error:  # noqa: BLE001 — a late answer never kills the loop
             log.warning("applying an answer failed (%s: %s)", type(error).__name__, error)
 
-    async def _apply_arrived(self) -> None:
+    async def _apply_arrived(self, *, force: bool = False) -> None:
         """Every answer that has arrived, accepted and applied under the lock
         in one step, and the beat recorded; nothing when no answer arrived
         since the last apply — a door's re-read may have taken it."""
         async with self._lock:
             began = time.monotonic()
-            collection = await asyncio.to_thread(self._accept_and_apply)
+            collection = await asyncio.to_thread(self._accept_and_apply, force)
             held = time.monotonic() - began
         if collection is not None:
             await asyncio.to_thread(self._record_beat, collection, held)
 
-    def _accept_and_apply(self) -> dict[str, float] | None:
+    def _accept_and_apply(self, force: bool = False) -> dict[str, float] | None:
+        """`force` applies with no new answer: the endings asked outside the
+        lock are the news."""
         collection = self.runtime.accept_ready()
-        if not collection and self.live.machine.beat is not None:
+        if not collection and not force and self.live.machine.beat is not None:
             return None
         self.apply_now()
         return collection
