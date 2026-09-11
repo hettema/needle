@@ -418,17 +418,31 @@ class Loops:
         Without it the pass returns once the board's own machine is applied,
         and another machine's answer is applied whenever it comes."""
         self._event_loop = asyncio.get_running_loop()
-        asks = await asyncio.to_thread(self._asks)
-        pending = await asyncio.to_thread(self.runtime.ask_machines, asks)
-        self._proofs = await asyncio.to_thread(self._prove)
-        await asyncio.to_thread(self._ask_causes)
-        for future in pending.values():
-            future.add_done_callback(self._arrived)
+        began = clock.now()
         here = await asyncio.to_thread(lambda: self.runtime.here().name)
-        wanted = [f for name, f in pending.items() if every or name == here]
-        if wanted:
-            await asyncio.wait([asyncio.wrap_future(f) for f in wanted])
-        await self._apply_arrived()
+        only: set[str] | None = None
+        # Twice at most: a machine whose question was already out when this
+        # pass began answers from before what the caller heard — a hook, a
+        # registry write, a door's act — so its answer is applied and it is
+        # asked once more. Still one question at a time per machine.
+        for _ in range(2):
+            asks = await asyncio.to_thread(self._asks)
+            pending = await asyncio.to_thread(self.runtime.ask_machines, asks, only=only)
+            self._proofs = await asyncio.to_thread(self._prove)
+            await asyncio.to_thread(self._ask_causes)
+            for future in pending.values():
+                future.add_done_callback(self._arrived)
+            wanted = {name: f for name, f in pending.items() if every or name == here}
+            if wanted:
+                await asyncio.wait([asyncio.wrap_future(f) for f in wanted.values()])
+            await self._apply_arrived()
+            only = {
+                name
+                for name, f in wanted.items()
+                if f.exception() is None and f.result().asked_at < began
+            }
+            if not only:
+                return
 
     def _prove(self) -> dict[tuple[str, str | None, str, str | None], bool | None]:
         """Outside any lock (card #123, item 3): every lane not yet proved
