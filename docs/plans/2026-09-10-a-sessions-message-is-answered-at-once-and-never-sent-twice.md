@@ -80,12 +80,20 @@ Done means: live, the queue file beside the store on the laptop and on the
 rented machine is empty a minute after the fold; on the fixture a queue
 with an old event is counted on the machines line and an empty one is not.
 **Met:** `tests/runtime/test_machines.py::test_a_queue_holding_an_event_older_than_an_hour_is_counted_on_the_machines_line`
-— on the two-machine floor an event two hours old beside either machine's
-store counts one on that machine's line, a fresh one and an empty queue
-count nothing, read through the same room read the head uses. The hook
-itself is unchanged: its drain already empties the queue on a 2xx. The
-live half — both queues empty a minute after the fold — is read at the
-close and written in the review record.
+— on the two-machine floor an event two hours old in either machine's data
+folder, where the hook writes its queue, counts one on that machine's line,
+a fresh one and an empty queue count nothing, read through the same room
+read the head uses; a queue that could not be read, and a machine whose
+older needle answers without the count, are said as not read and never as
+zero; a queue whose last write was cut off, or whose message holds a Unicode
+line separator, still counts every whole event
+(`tests/api/test_hook_script.py::test_a_queue_whose_last_write_was_cut_off_still_drains`
+holds the hook's drain to the same). The page says the count on the
+machine's line (`frontend/tests/board.test.tsx`). The hook's drain already
+emptied the queue on a 2xx; the review made it survive a torn line and a
+line separator (docs/reviews/2026-09-11-a-sessions-message-is-answered-at-once-and-never-sent-twice.md,
+findings 2.4 and 2.6). The live half — both queues empty a minute after the
+fold — is read at the close and written in the review record.
 
 ## Acceptance criteria
 
