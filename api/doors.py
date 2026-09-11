@@ -15,7 +15,6 @@ from board import review_rules
 from board.assemble import document_of, is_trigger_card
 from board.brief import (
     FOCUS_EXCERPT,
-    completeness_read,
     corpus_lane_name,
     filing_rule,
     focus_brief,
@@ -24,12 +23,13 @@ from board.brief import (
     needle_command,
     neighbours_text,
     render,
+    review_guidance,
     watercooler_text,
 )
 from board.focus import FOCUS_PATH, is_chosen
 from board.handouts import handouts_row
 from board.lane import HANDS_ON
-from board.parse import plan_stem_of, review_of
+from board.parse import plan_stem_of
 from board.signals import GRAMMAR, read_or_decline, where_after, where_after_finding
 from board.title import title_fingerprint
 from board.triage import routing_now, triaged_row
@@ -70,7 +70,6 @@ from domain.window import WindowKind
 from infrastructure import clock
 from infrastructure.live import WATERCOOLER_SHOWN, Live
 from infrastructure.store import StoreRefusal
-from runtime import calls
 from runtime.git import TRUNK
 from runtime.service import Runtime
 from runtime.windows import WindowRefused
@@ -273,19 +272,16 @@ class Doors:
             "them; the card reads both from this worktree as your word. When an item's done-means "
             "holds, end it in your plan with `**Met:** <what shows it>` in the commit that makes "
             "it true, `**Deviated:** <pointer>` when it landed otherwise. Write the review record "
-            "pass by pass, each pass appended under `## The passes` as it completes, with its "
-            "`**Plan:**` line naming your plan; the card shows the count of items met while you "
-            "work and the review loop's pass and findings once every item is met."
-            "\n\nThe review runs in rings (CLAUDE.md): a finding inside your change or on its "
-            "seams is fixed here and the next pass re-reads; a finding outside it is never "
-            "fixed in this lane — "
+            "using docs/reviews/README.md, with its `**Plan:**` line naming your plan. "
+            "The card shows the items met and the review's recorded findings."
+            "\n\nFor findings outside the change, "
             + filing_rule(
                 f"the lane on card #{card.number}"
                 + (f" ({detail.document.path})" if detail.document is not None else "")
-                + ", in the review's <lens> pass"
+                + ", in the independent review"
             )
             + "."
-            "\n\n" + completeness_read(needle) + "."
+            "\n\n" + review_guidance() + "."
             "\n\nTo ask the owner something, end your turn with the question; the board shows it "
             "on the card and his answer resumes you."
         )
@@ -1733,21 +1729,12 @@ class Doors:
     def _refuse_a_record_that_skipped_the_read(
         self, slug: str, number: int, card: Card, lane: Lane | None, review: str
     ) -> None:
-        """Every record a close names is read where the lane stands —
-        through the runtime's lane-document path, so a lane on another
-        machine is read there — and held to what `docs/HOW-WE-WORK.md` §13
-        says a record owes (card #110, rulings 2 to 5): it is a file inside
-        the project's tree, named by the README's dated shape; its `Plan:`
-        line names this card's plan; and, when its date is after the day
-        that card folded, every fix line says who else it reaches and what
-        it assumes, every round of repairs carries a cold reader's verdict
-        whose call is a row the board holds, and every claim the reader
-        broke has a disposition. The rules are `board.review_rules`, the
-        same ones Needle's own ratchet reads; a record dated on or before
-        the fold's day closes as it did before. What this does not hold: a
-        round nobody read may already be on the trunk — the fold comes
-        first, and a lane that skipped the read finds out here, with its
-        code landed (the register says so)."""
+        """Read local or remote review evidence and preserve record identity.
+
+        All records close under the finite review contract, including those
+        begun under the former recursive process. Old dates only exempt an
+        absent Plan head; an explicitly wrong plan never identifies this card.
+        """
         project = self.live.projects[slug].project
         given = Path(review)
         if given.is_absolute() or ".." in given.parts:
@@ -1773,88 +1760,15 @@ class Doors:
                 f"#{number}'s review record {review} carries no date in its name; the README's "
                 "shape is docs/reviews/YYYY-MM-DD-<topic>.md."
             )
-        if not review_rules.held(name):
-            # Written under the old form, which Hello Revenue's template
-            # headed with `**Card:**` and no plan line until this card: the
-            # date decides, and the stem is part of the form (ruling 3; the
-            # author's first pass).
-            return
         if card.link is not None:
             named = plan_stem_of(text)
-            if named != card.link.stem:
+            if named != card.link.stem and (named is not None or review_rules.held(name)):
                 raise DoorRefused(
                     f"#{number}'s review record {review} names the plan "
                     f"{named or 'nothing'} on its `**Plan:**` line, and #{number}'s plan is "
                     f"{card.link.stem}; a record is its card's word about its own diff."
                 )
-        read = review_of(text, review)
-        # The lane's make, from the session the board saw on it — the live
-        # one, else the runtime's own record of who it started on the card
-        # — and never a default (pass two's reader: an unknown author read
-        # as Claude's would accept its own make as the cold reader).
-        # The lane's make is the slot of a session on its worktree — the
-        # closing session itself, which runs there. By path, never by name:
-        # a lane's name carries no project and the snapshot's own selector
-        # matches names too, so two projects' card 1 answered for each other
-        # (the cold reads of pass two's round and of round eight). A lane no
-        # session of any make is on: the rules say so and refuse.
-        # A session that holds the worktree outranks one merely working in
-        # it: a cold reader of the other make is started in the lane's
-        # directory too, and would otherwise read as the lane's own make.
-        # On the machine the lane is on: the one list merges every
-        # machine's sessions, and the same absolute path exists on each (the
-        # cold read of round nine — a remote holder at the local author's
-        # path). A row with no machine name was read here.
-        lane_on = self.runtime.lane_machine(where) if where is not None else None
-        on_lane = [
-            s
-            for s in self.runtime.sessions()
-            if where is not None
-            and lane_on is not None
-            and not s.stale
-            and where in (s.worktree, s.cwd)
-            and (s.machine == lane_on.name if s.machine else self.runtime.is_here(lane_on))
-        ]
-        # Ownership first: the runtime's own record of who it started on
-        # this card names the session that holds the lane, whatever make
-        # it is — a Codex lane's row carries no worktree and a Claude reader
-        # called into its directory carries none either, so directory and
-        # slot order cannot tell author from reader (pass three's reader).
-        # (A warm call re-cards the session's slot row with the call's name,
-        # so the row's card is evidence only while it stands — pass four's
-        # reader — and the session's own capability is read beside it: a
-        # cold reader of the other make runs read-only by construction, a
-        # lane's worker writes. The durable answer — the board remembering
-        # which session it started on a card — is filed as a defect.)
-        owners = {
-            s.session_id
-            for s in self.live.store.session_slots()
-            if where is not None and s.card == Path(where).name
-        }
-        on_lane.sort(
-            key=lambda s: (
-                s.session_id not in owners,
-                s.worktree != where,
-                s.sandbox == "read-only",
-            )
-        )
-        lane_slot = on_lane[0].slot if on_lane else None
-        faults = review_rules.record_faults(read, review) + review_rules.verdict_faults(
-            read,
-            review,
-            call_of=self.live.store.call,
-            lane_slot=lane_slot,
-            landed=calls.landed,
-            within=project.path,
-            # The reader's answer itself while it stands, else the words the
-            # loop or a waiter stored — a close can come before the loop's
-            # next beat, and a row ended for another reason before the
-            # answer landed keeps those words for good (the cold reads of
-            # rounds eleven and twelve).
-            words_of=lambda c: (
-                calls.read_answer(c.answer).words if calls.answer_landed(c) else c.words
-            ),
-        )
+        faults = review_rules.record_faults(text, review)
         if faults:
             more = f"; and {len(faults) - 4} more" if len(faults) > 4 else ""
             shown = "; ".join(faults[:4]) + more

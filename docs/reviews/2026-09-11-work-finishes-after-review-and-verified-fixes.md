@@ -1,0 +1,26 @@
+# Review — work finishes after review and verified fixes
+
+**Plan:** docs/plans/2026-09-11-work-finishes-after-review-and-verified-fixes.md
+**Reviewer:** Independent Codex session 01a090ab-7288-73b1-a71e-7f30accdb36d, Needle call 84, read-only.
+**Diff range:** Needle base 1ecfa89 plus the frozen uncommitted implementation read by call 84; external instruction diffs at HR b8c0099f3, machine 3cda66b and HR3 a3a6a56. Repairs below were subsequently verified by the implementing colleagues, not represented as part of that earlier independent reading.
+**Findings:** 3
+**Verification:** Initial close-path checks: 22 passed; final absolute shared-pointer test passed. After the fenced-evidence repair, all 13 review-rule tests passed. Template parsed through review_of and progress_line: 3 found, 1 fixed, 1 no change, 1 filed. Full suite and distribution are still in progress.
+**Completion:** Not complete yet: waiting for full suite and canonical-source distribution on both machines.
+
+## Dispositions
+
+1. [boundary] CLAUDE.md:62-63 still required the next pass to re-read inside-change fixes, contradicting the adopted finite rule — FIXED in this change; replaced that last sentence with a pointer to §13. Verified no next-pass instruction remains in CLAUDE.md and inspected shared instructions.
+2. [seam] docs/reviews/README.md omitted the Findings head that the existing board reader uses, so its three example dispositions displayed zero findings — FIXED in this change; restored the total head, retaining the existing parser and historical format. Drove the template through review_of and progress_line and verified all four counts.
+3. [feature] board/review_rules.py discarded a legitimate fenced verification transcript and refused its record — FIXED in this change; fenced contents count only inside a real evidence section, while fenced example metadata cannot identify a reviewer or open that section. The original failed reproduction now passes; empty fences, fenced fake metadata and output outside the evidence section remain refused. Thirteen review-rule tests passed.
+
+## Verification evidence
+
+The independent reader reproduced findings 2 and 3 directly and found no remaining call-row dependency in the close. It reported normal pytest unavailable in its read-only sandbox; its direct invocation of eleven test bodies is not treated as a suite run. The implementing sessions ran the actual targeted pytest commands and recorded the counts above. Reader output is held by Needle call 84 and /tmp/needle-131-independent-review-answer.md.
+
+Inspected active canonical instructions: Needle HOW-WE-WORK, HOW-WE-HOLD-IT, INTENT, CLAUDE and review README; HR review skill and README; machine review README; HR3 AGENTS. dennis-os, rented-machine and dennishettema entrypoints did not add a recursive requirement in the inventory. Both machines' user-level Claude/Codex instructions are symlinks to canonical Needle HOW-WE-WORK.
+
+External documentation commits: HR 8fd1420e5; machine 387bc81; HR3 476da5b. These four external edits had no independent review findings. No production application code changed in those projects.
+
+Existing worktrees contain historical instruction snapshots. Their target files were clean at inventory time; they were not overwritten while their owners may be reading or testing them. The canonical doctrine governs their older project methods. The owner ruling was recorded on Needle #131 and delivered through the Needle and Hello Revenue watercoolers. Delivery is recorded by the board; receipt and adoption by every existing session are not claimed.
+
+The earlier research is preserved separately as historical evidence. It did not complete a controlled policy comparison and does not establish the token savings or final quality of this change. This change tests removal of mandatory recursive obligations, not the rest of the harness or a Kanban redesign.

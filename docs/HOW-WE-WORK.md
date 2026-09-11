@@ -293,75 +293,59 @@ session's own command; test that it does not.
 *Shaped by:* 2026-08-30 and 31, three working trees destroyed by sessions
 sharing one checkout.
 
-## 13. Nothing is done without a review, and a review is a loop
+## 13. Independent review, all findings resolved, repairs verified
 
-Every completed slice is read again by a reader who was not its author, in
-passes that end when the work is shown to hold and not when a reader runs out
-of sentences, and the ring a finding falls in decides who fixes it. For
-software, the review below is the current form.
+Every completed software change receives an independent review against its
+intended behaviour and relevant boundaries. The default is: code, review,
+fix all findings, verify the fixes, done. Review protects quality; repeating
+a review is not itself evidence of quality.
 
-A code-shipping slice closes with a review record. Each pass reads the work
-through one lens and reports everything it finds — file, line, class, ring,
-and a grade: live, latent in behaviour, latent in coverage, cosmetic, or about
-the record; a reader is never told that a finding costs a round. Lenses in
-order: the work against its "done means"; the seams — concurrency, failure and
-restart, the truth of what the board shows; the boundaries the project's rules
-name, and among them the claims that stand on nothing. Findings fall in three
-rings: inside the change is fixed and re-read; adjacent is fixed when it
-serves this intent, else filed as a suggestion marked a defect; outside is
-never fixed here, only filed. A pass and the repairs it causes are a round,
-and every round's repairs are read for completeness by a cold reader of
-another make before they ship — who reads the fix's line and tries to break
-it — who else calls this, what is the sibling case, what list was written by
-hand, what does the fix assume and what drove it — and whose verdict is on
-the record before the round ships — so a round closes when that read says
-complete or its siblings are fixed. A repair reported partial is one of three:
-the cause half removed, or a test that would not catch the regression, either
-of which blocks the fold; or the record's words off, which the writer fixes
-and re-reads alone. The loop owes another full pass only when a round found,
-inside the change, something live or latent in behaviour — a wrong answer on
-a supported input, or a written promise a person meets unmet; a survivor of a
-mutation is such a finding only when the reader shows which promised
-behaviour can now fail, on what input, with no other defence catching it,
-else it is coverage. A round of coverage, cosmetic and record findings is
-repaired, read for completeness, and ends the loop. The promise's boundary is
-settled before the final reading, and a finding outside it is filed, never
-repaired here; a verification gap the record already names is debt with a
-mark, not a finding on re-read. When three passes running find the same
-shape, the next move is a question about the representation to the cold
-reader, not another pass. The floor: one pass clean by this rule after any
-pass that found live or latent behaviour; the suite green at the fold; and a
-stop signal in the record — which rule ended the loop, and the pass on which
-the last live or latent-behaviour finding was made — so the person can see
-whether a review is still paying without reading it.
+Before reviewing, settle the promise and its supported inputs. The reviewer
+reads the complete change and relevant dependencies, including failure,
+concurrency, restart and the truth of what the person sees. The revision is
+frozen while read. Every finding names its file, line, violated promise and
+consequence; distinguish demonstrated defects from unverified hypotheses and
+implementation preferences. An equally truthful wording is not a defect.
 
-What makes it hard: each repair creates changed surface that needs review, and
-repairs can introduce new defects; bounding repairs by size can block a
-structural correction whose promise crosses files. So a repair is bounded by
-the promise it restores, not by how many lines it touches: every review repair names the finding, the promise it must
-restore, and the affected dependencies — who else the fix reaches and what it
-assumes about who else reads or writes the thing, written on the fix's own
-line; it changes enough to remove the cause and reconcile those dependencies,
-and omits unrelated improvements. A
-structural repair remains part of delivering the existing promise — if it
-needs a separate item, the original promise stays unmet until that item lands
-or the person explicitly changes the promised outcome. The revision under
-review is frozen while a pass reads it, and a finding names a violated promise
-or an unsupported claim; another equally truthful wording is not a finding.
-The record is reviewed the same way as the work, including its decision-bearing
-claims; mechanical checks support that judgment and never replace it.
-*Shaped by:* 2026-09-08, two lanes on one day — #472's record held eleven
-defects its own fixes had made, all in the last quarter of twenty-two readings,
-and #456's fixes introduced regressions; a size bound, proposed first, would
-have blocked #456's right repair (Codex's reading, adopted by the owner the
-same day); 2026-09-09, three lanes paused before their folds under "until a
-pass finds nothing new" — Needle #83's last two of six passes read the
-record's own arithmetic, Hello Revenue #409's passes 17 to 31 found no wrong
-answer on a supported input, and #456's rounds 20 to 30 found the previous
-round's own siblings — and the owner's ruling that the code is built for AI
-maintenance alone, so held behaviour and written reasons are the bar, and a
-pin that no consequence rides on is not (the three lanes' joint proposal,
-adopted the same day).
+Fix all verified findings inside the change. At an adjacent seam, fix what
+serves this intent; otherwise file it. Outside the change, file it and leave
+it outside. Assess a finding before acting: a disproved allegation receives
+an evidence-backed no-change disposition, never a forced repair. No verified
+in-scope finding is silently waived. Repairs remove the cause and reconcile
+the affected dependencies; size is not their boundary. If the original
+promise remains unmet, the work remains unfinished unless the person changes
+that promise.
+
+Verify the fixes with the checks appropriate to the changed behaviour and
+its dependencies, and run the applicable suite before integration. The
+implementing colleague may perform this verification. A demonstrated failed
+repair or regression is corrected and checked; verification does not
+commission a fresh open-ended review. There is no mandatory second pass,
+no mandatory cold reader after each repair, and no requirement to keep
+reviewing until a reader runs out of findings. A first independent review
+with no findings may finish. Additional independent review is an execution
+decision justified by substantial changed behaviour or a specific unresolved
+risk; name that reason and the surface needing another read. Repeated
+repair failures call for diagnosing the cause, not reflexively adding checks
+or restarting the whole review.
+
+The review record names the independent reader, the revision reviewed, every
+finding's disposition, and the evidence verifying the repairs and final
+state. Decision-bearing claims in the record must be supported; ordinary
+record corrections are corrected and checked by the writer and do not
+restart code review. Record why the work is complete, or exactly what remains
+unverified. Historical reviews retain their original evidence and wording;
+today's workflow does not require rewriting their past.
+
+*Shaped by:* 2026-09-11, the owner's return to the earlier review-and-fix
+workflow after recursive repair reads slowed execution. September 9's rule
+limited full passes but left repairs creating new cold-read obligations;
+Needle #110's gate admitted FIXED or CORRECTED but no evidence-backed rejection
+of a cold reader's allegation. The owner chose meaningful repair verification
+without mandatory recursive reviews, preserving independent review and the
+obligation to fix every verified in-scope finding (Needle #131).
+
+---
 
 ## 14. The close ritual
 

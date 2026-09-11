@@ -139,7 +139,7 @@ rather than the half that showed things. The lessons, carried as principles:
 Needle is built the way it asks every project to be built. The way of working
 is written once, by the owner and the coordinating session together, in
 `docs/HOW-WE-WORK.md`: intent over orders, loops as falsifiable theses, the
-corpus as the way in, one move the person's, lanes, reviews as loops, the
+corpus as the way in, one move the person's, lanes, independent review, the
 close ritual. The project's `CLAUDE.md` carries the working rules specific to
 this repository; `docs/plans/` carries the slices, with the folder as the
 status.

@@ -107,9 +107,10 @@ class Item(BaseModel):
 
 
 class ReviewPass(BaseModel):
-    """One pass of a review record's loop (`docs/reviews/README.md`): its
-    lens, what it found in the record's own words, and whether it read
-    clean — "nothing new" — which is what ends the loop."""
+    """A recorded review pass, including historical loop records.
+
+    Its clean flag describes that pass, not permission to close the card.
+    """
 
     number: int
     lens: str
@@ -125,16 +126,13 @@ class Fate(StrEnum):
     NO_CHANGE = "no_change"
     FILED = "filed"
     CORRECTED = "corrected"
-    """A record-only correction — the record's words off, which the writer
-    fixes and re-reads alone (HOW-WE-WORK §13): the one answer to a broken
-    claim that closes a round without another cold read (card #110)."""
+    """A record-only correction, retained for historical disposition counts."""
 
 
 class Disposition(BaseModel):
-    """One finding's line under `## Dispositions` (card #110): where it sits,
-    what became of it, and — for a fix — who else it reaches and what it
-    assumes, the two halves a cold reader tries to break before the round
-    ships. The address is how a verdict and a repair-caused mark name it."""
+    """A finding and its disposition. Historical records additionally carry
+    addresses, dependency clauses and repair marks; these remain readable
+    without imposing their former review procedure on new work."""
 
     number: int
     pass_number: int | None
@@ -178,15 +176,12 @@ class ColdRead(BaseModel):
 
 
 class Review(BaseModel):
-    """A review record as its counts read (plan 13, item 5): the passes from
-    its `## The passes`, the findings from its `**Findings:**` line, and
-    each disposition's fate from `## Dispositions` — FIXED, NO CHANGE, or
-    filed as a suggestion. Read from the lane's own worktree while it runs,
-    so the face counts the loop as the lane writes it, pass by pass. Since
-    card #110 it also carries every disposition with its two halves, every
-    cold reader's verdict, and how many findings an earlier repair caused —
-    caught by a cold reader before the round shipped, or escaped to a full
-    pass — which is the loop that card reads."""
+    """Review evidence and finding counts, read from the lane's own record.
+
+    Optional historical pass, cold-verdict and repair-origin fields keep
+    existing records visible. None imposes a number of reviews or supplies
+    the close gate; that gate checks recorded reader and verification evidence.
+    """
 
     path: str
     """Relative to the project root."""
@@ -195,8 +190,7 @@ class Review(BaseModel):
     its card. A record that names none is not counted against any card."""
     passes: list[ReviewPass]
     clean: bool
-    """The last pass read clean: the loop is closed and the lane is writing
-    the close."""
+    """Whether the last recorded pass read clean; not a close prerequisite."""
     found: int
     fixed: int
     no_change: int

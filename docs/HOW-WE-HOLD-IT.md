@@ -26,16 +26,16 @@ that ceremony, and the ratchet keeps it honest.*
 *Traced by:* every decision a colleague took under the ownership test, listed with the source it read, the direction it moved the product and its fate (`needle decisions`), which the person audits cold; entry into execution is mechanised, `tests/ratchets/test_start_is_the_owners_click.py`, and a defect's mark cannot route until a reading has verified it, `board/triage.py::routing_of`.
 
 ## 2. Intent over orders, and the test for a rule
-*Traced by:* the walk that read every section by this test (`docs/design/2026-09-05-the-doctrine-walked-as-its-readers-would-read-it.md`) and the review's boundaries pass, which reads a plan's new rules by it; nothing guarantees the person detects a method in an intent's clothes at the gate.
+*Traced by:* the walk that read every section by this test (`docs/design/2026-09-05-the-doctrine-walked-as-its-readers-would-read-it.md`) and the review's boundary checks, which reads a plan's new rules by it; nothing guarantees the person detects a method in an intent's clothes at the gate.
 
 ## 3. A session's economics are inverted
-*Traced by:* the review's passes, which read for the shortcut and the second way; the deferral markers alone are refused by `tests/ratchets/test_nothing_ships_half_done.py`.
+*Traced by:* the independent review, which reads for the shortcut and the second way; the deferral markers alone are refused by `tests/ratchets/test_nothing_ships_half_done.py`.
 
 ## 4. Only what is written survives
-*Traced by:* the commit log, whose bodies the review's first pass quotes, and the plan's rulings, which the close reads.
+*Traced by:* the commit log, whose bodies the independent review quotes, and the plan's rulings, which the close reads.
 
 ## 5. Convention is the weakest defence
-*Traced by:* this register's print and each project's own ratchets, read at the review's boundaries pass; the one clause held is that every rule here names its holder, by `tests/ratchets/test_every_rule_says_what_holds_it.py`.
+*Traced by:* this register's print and each project's own ratchets, read at the review's boundary checks; the one clause held is that every rule here names its holder, by `tests/ratchets/test_every_rule_says_what_holds_it.py`.
 
 ## 6. Completeness is a claim only the session can check
 *Traced by:* the plan's `Met:` and `Deviated:` lines and the review record, presented on the card at the close; nothing guarantees they are read. The close itself is one act or refused, `api/doors.py::close`.
@@ -44,7 +44,7 @@ that ceremony, and the ratchet keeps it honest.*
 *Undefended until:* docs/plans/2026-09-05-every-loop-a-plan-names-is-watched-until-it-closes.md by 2026-09-19 — every loop a plan names is watched by the board until it closes, and a loop that never closed is shown as a belief.
 
 ## 8. Verify, don't assume — and the answer is usually there
-*Traced by:* the `[verification]` findings in every review record — a claim with no source, a hedge shipped as a fact, a primitive built beside an existing one — which the review's boundaries pass reads for by name and the loop on card #60 counts per carded close, read by the session at the tenth close after its fold against Hello Revenue's rate over the same window (`docs/plans/done/2026-09-05-every-session-of-any-make-follows-the-doctrine-at-least-as-well-as-hello-revenues-did.md`, its Loop); the one clause held is that every finding says its class, `tests/ratchets/test_every_finding_says_its_class.py`. The section is read back into a session verbatim on the word "backbrief" (`hooks/needle_hook.py`), which is delivery, not a hold: a session that has stopped checking reads like one that has not, and only the count says which.
+*Traced by:* the `[verification]` findings in every review record — a claim with no source, a hedge shipped as a fact, a primitive built beside an existing one — which the review's boundary checks reads for by name and the loop on card #60 counts per carded close, read by the session at the tenth close after its fold against Hello Revenue's rate over the same window (`docs/plans/done/2026-09-05-every-session-of-any-make-follows-the-doctrine-at-least-as-well-as-hello-revenues-did.md`, its Loop); the one clause held is that every finding says its class, `tests/ratchets/test_every_finding_says_its_class.py`. The section is read back into a session verbatim on the word "backbrief" (`hooks/needle_hook.py`), which is delivery, not a hold: a session that has stopped checking reads like one that has not, and only the count says which.
 
 ## 9. Raise the standard, not just the output
 *Traced by:* the suggestions folder, where a learning about the way we work arrives marked `his`, read on the board's rail.
@@ -58,8 +58,8 @@ that ceremony, and the ratchet keeps it honest.*
 ## 12. Execution takes a lane
 *Traced by:* the board's read of the machine — a lane's isolation and its overlap with another shown on both cards, a project of another kind's method in its own instructions, and every call to a colleague as a row of plan 17's table in `docs/reviews/2026-09-05-asking-a-colleague-takes-a-minute-not-ten.md`, which its WATCH row reads (a bare `codex exec` or `claude -p` from a session leaves no row, and nothing yet refuses it: card #76); the one clause held is integration: the trunk moves only by a fast-forward push from a lane's own worktree, `api/board_cli.py::fold`.
 
-## 13. Nothing is done without a review, and a review is a loop
-*Traced by:* the review record itself, pass by pass with what each found, read by the person at the close; three clauses are held — that one exists, by `api/doors.py::close`; that every finding in it says its class, by `tests/ratchets/test_every_finding_says_its_class.py`; and, for a record dated after 2026-09-10, that a card cannot close without every fix line carrying who else it reaches and what it assumes, a cold reader's verdict per round with the call row behind it, and a disposition for every claim the reader broke, by `api/doors.py::close` reading `board/review_rules.py` (Needle's own records also by `tests/ratchets/test_every_fix_says_who_else_it_reaches.py`) — which does not hold that an unread round never reached the trunk: the fold comes before the close, and a lane that skipped the read finds out at the close with its code landed; the stop rule is traced by the record's stop signal — the rule that ended the loop and the pass of the last live or latent-behaviour finding — read by the person at the close.
+## 13. Independent review, all findings resolved, repairs verified
+*Traced by:* the review record's independent reader, reviewed revision, findings and dispositions, repair verification and completion statement, read by the person at the close. The close checks that a review record exists, names its reader and carries verification evidence, using `api/doors.py::close` and `board/review_rules.py`; it does not establish independence or truth merely from written labels. No mechanism requires recursive cold reads or a second pass. `tests/api/test_close_record.py` exercises the finite workflow and missing-evidence refusals.
 
 ## 14. The close ritual
 *Traced by:* the card's close rows and its history, and the board's lane read, which moves a folded card nobody closed to the person's attention rather than to shipped; two clauses are held by `api/doors.py::close` — every close writes DELIVERED and WATCH in one act, and for a code lane that act also requires a review record that exists.

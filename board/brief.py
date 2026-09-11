@@ -179,32 +179,11 @@ mark is written from inside one session's context and read from outside it,
 so a reason nobody else can act on is a mark nobody else can check."""
 
 
-def completeness_read(needle: str) -> str:
-    """What the cold read of a round is (card #110, item 2), in one sentence
-    for every lane's opening brief on either make — the one place the four
-    questions, the verb and the verdict's form are said, so a lane of Codex's
-    reads the same words a lane of Claude's does. Why a sentence in the
-    brief and not a rule in a file: the read costs the close when skipped,
-    and a session finds that out with its code already on the trunk unless
-    it was told at the start."""
+def review_guidance() -> str:
+    """Point both makes at the canonical contract instead of duplicating it."""
     return (
-        "Every round of repairs — a pass and the fixes it caused — is read cold before it "
-        "ships (HOW-WE-WORK §13): write each fix's disposition as `[class] <finding> — FIXED "
-        "in <sha>; reaches <who else the fix reaches: the sibling cases, the other readers of "
-        "the surface>; assumes <what it assumes about who else reads or writes the thing, and "
-        "in what order>` under `### Pass N's findings`, then hand the round's FIXED lines to a "
-        f"colleague of the other make through the board's call — `{needle} call codex --fresh "
-        f"<note>` from a lane of Claude's, `{needle} call <a Claude slot or session> <note>` "
-        f"from a lane of Codex's — and `{needle} wait <n>`, with one job per line: re-run the "
-        "search behind the reach and "
-        "name a sibling or a reader the line left out (who else calls this, what is the sibling "
-        "case, what list was written by hand); drive the premise and say what it saw (what does "
-        "the fix assume, and what drove it). Quote its verdict on a line of its own under the "
-        "pass: `Read cold by <who> on <sha>, call <n>: complete` or `…: broke <pass.finding>, "
-        "… — <its words>`; every address it broke gets a disposition marked `[repair of "
-        "<pass.finding>]` — a fix with its own reach and premise, or a record-only correction — "
-        "and a finding a later pass makes that an earlier repair caused carries the same mark. "
-        "The close refuses a record that skips any of it (docs/reviews/README.md)"
+        "Read /home/dennis/Work/needle/docs/HOW-WE-WORK.md §13 for the review contract and "
+        "/home/dennis/Work/needle/docs/reviews/README.md for the finite review record"
     )
 
 
