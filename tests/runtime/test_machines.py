@@ -305,7 +305,7 @@ def test_a_queue_holding_an_event_older_than_an_hour_is_counted_on_the_machines_
     # A write the hook was cut off in leaves half a character at the end;
     # the whole lines still count and the room is read (call 95, 2.2).
     (machine_floor.data_dir / "hook-queue.jsonl").rmdir()
-    whole = f'{{"at": {old}, "session_id": "s4", "message": "déjà vu"}}\n'.encode()
+    whole = f'{{"at": {old}, "session_id": "s4", "message": "déjà vu"}}\n'.encode()
     torn = '{"at": 1, "message": "é'.encode()[:-1]
     (machine_floor.data_dir / "hook-queue.jsonl").write_bytes(whole + torn)
     laptop = next(r for r in runtime.rooms() if r.machine.name == "laptop")

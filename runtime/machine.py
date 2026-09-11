@@ -340,7 +340,10 @@ def hook_queue_moments() -> list[float] | None:
         return []
     except OSError:
         return None
-    lines = raw.decode("utf-8", errors="replace").splitlines()
+    # Split on the line feed alone: `splitlines` also splits U+0085, U+2028
+    # and U+2029, which the hook leaves raw inside a JSON string, and would cut
+    # a whole event in two (Codex's cold read of card #124, call 97, 2.3).
+    lines = raw.decode("utf-8", errors="replace").split("\n")
     moments: list[float] = []
     for line in lines:
         try:

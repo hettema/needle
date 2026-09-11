@@ -168,8 +168,11 @@ def drain(queue: Path, lock) -> None:
         # character; decoded strictly, that one tail would fail every drain
         # after it and the queue would never empty (card #124). Decoded
         # leniently, the torn line fails to parse and is skipped below.
+        # And split on the line feed alone: `splitlines` also splits U+0085,
+        # U+2028 and U+2029, which `ensure_ascii=False` leaves raw inside a
+        # message, and would drop that whole event at this drain for good.
         raw = queue.read_bytes() if queue.is_file() else b""
-        lines = raw.decode("utf-8", errors="replace").splitlines()
+        lines = raw.decode("utf-8", errors="replace").split("\n")
         horizon = time.time() - KEEP_SECONDS
         events = []
         for line in lines:

@@ -165,7 +165,7 @@ def test_a_queue_whose_last_write_was_cut_off_still_drains(tmp_path: Path):
         "hook_event_name": "Stop",
         "session_id": "bbbb0124-0000-4000-8000-000000000000",
         "cwd": LANE,
-        "last_assistant_message": "déjà vu",
+        "last_assistant_message": "déjà vu",
         "at": time.time(),
     }
     torn = '{"hook_event_name": "Stop", "last_assistant_message": "é'.encode()[:-1]
@@ -185,7 +185,7 @@ def test_a_queue_whose_last_write_was_cut_off_still_drains(tmp_path: Path):
         assert done.returncode == 0
         assert len(board.posts) == 1
         assert [(e["kind"], e["message"]) for e in board.posts[0]] == [
-            ("Stop", "déjà vu"),
+            ("Stop", "déjà vu"),
             ("SessionEnd", None),
         ]
         assert queue.read_bytes() == b"", "drained past the torn line"
