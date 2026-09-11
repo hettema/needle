@@ -17,7 +17,11 @@ from datetime import date, datetime
 
 from pydantic import BaseModel
 
-from domain.dial import Headroom
+from domain.dial import Headroom, ScopeHeld
+from domain.ending import Boot
+from domain.lane import LaneDocs, LaneTip
+from domain.session import Session
+from domain.slot import Limits, Where
 
 
 class Machine(BaseModel):
@@ -111,7 +115,14 @@ class MachineRoom(BaseModel):
     trunk when the board last levelled it (`needle: 2 behind`), so a
     machine's stale checkout is said on its own line and never as the
     board's own checkout's state (Codex's eighth pass on card #83)."""
-    """The latest measured build time per step on it (the plan's item 5)."""
+    observed_at: datetime | None = None
+    """When the observation the board holds of this machine was read (card
+    #123): this pass's when the machine answered, an earlier pass's when
+    it did not — then `why` says why and the age is on the head, and the
+    machine's lanes stand as last read rather than empty."""
+    behind: bool = False
+    """Its `needle` is older than the one question (card #123): it was read
+    the old way, one verb at a time, and the head says so."""
 
 
 def find_ground(machines: list[Machine], repo: str) -> Machine | None:
@@ -162,3 +173,119 @@ def choose_machine(rooms: list[MachineRoom], repo: str) -> tuple[Machine | None,
         else:
             said.append(f"{reading.machine.name}: {reading.room.sentence or 'full'}")
     return None, "no machine has room — " + "; ".join(said)
+
+
+# ── the one question a pass (card #123) ────────────────────────────────
+
+
+class LaneAsk(BaseModel):
+    """One lane the board asks a machine about: the checkout, the
+    repository and branch its tip is read for, and which of its documents
+    to carry — the plan by its candidate paths, and the review records
+    only once every item is met, since a lane's reviews folder is every
+    record the project ever wrote."""
+
+    checkout: str
+    repo: str
+    branch: str | None
+    plans: list[str] = []
+    """The plan's candidate paths, relative to the checkout, live first and
+    archived second; the first that exists is carried."""
+    reviews: bool = False
+
+
+class Ask(BaseModel):
+    """What the board asks a machine on one pass: every read the pass made
+    one verb at a time before this card (the plan's item 1 names them),
+    named so the machine answers them in one reply."""
+
+    repos: list[str] = []
+    """Every project's path: the machine lists its checkouts of each."""
+    lanes: list[LaneAsk] = []
+    hold: bool = True
+    """Hold every group of ours at the machine's mark before reading the
+    room, as the pass does (card #107)."""
+    owners: dict[str, tuple[str, int]] = {}
+    """Which card each group is, by unit, when the board knows."""
+    read: list[str] = []
+    """Groups asked for by name whether or not the manager lists them:
+    every lane with hands on (plan 53, item 1)."""
+
+
+class LaneSeen(BaseModel):
+    """One lane as its machine answered for it."""
+
+    checkout: str
+    tip: LaneTip
+    edits: list[str]
+    """What the checkout has changed against the trunk, committed and not."""
+    docs: LaneDocs
+    plans: list[str] = []
+    """The candidates the documents were read for, so a read with other
+    candidates (a door reading one record by path) never answers from here."""
+    reviews: bool = False
+    """The review records were asked for and are in `docs`."""
+
+
+class Observation(BaseModel):
+    """Everything the board asks one machine on one pass, as that machine
+    answered it (card #123, item 1): the machine's own `needle` reads its
+    registries, its manager, its memory and its checkouts and answers once.
+    The same value is read here for the board's own machine, by the same
+    function, so a one-machine board and a five-machine board are read by
+    one code path."""
+
+    at: datetime
+    """The machine's own clock when it began answering."""
+    seconds: float
+    """How long the machine took to answer, by its own clock."""
+    sessions: list[Session]
+    """Every session there, lean (without each one's brief)."""
+    boots: list[Boot]
+    room: Headroom
+    scopes: list[ScopeHeld] | None
+    """Every process group of ours the manager holds; None when the manager
+    could not be asked."""
+    placement: Where
+    """Where that machine's own rule would run the next card, asked with
+    nothing tried: the pass's placement read (`_where_on`) for a machine
+    the rooms chose."""
+    checkouts: dict[str, dict[str, str | None]] = {}
+    """Per repository asked, every checkout there: path → branch."""
+    lanes: list[LaneSeen] = []
+    limits: dict[str, Limits | None] = {}
+    """Every subscription's last limits reading on that machine, by slot:
+    what a parked lane's end is read against, so a park is checked without
+    asking the machine under the lock (card #123). Empty for a machine read
+    the old way."""
+    windows: list[str] | None = None
+    """The addresses of every window the compositor holds, when this
+    machine is the desktop and the compositor answered; None otherwise.
+    The board reconciles its window records against this instead of
+    asking the desktop's compositor over the wire on every read."""
+
+
+class Observed(BaseModel):
+    """What the board holds of one machine between passes (card #123, item
+    2): the newest observation it accepted, when the board read it, and —
+    when this pass brought no new one — why. A machine that never answered
+    holds None with the reason, so every read of it answers empty and
+    unread rather than reaching for the wire."""
+
+    machine: str
+    observation: Observation | None
+    read_at: datetime | None
+    """The board's clock when `observation` was accepted."""
+    asked_at: datetime | None = None
+    """The board's clock when the last question accepted for this machine
+    went out, answered or not: an answer to an older question is dropped,
+    and a launch after a fresh observation's question stands beside it."""
+    fresh: bool
+    """The observation is this pass's."""
+    why: str | None
+    """Why this pass brought no observation, in the transport's words."""
+    behind: bool = False
+    """The machine's `needle` has no `observe` verb: read the old way."""
+    seconds: float = 0.0
+    """How long this pass's collection of the machine took, by the board's
+    clock — the wire included — for the beat's record (item 4)."""

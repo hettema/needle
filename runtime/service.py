@@ -12,10 +12,14 @@ which row is this machine is the kernel's (`machine.machine_id`)."""
 
 import contextlib
 import logging
+import threading
+import time
 import uuid
 from collections.abc import Callable
+from concurrent.futures import Future, ThreadPoolExecutor
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
+from typing import NamedTuple
 
 from domain.call import Call, CallVerdict
 from domain.dial import (
@@ -32,7 +36,17 @@ from domain.gate import Gate
 from domain.handout import Dispatch
 from domain.lane import LaneDocs, LaneTip, ReviewText
 from domain.launch import Launch, LaunchVerdict, Rescoped, Rescue, Start, Stopped, WindowlessStart
-from domain.machine import Machine, MachineRoom, Timing, choose_machine
+from domain.machine import (
+    Ask,
+    LaneAsk,
+    LaneSeen,
+    Machine,
+    MachineRoom,
+    Observation,
+    Observed,
+    Timing,
+    choose_machine,
+)
 from domain.notice import Notice, Told
 from domain.session import Session, SessionKind, SessionSlot
 from domain.signal import Signal
@@ -60,7 +74,7 @@ from runtime import (
     transcripts,
     windows,
 )
-from runtime.remote import Remote, RemoteRefused, RemoteTimeout
+from runtime.remote import Remote, RemoteBehind, RemoteRefused, RemoteTimeout
 
 log = logging.getLogger("needle.runtime")
 
@@ -88,6 +102,24 @@ KILLED_HOURS = 24
 
 _EPOCH = datetime.min.replace(tzinfo=UTC)
 _UNREACHABLE = (machine.Unreachable, RemoteRefused)
+LANE_READERS = 8
+"""How many lanes one observation reads at once: a lane's tip, edits and
+documents are three git reads and a file, and a hundred lanes read one after
+another are ten seconds on the laptop (card #123)."""
+
+
+class Answer(NamedTuple):
+    """One machine's reply to one question, before the board accepts it:
+    the observation, or the transport's words when there is none, and when
+    the question went out — so an answer to an older question never
+    replaces the answer to a newer one."""
+
+    machine: Machine
+    observation: Observation | None
+    behind: bool
+    error: str | None
+    asked_at: datetime
+    seconds: float
 
 
 def _unlevelled(note: str) -> git.Levelled:
@@ -118,6 +150,25 @@ class Runtime:
         """Which machine each worktree was last seen on, by path: what
         routes a lane's edits, tip and documents to the machine that has
         them."""
+        self.observed: dict[str, Observed] = {}
+        """What the board holds of every machine, this one included, by
+        name (card #123): the newest observation each answered, kept
+        between passes. Every read below answers from it when one stands,
+        so under the lock nothing waits on a wire or a walk; a runtime in
+        its own process (a terminal verb) holds none and reads as before."""
+        self._asking: dict[str, Future[Answer]] = {}
+        """The question out to each machine, by name, until the board
+        accepts its answer: a machine is never asked twice at once, so a
+        slow one costs one thread and one ssh, however many passes wait."""
+        self._asking_lock = threading.Lock()
+        self._acted: dict[str, list[tuple[datetime, Session]]] = {}
+        """Each session an act changed on a machine since its observation
+        was asked, as the act left it, by machine: a launch's new session,
+        and a stopped or moved session with no process. A door's re-read
+        sees the act at once, and an observation asked before the act does
+        not undo it when it is accepted after (the plan's second ruling:
+        the newest reading stands, and an act is newer than a question
+        asked before it)."""
 
     # ── reading ────────────────────────────────────────────────────────
 
@@ -248,7 +299,29 @@ class Runtime:
                     machine=m.name,
                 )
             )
+            self._put_acted(m, session)
         return launch_.model_copy(update={"placement": placement, "session": session})
+
+    def _replaced(self, old: Session, m: Machine, launch_: Launch, card: str) -> Launch:
+        """A move or resume on this machine, as the board records it: the
+        launch stamped, and the session it replaced put into the standing
+        observation with no process, so a door's apply says the old one
+        ended without reading the machine again (card #123)."""
+        stamped = self._stamped(m, launch_, card)
+        if stamped.session is not None and stamped.session.session_id != old.session_id:
+            self._put_acted(m, old.model_copy(update={"pid": None}))
+        return stamped
+
+    def _put_acted(self, m: Machine, session: Session) -> None:
+        """A session as an act just left it on a machine — launched, or
+        stopped with no process — read into the standing observation (card
+        #123): the door's re-read sees it without a wire, and the machine's
+        next answer to a question asked after the act replaces it."""
+        self._acted.setdefault(m.name, []).append((clock.now(), session))
+        seen = self.observed.get(m.name)
+        if seen is not None and seen.observation is not None:
+            rows = [s for s in seen.observation.sessions if s.session_id != session.session_id]
+            seen.observation = seen.observation.model_copy(update={"sessions": [*rows, session]})
 
     def room(
         self,
@@ -301,6 +374,263 @@ class Runtime:
             info, MEMORY_FLOOR_BYTES, clock.now(), scopes=scopes, marked=marked, mark=mark
         )
 
+    # ── the one question a pass (card #123) ────────────────────────────
+
+    def observe_here(self, ask: Ask) -> Observation:
+        """Everything the board asks this machine on one pass, read here and
+        answered once (card #123, item 1): what `needle observe` prints for
+        another board, and what the board's own pass reads of its own
+        machine — one function, whichever side of the wire it runs on."""
+        began = clock.now()
+        clock_started = time.monotonic()
+        here = self.here()
+        walls = handoffs.read_handoffs().by_session
+        rows = [
+            r.model_copy(update={"machine": here.name, "intent": ""})
+            for r in [
+                *registry.sessions(slots.registries(), walls),
+                *codex.sessions(began),
+            ]
+        ]
+        try:
+            boots = reasons.boots()
+        except (OSError, machine.Timeout, machine.CommandMissing):
+            boots = []
+        room = self.room(hold=ask.hold, owners=ask.owners or None, read=set(ask.read) or None)
+        checkouts = {repo: git.worktrees(repo) for repo in ask.repos}
+        with ThreadPoolExecutor(max_workers=LANE_READERS) as readers:
+            lanes = list(readers.map(self._lane_seen, ask.lanes))
+        held: list[str] | None = None
+        if here.desktop:
+            with contextlib.suppress(windows.WindowRefused):
+                held = windows.addresses(None)
+        return Observation(
+            at=began,
+            seconds=time.monotonic() - clock_started,
+            sessions=rows,
+            boots=boots,
+            room=room,
+            scopes=self._scopes_here(),
+            placement=rule.where(None, [], cached=True),
+            limits={s.name: limits.snapshot(s.name) for s in slots.registries()},
+            checkouts=checkouts,
+            lanes=lanes,
+            windows=held,
+        )
+
+    @staticmethod
+    def _lane_seen(ask: LaneAsk) -> LaneSeen:
+        return LaneSeen(
+            checkout=ask.checkout,
+            tip=LaneTip(
+                tip=git.head_of(ask.repo, ask.branch) if ask.branch else None,
+                birth=git.branch_birth(ask.repo, ask.branch) if ask.branch else None,
+            ),
+            edits=sorted(git.changed_files(ask.checkout)),
+            docs=read_lane_docs(ask.checkout, ask.plans, reviews=ask.reviews),
+            plans=ask.plans,
+            reviews=ask.reviews,
+        )
+
+    def observe(self, m: Machine, ask: Ask) -> tuple[Observation, bool]:
+        """One machine's answer to the one question: read here for this
+        machine, over the wire for another; a machine whose `needle` is
+        older than the verb is read the old way, one verb at a time, and
+        the second value says so."""
+        if self.is_here(m):
+            return self.observe_here(ask), False
+        r = self._remote(m)
+        try:
+            return r.observe(ask), False
+        except RemoteBehind as behind:
+            log.warning("%s is read the old way: %s", m.name, behind)
+        return self._observe_old_way(r, ask), True
+
+    @staticmethod
+    def _observe_old_way(r: Remote, ask: Ask) -> Observation:
+        """The observation composed from the per-verb reads that were the
+        pass before this card: what a machine whose `needle` predates the
+        verb still answers. The first read that fails fails the whole."""
+        began = clock.now()
+        clock_started = time.monotonic()
+        rows = r.sessions()
+        try:
+            boots = r.boots()
+        except _UNREACHABLE:
+            boots = []
+        room = r.room(hold=ask.hold, owners=ask.owners or None)
+        try:
+            scopes: list[ScopeHeld] | None = r.scopes()
+        except _UNREACHABLE:
+            scopes = None
+        placement = r.where(None, [], cached=True)
+        checkouts = {repo: r.worktrees(repo) for repo in ask.repos}
+        lanes = [
+            LaneSeen(
+                checkout=a.checkout,
+                tip=r.tip(a.repo, a.branch) if a.branch else LaneTip(tip=None, birth=None),
+                edits=sorted(r.edits(a.checkout)),
+                docs=r.lane_docs(a.checkout, a.plans, reviews=a.reviews),
+                plans=a.plans,
+                reviews=a.reviews,
+            )
+            for a in ask.lanes
+        ]
+        return Observation(
+            at=began,
+            seconds=time.monotonic() - clock_started,
+            sessions=rows,
+            boots=boots,
+            room=room,
+            scopes=scopes,
+            placement=placement,
+            checkouts=checkouts,
+            lanes=lanes,
+            windows=None,
+        )
+
+    def _answer(self, m: Machine, ask: Ask) -> Answer:
+        """Ask one machine and wait for its reply, never raising for a
+        machine that does not answer: the reply says why."""
+        asked_at = clock.now()
+        started = time.monotonic()
+        try:
+            observation, behind = self.observe(m, ask)
+        except (*_UNREACHABLE, machine.Timeout, OSError) as error:
+            return Answer(m, None, False, str(error), asked_at, time.monotonic() - started)
+        return Answer(m, observation, behind, None, asked_at, time.monotonic() - started)
+
+    def ask_machines(
+        self, asks: dict[str, Ask], *, only: set[str] | None = None
+    ) -> dict[str, Future[Answer]]:
+        """Every machine asked its one question, each on a thread of its own
+        so one never waits on another (card #123, item 2). A machine whose
+        question is still out, or whose answer the board has not accepted
+        yet, is not asked again: the answer that comes is the pass's. The
+        threads are daemons, so a machine stalled at shutdown never holds
+        the server's exit. Answers the question out to each machine."""
+        machines = [m for m in self.machines() if only is None or m.name in only]
+        out: dict[str, Future[Answer]] = {}
+        with self._asking_lock:
+            for m in machines:
+                pending = self._asking.get(m.name)
+                if pending is None:
+                    pending = Future()
+                    pending.set_running_or_notify_cancel()
+                    threading.Thread(
+                        target=self._answer_into,
+                        args=(pending, m, asks.get(m.name, Ask())),
+                        name=f"needle-ask-{m.name}",
+                        daemon=True,
+                    ).start()
+                    self._asking[m.name] = pending
+                out[m.name] = pending
+        return out
+
+    def _answer_into(self, future: Future[Answer], m: Machine, ask: Ask) -> None:
+        try:
+            future.set_result(self._answer(m, ask))
+        except BaseException as error:  # noqa: BLE001 — a fault is an answer, never a dead thread
+            future.set_exception(error)
+
+    def accept_ready(self) -> dict[str, float]:
+        """Every answer that has arrived becomes what the board holds of its
+        machine; answers how long each accepted one took. Called under the
+        loop's lock, so acceptance never races a pass that reads."""
+        with self._asking_lock:
+            ready = {name: f for name, f in self._asking.items() if f.done()}
+            for name in ready:
+                del self._asking[name]
+        seconds: dict[str, float] = {}
+        for name, future in ready.items():
+            error = future.exception()
+            if error is not None:
+                log.warning("asking %s failed (%s: %s)", name, type(error).__name__, error)
+                answer = Answer(self.machine_named(name), None, False, str(error), clock.now(), 0.0)
+            else:
+                answer = future.result()
+            if self._accept(answer):
+                seconds[name] = answer.seconds
+        return seconds
+
+    def collect(self, asks: dict[str, Ask], *, only: set[str] | None = None) -> dict[str, float]:
+        """Every machine named asked now and waited for, in the caller's
+        thread: a door's re-read of its own machine after its act, and a
+        terminal verb's pass, which has no loop to hand answers to. Answers
+        how long each accepted answer took."""
+        machines = [m for m in self.machines() if only is None or m.name in only]
+        if not machines:
+            return {}
+        with ThreadPoolExecutor(max_workers=len(machines)) as askers:
+            answers = list(askers.map(lambda m: self._answer(m, asks.get(m.name, Ask())), machines))
+        return {a.machine.name: a.seconds for a in answers if self._accept(a)}
+
+    def _accept(self, answer: Answer) -> bool:
+        """One machine's answer becomes what the board holds of it: the
+        sessions stamped with its name, a launch newer than the question
+        kept beside them, the lanes' machines remembered, and unread set or
+        cleared by whether the machine answered. A machine that did not
+        answer keeps its last observation, marked not fresh with the
+        transport's words; one that never answered holds None and reads as
+        unread. An answer to a question older than the one the board holds
+        is dropped, and False says so."""
+        m = answer.machine
+        old = self.observed.get(m.name)
+        if old is not None and old.asked_at is not None and answer.asked_at < old.asked_at:
+            return False
+        if answer.observation is None:
+            seen = Observed(
+                machine=m.name,
+                observation=old.observation if old is not None else None,
+                read_at=old.read_at if old is not None else None,
+                asked_at=answer.asked_at,
+                fresh=False,
+                why=answer.error or f"{m.name} did not answer",
+                behind=old.behind if old is not None else False,
+                seconds=answer.seconds,
+            )
+        else:
+            rows = [r.model_copy(update={"machine": m.name}) for r in answer.observation.sessions]
+            kept: list[tuple[datetime, Session]] = []
+            for at, session in self._acted.get(m.name, []):
+                if at > answer.asked_at:
+                    kept.append((at, session))
+                    rows = [r for r in rows if r.session_id != session.session_id]
+                    rows.append(session)
+            self._acted[m.name] = kept
+            observation = answer.observation.model_copy(update={"sessions": rows})
+            for checkouts in observation.checkouts.values():
+                for path in checkouts:
+                    if not self.is_here(m) and self._lane_machines.get(path) == self.here().name:
+                        continue  # the main checkout is on both; a lane is on one
+                    self._lane_machines[path] = m.name
+            seen = Observed(
+                machine=m.name,
+                observation=observation,
+                read_at=clock.now(),
+                asked_at=answer.asked_at,
+                fresh=True,
+                why=None,
+                behind=answer.behind,
+                seconds=answer.seconds,
+            )
+        self.observed[m.name] = seen
+        if seen.fresh:
+            self.unread.pop(m.name, None)
+        else:
+            self.unread[m.name] = seen.why or f"{m.name} did not answer"
+        return True
+
+    def _seen(self, m: Machine) -> Observed | None:
+        """What the board holds of the machine, when it has asked it."""
+        return self.observed.get(m.name)
+
+    def _seen_lane(self, m: Machine, checkout: str) -> LaneSeen | None:
+        seen = self._seen(m)
+        if seen is None or seen.observation is None:
+            return None
+        return next((lane for lane in seen.observation.lanes if lane.checkout == checkout), None)
+
     def rooms(
         self,
         *,
@@ -311,14 +641,24 @@ class Runtime:
         """Every machine against the floor this pass, with what the board
         has measured on each: the two-week high-water mark and the day's
         kills. A machine that did not answer is a room of None with the
-        transport's words, never a machine with room."""
+        transport's words, never a machine with room — unless an earlier
+        observation of it stands (card #123): then its last room, with when
+        it was read and why nothing newer came."""
         now = clock.now()
         found: list[MachineRoom] = []
         here = self.here()
         for m in self.machines():
             room: Headroom | None = None
             why: str | None = None
-            if self.is_here(m):
+            observed_at: datetime | None = None
+            behind = False
+            seen = self._seen(m)
+            if seen is not None:
+                room = seen.observation.room if seen.observation is not None else None
+                why = None if seen.fresh else seen.why
+                observed_at = seen.read_at
+                behind = seen.behind
+            elif self.is_here(m):
                 room = self.room(hold=hold, owners=owners, read=read)
             else:
                 try:
@@ -347,6 +687,8 @@ class Runtime:
                     # clone: a row about this machine from before it was the
                     # board's is history (Codex's tenth pass).
                     clones=[] if self.is_here(m) else self.store.clones(m.name),
+                    observed_at=observed_at,
+                    behind=behind,
                 )
             )
         return found
@@ -364,7 +706,17 @@ class Runtime:
     ) -> Where:
         """The one rule, asked on the machine the work would run on: its
         `claude-acct` knows that machine's logins and allowances."""
-        if self.is_here(m):
+        seen = self._seen(m)
+        if seen is not None and from_slot is None and not tried and cached:
+            # The pass's placement read: the machine's rule as it answered
+            # the one question (card #123); a walk with a rung tried, or a
+            # live ask, is a door's and goes to the machine.
+            if seen.observation is None:
+                return Where(
+                    placement=None, reason=f"{m.name} could not be asked: {seen.why or 'unread'}"
+                )
+            answer = seen.observation.placement
+        elif self.is_here(m):
             answer = rule.where(from_slot, tried, cached=cached)
         else:
             try:
@@ -385,18 +737,36 @@ class Runtime:
         answer contributes no rows and is said in the log; its sessions are
         not gone, they are unread, and the lanes they hold read as ended
         only if nothing else knows better."""
-        walls = handoffs.read_handoffs().by_session
-        rows = registry.sessions(slots.registries(), walls)
-        # Codex's sessions are rows of the same list (plan 57, item 3): read
-        # from its rollouts, checked in /proc the same way, sorted under the
-        # make's name where a Claude row sorts under its slot.
         here = self.here()
-        rows = [
-            r.model_copy(update={"machine": here.name})
-            for r in [*rows, *codex.sessions(clock.now())]
-        ]
+        seen_here = self._seen(here)
+        if seen_here is not None and seen_here.observation is not None:
+            # The board's own machine as the pass observed it (card #123):
+            # the registry walk ran outside the lock, and a launch since is
+            # in the observation already.
+            rows = list(seen_here.observation.sessions)
+        else:
+            walls = handoffs.read_handoffs().by_session
+            rows = registry.sessions(slots.registries(), walls)
+            # Codex's sessions are rows of the same list (plan 57, item 3):
+            # read from its rollouts, checked in /proc the same way, sorted
+            # under the make's name where a Claude row sorts under its slot.
+            rows = [
+                r.model_copy(update={"machine": here.name})
+                for r in [*rows, *codex.sessions(clock.now())]
+            ]
+        held: list[str] | None = None
         for m in self.machines():
             if self.is_here(m):
+                continue
+            seen = self._seen(m)
+            if seen is not None:
+                # What the board holds of the machine (card #123): its last
+                # observation whether or not it answered this pass — unread
+                # when it did not, so nothing acts on an ending there.
+                if seen.observation is not None:
+                    rows += seen.observation.sessions
+                    if m.desktop and seen.observation.windows is not None:
+                        held = seen.observation.windows
                 continue
             try:
                 read = [
@@ -413,9 +783,17 @@ class Runtime:
             self._last_rows[m.name] = read
             rows += read
         rows = registry.merge(rows)
-        # With no compositor to ask, the windows' state stays as last recorded.
-        with contextlib.suppress(windows.WindowRefused):
-            windows.reconcile(self.store, host=self.desktop_host())
+        if seen_here is not None and seen_here.observation is not None and here.desktop:
+            held = seen_here.observation.windows
+        if held is not None:
+            windows.reconcile_with(self.store, held)
+        elif seen_here is None or self.desktop_host() is None:
+            # With no compositor to ask, the windows' state stays as last
+            # recorded. A board that observes (seen_here stands) never asks
+            # a desktop elsewhere on a read: the desktop's observation
+            # carries its windows, and none means it did not answer.
+            with contextlib.suppress(windows.WindowRefused):
+                windows.reconcile(self.store, host=self.desktop_host())
         return rows
 
     def session(self, ref: str) -> Session:
@@ -572,8 +950,8 @@ class Runtime:
                     None,
                 )
             to = asked.placement
-        return self._stamped(
-            on, launch.move(self.store, session, to=to, card=card, reason=reason), card
+        return self._replaced(
+            session, on, launch.move(self.store, session, to=to, card=card, reason=reason), card
         )
 
     def _moved_elsewhere(
@@ -598,6 +976,10 @@ class Runtime:
         except _UNREACHABLE as error:
             return launch.dead(session.name, [], f"{on.name} could not move it: {error}", None)
         stamped = self._stamped(on, done, card)
+        if stamped.session is not None and stamped.session.session_id != session.session_id:
+            # The session moved from has ended there (card #123): the card
+            # says so at once, not a pass later.
+            self._put_acted(on, session.model_copy(update={"pid": None}))
         if stamped.session is not None and stamped.placement is not None:
             self.store.record_rescue(
                 stamped.session.session_id,
@@ -618,9 +1000,15 @@ class Runtime:
         on = self.machine_of(session)
         if self.is_here(on):
             stopped = launch.stop(session)
+            if stopped.gone:
+                self._put_acted(on, session.model_copy(update={"pid": None}))
         else:
             try:
                 stopped = self._remote(on).stop(session.short_id, keep_handoff=keep_handoff)
+                if stopped.gone:
+                    # Proven gone there (card #123): the card says so at
+                    # once, not when the machine next answers.
+                    self._put_acted(on, session.model_copy(update={"pid": None}))
             except _UNREACHABLE as error:
                 stopped = Stopped(
                     short_id=session.short_id,
@@ -715,7 +1103,8 @@ class Runtime:
                     session.short_id, prompt=prompt, card=card, to_slot=to_slot, reason=reason
                 ),
             )
-        return self._stamped(
+        return self._replaced(
+            session,
             on,
             launch.move(
                 self.store,
@@ -744,6 +1133,9 @@ class Runtime:
         """The machine's boots, newest first; none when another machine
         could not be asked, which names no death a boot."""
         on = self.machine_named(machine_name)
+        seen = self._seen(on)
+        if seen is not None:
+            return seen.observation.boots if seen.observation is not None else []
         if self.is_here(on):
             return reasons.boots()
         try:
@@ -756,6 +1148,13 @@ class Runtime:
         each machine holds its own login for the same subscription, and its
         own `claude-acct` cache of what that login last saw."""
         on = self.machine_named(machine_name)
+        seen = self._seen(on)
+        if seen is not None and not seen.behind:
+            # As the machine last answered (card #123): a park is checked
+            # under the lock, and never over the wire there.
+            if seen.observation is None:
+                return None
+            return seen.observation.limits.get(slot)
         if self.is_here(on):
             return limits.snapshot(slot)
         try:
@@ -941,12 +1340,39 @@ class Runtime:
         # its lanes as that machine's (Codex's third pass).
         for path, name in self.store.lane_paths_by_machine().items():
             self._lane_machines.setdefault(path, name)
-        found = dict(git.worktrees(repo))
+        seen_here = self._seen(self.here())
+        if seen_here is not None and seen_here.observation is not None:
+            # This machine as the pass observed it (card #123); a project
+            # the question did not name yet is read here, cheaply.
+            found = dict(seen_here.observation.checkouts.get(repo) or git.worktrees(repo))
+        else:
+            found = dict(git.worktrees(repo))
         here = self.here().name
         for path in found:
             self._lane_machines[path] = here
         for m in self.machines():
             if self.is_here(m):
+                continue
+            seen = self._seen(m)
+            if seen is not None:
+                # The machine's standing observation (card #123): what it
+                # answered when it did, and the paths last seen on it when
+                # this pass brought nothing new — a project the question did
+                # not name is the same, until the next pass asks.
+                theirs = (
+                    seen.observation.checkouts.get(repo) if seen.observation is not None else None
+                )
+                if theirs is None:
+                    theirs = {
+                        path: None
+                        for path, name in self._lane_machines.items()
+                        if name == m.name and path not in found
+                    }
+                for path, branch in theirs.items():
+                    if path in found and self._lane_machines.get(path) == here:
+                        continue
+                    found[path] = branch
+                    self._lane_machines[path] = m.name
                 continue
             try:
                 theirs = self._remote(m).worktrees(repo)
@@ -970,8 +1396,13 @@ class Runtime:
         """The branch's tip on the machine that holds the worktree named by
         `path`, else here."""
         on = self.lane_machine(path) if path else self.here()
+        seen = self._seen_lane(on, path) if path else None
+        if seen is not None:
+            return seen.tip.tip
         if self.is_here(on):
             return git.head_of(repo, branch)
+        if self._seen(on) is not None:
+            return None  # a lane the question did not name yet: next pass
         try:
             return self._remote(on).tip(repo, branch).tip
         except _UNREACHABLE:
@@ -980,6 +1411,9 @@ class Runtime:
     def lane_tip(self, repo: str, branch: str, *, path: str) -> LaneTip:
         """The tip and the birth of a lane's branch where it lives."""
         on = self.lane_machine(path)
+        seen = self._seen_lane(on, path)
+        if seen is not None:
+            return seen.tip
         if self.is_here(on):
             return LaneTip(tip=git.head_of(repo, branch), birth=git.branch_birth(repo, branch))
         try:
@@ -989,8 +1423,13 @@ class Runtime:
 
     def edits(self, checkout: str) -> set[str]:
         on = self.lane_machine(checkout)
+        seen = self._seen_lane(on, checkout)
+        if seen is not None:
+            return set(seen.edits)
         if self.is_here(on):
             return git.changed_files(checkout)
+        if self._seen(on) is not None:
+            return set()  # a lane the question did not name yet: next pass
         try:
             return self._remote(on).edits(checkout)
         except _UNREACHABLE:
@@ -1016,8 +1455,15 @@ class Runtime:
         item is met (plan 13), never before — read on the machine that
         holds the worktree."""
         on = self.lane_machine(checkout)
+        seen = self._seen_lane(on, checkout)
+        if seen is not None and seen.plans == candidates and (seen.reviews or not reviews):
+            # As the question asked it (card #123): the same candidates,
+            # and the records only when they were asked for.
+            return seen.docs
         if self.is_here(on):
             return read_lane_docs(checkout, candidates, reviews=reviews)
+        if self._seen(on) is not None:
+            return LaneDocs(plan=None, reviews=[])  # not asked yet: next pass
         try:
             return self._remote(on).lane_docs(checkout, candidates, reviews=reviews)
         except _UNREACHABLE:
@@ -1184,6 +1630,10 @@ class Runtime:
                 return Rescoped(
                     unit=launch.lane_unit(card), asked=False, verified=False, words=str(error)
                 )
+        if done.verified:
+            # Verified in /proc there (card #123): the card reads the group
+            # it is in now, not when the machine next answers.
+            self._put_acted(on, session.model_copy(update={"scope": done.unit}))
         if done.asked or done.verified:
             self.store.record_session_slot(
                 SessionSlot(
@@ -1208,11 +1658,9 @@ class Runtime:
         (Codex's reading of card #83's second pass)."""
         return self._scopes()
 
-    def _scopes(self) -> list[ScopeHeld] | None:
-        """Every process group of ours the manager holds active — the
-        prefix every lane's and reading's session is put under at Start —
-        with the pids each holds and their command lines (card #99); None
-        when the manager could not be asked."""
+    def _scopes_here(self) -> list[ScopeHeld] | None:
+        """This machine's groups alone; None when the manager could not be
+        asked."""
         here = self.here()
         try:
             held: list[ScopeHeld] = []
@@ -1231,8 +1679,37 @@ class Runtime:
                 )
         except (OSError, machine.Timeout, machine.CommandMissing):
             return None
+        return held
+
+    def _scopes(self) -> list[ScopeHeld] | None:
+        """Every process group of ours the manager holds active — the
+        prefix every lane's and reading's session is put under at Start —
+        with the pids each holds and their command lines (card #99); None
+        when the manager could not be asked."""
+        here = self.here()
+        seen_here = self._seen(here)
+        if seen_here is not None and seen_here.observation is not None:
+            held = seen_here.observation.scopes
+            if held is None:
+                return None
+            held = list(held)
+        else:
+            held_here = self._scopes_here()
+            if held_here is None:
+                return None
+            held = held_here
         for m in self.machines():
             if self.is_here(m) or m.name in self.unread:
+                continue
+            seen = self._seen(m)
+            if seen is not None:
+                # A group of a machine read this pass, from its observation
+                # (card #123); an unread machine was skipped above.
+                if seen.observation is not None and seen.observation.scopes is not None:
+                    held += [
+                        group.model_copy(update={"machine": m.name})
+                        for group in seen.observation.scopes
+                    ]
                 continue
             try:
                 held += [

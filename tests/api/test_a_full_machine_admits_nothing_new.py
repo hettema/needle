@@ -57,6 +57,11 @@ def test_the_machine_is_read_on_every_pass_and_a_lane_past_the_floor_admits_noth
     lane_241(repo, machine_floor)
     live.rescan("proj")
     reconcile(client)
+    # The pass asks each machine what the board knew when it asked (card
+    # #123): the lane is first seen on the pass above, and its group is
+    # read by name from the next — a group nobody has put the lane in yet
+    # holds nothing to read.
+    reconcile(client)
     # The pass asked the user manager what the lane's scope holds, by the
     # name the lane was given at Start — one call, whether or not the dial
     # is on a beat.

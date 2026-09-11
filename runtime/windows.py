@@ -192,12 +192,25 @@ def app_id_for(kind: WindowKind, card: str) -> str:
     return f"{APP_ID_PREFIX}{kind.value}-{safe}"
 
 
+def addresses(host: str | None = None) -> list[str]:
+    """Every window the compositor holds, by address: what the desktop's
+    observation carries so the board reconciles its records against it
+    without asking the compositor over the wire on every read (card #123)."""
+    return [str(c.get("address")) for c in clients(host)]
+
+
 def reconcile(store: Store, *, host: str | None = None) -> None:
     """Windows the runtime recorded open that the compositor no longer has
     were closed by the owner; record the close so they are never reopened."""
-    addresses = {str(c.get("address")) for c in clients(host)}
+    reconcile_with(store, addresses(host))
+
+
+def reconcile_with(store: Store, held: list[str]) -> None:
+    """The same, against a list of addresses read elsewhere — the desktop's
+    own observation (card #123)."""
+    present = set(held)
     for window in store.windows(open_only=True):
-        if window.address not in addresses:
+        if window.address not in present:
             store.window_closed(window.id, clock.now())
 
 

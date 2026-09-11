@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { DndContext, DragOverlay, PointerSensor, pointerWithin, rectIntersection, useSensor, useSensors, type CollisionDetection, type DragEndEvent, type DragMoveEvent, type DragStartEvent } from "@dnd-kit/core";
-import type { BoardState, CardSummary } from "../types/board";
+import type { Beat, BoardState, CardSummary } from "../types/board";
 import type { MachineRoom } from "../types/machine";
 import type { Place } from "../types/card";
 import type { Claim } from "../types/board";
@@ -26,10 +26,29 @@ function machineWords(m: MachineRoom): string {
   // fact, said on its line and never as the board's checkout's state.
   const stale = m.clones ?? [];
   const clones = stale.length ? `; clone not level — ${stale.join(", ")}` : "";
-  if (m.room === null) return `did not answer${m.why ? ` (${m.why})` : ""}${clones}`;
-  if (m.room.full) return `${m.room.sentence ?? "full"}${clones}`;
+  // Its needle predates the one question (card #123): read the old way.
+  const behind = m.behind ? "; its needle is behind, read one verb at a time" : "";
+  if (m.room === null) return `did not answer${m.why ? ` (${m.why})` : ""}${clones}${behind}`;
+  // A room that stands from an earlier pass (card #123): the machine has
+  // not answered since, and the age says how old what the board shows is.
+  const old = m.why && m.observed_at ? `as last read ${ago(m.observed_at)} ago — ${m.why}; ` : "";
+  if (m.room.full) return `${old}${m.room.sentence ?? "full"}${clones}${behind}`;
   const gb = (m.room.available / 1024 ** 3).toFixed(1);
-  return `${gb} GB free${m.killed ? `, ${m.killed} killed today` : ""}${clones}`;
+  return `${old}${gb} GB free${m.killed ? `, ${m.killed} killed today` : ""}${clones}${behind}`;
+}
+
+/** The last pass's times (card #123, item 4), as the head says them:
+ * collection per machine, the lock, and the first click's wait and effect. */
+function beatWords(beat: Beat): string {
+  const collected = Object.entries(beat.collection)
+    .map(([name, seconds]) => `${name} ${seconds.toFixed(1)} s`)
+    .join(", ");
+  const lock = `lock ${beat.lock_seconds.toFixed(2)} s`;
+  if (beat.door === null || beat.door === undefined) return `last pass: ${collected || "nothing collected"} · ${lock} · no click`;
+  const wait = beat.door_wait ?? 0;
+  const took = beat.door_seconds ?? 0;
+  const click = wait + took < 1 ? `${beat.door} answered in ${(wait + took).toFixed(2)} s` : `${beat.door} waited ${wait.toFixed(2)} s, took ${took.toFixed(2)} s`;
+  return `last pass: ${collected || "nothing collected"} · ${lock} · click: ${click}`;
 }
 
 export const WIDE_SCREEN = "(min-width: 2300px)";
@@ -403,7 +422,7 @@ export function Board({ slug, store, projects, onSwitch }: { slug: string; store
                 <Fact meaning="broken">the runtime cannot find: {board.machine.missing.join(", ")}</Fact>
               ) : null}
               {(board.machine.machines ?? []).length > 1 ? (
-                <Fact {...((board.machine.machines ?? []).some((m) => m.room === null) ? { meaning: "broken" as const } : {})}>
+                <Fact {...((board.machine.machines ?? []).some((m) => m.room === null || m.why) ? { meaning: "broken" as const } : {})}>
                   {(board.machine.machines ?? []).map((m, i) => (
                     <span key={m.machine.name}>
                       {i ? " · " : ""}
@@ -411,6 +430,11 @@ export function Board({ slug, store, projects, onSwitch }: { slug: string; store
                       {m.here ? " (here)" : ""}: {machineWords(m)}
                     </span>
                   ))}
+                </Fact>
+              ) : null}
+              {board.machine.beat ? (
+                <Fact {...(board.machine.beat.lock_seconds >= 1 || (board.machine.beat.door_wait ?? 0) + (board.machine.beat.door_seconds ?? 0) >= 1 ? { meaning: "broken" as const } : {})}>
+                  {beatWords(board.machine.beat)}
                 </Fact>
               ) : null}
               {board.trunk.level === null ? (

@@ -98,6 +98,10 @@ def _ts_type(schema: dict[str, object], uses: set[str]) -> str:
         return "number"
     if kind == "boolean":
         return "boolean"
+    if kind == "array" and isinstance(schema.get("prefixItems"), list):
+        # A tuple of fixed length (`tuple[str, int]`): TypeScript's own tuple.
+        parts = [_ts_type(o, uses) for o in schema["prefixItems"] if isinstance(o, dict)]
+        return f"[{', '.join(parts)}]"
     if kind == "array":
         items = schema.get("items")
         assert isinstance(items, dict)

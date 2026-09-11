@@ -41,6 +41,15 @@ export interface Attention {
   arrived_today: number;
 }
 
+export interface Beat {
+  at: string;
+  collection: Record<string, number>;
+  lock_seconds: number;
+  door?: string | null;
+  door_wait?: number | null;
+  door_seconds?: number | null;
+}
+
 export interface BoardState {
   project: Project;
   version: number;
@@ -164,6 +173,7 @@ export interface MachineState {
   missing: string[];
   roles?: string[] | null;
   machines?: MachineRoom[];
+  beat?: Beat | null;
 }
 
 export interface OwnerAsk {

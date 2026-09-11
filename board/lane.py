@@ -84,6 +84,10 @@ class LaneFacts(BaseModel):
     lane say which machine its session runs on — on a one-machine board
     the word carries nothing, and the owner is not to know which machine
     ran a card unless he looks."""
+    last_read: dict[str, datetime] = {}
+    """Each machine whose reading is not this pass's, with when it last
+    answered (card #123): a lane on one says so on its card, so an old
+    reading is never mistaken for a live one."""
 
 
 def card_of_cwd(cwd: str, project_path: str) -> int | None:
@@ -481,6 +485,15 @@ def lane_for(card: Card, facts: LaneFacts) -> Lane:
         # A discussion beside a lane is one more clause of its sentence; on
         # its own it is the sentence, live because the conversation is.
         sentence = f"{sentence} {talk}" if sentence else say(Meaning.LIVE, talk[:-1])
+
+    if winner is not None and winner.machine in facts.last_read and sentence:
+        # The machine has not answered since its last reading (card #123):
+        # the lane stands as last read, and the card says how old that is.
+        age = ago(facts.last_read[winner.machine], facts.now)
+        sentence = (
+            f"{sentence} As {winner.machine} last answered, {age} ago; "
+            "it has not answered since."
+        )
 
     return Lane(
         card_number=card.number,

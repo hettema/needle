@@ -50,13 +50,14 @@ from pathlib import Path
 from pydantic import BaseModel
 
 from board.dial import who_is_home
+from domain.board import Beat
 from domain.call import Answer, CallOutcome, CallVerdict
 from domain.dial import ScopePids, ScopeState, ScopeStop
 from domain.ending import Ended, Sighting
 from domain.gate import Gate
 from domain.lane import Checkouts, Edited
 from domain.launch import Launch, LaunchVerdict, Start, WindowlessStart
-from domain.machine import BoardMachine, Machine, MachineRoom, Timing
+from domain.machine import Ask, BoardMachine, Machine, MachineRoom, Timing
 from domain.notice import Notice, Said
 from domain.session import Session, TranscriptSize
 from domain.slot import Expired, LimitsRead, Rung, rung_words
@@ -649,6 +650,70 @@ def transcript_size(runtime: Runtime, args: argparse.Namespace) -> int:
     return 0
 
 
+# ── the one question a pass, and the beat's measure (card #123) ────────
+
+
+def observe(runtime: Runtime, args: argparse.Namespace) -> int:
+    """Everything a board asks this machine on one pass, answered once:
+    the wire's form of every read the pass made one verb at a time before
+    card #123. The ask is the board's `Ask` as JSON; none is the empty ask
+    (this machine's sessions, boots, room, groups and rule alone)."""
+    text = sys.stdin.read() if args.ask == "-" else args.ask
+    try:
+        ask = Ask.model_validate_json(text) if text else Ask()
+    except ValueError as wrong:
+        print(f"--ask is not an Ask: {wrong}", file=sys.stderr)
+        return 2
+    observation = runtime.observe_here(ask)
+    _emit(
+        args,
+        observation,
+        f"{len(observation.sessions)} sessions, {len(observation.boots)} boots, "
+        f"{len(observation.lanes)} lanes read in {observation.seconds:.1f} s",
+    )
+    return 0
+
+
+def beat_line(beat: Beat) -> str:
+    """One pass's four times in one line, ending in the word the plan's loop
+    reads — `answered` when the pass's first click was answered within a
+    second, wait and effect together."""
+    collected = ", ".join(f"{name} {seconds:.1f} s" for name, seconds in beat.collection.items())
+    line = (
+        f"{beat.at:%Y-%m-%d %H:%M:%S}Z  collection: {collected or 'nothing'} · "
+        f"lock held {beat.lock_seconds:.2f} s"
+    )
+    if beat.door is None:
+        return line + " · no click during the pass"
+    wait = beat.door_wait or 0.0
+    took = beat.door_seconds or 0.0
+    if beat.answered:
+        return line + f" · click: {beat.door} answered in {wait + took:.2f} s"
+    return line + f" · click: {beat.door} waited {wait:.2f} s and took {took:.2f} s"
+
+
+def beats(runtime: Runtime, args: argparse.Namespace) -> int:
+    """The last passes as the board timed them (card #123, item 4); `--last`
+    prints the newest alone, which the plan's loop reads for `answered`."""
+    listed = runtime.store.beats(limit=1 if args.last else args.count)
+    if not listed:
+        print("no pass has been timed yet" if not args.json else "[]")
+        return 1
+    text = "\n".join(beat_line(b) for b in listed)
+    if args.last and listed[0].door is None:
+        # Most passes have no click; the loop reads the last one that did.
+        clicked = runtime.store.last_clicked_beat()
+        text += (
+            "\nlast click: "
+            + beat_line(clicked).split(" · click: ", 1)[-1]
+            + f" at {clicked.at:%Y-%m-%d %H:%M:%S}Z"
+            if clicked is not None
+            else "\nno click in the last day"
+        )
+    _emit(args, listed, text)
+    return 0
+
+
 # ── machines (card #83) ────────────────────────────────────────────────
 
 
@@ -661,12 +726,17 @@ def describe_room(reading: MachineRoom) -> str:
         state = reading.room.sentence or "full"
     else:
         state = f"{_gb(reading.room.available)} available"
+    if reading.room is not None and reading.why and reading.observed_at is not None:
+        # A reading that stands from an earlier pass (card #123).
+        age = int((clock.now() - reading.observed_at).total_seconds())
+        state = f"as last read {age} s ago ({reading.why}): {state}"
     mark = reading.high_water
     marks = f", high-water {_gb(mark.used)} used" if mark is not None else ""
     clones = f"; clone not level — {', '.join(reading.clones)}" if reading.clones else ""
+    behind = "; its needle is behind, read one verb at a time" if reading.behind else ""
     return (
         f"{reading.machine.name}{where}  {what}  {state}{marks}, "
-        f"{reading.killed} killed today{clones}"
+        f"{reading.killed} killed today{clones}{behind}"
     )
 
 
@@ -1208,6 +1278,17 @@ def register(sub: "argparse._SubParsersAction[argparse.ArgumentParser]") -> None
         action="append",
         help="unit=slug:number — the card a group is, so the reading names it (the wire's form)",
     )
+
+    p_observe = parser(
+        "observe", "everything a board asks this machine on one pass, in one answer", observe
+    )
+    p_observe.add_argument(
+        "--ask", help="the board's Ask as JSON, or - to read it on stdin; none is the empty ask"
+    )
+    p_beats = parser("beats", "the last passes as the board timed them", beats)
+    p_beats.add_argument("--last", action="store_true", help="the newest pass alone")
+    p_beats.add_argument("--count", type=int, default=10, help="how many passes, newest first")
+    p_beats.set_defaults(board=True)
 
     p_machines = parser("machines", "every machine the board knows, with what each holds", machines)
     # The registry and its measurements are the board's (Codex's eighth

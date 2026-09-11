@@ -312,6 +312,37 @@ class TrunkState(BaseModel):
     read_at: datetime | None
 
 
+class Beat(BaseModel):
+    """One pass of the lane loop as the board timed it (card #123, item 4):
+    how long each machine took to answer, how long the pass held the lock
+    every door takes, and the first door that waited during it — how long
+    it waited for the lock and how long its effect took. The head shows the
+    last one beside the machines line and `needle beats --last` prints it,
+    so a pass that holds the lock for seconds is loud where the owner looks
+    and the plan's loop reads the numbers daily."""
+
+    at: datetime
+    collection: dict[str, float]
+    """Seconds per machine, by the board's name for it, the wire included."""
+    lock_seconds: float
+    """How long the pass held the lock while applying what it collected."""
+    door: str | None = None
+    """The first door that took the lock while this pass ran or after the
+    last beat, by the door's name; None when none did."""
+    door_wait: float | None = None
+    """How long that door waited for the lock."""
+    door_seconds: float | None = None
+    """How long its effect took once it held the lock."""
+
+    @property
+    def answered(self) -> bool | None:
+        """Whether the door was answered within a second, wait and effect
+        together; None when no door ran."""
+        if self.door_wait is None or self.door_seconds is None:
+            return None
+        return self.door_wait + self.door_seconds < 1.0
+
+
 class MachineState(BaseModel):
     """Whether the runtime can reach what it needs on this machine, and what
     the machine names that a plan may name too."""
@@ -325,6 +356,8 @@ class MachineState(BaseModel):
     """Every machine the board knows, with what each holds against the
     floor this pass (card #83): the head shows each by name, so a lane on
     the wrong machine is loud. Empty until the loop has read them."""
+    beat: Beat | None = None
+    """The last pass's times (card #123, item 4); None until one ran."""
 
 
 class BoardState(BaseModel):

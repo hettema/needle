@@ -192,8 +192,7 @@ def create_app(store: Store | None = None, *, dist: Path | None = FRONTEND_DIST)
         await live_for(request, slug)
         loops: Loops = request.app.state.loops
         doors: Doors = request.app.state.doors
-        async with loops.lock:
-            return await asyncio.to_thread(work, doors)
+        return await loops.door(request.url.path.rsplit("/", 1)[-1], lambda: work(doors))
 
     @app.get("/api/projects", response_model=list[Project])
     async def projects(request: Request) -> list[Project]:
@@ -297,8 +296,7 @@ def create_app(store: Store | None = None, *, dist: Path | None = FRONTEND_DIST)
         await live_for(request, slug)
         loops: Loops = request.app.state.loops
         doors: Doors = request.app.state.doors
-        async with loops.lock:
-            return await asyncio.to_thread(doors.accept_class, slug, body.evidence_class)
+        return await loops.door("accept", lambda: doors.accept_class(slug, body.evidence_class))
 
     @app.get("/api/projects/{slug}/focus", response_model=FocusStrip)
     async def focus(slug: str, request: Request) -> FocusStrip:
@@ -339,8 +337,7 @@ def create_app(store: Store | None = None, *, dist: Path | None = FRONTEND_DIST)
         board, audited as his, under the loops' lock like a door."""
         loops: Loops = request.app.state.loops
         dial: Dial = request.app.state.dial
-        async with loops.lock:
-            return await asyncio.to_thread(dial.turn, on=body.on, lanes=body.lanes)
+        return await loops.door("dial", lambda: dial.turn(on=body.on, lanes=body.lanes))
 
     @app.get("/api/fixes", response_model=Fixes)
     async def fixes(request: Request, slug: str | None = None) -> Fixes:
@@ -348,8 +345,7 @@ def create_app(store: Store | None = None, *, dist: Path | None = FRONTEND_DIST)
         and the rail now against the rail when the dial was first turned on."""
         loops: Loops = request.app.state.loops
         dial: Dial = request.app.state.dial
-        async with loops.lock:
-            return await asyncio.to_thread(dial.fixes, slug)
+        return await loops.door("fixes", lambda: dial.fixes(slug))
 
     @app.get("/api/projects/{slug}/cards/{number}/brief", response_class=PlainTextResponse)
     async def brief(slug: str, number: int, request: Request) -> str:
