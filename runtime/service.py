@@ -382,6 +382,7 @@ class Runtime:
         hold: bool = False,
         owners: dict[str, tuple[str, int]] | None = None,
         read: set[str] | None = None,
+        here: Machine | None = None,
     ) -> Headroom:
         """This machine against the floor: its memory, and what every group
         of ours holds, read by the one rule the head uses. With `hold`,
@@ -405,7 +406,7 @@ class Runtime:
         if units is not None and read:
             units |= set(read)
         info = self.meminfo()
-        mark = lane_mark(self.here().desktop, info.total if info is not None else 0)
+        mark = lane_mark((here or self.here()).desktop, info.total if info is not None else 0)
         marked = self.hold_scopes_at(sorted(units), mark) if hold and units else []
         held = self.scope_memory(sorted(units)) if units else {}
         named = owners or {}
@@ -445,14 +446,18 @@ class Runtime:
 
     # ── the one question a pass (card #123) ────────────────────────────
 
-    def observe_here(self, ask: Ask) -> Observation:
+    def observe_here(self, ask: Ask, here: Machine | None = None) -> Observation:
         """Everything the board asks this machine on one pass, read here and
         answered once (card #123, item 1): what `needle observe` prints for
         another board, and what the board's own pass reads of its own
         machine — one function, whichever side of the wire it runs on."""
         began = clock.now()
         clock_started = time.monotonic()
-        here = self.here()
+        # The machine is handed in by the asker's caller: a question thread
+        # never reads the board's store, which a test or a shutdown may close
+        # while the thread still runs (card #123; two unclosed connections
+        # were opened here from a store's teardown).
+        here = here or self.here()
         walls = handoffs.read_handoffs().by_session
         rows = [
             r.model_copy(update={"machine": here.name, "intent": ""})
@@ -465,7 +470,9 @@ class Runtime:
             boots = reasons.boots()
         except (OSError, machine.Timeout, machine.CommandMissing):
             boots = []
-        room = self.room(hold=ask.hold, owners=ask.owners or None, read=set(ask.read) or None)
+        room = self.room(
+            hold=ask.hold, owners=ask.owners or None, read=set(ask.read) or None, here=here
+        )
         checkouts = {repo: git.worktrees(repo) for repo in ask.repos}
         with ThreadPoolExecutor(max_workers=LANE_READERS) as readers:
             lanes = list(readers.map(self._lane_seen, ask.lanes))
@@ -479,7 +486,7 @@ class Runtime:
             sessions=rows,
             boots=boots,
             room=room,
-            scopes=self._scopes_here(),
+            scopes=self._scopes_here(here),
             placement=rule.where(None, [], cached=True),
             limits={s.name: limits.snapshot(s.name) for s in slots.registries()},
             checkouts=checkouts,
@@ -507,7 +514,7 @@ class Runtime:
         older than the verb is read the old way, one verb at a time, and
         the second value says so."""
         if self.is_here(m):
-            return self.observe_here(ask), False
+            return self.observe_here(ask, m), False
         r = self._remote(m)
         try:
             return r.observe(ask), False
@@ -1824,10 +1831,10 @@ class Runtime:
         (Codex's reading of card #83's second pass)."""
         return self._scopes()
 
-    def _scopes_here(self) -> list[ScopeHeld] | None:
+    def _scopes_here(self, here: Machine | None = None) -> list[ScopeHeld] | None:
         """This machine's groups alone; None when the manager could not be
         asked."""
-        here = self.here()
+        here = here or self.here()
         try:
             held: list[ScopeHeld] = []
             for unit in machine.units_named(launch.SESSION_UNIT_PREFIX):
