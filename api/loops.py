@@ -2139,6 +2139,15 @@ class Loops:
                 if folded is False and record is not None and record.tip is None:
                     folded = None
                 leaving = exit_for(card, lane, history, folded=folded, signal=signal, since=since)
+                if (
+                    leaving is not None
+                    and lane.session is not None
+                    and lane.session.session_id in self._causes_wanted
+                ):
+                    # Its ending is asked outside the lock before the next
+                    # pass (card #123): the card moves on the ending once it
+                    # is named, never on an ending not yet read.
+                    continue
             if leaving is None:
                 leaving = after_archive(card, lane, signal)
             if (

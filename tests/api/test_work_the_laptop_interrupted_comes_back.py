@@ -81,9 +81,12 @@ def hold_clock(monkeypatch, at: datetime) -> None:
 
 
 def begun(client: TestClient, machine_floor: Floor) -> dict:
-    """A lane with hands on, sighted once by the loop."""
+    """A lane with hands on, sighted once by the loop, and the pass its Start
+    asked for already run (card #123): a test that stages a kill after this
+    stages it after the board last saw the lane alive, as a real kill is."""
     start(client)
     reconcile(client)
+    doors.settle(client)
     return launches(machine_floor)[0]
 
 
