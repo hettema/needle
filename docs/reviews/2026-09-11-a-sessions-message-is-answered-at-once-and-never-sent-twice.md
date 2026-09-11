@@ -4,7 +4,7 @@
 **Reviewer:** the build session (Claude Fable 5.1, then Claude Opus 5 after a usage-limit handoff on the same lane) for its own passes; Codex in fresh read-only threads through `needle call codex --fresh` for the cold reads of another make
 **Diff range:** d32e24f (`origin/develop` at the lane's rebase) .. the close commit that carries this record (the build f3664e1; pass 1's repairs d36792d and fb7a5ba; the repairs of the cold read's breaks 4d6649d; pass 2's repairs 92844ce; the repair of the cold read's break 2599675 and its sibling fb479c6; the repairs of the next read's breaks 93f15d1)
 **Findings:** 13 over two passes — pass 1: 6 the author's and 2 the cold read's breaks of the author's repairs; pass 2: 2 by a reader who did not write the change, 3 the cold reads' breaks of repairs, 1 a sibling the author found repairing one, and 1 outside the change, filed
-**Stop signal:** open — pass 2 found live behaviour inside the change (findings 2.1, 2.3 to 2.6), its round's repairs are read cold complete (call 98), and pass 3, a full pass clean by HOW-WE-WORK §13, is running.
+**Stop signal:** the loop ended on HOW-WE-WORK §13's floor — one full pass clean after the last pass that found live or latent behaviour. The last live or latent-behaviour finding inside the change was made on pass 2 (findings 2.1 to 2.6, the last of them by the cold read of its own repairs, call 97); its round was read cold complete (call 98), and pass 3 (call 99), a full read by a reader who did not write the change, found nothing new.
 
 ## What was checked
 
@@ -25,6 +25,7 @@ Read cold by Codex (fresh thread 01a09052) on 92844ce, call 95: broke 2.2 — an
 The cold read of that repair and its sibling broke both, confirmed by reading: `splitlines` also splits U+0085, U+2028 and U+2029, which the hook leaves raw inside a message, so a whole event carrying one went uncounted by the runtime (finding 2.5) and was dropped for good by the hook's drain (finding 2.6). The author probed the tests' own queue bytes under both split rules before trusting them: the line-feed split counts and keeps the event, `splitlines` loses it.
 Read cold by Codex (fresh thread 01a0905f) on fb479c6, call 97: broke 2.3, 2.4 — Unicode line separators inside valid messages cause complete events to disappear from both the count and the drain.
 Read cold by Codex (fresh thread 01a09064) on 93f15d1, call 98: complete
+3. **A reader who did not write the change — Codex in a fresh thread (01a09067, call 99) on fc66bce and the record through e2b2aca — through the three lenses in order.** Clean. Against the "done means": the code and tests hold the answer before the pass, the event held once, and the queue count on the machines line; the live drain after the fold is the close's own check. The seams, probed: a cancelled post, the page woken from the loop's thread, coalesced passes, a server stopping with a pass asked, a re-sent batch answering zero, a failed batch rolled back whole, migration 0019 keeping each group's first row in order across 50,000 synthetic events, Unicode line separators kept, a torn tail skipped, an unreadable queue said as not read. The boundaries: the generated frontend types match the backend, and the type and machine-door checks passed. The reader could not run the frontend compiler in its sandbox; the lane ran it (`tsc` clean, 82 of 82).
 
 ## Dispositions
 

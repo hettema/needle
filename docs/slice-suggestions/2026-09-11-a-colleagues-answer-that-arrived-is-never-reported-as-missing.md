@@ -2,7 +2,7 @@
 
 **Kind:** defect
 **Fix:** now — the waiting command's whole promise is to hand back the answer a colleague landed, and calling a landed answer missing sends the caller to ask again for work already done; checking for the answer once more after the colleague's thread ends, before saying it is missing, removes that for every call and not for one.
-**Found by:** the lane on card #124 (docs/plans/2026-09-10-a-sessions-message-is-answered-at-once-and-never-sent-twice.md), in the review's seams pass
+**Found by:** the lane on card #124 (docs/plans/done/2026-09-10-a-sessions-message-is-answered-at-once-and-never-sent-twice.md), in the review's seams pass
 
 ## The intent it breaks
 

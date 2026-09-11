@@ -2,7 +2,7 @@
 
 **Kind:** defect
 **Fix:** now — the page's live stream promises in `Live.wait_for_change` to return the version after the one a page holds as soon as it changes, and a wake set from a worker thread leaves the page waiting for its keepalive instead; making the one wake hand itself to the server's loop removes the delay for every part of the board that changes something, not for one caller.
-**Found by:** the lane on card #124 (docs/plans/2026-09-10-a-sessions-message-is-answered-at-once-and-never-sent-twice.md), in the review's seams pass
+**Found by:** the lane on card #124 (docs/plans/done/2026-09-10-a-sessions-message-is-answered-at-once-and-never-sent-twice.md), in the review's seams pass
 
 ## The intent it breaks
 

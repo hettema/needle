@@ -1,5 +1,5 @@
 # A session's message is answered at once and never sent twice
-**Carried by:** docs/plans/2026-09-10-a-sessions-message-is-answered-at-once-and-never-sent-twice.md
+**Carried by:** docs/plans/done/2026-09-10-a-sessions-message-is-answered-at-once-and-never-sent-twice.md
 
 **Kind:** defect
 **Fix:** now — the intent is written (plan 10, item 1: "a running lane hears the board", whose hook posts and queues; card #83's plan: the board feels like it is on your laptop), the fix stays inside the board's intake and the hook script, and it removes a class: every message a session sends, on every machine, is answered before the pass it causes.
