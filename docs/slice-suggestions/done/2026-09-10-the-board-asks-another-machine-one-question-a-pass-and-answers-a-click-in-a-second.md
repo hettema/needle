@@ -1,5 +1,5 @@
 # The board asks another machine one question a pass, and answers a click in a second
-**Carried by:** docs/plans/2026-09-10-the-board-asks-another-machine-one-question-a-pass-and-answers-a-click-in-a-second.md
+**Carried by:** docs/plans/done/2026-09-10-the-board-asks-another-machine-one-question-a-pass-and-answers-a-click-in-a-second.md
 
 **Kind:** defect
 **Fix:** now — the intent is written (card #83's plan: "the board feels like it is on your laptop", and its acceptance: the owner starts a card, gets its notification, opens its window without doing anything he did not do before); the fix stays inside `api/loops.py`, `runtime/service.py` and `runtime/remote.py` and removes the class — one typed observation per machine per pass, collected outside the loop's lock and applied under it in a moment, and doors that answer "opening, awaiting proof" at once and prove the one thing they touched — rather than another deadline raised.

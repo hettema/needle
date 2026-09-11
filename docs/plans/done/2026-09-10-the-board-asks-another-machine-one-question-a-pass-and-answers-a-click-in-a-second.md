@@ -68,6 +68,7 @@ clients` over ssh, `runtime/windows.py::reconcile`) inside every
 `sessions()` read when the screen is on another machine — three more
 wire calls a pass once the board is on the rented machine — so the
 observation carries the desktop's open window addresses too.
+**Met:** `tests/runtime/test_one_question_a_pass.py::test_one_pass_asks_the_other_machine_once_and_reads_what_the_verbs_read` — three lanes on the other floor, the third pass makes one ssh call (`observe --ask -`), and each lane's state, machine, path, session, edits and tip, the rented machine's sessions, its boots and a slot's limits equal what the same board read one verb at a time gives; `tests/runtime/test_one_question_a_pass.py::test_a_machine_whose_needle_predates_the_question_is_read_the_old_way_and_said_behind` — a `needle` that refuses `observe` (exit 2) is read verb by verb and the machines line says its needle is behind, on the head and in `needle machines`. `dispatches` and `transcript-size` stay per-verb: neither is a pass's read.
 
 ### 2. Collection runs outside the lock, per machine, and the last answer stays warm
 The loop (`api/loops.py`, `reconcile` and `level_trunks`) collects each
@@ -81,6 +82,7 @@ pass on the board's own lanes completes in the time it took with one
 machine, the other machine's lanes show their last reading with its age,
 and no door on any card waits on the wire; when the floor answers again
 the next pass reads it.
+**Met:** `tests/runtime/test_one_question_a_pass.py::test_a_silent_machine_keeps_its_last_reading_with_its_age_and_nothing_waits_under_the_lock` — the other floor down: its last observation stands, it reads unread, its room carries its age on the head and in `needle machines`, each of its lanes says "As rented last answered, N ago" and stays hands on, the apply asks no machine, and the floor back up is read fresh on the next pass; `tests/runtime/test_one_question_a_pass.py::test_the_boards_own_lanes_are_applied_while_another_machine_is_slow` — with the other floor answering in six seconds, the pass returns once the board's own machine is applied, under five seconds, without the rented machine's answer. Measured as not waiting on the other machine, not against a one-machine timing.
 
 ### 3. Nothing that waits on another process runs under the door lock
 Every wait the lock covers today — ssh, git fetch and levelling, registry
@@ -93,6 +95,7 @@ Done means: on the fixture the lock is held under a second per pass with
 two machines and thirty lanes (measured by the pass itself, item 4); a
 Watch on a card of the board's own machine is answered while the other
 floor is stalled for 45 seconds.
+**Met:** `tests/runtime/test_one_question_a_pass.py::test_the_lock_is_held_under_a_second_a_pass_with_thirty_lanes_on_two_machines` (the beat's own lock time, fifteen lanes a floor); `tests/runtime/test_one_question_a_pass.py::test_the_apply_starts_no_process_and_asks_no_machine`; `tests/runtime/test_one_question_a_pass.py::test_a_stop_on_either_machine_is_on_the_card_and_its_ending_is_named_outside_the_lock`; `tests/api/test_a_click_waits_on_no_machine.py` — a Watch on a card of the board's own machine answers, its wait for the lock under a second, while the other floor is stalled (eight seconds on the fixture; the mechanism does not depend on the length). **Deviated:** the per-card serialisation is not built and acts stay under the one lock — Rulings, "Doors keep the board's one lock" and "The fold proofs and the stable branch are proved outside the lock".
 
 ### 4. The measure is on the head
 Every pass records four times — collection per machine, lock occupancy,
@@ -103,6 +106,7 @@ Done means: live, on a day with the rented machine on the board and
 lanes on both, the head reads collection under ten seconds, the lock
 under a second, and a click answered under a second; the loop below reads
 the same.
+**Met** in the lane for the measure: every pass records collection per machine, the lock, and the first door's wait and effect (the beats table, migration 0019), `needle beats --last` prints the newest pass and the last click's verdict (`tests/runtime/test_one_question_a_pass.py::test_the_last_pass_says_whether_its_click_was_answered`), and the head shows the last pass beside the machines line. **Deviated:** the live numbers on a day with lanes on both machines cannot be read inside the lane; they are the Loop below and the card's WATCH row after the fold.
 
 ## Acceptance criteria
 
