@@ -1,7 +1,7 @@
 # The board asks another machine one question a pass, and answers a click in a second
 
 **Carries:** docs/slice-suggestions/done/2026-09-10-the-board-asks-another-machine-one-question-a-pass-and-answers-a-click-in-a-second.md
-**Status:** NEW — planned, not started; placed at the top of Up next on 2026-09-10 at the owner's word ("What do we need to fix to make the board run properly? Can you put those cards at the top of up next").
+**Status:** EXECUTING — started 2026-09-11 on card #123's lane; placed at the top of Up next on 2026-09-10 at the owner's word ("What do we need to fix to make the board run properly? Can you put those cards at the top of up next"). The board's home changed the morning this started (card #83's plan, Rulings, 2026-09-11 morning: the board goes to the rented machine for good after this card, because a laptop that sleeps takes the board with it); nothing in this plan's mechanics depends on which machine is the board's — the other machine is the laptop with its hundred lanes instead of the rented one with its one, which is the case the one question was written for.
 **Written:** 2026-09-10, from Dennis after three hours with the board on the rented machine: "The intent is for the needle board's UX to be just like it used to when it was only on my laptop", and that evening, "lets go with your rec" — the board back on the laptop, the rented machine the horsepower, and this the next slice. The shape is Codex's reading of the representation (card #83's review record, fourteenth pass), adopted the same evening.
 **Effort gate:** high — the mechanics are one new verb on the machine side and one collector on the board's, beside the per-verb reads that exist (`runtime/remote.py`); the judgment is what runs under the loop's lock and what never does, which decides whether a click can be answered while a machine is silent, and is settled in the rulings below.
 **Sequencing:** none. Shares `api/loops.py` with the plan that answers a session's message at once; the fold settles it.
@@ -47,6 +47,27 @@ Hands out: search — every wire read a pass makes today, with the file and
 line that calls it and the type it returns; verifies against
 `runtime/remote.py` and the fixture's `ssh_calls` on one pass before the
 verb's shape is fixed.
+The search (2026-09-11, read in the lane and proven on the fixture: one
+pass with three lanes on the other floor, ten ssh calls, 12.8 s on the
+floor where each call is a `needle` start-up): `sessions --lean`
+(`runtime/service.py::sessions`, `list[Session]`), `boots`
+(`Runtime.boots`, `list[Boot]`), `where` (`Runtime._where_on` for the
+placement, `Where`, once per project), `worktrees <repo>`
+(`Runtime.worktrees`, `Checkouts`, once per project), `tip <repo>
+<branch>` (`Runtime.branch_tip`, `LaneTip`, once per lane),
+`scopes --held` (`Runtime._scopes`, `list[ScopeHeld]`), `sessions --lean`
+again (`Loops._tend_calls`), `room --hold` (`Runtime.rooms`, `Headroom`),
+and per lane with hands on `edits <checkout>` (`Runtime.edits`, `Edited`)
+and `lane-docs <checkout> --plan …` (`Runtime.lane_docs`, `LaneDocs`, and
+once more with `--reviews` once every item is met). Every one is a method
+of `runtime/remote.py::Remote`. Not a pass's read: `dispatches` (the Start
+door's brief, `api/doors.py::handouts_row`) and `transcript-size` (a
+terminal verb), so those two stay per-verb and the observation does not
+carry them. Also found: the desktop's compositor is asked (`hyprctl
+clients` over ssh, `runtime/windows.py::reconcile`) inside every
+`sessions()` read when the screen is on another machine — three more
+wire calls a pass once the board is on the rented machine — so the
+observation carries the desktop's open window addresses too.
 
 ### 2. Collection runs outside the lock, per machine, and the last answer stays warm
 The loop (`api/loops.py`, `reconcile` and `level_trunks`) collects each
@@ -93,6 +114,84 @@ the same.
   reading, and its silence costs no other machine's lanes their pass.
 
 ## Rulings
+
+- **The board's own machine is observed by the same function the verb
+  runs, outside the lock, and every read the pass makes answers from the
+  standing observations** (the lane's ruling, 2026-09-11, on item 3's
+  "registry and transcript walks"). Rejected: observing only the other
+  machines and reading this one live under the lock — the registry walk
+  and the codex rollouts on a laptop with a hundred lanes are seconds,
+  and they would be the lock's. A door's re-read after its act refreshes
+  this machine's observation locally and applies; another machine's
+  session the door just started is put into that machine's standing
+  observation by the runtime at the launch, so the door sees it at once
+  and the next pass's answer replaces it.
+- **The question names what the board knew when it asked; a lane first
+  seen on a pass is asked about from the next** (the lane's ruling,
+  2026-09-11). The pass asks before it applies, so a worktree that
+  appears between passes has no tip, edits or documents asked for on the
+  pass that finds it, and its group is read by name one pass later; on
+  the board's own machine its tip and edits are read locally that once.
+  Rejected: reading the newcomer under the lock — that is a process under
+  the lock item 3 removes — and asking every worktree on disk by name,
+  which on the laptop is a hundred groups a pass to catch a lane in its
+  first thirty seconds, when a group nobody has put the lane in yet holds
+  nothing. The room the pass shows is likewise the one read before its
+  moves, so a memory a stop in the pass gave back is on the head from the
+  next pass. The ask travels on standard input, since it names every
+  lane on the machine and one argument stops at 128 KB (card #83's first
+  live move).
+- **A machine that never answered is an empty observation marked unread,
+  never a fall-through to the wire** (the lane's ruling, 2026-09-11).
+  Rejected: reading the old way when no observation stands — that is the
+  wire under the lock on the first pass a machine is down, which is the
+  minute this plan removes.
+- **Each machine's answer is applied as it arrives; what the timer, the
+  registries, a hook and a corpus change wait for is the board's own
+  machine** (the lane's ruling, 2026-09-11). Rejected: a pass that asks
+  every machine and applies once all have answered — a stalled machine
+  then holds the board's own lanes for its whole deadline, forty-five
+  seconds, which is item 2's done-means broken with the doors free. A
+  machine is never asked twice at once; its late answer is applied when
+  it lands, and an answer to an older question never replaces a newer
+  one. The first read and the tests wait for every machine.
+- **A door applies what stands with its own act in it, and a pass
+  follows** (the lane's ruling, 2026-09-11, on the lock probe below).
+  Every act the runtime makes — a launch, a stop, a move, a resume, a
+  session put back in its group — is written into that machine's standing
+  observation as it lands, so the door's apply shows it without reading
+  any machine, and a pass reads every machine right after without the
+  door waiting. Rejected: the door re-reading its own machine under the
+  lock, which is the registry walk and a git read per lane — the wait
+  item 3 removes. A terminal verb, with no loop, still asks every machine
+  and waits.
+- **The fold proofs and the stable branch are proved outside the lock**
+  (the lane's ruling, 2026-09-11). The probe on the fixture (thirty lanes
+  on two floors): the apply held the lock 0.49 s and started thirty
+  processes, every one `git rev-parse` for a lane's fold proof; the rest
+  was the store's own writes, which is the bookkeeping the lock is for.
+  The pass now proves each recorded tip before it takes the lock and the
+  apply looks the proof up; a tip the apply records first is proved on
+  the next pass. The trunk loop proves the stable branch with its fetch.
+  A terminal verb proves as it reads, so a close right after a fold
+  still sees it. The same holds for why a session ended — the journal and
+  the transcript of the machine it ran on, over the wire for another —
+  which the apply queues and the next pass asks before the lock, so an
+  ending is named a pass after it is found; and a parked lane's limits
+  come from each machine's answer, which carries every subscription's
+  last reading. What stays under the lock is an act the pass itself
+  makes — a launch, a stop, a move, a notice, a group ended — which is
+  rare, and the beat's numbers say when one was slow.
+- **Doors keep the board's one lock; the per-card serialisation of a
+  door's act is not built here** (the lane's ruling, 2026-09-11, on the
+  third ruling below). With every read outside the lock, what a door
+  waits on is another door's act — a Start's launch window, fifteen
+  seconds — never a pass; the beat's door numbers (item 4) say how often
+  that happens, and the loop below decides whether it is worth its own
+  slice. Rejected for now: a lock per card taken by the doors and the
+  pass's per-card acts alike — every act in `api/loops.py` and
+  `api/doors.py` would take one, forty places, on no evidence yet that a
+  door waits on a door.
 
 - **Pull, one question, from the board.** Rejected: each machine pushing
   its observation to the board on its own clock. The board's beat is the

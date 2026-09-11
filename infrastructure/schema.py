@@ -851,3 +851,21 @@ class CompositionRow(Base):
     route: Mapped[str] = mapped_column(Text)
     """The Route as JSON, exactly as assigned."""
     assigned_at: Mapped[datetime] = mapped_column(UtcDateTime)
+
+
+class BeatRow(Base):
+    """One pass of the lane loop as the board timed it (card #123, item 4):
+    in the store so the terminal's `needle beats` — its own process, and
+    the plan's daily loop — reads what the head shows."""
+
+    __tablename__ = "beats"
+    __table_args__ = (Index("ix_beats_at", "at"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    at: Mapped[datetime] = mapped_column(UtcDateTime)
+    collection: Mapped[str] = mapped_column(Text)
+    """Seconds per machine, as JSON: `{"laptop": 4.1, "rented": 0.3}`."""
+    lock_seconds: Mapped[float] = mapped_column(Float)
+    door: Mapped[str | None] = mapped_column(String(40), nullable=True)
+    door_wait: Mapped[float | None] = mapped_column(Float, nullable=True)
+    door_seconds: Mapped[float | None] = mapped_column(Float, nullable=True)

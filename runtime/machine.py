@@ -176,11 +176,22 @@ def forward(board: BoardMachine, argv: list[str]) -> int:
     return done.returncode
 
 
-def run_line(host: str, line: str, *, timeout: float = 30.0) -> subprocess.CompletedProcess[str]:
+def run_line(
+    host: str, line: str, *, timeout: float = 30.0, stdin: str | None = None
+) -> subprocess.CompletedProcess[str]:
     """Run one shell line on another machine and answer what it printed.
-    Raises `Unreachable` when `ssh` never got a shell there."""
+    `stdin`, when given, is what the line reads on its standard input: a
+    value too large to be one argument travels there (card #123 — the one
+    question names every lane on the machine, and a single argument stops
+    at 128 KB, which card #83's first live move hit). Raises `Unreachable`
+    when `ssh` never got a shell there."""
     done = subprocess.run(
-        remote_argv(host, line), capture_output=True, text=True, timeout=timeout, check=False
+        remote_argv(host, line),
+        capture_output=True,
+        text=True,
+        timeout=timeout,
+        check=False,
+        input=stdin,
     )
     if done.returncode == SSH_UNREACHABLE:
         raise Unreachable(f"{host} did not answer: {(done.stderr or done.stdout).strip()[:200]}")

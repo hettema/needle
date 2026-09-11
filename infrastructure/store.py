@@ -27,7 +27,7 @@ from board.moves import GroupLayout, MoveRefused, MoveResult, apply_move
 from board.reconcile import PROMOTED_FROM, Effects
 from board.signals import read_or_decline
 from domain.audit import AuditEntry, AuditKind
-from domain.board import TrunkState
+from domain.board import Beat, TrunkState
 from domain.call import Call, HowKnown
 from domain.card import Actor, Card, CardOrigin, DocumentLink, Place, RowRecord
 from domain.column import COLUMN_DEFINITIONS, DEFECTS_RAIL, DEFECTS_RAIL_POSITION, Column
@@ -77,6 +77,7 @@ from domain.watercooler import WatercoolerLine
 from domain.window import Window, WindowKind
 from infrastructure.schema import (
     AuditRow,
+    BeatRow,
     CallRow,
     CardRow,
     CardRowRow,
@@ -2069,6 +2070,42 @@ class Store:
                 for r in session.scalars(query)
             ]
 
+    def record_beat(self, beat: Beat, *, keep: timedelta = timedelta(days=1)) -> None:
+        """One pass's times (card #123, item 4), and the beats older than
+        `keep` dropped: a day of passes is three thousand rows, enough for
+        the plan's loop to read the day and nothing to grow without end."""
+        with self._session() as session, session.begin():
+            session.add(
+                BeatRow(
+                    at=beat.at,
+                    collection=json.dumps(beat.collection),
+                    lock_seconds=beat.lock_seconds,
+                    door=beat.door,
+                    door_wait=beat.door_wait,
+                    door_seconds=beat.door_seconds,
+                )
+            )
+            session.execute(delete(BeatRow).where(BeatRow.at < beat.at - keep))
+
+    def beats(self, limit: int = 10) -> list[Beat]:
+        """The last passes, newest first."""
+        with self._session() as session:
+            rows = session.scalars(
+                select(BeatRow).order_by(BeatRow.at.desc(), BeatRow.id.desc()).limit(limit)
+            )
+            return [_beat(r) for r in rows]
+
+    def last_clicked_beat(self) -> Beat | None:
+        """The newest pass during which a door took the lock, if one is kept."""
+        with self._session() as session:
+            row = session.scalars(
+                select(BeatRow)
+                .where(BeatRow.door.is_not(None))
+                .order_by(BeatRow.at.desc(), BeatRow.id.desc())
+                .limit(1)
+            ).first()
+            return _beat(row) if row is not None else None
+
     def killed_on(self, machine: str, *, since: datetime, here: str) -> list[Death]:
         """The deaths the system's memory killer caused on a machine since
         `since` (card #83, item 5): a death whose session's slot record
@@ -2791,6 +2828,17 @@ def _session_slot(row: SessionSlotRow) -> SessionSlot:
         scope=row.scope,
         recorded_at=row.recorded_at,
         machine=row.machine or "",
+    )
+
+
+def _beat(r: BeatRow) -> Beat:
+    return Beat(
+        at=r.at,
+        collection=json.loads(r.collection),
+        lock_seconds=r.lock_seconds,
+        door=r.door,
+        door_wait=r.door_wait,
+        door_seconds=r.door_seconds,
     )
 
 

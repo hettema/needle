@@ -26,7 +26,7 @@ from domain.ending import Boot, Ended, Named, Sighting
 from domain.handout import Dispatch
 from domain.lane import Checkouts, Edited, LaneDocs, LaneTip
 from domain.launch import Launch, Rescoped, Start, Stopped, WindowlessStart
-from domain.machine import Machine
+from domain.machine import Ask, Machine, Observation
 from domain.notice import Notice, Said, Told
 from domain.session import LaneTokens, Session, TranscriptSize
 from domain.slot import Expired, Limits, LimitsRead, Rung, Where
@@ -63,6 +63,13 @@ class RemoteTimeout(RemoteRefused):
     never dead (Codex's reading of card #83's second pass)."""
 
 
+class RemoteBehind(RemoteRefused):
+    """The other machine's `needle` does not know the verb or its arguments
+    (exit 2, the parser's usage refusal): it is older than this board's.
+    A caller that has an older way to ask reads it that way and says the
+    machine is behind (card #123, item 1)."""
+
+
 def _tried_argument(tried: list[Rung]) -> str:
     return ",".join(r.slot if r.model is None else f"{r.slot}:{r.model}" for r in tried)
 
@@ -76,12 +83,14 @@ class Remote:
     def _line(self, argv: list[str]) -> str:
         return f"{self.machine.command} {shlex.join(argv)}"
 
-    def _raw(self, argv: list[str], *, timeout: float = VERB_SECONDS) -> str:
+    def _raw(
+        self, argv: list[str], *, timeout: float = VERB_SECONDS, stdin: str | None = None
+    ) -> str:
         host = self.machine.host
         if host is None:
             raise machine.Unreachable(f"{self.machine.name} has no host the board can reach it by")
         try:
-            done = machine.run_line(host, self._line(argv), timeout=timeout)
+            done = machine.run_line(host, self._line(argv), timeout=timeout, stdin=stdin)
         except machine.Timeout as slow:
             raise RemoteTimeout(
                 f"{self.machine.name} did not answer `needle {argv[0]}` within {timeout:.0f} s"
@@ -90,6 +99,11 @@ class Remote:
             raise RemoteRefused(
                 f"{self.machine.name} has no needle at `{self.machine.command}`: "
                 f"{(done.stderr or done.stdout).strip()[:200]}"
+            )
+        if done.returncode == 2:
+            raise RemoteBehind(
+                f"{self.machine.name}'s needle does not know `needle {argv[0]}` as asked "
+                f"(its needle is behind): {(done.stderr or done.stdout).strip()[-200:]}"
             )
         # A verb answers its JSON on stdout and exits 1 when the thing asked
         # for did not happen (a refused placement, a dead launch): the value
@@ -101,8 +115,15 @@ class Remote:
             )
         return done.stdout
 
-    def _ask(self, argv: list[str], model: type[T], *, timeout: float = READ_SECONDS) -> T:
-        text = self._raw([*argv, "--json"], timeout=timeout)
+    def _ask(
+        self,
+        argv: list[str],
+        model: type[T],
+        *,
+        timeout: float = READ_SECONDS,
+        stdin: str | None = None,
+    ) -> T:
+        text = self._raw([*argv, "--json"], timeout=timeout, stdin=stdin)
         try:
             return model.model_validate_json(text)
         except ValidationError as wrong:
@@ -124,6 +145,17 @@ class Remote:
             ) from wrong
 
     # ── reading ────────────────────────────────────────────────────────
+
+    def observe(self, ask: Ask) -> Observation:
+        """Everything the board asks on one pass, in one reply (card #123,
+        item 1): the reads below, which stay for the doors that need one
+        answer now, asked as one verb. Bounded like any read: a machine that
+        answers slowly holds only its own collection, never the lock (item
+        2). Raises `RemoteBehind` when the machine's `needle` predates the
+        verb, and the caller reads it the old way. The ask travels on
+        standard input: it names every lane the board knows on the machine,
+        and one argument stops at 128 KB."""
+        return self._ask(["observe", "--ask", "-"], Observation, stdin=ask.model_dump_json())
 
     def sessions(self) -> list[Session]:
         """Every session there, without the brief each opened with: the

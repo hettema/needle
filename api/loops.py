@@ -22,10 +22,12 @@ import contextlib
 import logging
 import shlex
 import sys
+import time
 from collections.abc import Awaitable, Callable
 from datetime import UTC, datetime, timedelta
 from enum import StrEnum
 from pathlib import Path
+from typing import TypeVar
 
 from watchfiles import awatch
 
@@ -80,7 +82,7 @@ from board.title import title_hold
 from board.triage import already_ruled
 from board.word import compose, notes_word
 from domain.audit import AuditEntry, AuditKind
-from domain.board import MachineState, TrunkState
+from domain.board import Beat, MachineState, TrunkState
 from domain.call import Call, CallOutcome
 from domain.card import Actor, Card, Place
 from domain.column import Column
@@ -92,6 +94,7 @@ from domain.ending import (
     Cause,
     Death,
     Disposition,
+    Named,
     Park,
     Recovery,
     Sighting,
@@ -110,7 +113,7 @@ from domain.lane import (
     Wait,
 )
 from domain.launch import LaunchVerdict, WindowlessStart
-from domain.machine import MachineRoom
+from domain.machine import Ask, LaneAsk, MachineRoom
 from domain.notice import Moment, Notice
 from domain.session import Session, SessionKind, SessionState
 from domain.signal import SessionWork, Signal, SignalKind, WindowlessSession
@@ -120,11 +123,13 @@ from domain.window import Window, WindowKind
 from infrastructure import clock
 from infrastructure.live import Live, LiveProject
 from infrastructure.store import StoreRefusal
-from runtime import codex, discussion, handoffs, launch, limits, machine
+from runtime import codex, discussion, git, handoffs, launch, limits, machine
 from runtime.service import Runtime
 from runtime.windows import WindowRefused
 
 log = logging.getLogger("needle")
+
+T = TypeVar("T")
 
 FLOOR_SECONDS = 30.0
 """The lane loop's floor: a session that dies without a hook (a kill, a
@@ -280,22 +285,58 @@ class Loops:
         the loops' lock: that one is held through a reconcile's git reads,
         and a word that waited behind it would outlive the hook's half
         second while the server still moved the mark — the word lost."""
+        self._first_door: tuple[str, float, float] | None = None
+        """The first door that took the lock since the last beat was
+        recorded — its name, its wait for the lock and its effect's
+        seconds — for the beat's record (card #123, item 4)."""
+        self.last_beat: Beat | None = None
+        self._applier: asyncio.Task[None] | None = None
+        """The task applying answers that arrived after their pass stopped
+        waiting (card #123, item 2): one at a time, and asked again rather
+        than doubled when another answer lands while it runs."""
+        self._apply_again = False
+        self._event_loop: asyncio.AbstractEventLoop | None = None
+        self._marks_said: dict[str, datetime] = {}
+        self._proofs: dict[tuple[str, str | None, str, str | None], bool | None] | None = None
+        """Every unfolded lane's recorded tip against the trunk, proved by
+        the pass outside the lock (card #123, item 3): a git read per lane,
+        a second on the laptop's hundred. None in a process with no loop,
+        which proves as it reads."""
+        self._stable: dict[tuple[str, str], bool] = {}
+        """Every folded lane's tip against the stable branch, proved with
+        the trunk's fetch outside the lock."""
+        self._door_passes: set[asyncio.Task[None]] = set()
+        self._causes: dict[str, Named] | None = None
+        """Why each ended session ended, asked by the pass outside the lock
+        (card #123, item 3): the journal and the transcript of the machine
+        it ran on, over the wire for another machine. None in a process
+        with no loop, which asks as it names."""
+        self._causes_wanted: dict[str, tuple[Session, list[str], Sighting | None, list[Boot]]] = {}
+        """The endings an apply found and could not name yet, by session id."""
+        """Each machine's observation whose holds and memory mark the head
+        has already written, by when it was read."""
 
     # ── lifecycle ──────────────────────────────────────────────────────
 
     async def start(self) -> None:
+        self._event_loop = asyncio.get_running_loop()
         self._tasks = [
-            asyncio.create_task(self._timer(FLOOR_SECONDS, self.reconcile)),
+            asyncio.create_task(self._timer(FLOOR_SECONDS, self.pass_now)),
             asyncio.create_task(self._timer(SIGNAL_SECONDS, self.read_signals)),
             asyncio.create_task(self._timer(TRUNK_SECONDS, self.level_trunks)),
             asyncio.create_task(self._watch_registries()),
         ]
-        self.live.on_change = self.reconcile
+        self.live.on_change = self.pass_now
 
     async def stop(self) -> None:
         self._stop.set()
-        pending = [self._pass_task] if self._pass_task is not None else []
-        for task in [*self._tasks, *pending]:
+        tasks = [
+            *self._tasks,
+            *([self._pass_task] if self._pass_task is not None else []),
+            *([self._applier] if self._applier is not None else []),
+            *self._door_passes,
+        ]
+        for task in tasks:
             task.cancel()
             with contextlib.suppress(asyncio.CancelledError):
                 await task
@@ -334,7 +375,7 @@ class Loops:
             async for _changes in awatch(
                 *existing, stop_event=self._stop, debounce=WATCH_DEBOUNCE_MS
             ):
-                await self.reconcile()
+                await self.pass_now()
         except asyncio.CancelledError:
             raise
         except Exception as error:  # noqa: BLE001
@@ -348,27 +389,176 @@ class Loops:
 
     @property
     def lock(self) -> asyncio.Lock:
-        """The one lock every read of the machine and every door takes, so a
-        door and a loop never act on the same lane at once."""
+        """The one lock every door and every apply of a pass takes, so a
+        door and a loop never act on the same lane at once. Since card
+        #123 nothing that waits on a wire, a fetch or a registry walk runs
+        under it: the pass collects outside and applies inside."""
         return self._lock
 
-    async def reconcile(self) -> None:
+    async def door(self, name: str, work: Callable[[], T]) -> T:
+        """A door's effect under the lock, off the loop's thread, timed:
+        how long it waited for the lock and how long its effect took are
+        the beat's third and fourth numbers (card #123, item 4)."""
+        asked = time.monotonic()
         async with self._lock:
-            # A post's ask is met by the first pass that reads the store
-            # after it (card #124): cleared here, under the lock, so posts
-            # that arrive while a pass waits its turn are read by that pass
-            # and not by one more after it — cleared before the wait, three
-            # posts during a stall caused two passes.
-            self._pass_asked = False
-            await asyncio.to_thread(self.reconcile_now)
+            waited = time.monotonic() - asked
+            began = time.monotonic()
+            try:
+                return await asyncio.to_thread(work)
+            finally:
+                if self._first_door is None:
+                    self._first_door = (name, waited, time.monotonic() - began)
+
+    async def reconcile(self, *, every: bool = True) -> None:
+        """One pass (card #123, items 2 and 3): every machine asked its one
+        question outside the lock, and each answer applied under the lock
+        as it arrives, so the board's own lanes never wait on a machine that
+        is slow. With `every` the pass returns once every machine has
+        answered or failed and been applied — the first read, a test.
+        Without it the pass returns once the board's own machine is applied,
+        and another machine's answer is applied whenever it comes."""
+        self._event_loop = asyncio.get_running_loop()
+        asks = await asyncio.to_thread(self._asks)
+        pending = await asyncio.to_thread(self.runtime.ask_machines, asks)
+        self._proofs = await asyncio.to_thread(self._prove)
+        await asyncio.to_thread(self._ask_causes)
+        for future in pending.values():
+            future.add_done_callback(self._arrived)
+        here = await asyncio.to_thread(lambda: self.runtime.here().name)
+        wanted = [f for name, f in pending.items() if every or name == here]
+        if wanted:
+            await asyncio.wait([asyncio.wrap_future(f) for f in wanted])
+        await self._apply_arrived()
+
+    def _prove(self) -> dict[tuple[str, str | None, str, str | None], bool | None]:
+        """Outside any lock (card #123, item 3): every lane not yet proved
+        folded, its recorded tip against the trunk. A tip first recorded by
+        the apply that follows is proved on the next pass."""
+        proofs: dict[tuple[str, str | None, str, str | None], bool | None] = {}
+        for live in list(self.live.projects.values()):
+            path = live.project.path
+            for record in self.live.store.lanes(live.project.slug):
+                if record.folded_at is None and record.tip:
+                    key = (path, record.branch, record.tip, record.birth)
+                    proofs[key] = self.runtime.lane_folded(*key)
+        return proofs
+
+    def _ask_causes(self) -> None:
+        """Outside any lock (card #123, item 3): every ending the last apply
+        could not name, asked of the machine it happened on. The answers
+        wait for the next apply."""
+        causes = self._causes if self._causes is not None else {}
+        wanted, self._causes_wanted = self._causes_wanted, {}
+        for session_id, (session, units, sighting, boots) in wanted.items():
+            causes[session_id] = self.runtime.cause_of(
+                session, units=units, sighting=sighting, boots_seen=boots, now=clock.now()
+            )
+        self._causes = causes
+
+    def _ask_pass_soon(self) -> None:
+        """From a door's thread: a pass right after it, so what the act
+        changed is read fresh from every machine without the door waiting
+        for the read (card #123, item 3)."""
+        event_loop = self._event_loop
+        if event_loop is None or self._stop.is_set():
+            return
+        with contextlib.suppress(RuntimeError):  # the loop has closed
+            event_loop.call_soon_threadsafe(self._start_door_pass)
+
+    def _start_door_pass(self) -> None:
+        if self._stop.is_set():
+            return
+        task = asyncio.create_task(self._door_pass())
+        self._door_passes.add(task)
+        task.add_done_callback(self._door_passes.discard)
+
+    async def _door_pass(self) -> None:
+        try:
+            await self.pass_now()
+        except asyncio.CancelledError:
+            raise
+        except Exception as error:  # noqa: BLE001 — a door's pass never kills the loop
+            log.warning("the pass after a door failed (%s: %s)", type(error).__name__, error)
+
+    async def pass_now(self) -> None:
+        """The pass the timer, the registries, a hook and a corpus change
+        ask for: it returns when the board's own machine is applied, so a
+        silent machine never delays what they wait for."""
+        await self.reconcile(every=False)
+
+    def _arrived(self, _future: object) -> None:
+        """An answer landed on its asker's thread: the loop applies it."""
+        event_loop = self._event_loop
+        if event_loop is None or self._stop.is_set():
+            return
+        with contextlib.suppress(RuntimeError):  # the loop has closed
+            event_loop.call_soon_threadsafe(self._schedule_apply)
+
+    def _schedule_apply(self) -> None:
+        if self._stop.is_set():
+            return
+        if self._applier is not None and not self._applier.done():
+            self._apply_again = True
+            return
+        self._applier = asyncio.create_task(self._apply_until_quiet())
+
+    async def _apply_until_quiet(self) -> None:
+        try:
+            while True:
+                self._apply_again = False
+                await self._apply_arrived()
+                if not self._apply_again:
+                    return
+        except asyncio.CancelledError:
+            raise
+        except Exception as error:  # noqa: BLE001 — a late answer never kills the loop
+            log.warning("applying an answer failed (%s: %s)", type(error).__name__, error)
+
+    async def _apply_arrived(self) -> None:
+        """Every answer that has arrived, accepted and applied under the lock
+        in one step, and the beat recorded; nothing when no answer arrived
+        since the last apply — a door's re-read may have taken it."""
+        async with self._lock:
+            began = time.monotonic()
+            collection = await asyncio.to_thread(self._accept_and_apply)
+            held = time.monotonic() - began
+        if collection is not None:
+            await asyncio.to_thread(self._record_beat, collection, held)
+
+    def _accept_and_apply(self) -> dict[str, float] | None:
+        collection = self.runtime.accept_ready()
+        if not collection and self.live.machine.beat is not None:
+            return None
+        self.apply_now()
+        return collection
+
+    def _record_beat(self, collection: dict[str, float], held: float) -> None:
+        door, self._first_door = self._first_door, None
+        beat = Beat(
+            at=clock.now(),
+            collection=collection,
+            lock_seconds=held,
+            door=door[0] if door else None,
+            door_wait=door[1] if door else None,
+            door_seconds=door[2] if door else None,
+        )
+        self.last_beat = beat
+        self.live.store.record_beat(beat)
+        self.live.set_machine(self.live.machine.model_copy(update={"beat": beat}))
 
     async def read_signals(self) -> None:
+        """The signals read outside the lock — a URL, a file, a command are
+        waits on another process — and landed under it (card #123, item 3)."""
+        read = await asyncio.to_thread(self.read_signals_outside_now)
         async with self._lock:
-            await asyncio.to_thread(self.read_signals_now)
+            await asyncio.to_thread(self.land_signals_now, read)
 
     async def level_trunks(self) -> None:
+        """The fetch outside the lock, the record under it (card #123, item
+        3): a fetch is a wait on the network."""
+        levelled = await asyncio.to_thread(self.fetch_trunks_now)
         async with self._lock:
-            await asyncio.to_thread(self.level_trunks_now)
+            await asyncio.to_thread(self.record_trunks_now, levelled)
         # The other machines' clones are levelled outside the lock: a
         # stalled machine would otherwise hold every door for the sum of
         # its waits (Codex's eighth pass on card #83, after finding 17).
@@ -519,9 +709,70 @@ class Loops:
     # ── the lane loop ──────────────────────────────────────────────────
 
     def reconcile_now(self) -> None:
-        """One read of the machine, and every move it implies."""
-        if not self._rooms:
-            self.headroom_now()
+        """One read of the machine, and every move it implies, in the
+        caller's thread and under whatever lock it holds: a door's re-read
+        after its act, and a terminal verb's own pass. In the server a door
+        applies the standing observations with its own act in them and asks
+        for a pass; a terminal verb, which has no loop, asks every machine
+        and waits (card #123)."""
+        if self._tasks:
+            # The server's door: what arrived and the act the door just made
+            # (the runtime puts every act into the machine's standing
+            # observation) are applied now, and a pass reads every machine
+            # right after, so the door waits on no walk and no wire.
+            self.runtime.accept_ready()
+            self.apply_now()
+            self._ask_pass_soon()
+            return
+        self.runtime.collect(self._asks())
+        self.apply_now()
+
+    def _asks(self) -> dict[str, Ask]:
+        """What the pass asks each machine: every project's checkouts, and
+        for every lane last seen on it its tip, its edits and its plan by
+        the card's link — the review records once the last read met every
+        item (plan 13). A lane first seen this pass is asked next pass; its
+        machine's per-lane reads answer empty until then rather than reach
+        for the wire under the lock."""
+        owners = self._busy_owners()
+        read = sorted(self._owners())
+        repos = [live.project.path for live in self.live.projects.values()]
+        asks = {m.name: Ask(repos=repos, owners=owners, read=read) for m in self.runtime.machines()}
+        here = self.runtime.here().name
+        for live in list(self.live.projects.values()):
+            slug, path = live.project.slug, live.project.path
+            lanes = live.snapshot.lanes if live.snapshot is not None else {}
+            for record in self.live.store.lanes(slug):
+                if record.gone_at is not None:
+                    continue
+                name = self.runtime.lane_machine(record.path).name or here
+                if name not in asks:
+                    continue
+                card = self.live.store.card(slug, record.card_number)
+                plans: list[str] = []
+                if card is not None and card.link is not None:
+                    document = live.index.find(card.link.kind, card.link.stem)
+                    if document is not None:
+                        plans = [document.path, f"docs/plans/done/{document.stem}.md"]
+                seen = lanes.get(record.card_number)
+                done = seen.progress if seen is not None else None
+                asks[name].lanes.append(
+                    LaneAsk(
+                        checkout=record.path,
+                        repo=path,
+                        branch=record.branch,
+                        plans=plans,
+                        reviews=done is not None and done.total > 0 and done.met == done.total,
+                    )
+                )
+        return asks
+
+    def apply_now(self) -> None:
+        """Every move the last collection implies, under the caller's lock:
+        the pass's reads answer from what the machines said. The rooms come
+        first: they are the observations just accepted, so a machine that
+        went quiet is said on this pass's lanes, not the next's."""
+        self.headroom_now()
         sessions = self.runtime.sessions()
         windows = self.runtime.open_windows()
         self._notes = self.runtime.notes()
@@ -538,7 +789,34 @@ class Loops:
                 )
         self._sweep_scopes()
         self._tend_calls()
-        self.headroom_now()
+        self._say_holds()
+
+    def _say_holds(self) -> None:
+        """Every group a machine held at its mark, said on its card once
+        (card #107) — at the end of the apply, when the lanes this pass
+        found are known: the hold happened when the machine answered, which
+        on the pass that first sees a lane is before the board knows whose
+        group it is (card #123). One observation is applied until the next
+        arrives, so its holds are said once."""
+        owners = self._busy_owners()
+        for reading in self._rooms:
+            if reading.room is None or not reading.room.marked:
+                continue
+            if reading.observed_at is not None:
+                if self._marks_said.get(reading.machine.name) == reading.observed_at:
+                    continue
+                self._marks_said[reading.machine.name] = reading.observed_at
+            for unit in reading.room.marked:
+                if unit in owners:
+                    slug, number = owners[unit]
+                    self.live.note(
+                        slug,
+                        number,
+                        AuditKind.SCOPED,
+                        Actor.MACHINE,
+                        f"Held {unit} at {reading.room.mark // 1024**3} GB (the high mark for "
+                        f"a lane on {reading.machine.name}): the scope stood without it.",
+                    )
 
     def headroom_now(self) -> Headroom:
         """The machine against the floor, on every pass and not only at the
@@ -559,17 +837,6 @@ class Loops:
         for reading in self._rooms:
             if reading.room is None:
                 continue
-            for unit in reading.room.marked:
-                if unit in owners:
-                    slug, number = owners[unit]
-                    self.live.note(
-                        slug,
-                        number,
-                        AuditKind.SCOPED,
-                        Actor.MACHINE,
-                        f"Held {unit} at {reading.room.mark // 1024**3} GB (the high mark for "
-                        f"a lane on {reading.machine.name}): the scope stood without it.",
-                    )
             if reading.room.total > 0:
                 self.live.store.note_high_water(
                     reading.machine.name,
@@ -950,6 +1217,11 @@ class Loops:
             worktrees=worktrees,
             now=now,
             many_machines=len(self._rooms) > 1,
+            last_read={
+                r.machine.name: r.observed_at
+                for r in self._rooms
+                if r.why is not None and r.observed_at is not None
+            },
         )
 
     def _current_boot(self, machine_name: str = "") -> Boot | None:
@@ -1041,14 +1313,21 @@ class Loops:
                 and (now - session.created_at).total_seconds() < launch.VERIFY_SECONDS
             ):
                 continue
-            named = self.runtime.cause_of(
-                session,
-                units=self._units_of(lane, session),
-                sighting=sighting,
-                boots_seen=self._boots.get(session.machine)
-                or self._boots.get(self.runtime.here().name, []),
-                now=now,
+            units = self._units_of(lane, session)
+            boots = self._boots.get(session.machine) or self._boots.get(
+                self.runtime.here().name, []
             )
+            if self._causes is None:
+                named = self.runtime.cause_of(
+                    session, units=units, sighting=sighting, boots_seen=boots, now=now
+                )
+            elif session.session_id in self._causes:
+                named = self._causes.pop(session.session_id)
+            else:
+                # Asked outside the lock before the next apply (card #123):
+                # the ending is named a pass after it is found.
+                self._causes_wanted[session.session_id] = (session, units, sighting, boots)
+                continue
             if death is not None and (death.cause, death.words) == (named.cause, named.words):
                 continue
             store.record_death(
@@ -1119,9 +1398,13 @@ class Loops:
             if record.path not in worktrees and record.gone_at is None and not unread:
                 record = record.model_copy(update={"gone_at": now})
             if record.folded_at is None and record.tip:
-                folded = self.runtime.lane_folded(
-                    project_path, record.branch, record.tip, record.birth
-                )
+                key = (project_path, record.branch, record.tip, record.birth)
+                if self._proofs is None:
+                    folded = self.runtime.lane_folded(*key)
+                else:
+                    # Proved outside the lock; a tip this apply recorded
+                    # first is proved on the next pass (card #123).
+                    folded = self._proofs.get(key)
                 if folded:
                     record = record.model_copy(update={"folded_at": now})
                     store.note(
@@ -2162,20 +2445,19 @@ class Loops:
         which moves nothing — a delivered trigger makes the defect eligible
         for the dial. A `session` signal is read by a session the loop starts
         (plan 09, item 1): at most READINGS_AT_ONCE alive at a time, one per
-        card, and the finding comes back through the reading door."""
-        projects = list(self.live.projects.values())
-        sessions = self.runtime.sessions()
-        for live in projects:
-            self._tend_readings(live, sessions)
-        alive = sum(
-            len(self.live.store.open_windowless_sessions(p.project.slug, SessionWork.READING))
-            for p in projects
-        )
-        for live in projects:
+        card, and the finding comes back through the reading door. In the
+        caller's thread, both halves: the server runs them apart (card
+        #123, item 3)."""
+        self.land_signals_now(self.read_signals_outside_now())
+
+    def _signals_due(self) -> list[tuple[LiveProject, Card, Signal, bool]]:
+        """Every card whose signal or trigger the cadence asks for now, with
+        the signal and whether it is a trigger's."""
+        due: list[tuple[LiveProject, Card, Signal, bool]] = []
+        now = clock.now()
+        for live in list(self.live.projects.values()):
             slug = live.project.slug
-            now = clock.now()
             readings = self.live.store.last_readings(slug)
-            in_flight = self.live.store.open_windowless_sessions(slug, SessionWork.READING)
             for card in self.live.store.cards(slug):
                 if card.folded_into is not None:
                     continue  # a folded card's loop is its leader's
@@ -2192,14 +2474,59 @@ class Loops:
                         continue
                     trigger = True
                 assert signal is not None
-                if signal.kind == SignalKind.SESSION:
-                    if card.number in in_flight or alive >= READINGS_AT_ONCE:
-                        continue
-                    if self._start_reading(live, card, signal, now, trigger=trigger):
-                        alive += 1
+                due.append((live, card, signal, trigger))
+        return due
+
+    def read_signals_outside_now(
+        self,
+    ) -> list[tuple[LiveProject, Card, Signal, bool, tuple[bool | None, str] | None]]:
+        """The half that waits on another process, outside any lock (card
+        #123, item 3): every due signal a URL, a file or a command answers,
+        read now; a `session` signal carries no reading — the lock's half
+        starts its session."""
+        read = []
+        for live, card, signal, trigger in self._signals_due():
+            reading = (
+                None
+                if signal.kind == SignalKind.SESSION
+                else self.runtime.read_signal(signal, live.project.path)
+            )
+            read.append((live, card, signal, trigger, reading))
+        return read
+
+    def land_signals_now(
+        self,
+        read: list[tuple[LiveProject, Card, Signal, bool, tuple[bool | None, str] | None]],
+    ) -> None:
+        """The half under the lock: the readings landed, the reading
+        sessions tended and started."""
+        projects = list(self.live.projects.values())
+        sessions = self.runtime.sessions()
+        for live in projects:
+            self._tend_readings(live, sessions)
+        alive = sum(
+            len(self.live.store.open_windowless_sessions(p.project.slug, SessionWork.READING))
+            for p in projects
+        )
+        in_flight = {
+            p.project.slug: self.live.store.open_windowless_sessions(
+                p.project.slug, SessionWork.READING
+            )
+            for p in projects
+        }
+        now = clock.now()
+        for live, card, signal, trigger, reading in read:
+            slug = live.project.slug
+            if signal.kind == SignalKind.SESSION:
+                if card.number in in_flight.get(slug, {}) or alive >= READINGS_AT_ONCE:
                     continue
-                delivered, words = self.runtime.read_signal(signal, live.project.path)
-                self._land(slug, card.number, signal, delivered, words, now, trigger=trigger)
+                if self._start_reading(live, card, signal, now, trigger=trigger):
+                    alive += 1
+                continue
+            if reading is None:
+                continue
+            delivered, words = reading
+            self._land(slug, card.number, signal, delivered, words, now, trigger=trigger)
 
     def _land(
         self,
@@ -2400,9 +2727,35 @@ class Loops:
 
     def level_trunks_now(self) -> None:
         """Keep every project's main checkout level with origin/develop, and
-        stamp each folded lane's trunk and main facts as they become true."""
+        stamp each folded lane's trunk and main facts as they become true.
+        In the caller's thread, both halves; the server runs the fetch
+        outside its lock (card #123, item 3)."""
+        self.record_trunks_now(self.fetch_trunks_now())
+
+    def fetch_trunks_now(self) -> dict[str, git.Levelled | None]:
+        """The half that waits on the network: every project's checkout
+        fetched and fast-forwarded; None for a path that is no repository."""
+        levelled: dict[str, git.Levelled | None] = {}
         for live in list(self.live.projects.values()):
-            self.level_project(live)
+            path = live.project.path
+            levelled[live.project.slug] = (
+                self.runtime.level(path) if self.runtime.is_repository(path) else None
+            )
+            for record in self.live.store.lanes(live.project.slug):
+                if record.folded_at is not None and record.tip and record.main_synced_at is None:
+                    self._stable[(path, record.tip)] = self.runtime.in_stable(path, record.tip)
+        return levelled
+
+    def record_trunks_now(self, levelled: dict[str, git.Levelled | None]) -> None:
+        """The half under the lock: each project's trunk state recorded and
+        its folded lanes stamped."""
+        for live in list(self.live.projects.values()):
+            if live.project.slug in levelled:
+                self._record_level(
+                    live,
+                    levelled[live.project.slug],
+                    lambda path, tip: self._stable.pop((path, tip), False),
+                )
 
     def level_clones_now(self) -> None:
         """Keep every other machine's clone of every project level with the
@@ -2430,14 +2783,28 @@ class Loops:
             self.live.bump()
 
     def level_project(self, live: LiveProject) -> TrunkState:
+        """One project fetched and recorded, in the caller's thread: the
+        fold's and the terminal's."""
+        path = live.project.path
+        return self._record_level(
+            live,
+            self.runtime.level(path) if self.runtime.is_repository(path) else None,
+            self.runtime.in_stable,
+        )
+
+    def _record_level(
+        self,
+        live: LiveProject,
+        result: git.Levelled | None,
+        in_stable: Callable[[str, str], bool],
+    ) -> TrunkState:
         slug, path = live.project.slug, live.project.path
         now = clock.now()
-        if not self.runtime.is_repository(path):
+        if result is None:
             state = TrunkState(
                 level=None, behind=0, note=f"{path} is not a git repository", read_at=now
             )
         else:
-            result = self.runtime.level(path)
             state = TrunkState(
                 level=result.level, behind=result.behind, note=result.note, read_at=now
             )
@@ -2459,7 +2826,7 @@ class Loops:
                         Actor.MACHINE,
                         "Trunk synced: the main checkout is level with origin/develop",
                     )
-                if record.main_synced_at is None and self.runtime.in_stable(path, record.tip):
+                if record.main_synced_at is None and in_stable(path, record.tip):
                     update["main_synced_at"] = now
                     self.live.note(
                         slug,
