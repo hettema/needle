@@ -6,6 +6,7 @@ from a terminal read the same brief (plan 03, item 3).
 import re
 from pathlib import Path
 
+from board.team import team_words
 from board.title import VOCABULARY, Word
 from domain.board import CardDetail
 from domain.document import SuggestionKind
@@ -13,6 +14,8 @@ from domain.lane import HANDS_ON, Lane
 from domain.project import Project
 from domain.row import RowKind
 from domain.signal import Signal
+from domain.slot import Make
+from domain.team import Challenge, Route
 from domain.triage import CorpusLaneKind, Direction, Source, Triage
 from domain.watercooler import WatercoolerLine
 
@@ -185,6 +188,49 @@ def review_guidance() -> str:
         "Read /home/dennis/Work/needle/docs/HOW-WE-WORK.md §13 for the review contract and "
         "/home/dennis/Work/needle/docs/reviews/README.md for the finite review record"
     )
+
+
+def call_words(make: Make, needle: str) -> str:
+    """How a lane calls a colleague of a make: a fresh Codex worker, or a
+    Claude colleague warm on a slot (plan 17, card #110)."""
+    if make is Make.CODEX:
+        return f"`{needle} call codex --fresh <note>`"
+    return f"`{needle} call <claude slot> <note>`"
+
+
+def team_brief(route: Route, needle: str) -> str:
+    """What the assigned team asks of the lane (card #58, item 1): who
+    challenges before build and who reads the change, in the verbs the
+    runtime has, and the one line the plan carries so the reader can count
+    the corrections. Every participant's brief carries the team: the lane's
+    here, the challenger's through the note the lane writes."""
+    hand = route.hand.make
+    lines = [
+        f"YOUR TEAM — assigned by the board before this Start from the evidence it holds, "
+        f"kept for the life of the card, and never rewritten by its outcome: {team_words(route)}."
+        + (" Rests on " + ", ".join(route.observations) + "." if route.observations else "")
+        + f" Policy {route.policy}."
+    ]
+    if route.challenge == Challenge.ALONE:
+        lines.append(
+            "What it asks of you: nobody challenges your plan before you build. The independent "
+            "review §13 asks of every software change is a cold reader of your own make: "
+            f"{call_words(hand, needle)} and `{needle} wait <n>`."
+        )
+    else:
+        challenger = route.challenger or hand
+        lines.append(
+            "What it asks of you: before you build, put the plan, its terrain and what you "
+            f"intend to do to a colleague of {'your own' if challenger is hand else 'the other'} "
+            f"make to challenge — {call_words(challenger, needle)} and `{needle} wait <n>`; open "
+            "the note with this team line so the colleague knows its seat. Land every material "
+            "correction in the plan and end the plan's head with one line the board reads: "
+            "`**Challenged:** <date>, by <who> (call <n>): <N> material corrections before "
+            "build` — a digit or a word, zero when the round changed nothing; a plan with no "
+            "such line reads as a round that did not happen. The independent review §13 asks "
+            f"for is a cold reader of the same make: {call_words(challenger, needle)}."
+        )
+    return "\n".join(lines)
 
 
 def filing_rule(found_by: str) -> str:

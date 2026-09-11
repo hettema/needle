@@ -11,6 +11,7 @@ import uuid
 from pathlib import Path
 
 from api.loops import Loops
+from api.team import Team, hand_of
 from board import review_rules
 from board.assemble import document_of, is_trigger_card
 from board.brief import (
@@ -24,6 +25,7 @@ from board.brief import (
     neighbours_text,
     render,
     review_guidance,
+    team_brief,
     watercooler_text,
 )
 from board.focus import FOCUS_PATH, is_chosen
@@ -31,6 +33,7 @@ from board.handouts import handouts_row
 from board.lane import HANDS_ON
 from board.parse import plan_stem_of
 from board.signals import GRAMMAR, read_or_decline, where_after, where_after_finding
+from board.team import Unexecutable, team_words
 from board.title import title_fingerprint
 from board.triage import routing_now, triaged_row
 from domain.audit import AuditKind
@@ -57,6 +60,7 @@ from domain.project import Project
 from domain.row import Row, RowKind
 from domain.signal import Finding, SessionWork, SignalKind
 from domain.slot import rung_words
+from domain.team import Route
 from domain.triage import (
     CorpusLane,
     CorpusLaneKind,
@@ -206,18 +210,26 @@ class Doors:
         self.live = live
         self.runtime = runtime
         self.loops = loops
+        self.team = Team(live, runtime)
 
     def _detail(self, slug: str, number: int) -> CardDetail:
         return self.live.detail(slug, number)
 
     # ── Start ──────────────────────────────────────────────────────────
 
-    def brief_for_lane(self, detail: CardDetail, slug: str) -> str:
+    def brief_for_lane(self, detail: CardDetail, slug: str, team: Route | None = None) -> str:
+        """The lane's brief. `team` is the team this Start assigns (card
+        #58) — the card's own once it has one, so a restart carries the
+        same team the first Start did; a brief read from a terminal with
+        none carries the card's stored team, or nothing."""
         project = self.live.projects[slug].project
         card = detail.card
         gate = detail.summary.gate
         needle = needle_command()
         text = render(detail, project) + f"\n\nexecute #{card.number}"
+        team = team or (detail.team.route if detail.team is not None else None)
+        if team is not None:
+            text += "\n\n" + team_brief(team, needle)
         collision = detail.doors.collision
         if collision is not None and collision.verdict == CollisionVerdict.COLLIDES:
             # The session is told what it shares so it rebases early and
@@ -313,7 +325,19 @@ class Doors:
         assert gate is not None
         card = detail.card
         name = lane_name(card.number, card.title)
-        brief = self.brief_for_lane(detail, slug)
+        # The team is assigned before the work and enters the brief (card
+        # #58, item 1): the card's own when it has one — a restart keeps
+        # the experiment it began — else the router's, from the cached
+        # rule's hand; the row is written once the lane is alive, with the
+        # rung it landed on, and never again.
+        held = detail.team
+        team: Route | None = held.route if held is not None else None
+        if team is None and doors.placement is not None:
+            try:
+                team = self.team.route(slug, number, doors.placement)
+            except Unexecutable as why:
+                raise DoorRefused(f"Start refused: {why}") from why
+        brief = self.brief_for_lane(detail, slug, team)
         self.live.store.forget_lane(slug, number)
         launch = self.runtime.start(
             Start(repo=project.path, card=name, brief=brief, effort=gate, from_slot=None)
@@ -355,6 +379,16 @@ class Doors:
         where = rung_words(placement.model, placement.slot) if placement else session.slot
         said = f"Started {session.short_id}, {where}, at {gate.value}, in {name}"
         said += f", in {launch.scope}" if launch.scope else f" ({launch.reason})"
+        if team is not None and held is None:
+            landed = team.model_copy(update={"hand": hand_of(placement)}) if placement else team
+            assigned, wrote = self.team.assign(slug, number, landed)
+            if wrote:
+                self.live.note(
+                    slug, number, AuditKind.STARTED, Actor.MACHINE, f"team: {team_words(landed)}"
+                )
+            team = assigned.route
+        if team is not None:
+            said += f"; team: {team_words(team)}"
         if actor == Actor.MACHINE:
             said += "; started by the dial"
         if lens:

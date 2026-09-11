@@ -22,6 +22,7 @@ from domain.meaning import OPENING, Meaning, opened, opening_of
 from domain.project import Project
 from domain.row import Row
 from domain.signal import Reading, Signal, SignalKind, WindowlessSession
+from domain.team import Composition
 from domain.triage import Routed, Source, TitleReading, Triage
 from domain.verdict import Verdict, VerdictLine
 from domain.watercooler import WatercoolerLine
@@ -406,3 +407,7 @@ class CardDetail(BaseModel):
     source: Source | None
     """The source that reading relied on, as it resolves today: how the card
     shows a row whose ground has moved."""
+    team: Composition | None = None
+    """The team the board assigned the card at its first Start (card #58):
+    who drives, who challenges and why the evidence chose it; None until
+    the card has started."""

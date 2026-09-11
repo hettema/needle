@@ -108,6 +108,14 @@ class TranscriptSize(BaseModel):
     size: int | None
 
 
+class LaneTokens(BaseModel):
+    """What every session in a lane's directory cost, in tokens, counted
+    once by request on the machine that holds the transcripts (card #58);
+    None when none exists there."""
+
+    tokens: int | None
+
+
 class SessionSlot(BaseModel):
     """The runtime's own record of where a session it started runs. Only the
     thing that started or moved a session knows; everything else reads this."""

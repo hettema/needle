@@ -16,6 +16,7 @@ import type { Meaning } from "./meaning";
 import type { Project } from "./project";
 import type { Row } from "./row";
 import type { Reading, Signal, SignalKind, WindowlessSession } from "./signal";
+import type { Composition } from "./team";
 import type { Routed, Source, TitleReading, Triage } from "./triage";
 import type { Verdict, VerdictLine } from "./verdict";
 import type { WatercoolerLine } from "./watercooler";
@@ -83,6 +84,7 @@ export interface CardDetail {
   triage: Triage | null;
   triaging: WindowlessSession | null;
   source: Source | null;
+  team?: Composition | null;
 }
 
 export interface CardState {

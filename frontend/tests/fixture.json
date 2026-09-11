@@ -2401,7 +2401,8 @@
       },
       "triage": null,
       "triaging": null,
-      "source": null
+      "source": null,
+      "team": null
     },
     "267": {
       "card": {
@@ -2655,7 +2656,8 @@
       },
       "triage": null,
       "triaging": null,
-      "source": null
+      "source": null,
+      "team": null
     },
     "252": {
       "card": {
@@ -2923,7 +2925,8 @@
       },
       "triage": null,
       "triaging": null,
-      "source": null
+      "source": null,
+      "team": null
     },
     "242": {
       "card": {
@@ -3191,7 +3194,8 @@
       },
       "triage": null,
       "triaging": null,
-      "source": null
+      "source": null,
+      "team": null
     },
     "120": {
       "card": {
@@ -3404,7 +3408,8 @@
       },
       "triage": null,
       "triaging": null,
-      "source": null
+      "source": null,
+      "team": null
     },
     "105": {
       "card": {
@@ -3601,7 +3606,8 @@
       },
       "triage": null,
       "triaging": null,
-      "source": null
+      "source": null,
+      "team": null
     },
     "263": {
       "card": {
@@ -3836,7 +3842,8 @@
       },
       "triage": null,
       "triaging": null,
-      "source": null
+      "source": null,
+      "team": null
     },
     "264": {
       "card": {
@@ -4071,7 +4078,8 @@
       },
       "triage": null,
       "triaging": null,
-      "source": null
+      "source": null,
+      "team": null
     },
     "265": {
       "card": {
@@ -4306,7 +4314,8 @@
       },
       "triage": null,
       "triaging": null,
-      "source": null
+      "source": null,
+      "team": null
     },
     "266": {
       "card": {
@@ -4541,7 +4550,8 @@
       },
       "triage": null,
       "triaging": null,
-      "source": null
+      "source": null,
+      "team": null
     },
     "196": {
       "card": {
@@ -4830,7 +4840,8 @@
       },
       "triage": null,
       "triaging": null,
-      "source": null
+      "source": null,
+      "team": null
     },
     "109": {
       "card": {
@@ -5106,7 +5117,8 @@
       },
       "triage": null,
       "triaging": null,
-      "source": null
+      "source": null,
+      "team": null
     },
     "172": {
       "card": {
@@ -5390,7 +5402,8 @@
       },
       "triage": null,
       "triaging": null,
-      "source": null
+      "source": null,
+      "team": null
     },
     "262": {
       "card": {
@@ -5637,7 +5650,8 @@
       },
       "triage": null,
       "triaging": null,
-      "source": null
+      "source": null,
+      "team": null
     },
     "268": {
       "card": {
@@ -5913,7 +5927,8 @@
       },
       "triage": null,
       "triaging": null,
-      "source": null
+      "source": null,
+      "team": null
     },
     "253": {
       "card": {
@@ -6205,7 +6220,8 @@
       },
       "triage": null,
       "triaging": null,
-      "source": null
+      "source": null,
+      "team": null
     },
     "241": {
       "card": {
@@ -6505,7 +6521,8 @@
       },
       "triage": null,
       "triaging": null,
-      "source": null
+      "source": null,
+      "team": null
     },
     "228": {
       "card": {
@@ -6723,7 +6740,8 @@
       },
       "triage": null,
       "triaging": null,
-      "source": null
+      "source": null,
+      "team": null
     },
     "237": {
       "card": {
@@ -7033,7 +7051,8 @@
       },
       "triage": null,
       "triaging": null,
-      "source": null
+      "source": null,
+      "team": null
     },
     "174": {
       "card": {
@@ -7358,7 +7377,8 @@
       },
       "triage": null,
       "triaging": null,
-      "source": null
+      "source": null,
+      "team": null
     },
     "259": {
       "card": {
@@ -7647,7 +7667,8 @@
       },
       "triage": null,
       "triaging": null,
-      "source": null
+      "source": null,
+      "team": null
     },
     "223": {
       "card": {
@@ -7923,7 +7944,8 @@
       },
       "triage": null,
       "triaging": null,
-      "source": null
+      "source": null,
+      "team": null
     },
     "219": {
       "card": {
@@ -8239,7 +8261,8 @@
       },
       "triage": null,
       "triaging": null,
-      "source": null
+      "source": null,
+      "team": null
     },
     "147": {
       "card": {
@@ -8466,7 +8489,8 @@
       },
       "triage": null,
       "triaging": null,
-      "source": null
+      "source": null,
+      "team": null
     },
     "139": {
       "card": {
@@ -8765,7 +8789,8 @@
       },
       "triage": null,
       "triaging": null,
-      "source": null
+      "source": null,
+      "team": null
     },
     "149": {
       "card": {
@@ -8990,7 +9015,8 @@
       },
       "triage": null,
       "triaging": null,
-      "source": null
+      "source": null,
+      "team": null
     },
     "134": {
       "card": {
@@ -9277,7 +9303,8 @@
       },
       "triage": null,
       "triaging": null,
-      "source": null
+      "source": null,
+      "team": null
     },
     "201": {
       "card": {
@@ -9499,7 +9526,8 @@
       },
       "triage": null,
       "triaging": null,
-      "source": null
+      "source": null,
+      "team": null
     }
   },
   "language": [
@@ -10910,7 +10938,8 @@
             "fate": "fixed",
             "reaches": null,
             "assumes": null,
-            "repair_of": null
+            "repair_of": null,
+            "finding_class": null
           },
           {
             "number": 2,
@@ -10922,7 +10951,8 @@
             "fate": "fixed",
             "reaches": null,
             "assumes": null,
-            "repair_of": null
+            "repair_of": null,
+            "finding_class": null
           },
           {
             "number": 3,
@@ -10934,7 +10964,8 @@
             "fate": "fixed",
             "reaches": null,
             "assumes": null,
-            "repair_of": null
+            "repair_of": null,
+            "finding_class": null
           },
           {
             "number": 4,
@@ -10946,7 +10977,8 @@
             "fate": "fixed",
             "reaches": null,
             "assumes": null,
-            "repair_of": null
+            "repair_of": null,
+            "finding_class": null
           },
           {
             "number": 5,
@@ -10958,7 +10990,8 @@
             "fate": "fixed",
             "reaches": null,
             "assumes": null,
-            "repair_of": null
+            "repair_of": null,
+            "finding_class": null
           },
           {
             "number": 6,
@@ -10970,7 +11003,8 @@
             "fate": "fixed",
             "reaches": null,
             "assumes": null,
-            "repair_of": "2"
+            "repair_of": "2",
+            "finding_class": null
           },
           {
             "number": 7,
@@ -10982,7 +11016,8 @@
             "fate": "fixed",
             "reaches": null,
             "assumes": null,
-            "repair_of": null
+            "repair_of": null,
+            "finding_class": null
           },
           {
             "number": 8,
@@ -10994,7 +11029,8 @@
             "fate": "fixed",
             "reaches": null,
             "assumes": null,
-            "repair_of": null
+            "repair_of": null,
+            "finding_class": null
           },
           {
             "number": 9,
@@ -11006,7 +11042,8 @@
             "fate": "filed",
             "reaches": null,
             "assumes": null,
-            "repair_of": null
+            "repair_of": null,
+            "finding_class": null
           }
         ],
         "verdicts": [
@@ -11112,7 +11149,8 @@
             "fate": "fixed",
             "reaches": null,
             "assumes": null,
-            "repair_of": null
+            "repair_of": null,
+            "finding_class": null
           },
           {
             "number": 2,
@@ -11124,7 +11162,8 @@
             "fate": "fixed",
             "reaches": null,
             "assumes": null,
-            "repair_of": null
+            "repair_of": null,
+            "finding_class": null
           },
           {
             "number": 3,
@@ -11136,7 +11175,8 @@
             "fate": "fixed",
             "reaches": null,
             "assumes": null,
-            "repair_of": null
+            "repair_of": null,
+            "finding_class": null
           },
           {
             "number": 4,
@@ -11148,7 +11188,8 @@
             "fate": "fixed",
             "reaches": null,
             "assumes": null,
-            "repair_of": null
+            "repair_of": null,
+            "finding_class": null
           },
           {
             "number": 5,
@@ -11160,7 +11201,8 @@
             "fate": "fixed",
             "reaches": null,
             "assumes": null,
-            "repair_of": null
+            "repair_of": null,
+            "finding_class": null
           },
           {
             "number": 6,
@@ -11172,7 +11214,8 @@
             "fate": "fixed",
             "reaches": null,
             "assumes": null,
-            "repair_of": "2"
+            "repair_of": "2",
+            "finding_class": null
           },
           {
             "number": 7,
@@ -11184,7 +11227,8 @@
             "fate": "fixed",
             "reaches": null,
             "assumes": null,
-            "repair_of": null
+            "repair_of": null,
+            "finding_class": null
           },
           {
             "number": 8,
@@ -11196,7 +11240,8 @@
             "fate": "fixed",
             "reaches": null,
             "assumes": null,
-            "repair_of": null
+            "repair_of": null,
+            "finding_class": null
           },
           {
             "number": 9,
@@ -11208,7 +11253,8 @@
             "fate": "filed",
             "reaches": null,
             "assumes": null,
-            "repair_of": null
+            "repair_of": null,
+            "finding_class": null
           }
         ],
         "verdicts": [

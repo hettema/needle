@@ -79,6 +79,22 @@ def filer_of(found_by: str | None) -> Filer:
     return Filer.UNKNOWN
 
 
+def filed_against(number: int, lane: str, documents: Sequence[Document]) -> list[Document]:
+    """The live defects whose `Found by:` line names the card or its lane:
+    what `needle fixes` reads as a defect filed against a fix lane (plan
+    11, item 6) and what the team's reader counts as an escape (card #58),
+    one reading for both."""
+    pattern = re.compile(rf"(?<!\d)#{number}(?!\d)|{re.escape(lane)}")
+    return [
+        d
+        for d in documents
+        if d.kind == DocumentKind.SUGGESTION
+        and not d.archived
+        and d.found_by is not None
+        and pattern.search(d.found_by) is not None
+    ]
+
+
 def rail_defects(cards: list[Card], index: CorpusIndex) -> list[tuple[Card, Document]]:
     """Every card standing on its own on the project's defects rail — a
     Backlog card behind a live suggestion whose document says defect."""

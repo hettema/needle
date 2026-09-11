@@ -43,6 +43,7 @@ from board.brief import (
 from board.dial import (
     LIVE_STAGES,
     Candidate,
+    filed_against,
     held_lanes,
     is_quiet,
     rail_count,
@@ -1166,14 +1167,7 @@ class Dial:
             document = document_of(card, live.index)
             record = store.lane(fix.project, fix.card_number)
             name = lane_name(card.number, card.title)
-            pattern = re.compile(rf"(?<!\d)#{card.number}(?!\d)|{re.escape(name)}")
-            filed = any(
-                d.kind == DocumentKind.SUGGESTION
-                and not d.archived
-                and d.found_by is not None
-                and pattern.search(d.found_by) is not None
-                for d in live.index.documents
-            )
+            filed = bool(filed_against(card.number, name, live.index.documents))
             reports.append(
                 FixReport(
                     project=fix.project,

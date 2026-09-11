@@ -18,6 +18,7 @@ needle kinds SLUG                        # every live suggestion's kind and Fix:
 needle watercooler SLUG [N "text"]       # read the watercooler, or say one line as #N's lane
 needle dial [on|off] [--lanes N]         # the owner's standing ruling on defects (plan 11)
 needle fixes SLUG|all                    # every fix lane the dial ran, and the rail against dial-on
+needle team SLUG [--json]                # which team earns its place, per kind of work (card #58)
 
 Rows are written to the store directly — the one writer — and the running
 board hears the store change; a start goes through the server so the board
@@ -45,6 +46,7 @@ from api.loops import Loops, project_of_cwd
 from board.brief import watercooler_text
 from board.dial import Filer
 from board.lane import has_row
+from board.team import team_words
 from board.verdicts import CLOSED, VerdictUnreadable, machine_verdict, parse_verdict, render_verdict
 from domain.audit import AuditKind
 from domain.call import HowKnown
@@ -55,6 +57,7 @@ from domain.focus import FocusState, FocusStrip, FocusVerdict, Leverage, Likelih
 from domain.lane import HANDS_ON, LaneState
 from domain.row import Row, RowKind
 from domain.signal import Finding
+from domain.team import Challenge, Tally
 from domain.triage import Direction, TriageResult
 from domain.verdict import EvidenceClass
 from infrastructure import clock
@@ -700,6 +703,65 @@ def dial(args: argparse.Namespace, live: Live, runtime: Runtime, loops: Loops, d
     return 0
 
 
+def _tally_line(tally: Tally) -> str:
+    hours = f"{tally.hours:.1f} h" if tally.hours is not None else "hours unread"
+    tokens = f"{tally.tokens:,} tokens" if tally.tokens is not None else "tokens unread"
+    corrections = (
+        f"{tally.correcting} of {tally.trials} corrected before build ({tally.corrections} "
+        f"corrections{f', {tally.unrecorded} unrecorded' if tally.unrecorded else ''})"
+        if tally.challenge != Challenge.ALONE
+        else "no challenge before build"
+    )
+    return (
+        f"    {tally.challenge.value:<15} {tally.trials} trial{'s' if tally.trials != 1 else ''}: "
+        f"{corrections}; {tally.escaping} escaped a defect ({tally.escapes}); "
+        f"{tally.findings} review findings; {tally.stops} stops; {tally.reverts} reverts; "
+        f"{hours} mean; {tokens} mean"
+    )
+
+
+def team(args: argparse.Namespace, live: Live, runtime: Runtime, loops: Loops, doors: Doors) -> int:
+    """The team reading (card #58): reproducible from the corpus, the board
+    and git, quality before time, and every conclusion with its sample."""
+    if args.slug not in live.projects:
+        print(f'no project "{args.slug}" is on the board', file=sys.stderr)
+        return 1
+    reading = doors.team.reading(args.slug)
+    if args.json:
+        print(reading.model_dump_json(indent=1))
+        return 0
+    print(f"policy {reading.policy}; read {reading.read_at.isoformat()}")
+    for shape in reading.shapes:
+        print(f"{shape.shape.value}: {shape.conclusion.value} — {shape.why}")
+        for tally in shape.tallies:
+            print(_tally_line(tally))
+        for confound in shape.confounds:
+            print(f"    confound: {confound}")
+        for seen in shape.observations:
+            corrections = (
+                f"{seen.corrections} corrections"
+                if seen.corrections is not None
+                else "corrections unread"
+            )
+            hours = f"{seen.hours:.1f} h" if seen.hours is not None else "not closed"
+            tokens = f"{seen.tokens:,} tokens" if seen.tokens is not None else "tokens unread"
+            print(
+                f"    #{seen.card_number:<4} {seen.challenge.value:<15} {corrections}; "
+                f"{seen.findings} findings (inside {seen.inside}, adjacent {seen.adjacent}, "
+                f"outside {seen.outside}); {seen.escapes} escaped; {seen.stops} stops; "
+                f"{'reverted' if seen.reverted else 'fold stands'}; {hours}; {tokens}; "
+                f"declared in {seen.declared_in}; read from {', '.join(seen.sources)}"
+            )
+    if not reading.assigned:
+        print("no team assigned yet: the first Start after this slice assigns one")
+    for held in reading.assigned:
+        print(
+            f"assigned #{held.card_number:<4} {held.assigned_at.isoformat()} "
+            f"{team_words(held.route)}"
+        )
+    return 0
+
+
 def fixes(
     args: argparse.Namespace, live: Live, runtime: Runtime, loops: Loops, doors: Doors
 ) -> int:
@@ -1143,6 +1205,10 @@ def register(sub: "argparse._SubParsersAction[argparse.ArgumentParser]") -> None
     )
     p_fixes.add_argument("slug", help="a project's slug, or all")
     p_fixes.set_defaults(board=True, run=_with_board(fixes))
+    p_team = sub.add_parser("team", help="which team earns its place, per kind of work (card #58)")
+    p_team.add_argument("slug", help="a project's slug")
+    p_team.add_argument("--json", action="store_true")
+    p_team.set_defaults(board=True, run=_with_board(team))
 
     # `focus` is the runtime's verb for bringing a session's window forward
     # (api/runtime_cli.py), so a project's focus prints under the name of

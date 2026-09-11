@@ -28,7 +28,7 @@ from domain.lane import Checkouts, Edited, LaneDocs, LaneTip
 from domain.launch import Launch, Rescoped, Start, Stopped, WindowlessStart
 from domain.machine import Machine
 from domain.notice import Notice, Said, Told
-from domain.session import Session, TranscriptSize
+from domain.session import LaneTokens, Session, TranscriptSize
 from domain.slot import Expired, Limits, LimitsRead, Rung, Where
 from runtime import git, machine
 
@@ -210,6 +210,10 @@ class Remote:
 
     def transcript_size(self, short_id: str) -> int | None:
         return self._ask(["transcript-size", short_id], TranscriptSize).size
+
+    def tokens(self, cwd: str) -> int | None:
+        """What the lane's sessions cost there, counted once (card #58)."""
+        return self._ask(["tokens", cwd], LaneTokens).tokens
 
     # ── acting ─────────────────────────────────────────────────────────
 

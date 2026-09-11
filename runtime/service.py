@@ -1151,6 +1151,18 @@ class Runtime:
         except _UNREACHABLE:
             return None
 
+    def tokens(self, cwd: str) -> int | None:
+        """What every session that ran in `cwd` cost in tokens, counted
+        once by request, from the transcripts on the machine that holds the
+        lane (card #58); None when none exists or the machine is silent."""
+        on = self.lane_machine(cwd)
+        if self.is_here(on):
+            return transcripts.tokens(cwd)
+        try:
+            return self._remote(on).tokens(cwd)
+        except _UNREACHABLE:
+            return None
+
     def transcript_size(self, session: Session) -> int | None:
         """How large the session's transcript is on the machine that holds it."""
         on = self.machine_of(session)

@@ -63,6 +63,7 @@ from domain.row import Row, RowKind
 from domain.session import SessionSlot
 from domain.signal import Reading, SessionWork, WindowlessSession
 from domain.slot import Rung
+from domain.team import Composition, Route
 from domain.triage import (
     CorpusLane,
     CorpusLaneKind,
@@ -80,6 +81,7 @@ from infrastructure.schema import (
     CardRow,
     CardRowRow,
     CloneRow,
+    CompositionRow,
     CorpusLaneRow,
     DeathRow,
     DialChangeRow,
@@ -1344,6 +1346,43 @@ class Store:
             if since is not None:
                 query = query.where(CallRow.called_at >= since)
             return [_call(r) for r in session.scalars(query.order_by(CallRow.id))]
+
+    # ── the team a card runs with (card #58) ───────────────────────────
+
+    def record_composition(self, slug: str, number: int, route: Route, at: datetime) -> Composition:
+        """The card's team, written once at its first Start. A second write
+        is refused with the team the card already has: an assignment is an
+        experiment declared before the work, and an outcome that could
+        rewrite it would measure nothing (plan item 1)."""
+        with self._session() as session, session.begin():
+            row = session.get(CompositionRow, (slug, number))
+            if row is not None:
+                held = _composition(row)
+                raise StoreRefusal(
+                    f"#{number} was assigned its team at {held.assigned_at.isoformat()} "
+                    f"({held.route.challenge.value}); a team is not rewritten"
+                )
+            row = CompositionRow(
+                project_slug=slug, card_number=number, route=route.model_dump_json(), assigned_at=at
+            )
+            session.add(row)
+            session.flush()
+            return _composition(row)
+
+    def composition(self, slug: str, number: int) -> Composition | None:
+        with self._session() as session:
+            row = session.get(CompositionRow, (slug, number))
+            return _composition(row) if row is not None else None
+
+    def compositions(self, slug: str) -> list[Composition]:
+        """Every team assigned on the project, oldest first."""
+        with self._session() as session:
+            query = (
+                select(CompositionRow)
+                .where(CompositionRow.project_slug == slug)
+                .order_by(CompositionRow.assigned_at, CompositionRow.card_number)
+            )
+            return [_composition(r) for r in session.scalars(query)]
 
     def move_call(self, call_id: int, session_id: str, slot: str, words: str) -> None:
         """The colleague now runs as another session: the call follows the
@@ -2902,6 +2941,15 @@ def _call(row: CallRow) -> Call:
         moved=row.moved,
         ended_at=row.ended_at,
         words=row.words,
+    )
+
+
+def _composition(row: CompositionRow) -> Composition:
+    return Composition(
+        project=row.project_slug,
+        card_number=row.card_number,
+        route=Route.model_validate_json(row.route),
+        assigned_at=row.assigned_at,
     )
 
 

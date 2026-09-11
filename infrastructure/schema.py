@@ -834,3 +834,20 @@ class TimingRow(Base):
     what: Mapped[str] = mapped_column(String(40))
     seconds: Mapped[float] = mapped_column(Float)
     at: Mapped[datetime] = mapped_column(UtcDateTime)
+
+
+class CompositionRow(Base):
+    """A card's team as it was assigned at its first Start (card #58): the
+    one fact no document can hold, because it must exist before the work
+    and never be rewritten by its outcome. One row per card, by key; the
+    route is kept whole as the router answered it, so the card shows what
+    selected the outcome and every reader derives the rest from the facts
+    the lane leaves behind."""
+
+    __tablename__ = "compositions"
+
+    project_slug: Mapped[str] = mapped_column(String(80), primary_key=True)
+    card_number: Mapped[int] = mapped_column(Integer, primary_key=True)
+    route: Mapped[str] = mapped_column(Text)
+    """The Route as JSON, exactly as assigned."""
+    assigned_at: Mapped[datetime] = mapped_column(UtcDateTime)

@@ -42,6 +42,7 @@ export interface Disposition {
   reaches: string | null;
   assumes: string | null;
   repair_of: string | null;
+  finding_class?: string | null;
 }
 
 export interface Document {

@@ -156,6 +156,10 @@ class Disposition(BaseModel):
     repair_of: str | None
     """The address of the earlier repair that caused this finding, when the
     line carries the `[repair of <address>]` mark."""
+    finding_class: str | None = None
+    """The class the finding opens with — `feature`, `seam`, `boundary`,
+    `verification`, `record` — lower-cased; None when the line carries
+    none. The team's reader counts findings by ring from it (card #58)."""
 
 
 class ColdRead(BaseModel):

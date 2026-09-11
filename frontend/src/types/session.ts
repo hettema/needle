@@ -13,6 +13,10 @@ export interface Doing {
   at: string;
 }
 
+export interface LaneTokens {
+  tokens: number | null;
+}
+
 export interface Session {
   slot: string;
   config_dir: string;

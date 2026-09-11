@@ -30,6 +30,7 @@ from domain.hook import HookEvent, HookPosted, Word
 from domain.lane import DoorResult
 from domain.notice import Shown
 from domain.project import Project
+from domain.team import TeamReading
 from domain.verdict import EvidenceClass, VerdictsRuled
 from infrastructure import clock
 from infrastructure.live import Live
@@ -350,6 +351,17 @@ def create_app(store: Store | None = None, *, dist: Path | None = FRONTEND_DIST)
         dial: Dial = request.app.state.dial
         async with loops.lock:
             return await asyncio.to_thread(dial.fixes, slug)
+
+    @app.get("/api/projects/{slug}/team", response_model=TeamReading)
+    async def team(slug: str, request: Request) -> TeamReading:
+        """The team reading (card #58): what the evidence says per shape,
+        and every team assigned on the project. Under the lock, as `fixes`
+        is: it reads the store's history and the trunk's reverts."""
+        await live_for(request, slug)
+        loops: Loops = request.app.state.loops
+        doors: Doors = request.app.state.doors
+        async with loops.lock:
+            return await asyncio.to_thread(doors.team.reading, slug)
 
     @app.get("/api/projects/{slug}/cards/{number}/brief", response_class=PlainTextResponse)
     async def brief(slug: str, number: int, request: Request) -> str:

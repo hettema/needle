@@ -202,3 +202,53 @@ def last_activity(cwd: str, session_id: str) -> datetime | None:
         if at is not None and (found is None or at > found):
             found = at
     return found
+
+
+def tokens(cwd: str) -> int | None:
+    """What every session that ran in `cwd` cost, in tokens: context (input,
+    cache read and cache creation) plus output of every request, counted
+    once — assistant records sharing a `requestId` are one request and the
+    last block's usage wins, and a record already counted from another file
+    is a copy a fork or a resume left behind (the definitions `machine
+    burn` fixed on 2026-09-04, so the card and the machine count alike).
+    None when no transcript of the lane exists; a file that cannot be read
+    never hides the others. Subagents' own transcripts are counted with the
+    main threads, since the lane paid for them (card #58)."""
+    directory = machine.transcript_dir(cwd)
+    if not directory.is_dir():
+        return None
+    files = sorted(p for p in directory.rglob("*.jsonl") if p.is_file())
+    if not files:
+        return None
+    usage_by_request: dict[str, int] = {}
+    for path in files:
+        try:
+            text = path.read_text(encoding="utf-8", errors="replace")
+        except OSError:
+            continue
+        for line in text.splitlines():
+            try:
+                record = json.loads(line)
+            except ValueError:
+                continue
+            if not isinstance(record, dict) or record.get("type") != "assistant":
+                continue
+            message = record.get("message")
+            usage = message.get("usage") if isinstance(message, dict) else None
+            if not isinstance(usage, dict):
+                continue
+            request = str(record.get("requestId") or record.get("uuid") or "")
+            if not request:
+                continue
+            counted = 0
+            for key in (
+                "input_tokens",
+                "cache_read_input_tokens",
+                "cache_creation_input_tokens",
+                "output_tokens",
+            ):
+                value = usage.get(key)
+                if isinstance(value, int) and not isinstance(value, bool):
+                    counted += value
+            usage_by_request[request] = counted
+    return sum(usage_by_request.values())

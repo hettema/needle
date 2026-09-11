@@ -153,7 +153,7 @@ _FATES = {
     "FILED": Fate.FILED,
     "CORRECTED": Fate.CORRECTED,
 }
-_CLASS = re.compile(r"^`?\[[\w-]+\]`?\s*")
+_CLASS = re.compile(r"^`?\[([\w-]+)\]`?\s*")
 """The class a finding opens with (card #60), plain or in backticks as
 Hello Revenue writes it; stripped before the fate and the marks are read."""
 _REPAIR_OF = re.compile(r"^\s*\[repair of\s+(\d+(?:\.\d+)?)\]", re.I)
@@ -898,6 +898,7 @@ def _disposition(
     line: int, pass_number: int | None, number: int, first: str, body: list[str | None]
 ) -> Disposition:
     tail = " ".join(line.strip() for line in body if line is not None and line.strip())
+    classed = _CLASS.match(first)
     unclassed = _CLASS.sub("", first)
     name, _ = _lead_and_rest(_REPAIR_OF.sub("", unclassed).strip(), [])
     text = _plain(f"{unclassed} {tail}".strip())
@@ -933,6 +934,7 @@ def _disposition(
         reaches=reaches,
         assumes=assumes,
         repair_of=repair.group(1) if repair else None,
+        finding_class=classed.group(1).lower() if classed else None,
     )
 
 

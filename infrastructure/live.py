@@ -569,6 +569,7 @@ class Live:
             sources=self.sources(slug),
             title_reading=self.store.latest_title_readings(slug).get(number),
             leverage=self.focus_of(slug)[1].get(number),
+            team=self.store.composition(slug, number),
         )
 
     def lane_and_doors(self, slug: str, card: Card) -> tuple[Lane | None, Doors]:

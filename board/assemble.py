@@ -71,6 +71,7 @@ from domain.meaning import Meaning, opening_of, say
 from domain.project import Project
 from domain.row import ROW_HALF, Row, RowHalf, RowKind
 from domain.signal import Reading, Signal, SignalKind, WindowlessSession
+from domain.team import Composition
 from domain.triage import Routed, Routing, TitleReading, Triage
 from domain.verdict import Verdict, VerdictLine
 from domain.watercooler import WatercoolerLine
@@ -1311,6 +1312,7 @@ def assemble_detail(
     sources: Sources | None = None,
     title_reading: TitleReading | None = None,
     leverage: CardLeverage | None = None,
+    team: Composition | None = None,
 ) -> CardDetail:
     """`readings` newest first; `read` is whether the loop has read the
     machine; `folded` the cards folded under this one; `reading` the
@@ -1362,4 +1364,5 @@ def assemble_detail(
         triage=triage,
         triaging=triaging,
         source=sources.resolve(triage.source_ref) if sources is not None and triage else None,
+        team=team,
     )

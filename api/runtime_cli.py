@@ -58,7 +58,7 @@ from domain.lane import Checkouts, Edited
 from domain.launch import Launch, LaunchVerdict, Start, WindowlessStart
 from domain.machine import BoardMachine, Machine, MachineRoom, Timing
 from domain.notice import Notice, Said
-from domain.session import Session, TranscriptSize
+from domain.session import LaneTokens, Session, TranscriptSize
 from domain.slot import Expired, LimitsRead, Rung, rung_words
 from domain.window import WindowKind
 from infrastructure import clock
@@ -643,6 +643,16 @@ def dispatches(runtime: Runtime, args: argparse.Namespace) -> int:
     return 0
 
 
+def lane_tokens(runtime: Runtime, args: argparse.Namespace) -> int:
+    counted = runtime.tokens(str(Path(args.cwd).expanduser().resolve()))
+    _emit(
+        args,
+        LaneTokens(tokens=counted),
+        f"{counted} tokens" if counted is not None else "no transcript ran there",
+    )
+    return 0
+
+
 def transcript_size(runtime: Runtime, args: argparse.Namespace) -> int:
     size = runtime.transcript_size(runtime.session(args.short))
     _emit(args, TranscriptSize(size=size), str(size) if size is not None else "no transcript")
@@ -1196,6 +1206,8 @@ def register(sub: "argparse._SubParsersAction[argparse.ArgumentParser]") -> None
     p_dispatches.add_argument("cwd")
     p_size = parser("transcript-size", "how large a session's transcript is here", transcript_size)
     p_size.add_argument("short")
+    p_tokens = parser("tokens", "what the sessions in a directory cost, counted once", lane_tokens)
+    p_tokens.add_argument("cwd")
 
     p_limits = parser("limits", "a slot's last limits reading on this machine", limits_read)
     p_limits.add_argument("slot")

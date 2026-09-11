@@ -42,6 +42,7 @@ import {
 } from "../components/ui";
 import { ago, when } from "./time";
 import { rungWords } from "./rung";
+import { teamWords } from "./team";
 import { useProject } from "./ProjectContext";
 
 const WHO: Record<AuditEntry["actor"], string> = { owner: "you", session: "session", import: "import", corpus: "corpus", machine: "board" };
@@ -452,6 +453,7 @@ export function OpenCard({ card, onMoveTo }: { card: CardSummary; onMoveTo: (num
                   <StatLine key={f.key} k={f.key} v={<Inline text={f.value} />} />
                 ))}
                 {document.archived ? <StatLine k="Archived" v={<b>yes — in done/</b>} /> : null}
+                {detail.team ? <StatLine k="Team" v={<Inline text={`${teamWords(detail.team.route)} (assigned ${when(detail.team.assigned_at)}, policy ${detail.team.route.policy})`} />} /> : null}
                 {detail.handouts.named.map((h, i) => (
                   <StatLine key={i} k="Hands out" v={<Inline text={`${h.item ? `${h.item} — ` : ""}${h.role}: ${h.what}; verifies ${h.verifies ?? "nothing named"}`} />} />
                 ))}
