@@ -19,6 +19,7 @@ from datetime import datetime, timedelta
 from pydantic import BaseModel
 
 from domain.audit import AuditEntry, AuditKind
+from domain.card import Actor
 from domain.column import Column
 from domain.document import HeadField, Review
 from domain.gate import Gate
@@ -185,16 +186,53 @@ def stops_in(history: list[AuditEntry]) -> int:
     )
 
 
-def escapes_of(defects: list[tuple[str, datetime | None]], closed: datetime | None) -> int:
-    """Live defects filed against the card within ESCAPE_DAYS of its close,
-    by each suggestion's own date. A defect with no date counts: the
-    reader cannot say it was late."""
+def send_backs_in(history: list[AuditEntry], closed: datetime | None) -> int:
+    """The owner's moves of the card out of Executed or Done after its
+    close: the work sent back."""
+    if closed is None:
+        return 0
+    return sum(
+        1
+        for e in history
+        if e.kind == AuditKind.MOVED
+        and e.actor == Actor.OWNER
+        and e.at > closed
+        and e.from_place is not None
+        and e.from_place.column in (Column.EXECUTED, Column.DONE)
+        and e.to_place is not None
+        and e.to_place.column not in (Column.EXECUTED, Column.DONE)
+    )
+
+
+class Defect(BaseModel):
+    """One defect filed against a card, as the api layer found it: its
+    path, and when it was born — the board's own birth of its card when it
+    has one, else the day in its stem."""
+
+    path: str
+    born: datetime | None
+    precise: bool
+    """Whether `born` is the board's moment or a stem's day."""
+
+
+def escapes_of(defects: list[Defect], closed: datetime | None) -> int:
+    """Defects filed against the card after its close and within
+    ESCAPE_DAYS of it, by each defect's birth. A defect born on the day of
+    the close whose birth is known only to the day cannot be placed before
+    or after the close, and counts: the reader cannot say it was earlier.
+    A defect with no date counts for the same reason."""
     if closed is None:
         return 0
     window = closed + timedelta(days=ESCAPE_DAYS)
-    return sum(
-        1 for _, born in defects if born is None or closed.date() <= born.date() <= window.date()
-    )
+    counted = 0
+    for defect in defects:
+        if defect.born is None:
+            counted += 1
+        elif defect.precise:
+            counted += closed < defect.born <= window
+        else:
+            counted += closed.date() <= defect.born.date() <= window.date()
+    return counted
 
 
 class CardFacts(BaseModel):
@@ -212,13 +250,19 @@ class CardFacts(BaseModel):
     reviews: list[Review]
     composition: Composition | None
     history: list[AuditEntry]
-    defects_against: list[tuple[str, datetime | None]]
-    """Each live defect naming the card, by path and its date."""
+    defects_against: list[Defect]
+    """Every defect naming the card or its lane, live or since archived:
+    a defect fixed later was still filed."""
     reverted: bool
+    fixes_after: int
+    """Trunk commits naming the card within a week of the lane's tip."""
     tokens: int | None
     hand_make: Make | None
     """The make that drove, when the board knows it from the lane's
     session; the composition's hand when it has one."""
+    challenger_model: str | None = None
+    """The model of the colleague the lane called, from the call rows and
+    the runtime's knowledge of that session; None when unread."""
 
 
 def observation_of(facts: CardFacts) -> Observation | None:
@@ -229,7 +273,6 @@ def observation_of(facts: CardFacts) -> Observation | None:
         return None
     sources: list[str] = ["history"]
     hand_model: str | None = None
-    challenger_model: str | None = None
     if facts.composition is not None:
         route = facts.composition.route
         challenge, shape = route.challenge, route.shape
@@ -254,11 +297,13 @@ def observation_of(facts: CardFacts) -> Observation | None:
     closed = closed_at(facts.history)
     findings, inside, adjacent, outside = rings_of(facts.reviews)
     sources.extend(facts.review_paths)
-    sources.extend(path for path, _ in facts.defects_against)
-    if facts.reverted:
+    sources.extend(d.path for d in facts.defects_against)
+    if facts.reverted or facts.fixes_after:
         sources.append("git")
     if facts.tokens is not None:
         sources.append("transcripts")
+    if facts.challenger_model is not None:
+        sources.append("calls")
     corrections = corrections_in(facts.document_head)
     if corrections is not None and facts.document_path:
         sources.append(f"{facts.document_path}, its Challenged line")
@@ -270,7 +315,7 @@ def observation_of(facts: CardFacts) -> Observation | None:
         challenge=challenge,
         hand_make=hand_make,
         hand_model=hand_model,
-        challenger_model=challenger_model,
+        challenger_model=facts.challenger_model,
         declared_in=declared_in_words,
         corrections=corrections,
         findings=findings,
@@ -279,7 +324,9 @@ def observation_of(facts: CardFacts) -> Observation | None:
         outside=outside,
         escapes=escapes_of(facts.defects_against, closed),
         stops=stops_in(facts.history),
+        send_backs=send_backs_in(facts.history, closed),
         reverted=facts.reverted,
+        fixes_after=facts.fixes_after,
         hours=(closed - began).total_seconds() / 3600 if closed is not None else None,
         tokens=facts.tokens,
         closed_at=closed,
@@ -291,13 +338,23 @@ def _mean(values: list[float]) -> float | None:
     return sum(values) / len(values) if values else None
 
 
-def tally_of(challenge: Challenge, observations: list[Observation]) -> Tally:
+def matured(observation: Observation, now: datetime) -> bool:
+    """Whether the card's fourteen-day escape window has passed: before
+    that its zero escapes are a fact about the calendar, not the work."""
+    return (
+        observation.closed_at is not None
+        and observation.closed_at + timedelta(days=ESCAPE_DAYS) <= now
+    )
+
+
+def tally_of(challenge: Challenge, observations: list[Observation], now: datetime) -> Tally:
     own = [o for o in observations if o.challenge == challenge]
     hours = _mean([o.hours for o in own if o.hours is not None])
     tokens = _mean([float(o.tokens) for o in own if o.tokens is not None])
     return Tally(
         challenge=challenge,
         trials=len(own),
+        maturing=sum(1 for o in own if not matured(o, now)),
         correcting=sum(1 for o in own if (o.corrections or 0) > 0),
         corrections=sum(o.corrections or 0 for o in own),
         unrecorded=sum(1 for o in own if o.corrections is None and challenge != Challenge.ALONE),
@@ -305,10 +362,24 @@ def tally_of(challenge: Challenge, observations: list[Observation]) -> Tally:
         escaping=sum(1 for o in own if o.escapes > 0),
         findings=sum(o.findings for o in own),
         stops=sum(o.stops for o in own),
+        send_backs=sum(o.send_backs for o in own),
         reverts=sum(1 for o in own if o.reverted),
+        fixes_after=sum(o.fixes_after for o in own),
         hours=hours,
         tokens=int(tokens) if tokens is not None else None,
     )
+
+
+def _first(challenge: Challenge, observations: list[Observation]) -> list[Observation]:
+    """A composition's first TRIALS_TO_JUDGE trials, by close."""
+    return sorted(
+        (o for o in observations if o.challenge == challenge),
+        key=lambda o: (o.closed_at is None, o.closed_at or datetime.max, o.card_number),
+    )[:TRIALS_TO_JUDGE]
+
+
+def _correcting_first(challenge: Challenge, observations: list[Observation]) -> int:
+    return sum(1 for o in _first(challenge, observations) if (o.corrections or 0) > 0)
 
 
 def _earned(tally: Tally, observations: list[Observation]) -> bool:
@@ -317,17 +388,19 @@ def _earned(tally: Tally, observations: list[Observation]) -> bool:
     and no trial escaped a defect within fourteen days."""
     if tally.challenge == Challenge.ALONE or tally.trials < TRIALS_TO_JUDGE:
         return False
-    first = sorted(
-        (o for o in observations if o.challenge == tally.challenge),
-        key=lambda o: (o.closed_at is None, o.closed_at or datetime.max),
-    )[:TRIALS_TO_JUDGE]
-    correcting = sum(1 for o in first if (o.corrections or 0) > 0)
-    return correcting >= CORRECTING_TRIALS_TO_EARN and tally.escaping == 0
+    return (
+        _correcting_first(tally.challenge, observations) >= CORRECTING_TRIALS_TO_EARN
+        and tally.escaping == 0
+    )
 
 
-def _quality(tally: Tally) -> tuple[float, int]:
-    """Fewer escaping trials per trial first, then more correcting ones."""
-    return (tally.escaping / tally.trials if tally.trials else 0.0, -tally.correcting)
+def _quality(tally: Tally) -> tuple[float, float]:
+    """The share of trials that escaped a defect first, fewer better, then
+    the share that corrected before build, more better — shares, so a
+    composition sampled more often is not read as better for it."""
+    if not tally.trials:
+        return (0.0, 0.0)
+    return (tally.escaping / tally.trials, -tally.correcting / tally.trials)
 
 
 def _efficiency(tally: Tally) -> tuple[float, float]:
@@ -347,15 +420,44 @@ def _least_sampled(shape: Shape, tallies: list[Tally], among: list[Challenge]) -
     return min(among, key=lambda c: (by[c].trials, ORDER.index(c)))
 
 
+def _stale(observation: Observation, hand_now: Hand | None, challenger_now: str | None) -> bool:
+    """Whether a model that took part is not the one that would take part
+    now, when both are named: the hand's against the rule's answer, the
+    challenger's against what the call would run. An unnamed model on
+    either side is no evidence of a change (the rule names no model for a
+    top rung today, card #63)."""
+    hand_changed = (
+        hand_now is not None
+        and hand_now.model is not None
+        and observation.hand_model is not None
+        and observation.hand_model != hand_now.model
+    )
+    challenger_changed = (
+        challenger_now is not None
+        and observation.challenger_model is not None
+        and observation.challenger_model != challenger_now
+    )
+    return hand_changed or challenger_changed
+
+
 def read_shape(
-    shape: Shape, observations: list[Observation], hand_now: Hand | None
+    shape: Shape,
+    observations: list[Observation],
+    hand_now: Hand | None,
+    now: datetime,
+    challenger_now: str | None = None,
 ) -> ShapeReading:
-    """What the evidence says for one shape. The stale test compares each
-    observation's hand model with the hand the rule names now, when both
-    are named; an unnamed model on either side is no evidence of a change
-    (the rule names no model for a top rung today, card #63)."""
-    own = [o for o in observations if o.shape == shape]
-    tallies = [tally_of(c, own) for c in ORDER]
+    """What the evidence says for one shape. Stale observations — a model
+    that took part is not the model now — stay in the record and are set
+    aside: the fresh cohort is judged on its own, and while it is short
+    the shape reads `stale` and explores. A composition is judged only
+    when its trials are past their escape window and, for a challenge,
+    when every trial's corrections are read; otherwise it is exploring,
+    with the reason."""
+    all_own = [o for o in observations if o.shape == shape]
+    stale = [o for o in all_own if _stale(o, hand_now, challenger_now)]
+    own = [o for o in all_own if o not in stale]
+    tallies = [tally_of(c, own, now) for c in ORDER]
     confounds: list[str] = []
     hands = {o.hand_make.value for o in own if o.hand_make is not None}
     if len(hands) > 1:
@@ -366,46 +468,65 @@ def read_shape(
             f"{unrecorded} trial{'s' if unrecorded != 1 else ''} under a challenge left no "
             "Challenged line, so its corrections are unread, not zero"
         )
+    maturing = sum(t.maturing for t in tallies)
+    if maturing:
+        confounds.append(
+            f"{maturing} trial{'s' if maturing != 1 else ''} still inside the "
+            f"{ESCAPE_DAYS}-day window, so its escapes are not yet a fact"
+        )
     if 0 < len(own) < TRIALS_TO_JUDGE:
         confounds.append(f"a sample of {len(own)}")
-    stale = [
-        o
-        for o in own
-        if hand_now is not None
-        and hand_now.model is not None
-        and o.hand_model is not None
-        and o.hand_model != hand_now.model
-    ]
     if stale:
-        old = sorted({o.hand_model for o in stale if o.hand_model})
+        old = sorted({m for o in stale for m in (o.hand_model, o.challenger_model) if m})
+        confounds.append(
+            f"{len(stale)} trial{'s' if len(stale) != 1 else ''} ran on {', '.join(old)}, "
+            "which is not a model that would take part now; set aside, kept in the record"
+        )
+
+    def reading(conclusion: Conclusion, leader: Challenge | None, why: str) -> ShapeReading:
         return ShapeReading(
             shape=shape,
-            observations=own,
+            observations=all_own,
             tallies=tallies,
-            conclusion=Conclusion.STALE,
-            leader=None,
-            why=(
-                f"{len(stale)} of {len(own)} trials ran on {', '.join(old)} and the hand now "
-                f"is {hand_now.model}; a model changed, so the shape explores again"
-                if hand_now is not None
-                else ""
-            ),
+            conclusion=conclusion,
+            leader=leader,
+            why=why,
             confounds=confounds,
         )
+
+    sample = ", ".join(f"{t.challenge.value} {t.trials}" for t in tallies)
     under = [t for t in tallies if t.trials < TRIALS_TO_JUDGE]
     if under:
-        sample = ", ".join(f"{t.challenge.value} {t.trials}" for t in tallies)
-        return ShapeReading(
-            shape=shape,
-            observations=own,
-            tallies=tallies,
-            conclusion=Conclusion.EXPLORING,
-            leader=None,
-            why=(
-                f"fewer than {TRIALS_TO_JUDGE} trials under "
-                f"{', '.join(t.challenge.value for t in under)} ({sample})"
-            ),
-            confounds=confounds,
+        why = (
+            f"fewer than {TRIALS_TO_JUDGE} trials under "
+            f"{', '.join(t.challenge.value for t in under)} ({sample})"
+        )
+        if stale:
+            return reading(
+                Conclusion.STALE,
+                None,
+                f"a model changed: {len(stale)} of {len(all_own)} trials are set aside, and "
+                f"the fresh trials are {why}",
+            )
+        return reading(Conclusion.EXPLORING, None, why)
+    unjudged = [t for t in tallies if t.maturing or t.unrecorded]
+    if unjudged:
+        reasons = "; ".join(
+            f"{t.challenge.value}: "
+            + ", ".join(
+                part
+                for part in (
+                    f"{t.maturing} still inside the window" if t.maturing else "",
+                    f"{t.unrecorded} with corrections unread" if t.unrecorded else "",
+                )
+                if part
+            )
+            for t in unjudged
+        )
+        return reading(
+            Conclusion.EXPLORING,
+            None,
+            f"the sample is full ({sample}) but not yet judged — {reasons}",
         )
     earned = [t for t in tallies if _earned(t, own)]
     if earned:
@@ -415,63 +536,41 @@ def read_shape(
             and _quality(ranked[0]) == _quality(ranked[1])
             and _efficiency(ranked[0]) == _efficiency(ranked[1])
         ):
-            return ShapeReading(
-                shape=shape,
-                observations=own,
-                tallies=tallies,
-                conclusion=Conclusion.TIED,
-                leader=None,
-                why=(
-                    f"{ranked[0].challenge.value} and {ranked[1].challenge.value} both met "
-                    "the threshold and differ on neither quality nor time"
-                ),
-                confounds=confounds,
+            return reading(
+                Conclusion.TIED,
+                None,
+                f"{ranked[0].challenge.value} and {ranked[1].challenge.value} both met "
+                "the threshold and differ on neither quality nor time",
             )
         lead = ranked[0]
-        return ShapeReading(
-            shape=shape,
-            observations=own,
-            tallies=tallies,
-            conclusion=Conclusion.EARNED,
-            leader=lead.challenge,
-            why=(
-                f"{lead.challenge.value} corrected before build in {lead.correcting} of its "
-                f"first {TRIALS_TO_JUDGE} trials and escaped no defect within {ESCAPE_DAYS} days"
-            ),
-            confounds=confounds,
+        return reading(
+            Conclusion.EARNED,
+            lead.challenge,
+            f"{lead.challenge.value} corrected before build in "
+            f"{_correcting_first(lead.challenge, own)} of its first {TRIALS_TO_JUDGE} trials "
+            f"and escaped no defect within {ESCAPE_DAYS} days",
         )
     ranked = sorted(tallies, key=lambda t: (_quality(t), _efficiency(t)))
     best, runner = ranked[0], ranked[1]
     if _quality(best) == _quality(runner) and _efficiency(best) == _efficiency(runner):
-        return ShapeReading(
-            shape=shape,
-            observations=own,
-            tallies=tallies,
-            conclusion=Conclusion.TIED,
-            leader=None,
-            why=(
-                f"no composition met the threshold, and {best.challenge.value} and "
-                f"{runner.challenge.value} differ on neither quality nor time"
-            ),
-            confounds=confounds,
+        return reading(
+            Conclusion.TIED,
+            None,
+            f"no composition met the threshold, and {best.challenge.value} and "
+            f"{runner.challenge.value} differ on neither quality nor time",
         )
     tie_broken = _quality(best) == _quality(runner)
-    return ShapeReading(
-        shape=shape,
-        observations=own,
-        tallies=tallies,
-        conclusion=Conclusion.BEST_QUALITY,
-        leader=best.challenge,
-        why=(
-            f"no composition met the threshold; {best.challenge.value} leads on "
-            + (
-                f"time ({best.hours:.1f} h against {runner.hours:.1f} h), quality being equal"
-                if tie_broken and best.hours is not None and runner.hours is not None
-                else f"quality ({best.escaping} of {best.trials} trials escaped a defect, "
-                f"{best.correcting} corrected before build)"
-            )
+    return reading(
+        Conclusion.BEST_QUALITY,
+        best.challenge,
+        "no composition met the threshold; "
+        f"{best.challenge.value} leads on "
+        + (
+            f"time ({best.hours:.1f} h against {runner.hours:.1f} h), quality being equal"
+            if tie_broken and best.hours is not None and runner.hours is not None
+            else f"quality ({best.escaping} of {best.trials} trials escaped a defect, "
+            f"{best.correcting} corrected before build)"
         ),
-        confounds=confounds,
     )
 
 
@@ -487,7 +586,10 @@ def executable(hand: Make, shape: Shape) -> list[Challenge]:
     """The compositions the runtime can execute for this hand: alone
     always; a same-make challenge whenever the hand's make can be called
     (both makes can, plan 57 and #73); a different-make challenge when
-    another make has a launcher. A reading seat holds one reader (#59)."""
+    another make has a launcher. A reading seat holds one reader (#59).
+    Whether a colleague of the make can be reached when the lane calls,
+    hours after this Start, is the call's fact and not this one's: the
+    brief says what a lane does when the call is refused."""
     if shape == Shape.READING:
         return [Challenge.ALONE]
     able = [Challenge.ALONE, Challenge.SAME_MAKE]
@@ -497,7 +599,8 @@ def executable(hand: Make, shape: Shape) -> list[Challenge]:
 
 
 class Unexecutable(Exception):
-    """The card pins a team the runtime cannot execute; Start refuses it."""
+    """The card pins a team the runtime cannot execute, or pins one with
+    no reason; Start refuses it with the words."""
 
 
 def route_for(
@@ -531,13 +634,15 @@ def route_for(
                 f"{hand.make.value} hand on a {shape.value} card; it can run "
                 + ", ".join(c.value for c in able)
             )
-        return route(
-            pinned.challenge,
-            Conclusion.PINNED,
-            f"the plan pins it: {pinned.why}"
-            if pinned.why
-            else "the plan pins it, giving no reason",
-        )
+        if not pinned.why:
+            # A pin is a safety or intent constraint and says why (plan
+            # item 4); convenience does not override the evidence, and a
+            # line with no reason cannot be told from convenience.
+            raise Unexecutable(
+                f"the plan pins {pinned.challenge.value} and gives no reason; write one after "
+                "the dash on its Composition line, or remove the line and let the evidence choose"
+            )
+        return route(pinned.challenge, Conclusion.PINNED, f"the plan pins it: {pinned.why}")
     if len(able) == 1:
         return route(
             able[0],

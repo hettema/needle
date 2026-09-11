@@ -44,6 +44,7 @@ def test_start_assigns_a_team_before_the_work_and_says_it_everywhere(
         "challenge": "alone",
         "hand": {"make": "claude", "model": None, "slot": "alpha"},
         "challenger": None,
+        "challenger_model": None,
         "conclusion": "exploring",
         "why": "exploring alone: fewer than 3 trials under alone, same-make, different-make "
         "(alone 0, same-make 0, different-make 0)",
@@ -125,3 +126,13 @@ def test_the_terminal_prints_the_reading(client: TestClient, repo: Path, capsys)
     assert "reading: exploring" in out
     assert f"assigned #{CARD}" in out and "the accountable hand alone" in out
     assert main(["team", "nowhere"]) == 1
+
+
+def test_a_launch_that_dies_assigns_no_team(client: TestClient, machine_floor: Floor):
+    machine_floor.script_launches({"then": "vanish"})
+    response = client.post(f"/api/projects/proj/cards/{CARD}/start", json={"anyway": False})
+    assert response.status_code == 502
+    after = detail(client)
+    assert after["team"] is None
+    assert not [h for h in after["history"] if h["detail"].startswith("team: ")]
+    assert client.get("/api/projects/proj/team").json()["assigned"] == []

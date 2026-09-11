@@ -304,7 +304,8 @@ class FixReport(BaseModel):
     """Its planning session asked the owner, or its lane's turn ended on a
     question."""
     defect_filed_against: bool
-    """A live suggestion names the card or its lane in its `Found by:` line."""
+    """A live defect — a suggestion of that kind, never an idea — names the
+    card or its lane in its `Found by:` line (`board/dial.py::filed_against`)."""
     fold_reverted: bool
     """A commit on the trunk reverts the lane's tip."""
     class_closer: str | None

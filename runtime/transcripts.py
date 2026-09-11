@@ -251,4 +251,9 @@ def tokens(cwd: str) -> int | None:
                 if isinstance(value, int) and not isinstance(value, bool):
                     counted += value
             usage_by_request[request] = counted
+    if not usage_by_request:
+        # Files that exist and could not be read, or carry no usage, are no
+        # count at all: a zero would be read as a measured cost and could
+        # win a quality tie (the independent review of card #58).
+        return None
     return sum(usage_by_request.values())

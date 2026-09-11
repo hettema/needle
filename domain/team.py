@@ -138,6 +138,11 @@ class Route(BaseModel):
     challenger: Make | None
     """The make that challenges: the hand's own under same-make, the other
     under different-make, None when alone."""
+    challenger_model: str | None = None
+    """The model a call to that make would run as this Start knows it —
+    Codex's configured model for a fresh worker; None for a Claude
+    colleague called warm, whose model is the session's, and when none is
+    known. The observation reads what the lane's calls in fact ran."""
     conclusion: Conclusion
     why: str
     observations: list[str]
@@ -191,8 +196,14 @@ class Observation(BaseModel):
     """Live defects filed against the card within ESCAPE_DAYS of its close."""
     stops: int
     """Times the owner or the machine stopped the lane, from the card's history."""
+    send_backs: int
+    """The owner's moves of the card out of Executed or Done after its
+    close, from the card's history."""
     reverted: bool
     """A commit on the trunk reverts the lane's tip."""
+    fixes_after: int
+    """Commits on the trunk naming the card within a week of its tip: the
+    rework its fold needed."""
     hours: float | None
     """From the first Start to the close, by the card's history; None while
     the card is not closed."""
@@ -211,6 +222,9 @@ class Tally(BaseModel):
 
     challenge: Challenge
     trials: int
+    maturing: int
+    """Trials whose close is less than ESCAPE_DAYS ago: their escapes are
+    not yet a fact, so the composition is not judged on them."""
     correcting: int
     """Trials whose challenge produced at least one material correction
     before build."""
@@ -222,7 +236,9 @@ class Tally(BaseModel):
     """Trials with at least one escape."""
     findings: int
     stops: int
+    send_backs: int
     reverts: int
+    fixes_after: int
     hours: float | None
     """Mean hours per closed trial; None when none says."""
     tokens: int | None
@@ -235,6 +251,8 @@ class ShapeReading(BaseModel):
 
     shape: Shape
     observations: list[Observation]
+    """Every observation of the shape, stale ones included: the record is
+    kept whole and the reading says which it set aside."""
     tallies: list[Tally]
     conclusion: Conclusion
     leader: Challenge | None

@@ -40,7 +40,9 @@ export interface Observation {
   outside: number;
   escapes: number;
   stops: number;
+  send_backs: number;
   reverted: boolean;
+  fixes_after: number;
   hours: number | null;
   tokens: number | null;
   closed_at: string | null;
@@ -52,6 +54,7 @@ export interface Route {
   challenge: Challenge;
   hand: Hand;
   challenger: Make | null;
+  challenger_model?: string | null;
   conclusion: Conclusion;
   why: string;
   observations: string[];
@@ -71,6 +74,7 @@ export interface ShapeReading {
 export interface Tally {
   challenge: Challenge;
   trials: number;
+  maturing: number;
   correcting: number;
   corrections: number;
   unrecorded: number;
@@ -78,7 +82,9 @@ export interface Tally {
   escaping: number;
   findings: number;
   stops: number;
+  send_backs: number;
   reverts: number;
+  fixes_after: number;
   hours: number | null;
   tokens: number | null;
 }

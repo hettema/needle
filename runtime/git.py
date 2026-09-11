@@ -154,6 +154,32 @@ def reverted(repo: str | Path, tip: str) -> bool:
     return bool(out and out.strip())
 
 
+FIXES_AFTER_DAYS = 7
+
+
+def fixes_after(repo: str | Path, tip: str, number: int) -> int:
+    """How many commits landed on the trunk after the lane's tip, within a
+    week of it, naming the card (`#N`) in their message: the rework a fold
+    needed, read the way the card's history and the review record already
+    name a card (card #58, item 2). A revert is counted by `reverted`, not
+    here, and a message naming the number as part of a larger one is not
+    a match."""
+    when = _try(repo, "log", "-1", "--format=%ct", tip)
+    if not when or not when.strip().isdigit():
+        return 0
+    until = int(when.strip()) + FIXES_AFTER_DAYS * 24 * 3600
+    out = _try(
+        repo,
+        "log",
+        f"--grep=(^|[^0-9])#{number}([^0-9]|$)",
+        "--extended-regexp",
+        f"--until={until}",
+        "--format=%H",
+        f"{tip}..{REMOTE}/{TRUNK}",
+    )
+    return len(out.split()) if out else 0
+
+
 CORPUS_FOLDERS = ("docs/plans", "docs/slice-suggestions")
 _RENAME_LINE = re.compile(r"^R\d*\t(.+?)\t(.+)$")
 _STAGED_RENAME = re.compile(r"^R.\s+(.+?) -> (.+)$")

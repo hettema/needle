@@ -1046,6 +1046,11 @@ class Runtime:
         """Whether a commit on the trunk says it reverts the lane's tip."""
         return git.reverted(repo, tip)
 
+    def fixes_after(self, repo: str, tip: str, number: int) -> int:
+        """Trunk commits naming the card within a week of the lane's tip
+        (card #58, item 2)."""
+        return git.fixes_after(repo, tip, number)
+
     def lane_folded(
         self, repo: str, branch: str | None, tip: str | None, birth: str | None
     ) -> bool | None:

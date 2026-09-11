@@ -327,22 +327,35 @@ class Doors:
         name = lane_name(card.number, card.title)
         # The team is assigned before the work and enters the brief (card
         # #58, item 1): the card's own when it has one — a restart keeps
-        # the experiment it began — else the router's, from the cached
-        # rule's hand; the row is written once the lane is alive, with the
-        # rung it landed on, and never again.
+        # the experiment it began — else the router's, for the hand the
+        # rule names when asked live and placed for this repository, which
+        # is the same question the launch asks a moment later; the cached
+        # preview could be minutes old. The row is written before the
+        # launch, so a board that dies between the launch and its record
+        # still holds the team the brief carried; a launch that dies takes
+        # the row back, and a launch that lands on another make than the
+        # one routed for is re-routed before any work, with the history
+        # saying so (the independent review of card #58).
         held = detail.team
         team: Route | None = held.route if held is not None else None
-        if team is None and doors.placement is not None:
-            try:
-                team = self.team.route(slug, number, doors.placement)
-            except Unexecutable as why:
-                raise DoorRefused(f"Start refused: {why}") from why
+        fresh = False
+        if team is None:
+            asked = self.runtime.where(None, [], cached=False, repo=project.path)
+            if asked.placement is not None:
+                try:
+                    team = self.team.route(slug, number, asked.placement)
+                except Unexecutable as why:
+                    raise DoorRefused(f"Start refused: {why}") from why
+                self.team.assign(slug, number, team)
+                fresh = True
         brief = self.brief_for_lane(detail, slug, team)
         self.live.store.forget_lane(slug, number)
         launch = self.runtime.start(
             Start(repo=project.path, card=name, brief=brief, effort=gate, from_slot=None)
         )
         if launch.verdict != LaunchVerdict.ALIVE or launch.session is None:
+            if fresh:
+                self.team.unassign(slug, number)
             tried = "; ".join(
                 f"{a.rung.slot}: {a.verdict.value}" + (f" — {a.reason}" if a.reason else "")
                 for a in launch.attempts
@@ -351,6 +364,34 @@ class Doors:
             self.live.note(slug, number, AuditKind.STARTED, actor, words)
             raise DoorFailed(words)
         session = launch.session
+        team_note: str | None = None
+        if team is not None and launch.placement is not None:
+            landed = hand_of(launch.placement)
+            if landed.make != team.hand.make and fresh:
+                team = self.team.reassign(
+                    slug, number, self.team.route(slug, number, launch.placement)
+                ).route
+                team_note = (
+                    f"team: {team_words(team)} — re-routed for the {landed.make.value} hand the "
+                    f"launch landed on; the brief named a {team.hand.make.value} hand's team, "
+                    "and the card is the word"
+                )
+            elif landed.make != team.hand.make:
+                team_note = (
+                    f"team: the lane restarted on a {landed.make.value} hand; its team was "
+                    f"assigned for a {team.hand.make.value} hand and stands — the reading "
+                    "names the mix"
+                )
+            elif fresh and landed != team.hand:
+                team = self.team.reassign(slug, number, team.model_copy(update={"hand": landed}))
+                team = team.route
+                team_note = f"team: {team_words(team)}"
+            elif fresh:
+                team_note = f"team: {team_words(team)}"
+        elif fresh and team is not None:
+            team_note = f"team: {team_words(team)}"
+        if team_note is not None:
+            self.live.note(slug, number, AuditKind.STARTED, Actor.MACHINE, team_note)
         now = clock.now()
         path = session.worktree or f"{project.path}/.claude/worktrees/{name}"
         # The lane's birth is the trunk's head its branch was laid from,
@@ -379,14 +420,6 @@ class Doors:
         where = rung_words(placement.model, placement.slot) if placement else session.slot
         said = f"Started {session.short_id}, {where}, at {gate.value}, in {name}"
         said += f", in {launch.scope}" if launch.scope else f" ({launch.reason})"
-        if team is not None and held is None:
-            landed = team.model_copy(update={"hand": hand_of(placement)}) if placement else team
-            assigned, wrote = self.team.assign(slug, number, landed)
-            if wrote:
-                self.live.note(
-                    slug, number, AuditKind.STARTED, Actor.MACHINE, f"team: {team_words(landed)}"
-                )
-            team = assigned.route
         if team is not None:
             said += f"; team: {team_words(team)}"
         if actor == Actor.MACHINE:

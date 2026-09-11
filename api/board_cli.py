@@ -714,8 +714,10 @@ def _tally_line(tally: Tally) -> str:
     )
     return (
         f"    {tally.challenge.value:<15} {tally.trials} trial{'s' if tally.trials != 1 else ''}: "
-        f"{corrections}; {tally.escaping} escaped a defect ({tally.escapes}); "
-        f"{tally.findings} review findings; {tally.stops} stops; {tally.reverts} reverts; "
+        f"{corrections}; {tally.escaping} escaped a defect ({tally.escapes}"
+        f"{f', {tally.maturing} still inside the window' if tally.maturing else ''}); "
+        f"{tally.findings} review findings; {tally.stops} stops; {tally.send_backs} send-backs; "
+        f"{tally.reverts} reverts; {tally.fixes_after} fixing commits within a week; "
         f"{hours} mean; {tokens} mean"
     )
 
@@ -749,7 +751,9 @@ def team(args: argparse.Namespace, live: Live, runtime: Runtime, loops: Loops, d
                 f"    #{seen.card_number:<4} {seen.challenge.value:<15} {corrections}; "
                 f"{seen.findings} findings (inside {seen.inside}, adjacent {seen.adjacent}, "
                 f"outside {seen.outside}); {seen.escapes} escaped; {seen.stops} stops; "
-                f"{'reverted' if seen.reverted else 'fold stands'}; {hours}; {tokens}; "
+                f"{seen.send_backs} send-backs; "
+                f"{'reverted' if seen.reverted else 'fold stands'}; {seen.fixes_after} fixing "
+                f"commits within a week; {hours}; {tokens}; "
                 f"declared in {seen.declared_in}; read from {', '.join(seen.sources)}"
             )
     if not reading.assigned:

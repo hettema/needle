@@ -27,6 +27,7 @@ card's lane, beside the one that calls a worker warm.
 
 import json
 import re
+import tomllib
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
@@ -587,3 +588,19 @@ def log_path(answer: str) -> Path:
     (which lists `.md` only) never mistakes it for a note."""
     given = Path(answer)
     return given.with_name(given.stem + ".log")
+
+
+def configured_model() -> str | None:
+    """The model Codex's own configuration names for a new session (the
+    top-level `model` of `config.toml`), which is what a fresh worker
+    called from a lane runs: what the team's stale test compares a
+    challenger's model with (card #58). None when the file names none —
+    the binary's default then, which this runtime does not guess — or
+    cannot be read."""
+    path = machine.codex_home() / "config.toml"
+    try:
+        loaded = tomllib.loads(path.read_text(encoding="utf-8"))
+    except (OSError, tomllib.TOMLDecodeError):
+        return None
+    named = loaded.get("model")
+    return named if isinstance(named, str) and named else None

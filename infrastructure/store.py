@@ -1369,6 +1369,16 @@ class Store:
             session.flush()
             return _composition(row)
 
+    def forget_composition(self, slug: str, number: int) -> None:
+        """The team written for a launch that died, or routed for a hand
+        that did not land: gone, so the next Start reads afresh. Reached
+        only through the Start door (`api/team.py::Team.unassign` and
+        `reassign`); nothing else unwrites a team."""
+        with self._session() as session, session.begin():
+            row = session.get(CompositionRow, (slug, number))
+            if row is not None:
+                session.delete(row)
+
     def composition(self, slug: str, number: int) -> Composition | None:
         with self._session() as session:
             row = session.get(CompositionRow, (slug, number))

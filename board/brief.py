@@ -227,7 +227,10 @@ def team_brief(route: Route, needle: str) -> str:
             "correction in the plan and end the plan's head with one line the board reads: "
             "`**Challenged:** <date>, by <who> (call <n>): <N> material corrections before "
             "build` — a digit or a word, zero when the round changed nothing; a plan with no "
-            "such line reads as a round that did not happen. The independent review §13 asks "
+            "such line reads as a round that did not happen. If no colleague of that make can "
+            "be called when you call — the call refuses, naming why — write the line as "
+            "`**Challenged:** no round — <the refusal's words>` and go on alone; the reading "
+            "counts the round as unread, never as zero. The independent review §13 asks "
             f"for is a cold reader of the same make: {call_words(challenger, needle)}."
         )
     return "\n".join(lines)
