@@ -305,7 +305,6 @@ class Loops:
         self._stable: dict[tuple[str, str], bool] = {}
         """Every folded lane's tip against the stable branch, proved with
         the trunk's fetch outside the lock."""
-        self._door_passes: set[asyncio.Task[None]] = set()
         self._awaited: dict[str, int] = {}
         """How many running passes wait for each machine's answer, by name:
         an answer that lands for one is that pass's to apply, never the
@@ -338,7 +337,6 @@ class Loops:
             *self._tasks,
             *([self._pass_task] if self._pass_task is not None else []),
             *([self._applier] if self._applier is not None else []),
-            *self._door_passes,
         ]
         for task in tasks:
             task.cancel()
@@ -426,9 +424,6 @@ class Loops:
         and moves the card on it (plan 68, items 1 and 5). A machine the pass
         does not wait for is applied when its answer lands."""
         self._event_loop = asyncio.get_running_loop()
-        # A post's ask is met by the first pass that reads the store after it
-        # (card #124): cleared where the pass starts reading.
-        self._pass_asked = False
         began = clock.now()
         here = await asyncio.to_thread(lambda: self.runtime.here().name)
         asks = await asyncio.to_thread(self._asks)
@@ -455,6 +450,11 @@ class Loops:
                     await asyncio.wait([asyncio.wrap_future(f) for f in again.values()])
             self._proofs = await asyncio.to_thread(self._prove)
             async with self._lock:
+                # A post's ask is met by the first pass that reads the store
+                # after it (card #124): cleared under the lock, where this
+                # pass takes what it applies, so posts that land while it
+                # waits its turn are read by it and not by one more after it.
+                self._pass_asked = False
                 accepting = time.monotonic()
                 collection = await asyncio.to_thread(self.runtime.accept_ready, only=set(wanted))
                 held = time.monotonic() - accepting
@@ -546,27 +546,14 @@ class Loops:
     def _ask_pass_soon(self) -> None:
         """From a door's thread: a pass right after it, so what the act
         changed is read fresh from every machine without the door waiting
-        for the read (card #123, item 3)."""
+        for the read (card #123, item 3). Asked the one way a pass is asked
+        for (card #124's coalesced ask), so a door and the posts that land
+        with it cause one pass, not one each."""
         event_loop = self._event_loop
         if event_loop is None or self._stop.is_set():
             return
         with contextlib.suppress(RuntimeError):  # the loop has closed
-            event_loop.call_soon_threadsafe(self._start_door_pass)
-
-    def _start_door_pass(self) -> None:
-        if self._stop.is_set():
-            return
-        task = asyncio.create_task(self._door_pass())
-        self._door_passes.add(task)
-        task.add_done_callback(self._door_passes.discard)
-
-    async def _door_pass(self) -> None:
-        try:
-            await self.pass_now()
-        except asyncio.CancelledError:
-            raise
-        except Exception as error:  # noqa: BLE001 — a door's pass never kills the loop
-            log.warning("the pass after a door failed (%s: %s)", type(error).__name__, error)
+            event_loop.call_soon_threadsafe(self.ask_for_a_pass)
 
     async def pass_now(self) -> None:
         """The pass the timer, the registries, a hook and a corpus change
@@ -2606,8 +2593,14 @@ class Loops:
             for p in projects
         }
         now = clock.now()
+        # Still due after the tending above (card #123): a reading that just
+        # ended is recorded, and the cadence that asked for it waits — the
+        # list was read before the lock, before that reading was tended.
+        still = {(live.project.slug, card.number) for live, card, _, _ in self._signals_due()}
         for live, card, signal, trigger, reading in read:
             slug = live.project.slug
+            if (slug, card.number) not in still:
+                continue
             if signal.kind == SignalKind.SESSION:
                 if card.number in in_flight.get(slug, {}) or alive >= READINGS_AT_ONCE:
                     continue
