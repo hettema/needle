@@ -313,6 +313,26 @@ def meminfo_path() -> Path:
     return _path("NEEDLE_MEMINFO", PROC / "meminfo")
 
 
+def hook_queue_moments(store: Path) -> list[float]:
+    """When each event still queued by the sessions' hook fired, in seconds
+    since the epoch: the queue is `hook-queue.jsonl` beside the store, one
+    JSON object a line as `hooks/needle_hook.py` appends and drains it
+    (card #124). Empty when there is no queue or nothing readable in it."""
+    queue = store.parent / "hook-queue.jsonl"
+    try:
+        lines = queue.read_text(encoding="utf-8").splitlines()
+    except OSError:
+        return []
+    moments: list[float] = []
+    for line in lines:
+        try:
+            blob = json.loads(line)
+            moments.append(float(blob["at"]))
+        except (ValueError, TypeError, KeyError):
+            continue
+    return moments
+
+
 _MEMINFO_LINE = re.compile(r"^(\w+):\s+(\d+)(?:\s+kB)?", re.M)
 
 

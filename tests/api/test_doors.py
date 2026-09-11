@@ -133,7 +133,15 @@ def post_hook(client: TestClient, kind: str, session_id: str, cwd: str, **fields
     event.update(fields)
     response = client.post("/api/hooks", json=[event])
     assert response.status_code == 200, response.text
+    # The answer comes before the pass the post causes (card #124); a test
+    # that reads the board next waits for that pass, as a page would.
+    settle(client)
     return response.json()
+
+
+def settle(client: TestClient) -> None:
+    """Every pass the posts so far asked for has run."""
+    client.portal.call(client.app.state.loops.settled)
 
 
 def reconcile(client: TestClient) -> None:
@@ -1269,6 +1277,100 @@ def test_a_running_lane_hears_its_drift_and_the_other_lanes_lines_once(
         "The board said on the watercooler: #253 folded over #241's edits in README.md",
     ]
     assert word_of(client, str(other)) == []
+
+
+# ── card #124: a session's message is answered at once and never sent twice ──
+
+
+def test_a_post_is_answered_while_a_pass_is_stalled_and_the_passes_it_causes_coalesce(
+    client: TestClient, machine_floor: Floor, repo: Path, monkeypatch
+):
+    """Card #124, item 1: the intake records and answers before the pass
+    the post causes; with a pass stalled — the loops' lock held, as a
+    read of a machine that does not answer holds it — three posts are
+    each answered in under a second and cause one pass between them once
+    the stall lifts; posted fresh with nothing stalled, three posts cause
+    at most two; the board shows the posted event after the next pass;
+    and a batch re-sent is answered with what was new, which is nothing."""
+    import asyncio
+
+    start(client)
+    launched = machine_floor.state()["launch_log"][0]
+    session_id, short = launched["session_id"], launched["short"]
+    state_file = machine_floor.config_dir("alpha") / "jobs" / short / "state.json"
+    state = json.loads(state_file.read_text())
+    state["state"] = "done"
+    state_file.write_text(json.dumps(state))
+    loops: loops_mod.Loops = client.app.state.loops
+    passes: list[float] = []
+    real_reconcile_now = loops.reconcile_now
+    monkeypatch.setattr(
+        loops, "reconcile_now", lambda: (passes.append(time.monotonic()), real_reconcile_now())
+    )
+
+    lifted = asyncio.Event()
+
+    async def stalled_pass() -> None:
+        async with loops.lock:
+            await lifted.wait()
+
+    stall = client.portal.start_task_soon(stalled_pass)
+    deadline = time.monotonic() + 5
+    while not loops.lock.locked() and time.monotonic() < deadline:
+        time.sleep(0.01)
+    assert loops.lock.locked(), "the pass is stalled"
+
+    def event(kind: str, at: datetime, **fields) -> dict:
+        return {
+            "kind": kind,
+            "session_id": session_id,
+            "cwd": lane_path(repo),
+            "at": at.isoformat(),
+            "source": None,
+            "message": None,
+            "reason": None,
+            "error": None,
+            "transcript_path": None,
+            **fields,
+        }
+
+    moment = datetime.now(UTC).replace(microsecond=0)
+    question = event("Stop", moment, message="In.\n\nShould the gate default to high?")
+    answered: list[float] = []
+    for posted in (question, event("SessionStart", moment, source="resume"), question):
+        began = time.monotonic()
+        response = client.post("/api/hooks", json=[posted])
+        answered.append(time.monotonic() - began)
+        assert response.status_code == 200, response.text
+        assert response.json()["received"] == (0 if posted is question and answered[2:] else 1)
+    assert max(answered) < 1.0, f"answered in {answered} with the pass stalled"
+    assert passes == [], "no pass ran while stalled"
+
+    client.portal.call(lifted.set)
+    stall.result(timeout=5)
+    settle(client)
+    assert len(passes) == 1, "three posts during a stall cause one pass after it"
+    assert detail(client)["summary"]["lane_state"] == "asking"
+    assert detail(client)["lane"]["question"].endswith("Should the gate default to high?")
+
+    passes.clear()
+    later = moment + timedelta(seconds=1)
+    for posted in (
+        event("Stop", later, message="Still in."),
+        event("SessionStart", later, source="resume"),
+        event("Stop", later + timedelta(seconds=1), message="In again."),
+    ):
+        assert client.post("/api/hooks", json=[posted]).json()["received"] == 1
+    settle(client)
+    assert 1 <= len(passes) <= 2, (
+        f"three posts in a row cause at most two passes, not {len(passes)}"
+    )
+    assert client.post(
+        "/api/hooks", json=[question, event("Stop", later, message="Still in.")]
+    ).json() == {
+        "received": 0,
+        "attributed": 0,
+    }
 
 
 # ── plan 06: the board at a glance ─────────────────────────────────────

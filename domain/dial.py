@@ -195,6 +195,11 @@ class Headroom(BaseModel):
     mark: int = MEMORY_FLOOR_BYTES
     """What a lane's group is held to on this machine (`lane_mark`): the
     floor on the desktop, what the machine has above it on the horsepower."""
+    stale_queue: int = 0
+    """Events the sessions' hook has queued beside this machine's store that
+    are older than an hour (card #124): the hook empties its queue the
+    moment the board answers, so a count here says the board did not, and
+    the head shows it where the owner looks."""
 
 
 class DialState(BaseModel):
@@ -357,6 +362,7 @@ def headroom(
     scopes: Sequence[ScopeMemory] | None = (),
     marked: Sequence[str] = (),
     mark: int | None = None,
+    stale_queue: int = 0,
 ) -> Headroom:
     """The machine against the floor, and every lane's scope beside it
     (plan 53, item 1). A reading the runtime could not make — the memory,
@@ -377,6 +383,7 @@ def headroom(
             sentence="the machine is full: its memory could not be read",
             read_at=now,
             mark=mark,
+            stale_queue=stale_queue,
         )
     if scopes is None:
         return Headroom(
@@ -388,6 +395,7 @@ def headroom(
             read_at=now,
             total=meminfo.total,
             mark=mark,
+            stale_queue=stale_queue,
         )
     ranked = sorted(scopes, key=lambda s: (-s.held, s.unit))
     short: list[str] = []
@@ -419,4 +427,5 @@ def headroom(
         marked=list(marked),
         total=meminfo.total,
         mark=mark,
+        stale_queue=stale_queue,
     )

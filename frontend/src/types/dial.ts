@@ -78,6 +78,7 @@ export interface Headroom {
   marked?: string[];
   total?: number;
   mark?: number;
+  stale_queue?: number;
 }
 
 export interface Meminfo {

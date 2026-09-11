@@ -168,6 +168,10 @@ class HookEventRow(Base):
     __table_args__ = (
         Index("ix_hook_events_card", "project_slug", "card_number"),
         Index("ix_hook_events_session", "session_id"),
+        # One row per event (card #124): a hook that heard no answer re-sends
+        # its whole queue, and the store, not the hook, is what holds each
+        # firing once — a session, a kind and the second it fired.
+        Index("ux_hook_events_moment", "session_id", "kind", "at", unique=True),
     )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)

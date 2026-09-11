@@ -261,6 +261,34 @@ def test_the_board_reads_every_machines_room_and_the_head_names_each(two_machine
     assert by_name["rented"].room.total == 32 * 1024**3
 
 
+def test_a_queue_holding_an_event_older_than_an_hour_is_counted_on_the_machines_line(
+    two_machines, store: Store
+):
+    """Card #124, item 3: the hook's queue beside each machine's store is
+    the trace — empty when the board answers, growing when it does not —
+    and an event still there after an hour is counted on that machine's
+    line, on either machine, through the same room read; an empty queue
+    and a fresh event count nothing."""
+    import time
+
+    from api.runtime_cli import describe_room
+
+    runtime, other = two_machines
+    old, fresh = time.time() - 2 * 3600, time.time() - 60
+    (store.path.parent / "hook-queue.jsonl").write_text(
+        f'{{"at": {old}, "session_id": "s1"}}\n{{"at": {fresh}, "session_id": "s2"}}\nnot json\n'
+    )
+    (other.root / "hook-queue.jsonl").write_text("")
+    by_name = {r.machine.name: r for r in runtime.rooms()}
+    assert by_name["laptop"].room is not None and by_name["laptop"].room.stale_queue == 1
+    assert by_name["rented"].room is not None and by_name["rented"].room.stale_queue == 0
+    assert "; 1 queued over an hour — the board did not answer" in describe_room(by_name["laptop"])
+    assert "queued" not in describe_room(by_name["rented"])
+    (other.root / "hook-queue.jsonl").write_text(f'{{"at": {old}, "session_id": "s3"}}\n')
+    rented = next(r for r in runtime.rooms() if r.machine.name == "rented")
+    assert rented.room is not None and rented.room.stale_queue == 1
+
+
 def test_a_machine_that_does_not_answer_is_a_room_of_none_with_the_transports_words(
     two_machines, machine_floor: Floor
 ):

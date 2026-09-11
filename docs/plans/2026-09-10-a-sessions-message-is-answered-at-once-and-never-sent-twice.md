@@ -1,7 +1,7 @@
 # A session's message is answered at once and never sent twice
 
 **Carries:** docs/slice-suggestions/done/2026-09-10-a-sessions-message-is-answered-at-once-and-never-sent-twice.md
-**Status:** NEW — planned, not started; placed at the top of Up next on 2026-09-10 at the owner's word ("What do we need to fix to make the board run properly? Can you put those cards at the top of up next").
+**Status:** EXECUTING — the lane on card #124 (Claude Fable 5.1, on the rented machine) since 2026-09-11; placed at the top of Up next on 2026-09-10 at the owner's word ("What do we need to fix to make the board run properly? Can you put those cards at the top of up next").
 **Written:** 2026-09-10, from Dennis on the first evening a lane ran on the rented machine: "The hooks don't work because of long round trips? What does that mean and does it make the board dumb too? What do we need to fix to make the board run properly?" The finding that answered him is the carried suggestion: the hook waits two seconds for an answer the board sends after a 26-second pass, so the answer never arrives, the queue never empties, and every firing re-sends a day of events the board already holds.
 **Effort gate:** medium — the mechanics are a reorder in one endpoint (record, answer, then the pass) and a uniqueness the store already has the columns for; the judgment is what "the same event" means and that the pass a post causes still runs, once, and is settled here.
 **Sequencing:** none. Shares `api/loops.py` with the plan that asks another machine one question a pass; the fold settles it.
@@ -38,6 +38,13 @@ Done means: on the fixture, a post is answered in under a second while a
 pass is stalled behind the other floor not answering (`host_down`), and the
 board's state shows the posted event after the next pass; three posts in a
 row cause at most two passes.
+**Met:** `tests/api/test_doors.py::test_a_post_is_answered_while_a_pass_is_stalled_and_the_passes_it_causes_coalesce`
+— with the loops' lock held as a pass in flight holds it, three posts are
+each answered in under a second, cause one pass once the stall lifts, and
+the card reads "asking" after it; three fresh posts cause at most two
+passes. The stall is the lock held directly, not `host_down`: on the
+fixture the fake `ssh` refuses at once, so a machine that is down stalls
+nothing there, and what the intake waited behind was the lock either way.
 
 ### 2. The same event is held once
 The store (`infrastructure/store.py`, `record_hook_events`; a migration)
@@ -53,6 +60,15 @@ Hands out: execution — the count of duplicate groups before and after the
 migration on a copy of the live store, and the card whose history changed
 if any did; verifies by reading two of those cards' histories on the
 served board before the fold.
+**Met:** `tests/infrastructure/test_store_doors.py::test_the_same_event_posted_twice_is_held_once_and_the_second_answer_counts_nothing`
+and migration 0019 on a copy of the laptop's live store taken 2026-09-11
+13:02Z: 1,728 duplicate groups before (49,938 rows), 0 after (2,937 rows);
+no group's echoes differed in content; the distinct histories before and
+after are equal; 109 of 110 cards' histories shrank, needle #109 most
+(8,162 rows to 39). Read on the served board before the fold: #109's last
+word (08:41:08Z, "Card 109 is closed into Executed and folded…") and
+Hello Revenue #456's (07:10:44Z, "The questions are already written…")
+are the copy's last Stop rows after the migration.
 
 ### 3. Both machines' queues drain, and the hook says when they do not
 With item 1 the hook's drain (`hooks/needle_hook.py`, `drain`) hears its
@@ -63,6 +79,13 @@ would be loud where the owner looks.
 Done means: live, the queue file beside the store on the laptop and on the
 rented machine is empty a minute after the fold; on the fixture a queue
 with an old event is counted on the machines line and an empty one is not.
+**Met:** `tests/runtime/test_machines.py::test_a_queue_holding_an_event_older_than_an_hour_is_counted_on_the_machines_line`
+— on the two-machine floor an event two hours old beside either machine's
+store counts one on that machine's line, a fresh one and an empty queue
+count nothing, read through the same room read the head uses. The hook
+itself is unchanged: its drain already empties the queue on a 2xx. The
+live half — both queues empty a minute after the fold — is read at the
+close and written in the review record.
 
 ## Acceptance criteria
 

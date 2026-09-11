@@ -892,10 +892,25 @@ class Store:
         self, events: list[tuple[HookPosted, str | None, int | None]]
     ) -> list[HookEvent]:
         """Keep every event a hook posted, attributed to (project, card) as
-        the caller resolved it from the working directory."""
+        the caller resolved it from the working directory — once. A hook
+        that heard no answer re-sends its whole queue (card #124: a day of
+        echoes, 47,001 rows of 49,938 on the laptop's store), so an event
+        the store already holds by its session, kind and second is skipped,
+        and only what was new comes back: the intake's answer counts it, so
+        a re-sent batch reads as a small number and a fresh post as its
+        count."""
         out: list[HookEvent] = []
         with self._session() as session, session.begin():
             for posted, slug, number in events:
+                held = session.scalar(
+                    select(HookEventRow.id).where(
+                        HookEventRow.session_id == posted.session_id,
+                        HookEventRow.kind == posted.kind.value,
+                        HookEventRow.at == posted.at,
+                    )
+                )
+                if held is not None:
+                    continue
                 row = HookEventRow(
                     at=posted.at,
                     kind=posted.kind.value,

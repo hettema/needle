@@ -119,7 +119,6 @@ from domain.watercooler import Note
 from domain.window import Window, WindowKind
 from infrastructure import clock
 from infrastructure.live import Live, LiveProject
-from infrastructure.paths import data_dir
 from infrastructure.store import StoreRefusal
 from runtime import codex, discussion, handoffs, launch, limits, machine
 from runtime.service import Runtime
@@ -263,6 +262,17 @@ class Loops:
         self._parties: dict[tuple[str, int], set[str]] = {}
         """Per lane, the notes its card names: read with the plan's
         footprint, once per beat, so the word never reads a plan."""
+        self._pass_asked = False
+        self._pass_task: asyncio.Task[None] | None = None
+        """The pass a post asks for (card #124): the intake records what was
+        posted and answers at once, and the pass runs after the answer as
+        this task's work. However many posts arrive while a pass runs, the
+        flag is one flag, so one more pass follows it and never one per
+        post; a post that arrives while no pass runs starts one. Before,
+        the intake awaited the whole pass — 26 s with a hundred lanes and a
+        second machine — so no hook heard its answer within the two seconds
+        it waits, every firing re-sent a day of events, and the board spent
+        the evening answering echoes (2026-09-10)."""
         self._word_lock = asyncio.Lock()
         """The word's own lock (plan 10): a read of a lane's word and the
         move of its heard-mark are one act, so two hooks firing from one
@@ -284,7 +294,8 @@ class Loops:
 
     async def stop(self) -> None:
         self._stop.set()
-        for task in self._tasks:
+        pending = [self._pass_task] if self._pass_task is not None else []
+        for task in [*self._tasks, *pending]:
             task.cancel()
             with contextlib.suppress(asyncio.CancelledError):
                 await task
@@ -343,6 +354,12 @@ class Loops:
 
     async def reconcile(self) -> None:
         async with self._lock:
+            # A post's ask is met by the first pass that reads the store
+            # after it (card #124): cleared here, under the lock, so posts
+            # that arrive while a pass waits its turn are read by that pass
+            # and not by one more after it — cleared before the wait, three
+            # posts during a stall caused two passes.
+            self._pass_asked = False
             await asyncio.to_thread(self.reconcile_now)
 
     async def read_signals(self) -> None:
@@ -358,9 +375,34 @@ class Loops:
         await asyncio.to_thread(self.level_clones_now)
 
     async def hooks(self, posted: list[HookPosted]) -> list[HookEvent]:
-        recorded = self.record_hooks(posted)
-        await self.reconcile()
+        """What a session's hook posted: recorded and answered at once, with
+        the pass it causes run after the answer (card #124). The record is
+        off the loop's thread and outside the loops' lock, which a pass in
+        flight holds for its whole read: the hook's two seconds are the
+        bound, and the store's write is milliseconds."""
+        recorded = await asyncio.to_thread(self.record_hooks, posted)
+        self.ask_for_a_pass()
         return recorded
+
+    def ask_for_a_pass(self) -> None:
+        """One more pass after the one in flight, whoever asks and however
+        often: the flag is set, and the task that drains it exists once."""
+        self._pass_asked = True
+        if self._pass_task is None or self._pass_task.done():
+            self._pass_task = asyncio.create_task(self._passes_asked_for())
+
+    async def _passes_asked_for(self) -> None:
+        while self._pass_asked and not self._stop.is_set():
+            try:
+                await self.reconcile()
+            except Exception as error:  # noqa: BLE001 — a failed pass never ends the asking
+                log.warning("the pass a post asked for failed (%s: %s)", type(error).__name__, error)
+
+    async def settled(self) -> None:
+        """Every pass posts have asked for has run: what a reader who wants
+        the board to show a post waits on, never the post itself."""
+        while self._pass_task is not None and not self._pass_task.done():
+            await asyncio.shield(self._pass_task)
 
     async def word(self, cwd: str, wrote: str | None = None) -> Word | None:
         """What the board has not yet told the lane at `cwd` (plan 10, item
@@ -2409,8 +2451,3 @@ class Loops:
                 if update:
                     self.live.store.record_lane(record.model_copy(update=update))
         return state
-
-
-def queue_path() -> Path:
-    """Where the hook script queues events while the board is down."""
-    return data_dir() / "hook-queue.jsonl"

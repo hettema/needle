@@ -155,6 +155,33 @@ def test_hook_events_are_kept_as_posted_and_attributed_as_told(board: Store):
     assert len(board.hook_events_of_session("bbbb0001-0000-4000-8000-000000000000")) == 1
 
 
+def test_the_same_event_posted_twice_is_held_once_and_the_second_answer_counts_nothing(
+    board: Store,
+):
+    """A hook that heard no answer re-sends its queue (card #124): the
+    store keeps one row per session, kind and second, and answers with
+    what was new — a re-sent batch counts zero, a fresh event its one."""
+    posted = HookPosted(
+        kind=HookKind.STOP,
+        session_id="aaaa0002-0000-4000-8000-000000000000",
+        cwd="/srv/p/.claude/worktrees/card-253-x",
+        at=NOW,
+        source=None,
+        message="Done.",
+        reason=None,
+        error=None,
+        transcript_path=None,
+    )
+    ended = posted.model_copy(update={"kind": HookKind.SESSION_END})
+    batch = [(posted, "proj", 253), (ended, "proj", 253)]
+    assert len(board.record_hook_events(batch)) == 2
+    assert board.record_hook_events(batch) == []
+    later = posted.model_copy(update={"at": NOW + timedelta(seconds=1)})
+    again = board.record_hook_events([*batch, (later, "proj", 253)])
+    assert [e.at for e in again] == [later.at]
+    assert len(board.hook_events("proj", 253)) == 3
+
+
 def test_discussions_lanes_readings_and_the_trunk_round_trip(board: Store):
     talk = board.record_discussion(
         "proj", 253, "dddd0001-0000-4000-8000-000000000000", "alpha", NOW

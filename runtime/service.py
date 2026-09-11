@@ -85,6 +85,9 @@ HIGH_WATER_DAYS = 14
 """The loop's window: the plan decides 32 or 64 GB on two weeks of marks."""
 KILLED_HOURS = 24
 """The loop's daily count: lanes the system killed on a machine in the last day."""
+STALE_QUEUE_SECONDS = 3600
+"""An event the sessions' hook still queues after this long is one the board
+never answered (card #124): counted on the machine's line of the head."""
 
 _EPOCH = datetime.min.replace(tzinfo=UTC)
 _UNREACHABLE = (machine.Unreachable, RemoteRefused)
@@ -297,8 +300,22 @@ class Runtime:
             if held is not None and units is not None
             else None
         )
+        now = clock.now()
+        # The hook's queue beside this machine's store (card #124): an event
+        # still there after an hour is one the board never answered.
+        stale = sum(
+            1
+            for at in machine.hook_queue_moments(self.store.path)
+            if now.timestamp() - at > STALE_QUEUE_SECONDS
+        )
         return headroom(
-            info, MEMORY_FLOOR_BYTES, clock.now(), scopes=scopes, marked=marked, mark=mark
+            info,
+            MEMORY_FLOOR_BYTES,
+            now,
+            scopes=scopes,
+            marked=marked,
+            mark=mark,
+            stale_queue=stale,
         )
 
     def rooms(
