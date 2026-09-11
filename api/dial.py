@@ -171,6 +171,12 @@ class Dial:
                 log.warning("the dial failed (%s: %s); it runs again", type(error).__name__, error)
 
     async def tick(self) -> None:
+        """One beat. The board's own machine is read first, outside the lock
+        (card #123): the beat decides on its room and its sessions, and the
+        pass's answer from before a lane grew would let the beat take work
+        the floor refuses. Another machine's room is its last answer; a
+        start there rechecks that machine's own floor."""
+        await self.loops.pass_now()
         async with self.loops.lock:
             await asyncio.to_thread(self.tick_now)
 
