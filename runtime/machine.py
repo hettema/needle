@@ -20,7 +20,7 @@ from pathlib import Path
 
 from domain.dial import Meminfo
 from domain.machine import BoardMachine
-from infrastructure.paths import board_path
+from infrastructure.paths import board_path, data_dir
 
 PROC = Path("/proc")
 SPAWN_REAP_SECONDS = 5.0
@@ -313,16 +313,28 @@ def meminfo_path() -> Path:
     return _path("NEEDLE_MEMINFO", PROC / "meminfo")
 
 
-def hook_queue_moments(store: Path) -> list[float]:
+def hook_queue_path() -> Path:
+    """Where the sessions' hook queues its events: `hook-queue.jsonl` in the
+    data folder, which `hooks/needle_hook.py::data_dir` names by the same
+    rule (`NEEDLE_DATA_DIR`, else the XDG data home) — never beside the
+    store, which `NEEDLE_DB` moves on its own (Codex's pass 2 on card #124,
+    finding 1). The floor lays its own data folder."""
+    return data_dir() / "hook-queue.jsonl"
+
+
+def hook_queue_moments() -> list[float] | None:
     """When each event still queued by the sessions' hook fired, in seconds
-    since the epoch: the queue is `hook-queue.jsonl` beside the store, one
-    JSON object a line as `hooks/needle_hook.py` appends and drains it
-    (card #124). Empty when there is no queue or nothing readable in it."""
-    queue = store.parent / "hook-queue.jsonl"
+    since the epoch, one JSON object a line as `hooks/needle_hook.py`
+    appends and drains it (card #124). Empty when there is no queue or
+    nothing readable in it; None when the file is there and could not be
+    read, which is no count at all and never a zero."""
+    queue = hook_queue_path()
     try:
         lines = queue.read_text(encoding="utf-8").splitlines()
-    except OSError:
+    except FileNotFoundError:
         return []
+    except OSError:
+        return None
     moments: list[float] = []
     for line in lines:
         try:

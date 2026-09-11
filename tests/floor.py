@@ -36,6 +36,11 @@ class Floor:
     state_file: Path
     cgroup_root: Path
     applications: Path
+    data_dir: Path
+    """Needle's own data folder on this floor (`NEEDLE_DATA_DIR`): where the
+    sessions' hook queues its events (card #124), laid apart from the store
+    the tests name by `NEEDLE_DB` so a reader that looks beside the store is
+    caught."""
     machine_id: str = "floor-machine-0001"
     """What the floor's `/etc/machine-id` says (card #83): a second floor
     laid beside this one answers with its own."""
@@ -559,6 +564,8 @@ def lay(root: Path) -> Floor:
     cgroups.mkdir()
     applications = root / "applications"
     applications.mkdir()
+    data = root / "needle-data"
+    data.mkdir()
     ssh_control = root / "ssh-control"
     ssh_control.mkdir()
     state = root / "fake-state.json"
@@ -607,6 +614,7 @@ def lay(root: Path) -> Floor:
         state_file=state,
         cgroup_root=cgroups,
         applications=applications,
+        data_dir=data,
         ssh_control=ssh_control / "needle-ssh-%C",
     )
 
@@ -642,6 +650,7 @@ ENVIRONMENT = {
     "NEEDLE_FAKE_STATE": "state_file",
     "NEEDLE_CGROUP_ROOT": "cgroup_root",
     "NEEDLE_APPLICATIONS": "applications",
+    "NEEDLE_DATA_DIR": "data_dir",
     "NEEDLE_MACHINE_ID": "machine_id",
     "NEEDLE_SSH_CONTROL": "ssh_control",
 }

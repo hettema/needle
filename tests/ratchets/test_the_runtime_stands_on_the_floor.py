@@ -51,6 +51,7 @@ def test_every_path_the_runtime_reads_is_under_the_floor(machine_floor: Floor):
         machine.acct_cache_dir(),
         machine.applications_dir(),
         machine.control_path(),
+        machine.hook_queue_path(),
     ):
         assert read.resolve().is_relative_to(root), f"{read} is not under the floor {root}"
     # The floor's identity is the floor's, never this laptop's kernel's (card #83).

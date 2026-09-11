@@ -664,8 +664,11 @@ def describe_room(reading: MachineRoom) -> str:
     mark = reading.high_water
     marks = f", high-water {_gb(mark.used)} used" if mark is not None else ""
     clones = f"; clone not level — {', '.join(reading.clones)}" if reading.clones else ""
-    stale = reading.room.stale_queue if reading.room is not None else 0
-    queued = f"; {stale} queued over an hour — the board did not answer" if stale else ""
+    queued = ""
+    if reading.room is not None and reading.room.stale_queue is None:
+        queued = "; its queue of session messages was not read"
+    elif reading.room is not None and reading.room.stale_queue:
+        queued = f"; {reading.room.stale_queue} queued over an hour — the board did not answer"
     return (
         f"{reading.machine.name}{where}  {what}  {state}{marks}, "
         f"{reading.killed} killed today{clones}{queued}"

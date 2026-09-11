@@ -195,11 +195,14 @@ class Headroom(BaseModel):
     mark: int = MEMORY_FLOOR_BYTES
     """What a lane's group is held to on this machine (`lane_mark`): the
     floor on the desktop, what the machine has above it on the horsepower."""
-    stale_queue: int = 0
-    """Events the sessions' hook has queued beside this machine's store that
-    are older than an hour (card #124): the hook empties its queue the
+    stale_queue: int | None = None
+    """Events the sessions' hook has queued in this machine's data folder
+    that are older than an hour (card #124): the hook empties its queue the
     moment the board answers, so a count here says the board did not, and
-    the head shows it where the owner looks."""
+    the head shows it where the owner looks. None when the queue was not
+    read — a machine running an older `needle` answers without the field,
+    or the file could not be read — so a count nobody took never reads as
+    zero (Codex's pass 2 on card #124, finding 2)."""
 
 
 class DialState(BaseModel):
@@ -362,7 +365,7 @@ def headroom(
     scopes: Sequence[ScopeMemory] | None = (),
     marked: Sequence[str] = (),
     mark: int | None = None,
-    stale_queue: int = 0,
+    stale_queue: int | None = None,
 ) -> Headroom:
     """The machine against the floor, and every lane's scope beside it
     (plan 53, item 1). A reading the runtime could not make — the memory,

@@ -301,12 +301,14 @@ class Runtime:
             else None
         )
         now = clock.now()
-        # The hook's queue beside this machine's store (card #124): an event
-        # still there after an hour is one the board never answered.
-        stale = sum(
-            1
-            for at in machine.hook_queue_moments(self.store.path)
-            if now.timestamp() - at > STALE_QUEUE_SECONDS
+        # The hook's queue in this machine's data folder (card #124): an event
+        # still there after an hour is one the board never answered, and a
+        # queue that could not be read is said as not read, never as zero.
+        moments = machine.hook_queue_moments()
+        stale = (
+            None
+            if moments is None
+            else sum(1 for at in moments if now.timestamp() - at > STALE_QUEUE_SECONDS)
         )
         return headroom(
             info,

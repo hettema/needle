@@ -502,7 +502,7 @@ describe("the doors", () => {
     const b = board();
     const laptop = { name: "laptop", machine_id: "id-laptop", host: null, desktop: true, ground: "/x/laptop-record", command: "needle", added_at: "2026-09-09T08:00:00+00:00" };
     const rented = { ...laptop, name: "rented", machine_id: "id-rented", host: "rented", desktop: false, ground: null };
-    const room = { available: 24 * 1024 ** 3, swap_free: 8 * 1024 ** 3, floor: 5 * 1024 ** 3, full: false, sentence: null, scopes: [], read_at: "2026-09-09T08:00:00+00:00", marked: [], total: 32 * 1024 ** 3 };
+    const room = { available: 24 * 1024 ** 3, swap_free: 8 * 1024 ** 3, floor: 5 * 1024 ** 3, full: false, sentence: null, scopes: [], read_at: "2026-09-09T08:00:00+00:00", marked: [], total: 32 * 1024 ** 3, stale_queue: 0 };
     b.machine = { missing: [], roles: null, machines: [
       { machine: laptop, here: true, room: { ...room, available: 9 * 1024 ** 3 }, why: null, high_water: null, killed: 0 },
       { machine: rented, here: false, room, why: null, high_water: null, killed: 2 },
@@ -517,7 +517,7 @@ describe("the doors", () => {
     const b = board();
     const laptop = { name: "laptop", machine_id: "id-laptop", host: null, desktop: true, ground: null, command: "needle", added_at: "2026-09-09T08:00:00+00:00" };
     const rented = { ...laptop, name: "rented", machine_id: "id-rented", host: "rented", desktop: false };
-    const room = { available: 9 * 1024 ** 3, swap_free: 8 * 1024 ** 3, floor: 5 * 1024 ** 3, full: false, sentence: null, scopes: [], read_at: "2026-09-09T08:00:00+00:00", marked: [], total: 16 * 1024 ** 3 };
+    const room = { available: 9 * 1024 ** 3, swap_free: 8 * 1024 ** 3, floor: 5 * 1024 ** 3, full: false, sentence: null, scopes: [], read_at: "2026-09-09T08:00:00+00:00", marked: [], total: 16 * 1024 ** 3, stale_queue: 0 };
     b.machine = { missing: [], roles: null, machines: [
       { machine: laptop, here: true, room, why: null, high_water: null, killed: 0 },
       { machine: rented, here: false, room: null, why: "rented did not answer", high_water: null, killed: 0 },
@@ -546,6 +546,23 @@ describe("the doors", () => {
     expect(head.textContent).not.toMatch(/rented: 9\.0 GB free; /);
     const facts = Array.from(head.querySelectorAll("[data-meaning='broken']"));
     expect(facts.some((el) => el.textContent?.includes("3 queued over an hour"))).toBe(true);
+  });
+
+  it("says a queue nobody read as not read, never as nothing queued, and does not paint the line broken for it (card #124)", async () => {
+    const b = board();
+    const laptop = { name: "laptop", machine_id: "id-laptop", host: null, desktop: true, ground: null, command: "needle", added_at: "2026-09-09T08:00:00+00:00" };
+    const rented = { ...laptop, name: "rented", machine_id: "id-rented", host: "rented", desktop: false };
+    const room = { available: 9 * 1024 ** 3, swap_free: 8 * 1024 ** 3, floor: 5 * 1024 ** 3, full: false, sentence: null, scopes: [], read_at: "2026-09-09T08:00:00+00:00", marked: [], total: 16 * 1024 ** 3 };
+    b.machine = { missing: [], roles: null, machines: [
+      { machine: laptop, here: true, room: { ...room, stale_queue: 0 }, why: null, high_water: null, killed: 0 },
+      { machine: rented, here: false, room: { ...room, stale_queue: null }, why: null, high_water: null, killed: 0 },
+    ] };
+    api.getBoard.mockResolvedValue(b);
+    await renderBoard();
+    const head = document.querySelector(".app-head") as HTMLElement;
+    expect(head).toHaveTextContent("laptop (here): 9.0 GB free · rented: 9.0 GB free; its queue of session messages was not read");
+    const facts = Array.from(head.querySelectorAll("[data-meaning='broken']"));
+    expect(facts.some((el) => el.textContent?.includes("was not read"))).toBe(false);
   });
 
   it("says on the open card which machine a lane's session runs on, when the board knows", async () => {

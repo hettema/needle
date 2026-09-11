@@ -7,6 +7,7 @@ environment, so every verb the board asks over the wire runs the real code
 against the real typed edge, and only the transport is a fake.
 """
 
+import os
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
@@ -262,31 +263,44 @@ def test_the_board_reads_every_machines_room_and_the_head_names_each(two_machine
 
 
 def test_a_queue_holding_an_event_older_than_an_hour_is_counted_on_the_machines_line(
-    two_machines, store: Store
+    two_machines, machine_floor: Floor
 ):
-    """Card #124, item 3: the hook's queue beside each machine's store is
+    """Card #124, item 3: the hook's queue in each machine's data folder is
     the trace — empty when the board answers, growing when it does not —
     and an event still there after an hour is counted on that machine's
     line, on either machine, through the same room read; an empty queue
-    and a fresh event count nothing."""
+    and a fresh event count nothing. The queue is where the hook writes it,
+    not beside the store, which the floor lays elsewhere (Codex's pass 2,
+    finding 1); a queue that could not be read, and a machine whose older
+    needle answers without the count, are said as not read and never as
+    zero (finding 2)."""
     import time
 
     from api.runtime_cli import describe_room
 
     runtime, other = two_machines
+    assert machine_floor.data_dir != Path(os.environ["NEEDLE_DB"]).parent
     old, fresh = time.time() - 2 * 3600, time.time() - 60
-    (store.path.parent / "hook-queue.jsonl").write_text(
+    (machine_floor.data_dir / "hook-queue.jsonl").write_text(
         f'{{"at": {old}, "session_id": "s1"}}\n{{"at": {fresh}, "session_id": "s2"}}\nnot json\n'
     )
-    (other.root / "hook-queue.jsonl").write_text("")
+    (other.data_dir / "hook-queue.jsonl").write_text("")
     by_name = {r.machine.name: r for r in runtime.rooms()}
     assert by_name["laptop"].room is not None and by_name["laptop"].room.stale_queue == 1
     assert by_name["rented"].room is not None and by_name["rented"].room.stale_queue == 0
     assert "; 1 queued over an hour — the board did not answer" in describe_room(by_name["laptop"])
-    assert "queued" not in describe_room(by_name["rented"])
-    (other.root / "hook-queue.jsonl").write_text(f'{{"at": {old}, "session_id": "s3"}}\n')
+    assert "queue" not in describe_room(by_name["rented"])
+    (other.data_dir / "hook-queue.jsonl").write_text(f'{{"at": {old}, "session_id": "s3"}}\n')
     rented = next(r for r in runtime.rooms() if r.machine.name == "rented")
     assert rented.room is not None and rented.room.stale_queue == 1
+
+    (machine_floor.data_dir / "hook-queue.jsonl").unlink()
+    (machine_floor.data_dir / "hook-queue.jsonl").mkdir()
+    laptop = next(r for r in runtime.rooms() if r.machine.name == "laptop")
+    assert laptop.room is not None and laptop.room.stale_queue is None
+    assert "; its queue of session messages was not read" in describe_room(laptop)
+    older = Headroom.model_validate(laptop.room.model_dump(mode="json", exclude={"stale_queue"}))
+    assert older.stale_queue is None
 
 
 def test_a_machine_that_does_not_answer_is_a_room_of_none_with_the_transports_words(

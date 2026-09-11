@@ -97,10 +97,15 @@ function machineWords(m: MachineRoom): string {
     return `did not answer${m.why ? ` (${m.why})` : ""}${clones}`;
   // A hook's queue still holding an event after an hour is one the board
   // never answered (card #124): said on the machine's line, loud.
-  const unanswered = m.room.stale_queue ?? 0;
-  const queued = unanswered
-    ? `; ${unanswered} queued over an hour — the board did not answer`
-    : "";
+  // A count nobody took — an older needle there, or a queue that could
+  // not be read — is said as not read, never shown as nothing queued.
+  const unanswered = m.room.stale_queue;
+  const queued =
+    unanswered === null || unanswered === undefined
+      ? "; its queue of session messages was not read"
+      : unanswered
+        ? `; ${unanswered} queued over an hour — the board did not answer`
+        : "";
   if (m.room.full) return `${m.room.sentence ?? "full"}${clones}${queued}`;
   const gb = (m.room.available / 1024 ** 3).toFixed(1);
   return `${gb} GB free${m.killed ? `, ${m.killed} killed today` : ""}${clones}${queued}`;
