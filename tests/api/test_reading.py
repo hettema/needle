@@ -318,3 +318,24 @@ def test_a_session_row_needs_a_target_and_a_due_date(text: str, capsys):
 
     signal, why = read_or_decline(text)
     assert signal is None and ("no target" in why or "no due date" in why)
+
+
+def test_a_signal_replaced_while_it_was_read_lands_nothing(
+    client: TestClient, machine_floor: Floor, repo: Path, monkeypatch
+):
+    """Codex's review of card #123 (call 105, 2): the signal loop reads a
+    command's result before its lock and lands it under the lock only while
+    the card is still due by that same signal — a WATCH row replaced in
+    between lands nothing."""
+    from board.signals import read_or_decline
+
+    close_with_session_signal(client, repo)
+    loops = client.app.state.loops
+    live = loops.live.projects["proj"]
+    card = loops.live.store.card("proj", CARD)
+    old, why = read_or_decline("the old check passes — command true by 2026-12-31")
+    assert old is not None, why
+    landed: list[tuple] = []
+    monkeypatch.setattr(loops, "_land", lambda *args, **kwargs: landed.append(args))
+    loops.land_signals_now([(live, card, old, False, (True, "passed"))])
+    assert landed == [], "the result of a signal the card no longer names is not landed"

@@ -320,7 +320,13 @@ class Runtime:
         stopped with no process — read into the standing observation (card
         #123): the door's re-read sees it without a wire, and the machine's
         next answer to a question asked after the act replaces it."""
-        self._acted.setdefault(m.name, []).append((clock.now(), session))
+        # The newest act on a session is the one that stands: a launch then
+        # a stop leaves the stop (Codex's review of card #123, call 105, 1).
+        entries = [
+            (at, s) for at, s in self._acted.get(m.name, []) if s.session_id != session.session_id
+        ]
+        entries.append((clock.now(), session))
+        self._acted[m.name] = entries
         seen = self.observed.get(m.name)
         if seen is not None and seen.observation is not None:
             seen.observation = self._laid_by_acts(m, seen.observation, [session])
@@ -334,7 +340,11 @@ class Runtime:
         whose worktree the answer predates reads as gone, and a gone lane
         moves its card (card #123). The branch is the machine's to say on
         its next answer."""
-        replaced = {a.session_id for a in acted}
+        newest: dict[str, Session] = {}
+        for act in acted:
+            newest[act.session_id] = act
+        acted = list(newest.values())
+        replaced = set(newest)
         rows = [r for r in observation.sessions if r.session_id not in replaced] + acted
         checkouts = {repo: dict(paths) for repo, paths in observation.checkouts.items()}
         for session in acted:
@@ -506,6 +516,18 @@ class Runtime:
             scopes = None
         placement = r.where(None, [], cached=True)
         checkouts = {repo: r.worktrees(repo) for repo in ask.repos}
+        # Read here, outside the lock, so a park and the windows are read
+        # from this answer too (Codex's review of card #123, call 105, 5 and 7).
+        found_limits: dict[str, Limits | None] = {}
+        for slot in sorted({row.slot for row in rows}):
+            try:
+                found_limits[slot] = r.limits(slot)
+            except _UNREACHABLE:
+                found_limits[slot] = None
+        held: list[str] | None = None
+        if r.machine.desktop and r.machine.host:
+            with contextlib.suppress(windows.WindowRefused):
+                held = windows.addresses(r.machine.host)
         lanes = [
             LaneSeen(
                 checkout=a.checkout,
@@ -527,7 +549,8 @@ class Runtime:
             placement=placement,
             checkouts=checkouts,
             lanes=lanes,
-            windows=None,
+            limits=found_limits,
+            windows=held,
         )
 
     def _answer(self, m: Machine, ask: Ask) -> Answer:
@@ -556,6 +579,20 @@ class Runtime:
             for m in machines:
                 pending = self._asking.get(m.name)
                 if pending is None:
+                    if not self.is_here(m) and m.name not in self.observed:
+                        # Unread until it first answers (Codex's review of
+                        # card #123, call 105, 3): every read of it answers
+                        # empty, never over the wire under the lock.
+                        why = f"{m.name} has not answered its first question yet"
+                        self.observed[m.name] = Observed(
+                            machine=m.name,
+                            observation=None,
+                            read_at=None,
+                            asked_at=None,
+                            fresh=False,
+                            why=why,
+                        )
+                        self.unread[m.name] = why
                     pending = Future()
                     pending.set_running_or_notify_cancel()
                     threading.Thread(
@@ -634,7 +671,10 @@ class Runtime:
                 machine=m.name,
                 observation=old.observation if old is not None else None,
                 read_at=old.read_at if old is not None else None,
-                asked_at=answer.asked_at,
+                # The question that brought the observation kept, not the one
+                # that failed: the windows it lists are read against it
+                # (Codex's review of card #123, call 105, 6).
+                asked_at=old.asked_at if old is not None else None,
                 fresh=False,
                 why=answer.error or f"{m.name} did not answer",
                 behind=old.behind if old is not None else False,
@@ -1211,7 +1251,7 @@ class Runtime:
         own `claude-acct` cache of what that login last saw."""
         on = self.machine_named(machine_name)
         seen = self._seen(on)
-        if seen is not None and not seen.behind:
+        if seen is not None:
             # As the machine last answered (card #123): a park is checked
             # under the lock, and never over the wire there.
             if seen.observation is None:
@@ -1804,6 +1844,14 @@ class Runtime:
         group the manager is ending still holds what it is killing (card
         #99); None when the manager could not be asked."""
         on = self.machine_named(machine_name)
+        seen = self._seen(on)
+        if not self.is_here(on) and seen is not None:
+            # As the machine last answered (Codex's review of card #123, call
+            # 105, 4): the sweep reads under the lock, never over the wire; a
+            # machine that did not answer this pass establishes nothing.
+            if not seen.fresh or seen.observation is None or seen.observation.scopes is None:
+                return None
+            return next((g.pids for g in seen.observation.scopes if g.unit == unit), [])
         try:
             if self.is_here(on):
                 return machine.unit_pids(unit)

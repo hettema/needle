@@ -799,6 +799,10 @@ class Loops:
             # observation) are applied now, and a pass reads every machine
             # right after, so the door waits on no walk and no wire.
             self.runtime.accept_ready()
+            # The endings the door's own act made are part of the act: asked
+            # before the apply, so a Stop moves its card with its ending
+            # named, and the pass after reads every machine fresh.
+            self._ask_causes(self._endings_to_name())
             self.apply_now()
             self._ask_pass_soon()
             return
@@ -2605,10 +2609,15 @@ class Loops:
         # Still due after the tending above (card #123): a reading that just
         # ended is recorded, and the cadence that asked for it waits — the
         # list was read before the lock, before that reading was tended.
-        still = {(live.project.slug, card.number) for live, card, _, _ in self._signals_due()}
+        # And due by the same signal: a WATCH row replaced while the old one
+        # was read lands nothing (Codex's review of card #123, call 105, 2).
+        still = {
+            (live.project.slug, card.number): signal
+            for live, card, signal, _ in self._signals_due()
+        }
         for live, card, signal, trigger, reading in read:
             slug = live.project.slug
-            if (slug, card.number) not in still:
+            if still.get((slug, card.number)) != signal:
                 continue
             if signal.kind == SignalKind.SESSION:
                 if card.number in in_flight.get(slug, {}) or alive >= READINGS_AT_ONCE:

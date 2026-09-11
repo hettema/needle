@@ -877,6 +877,9 @@ def test_a_lane_killed_otherwise_carries_the_machines_reason_and_comes_back(
     Resume open and nobody awake to press it."""
     start(client)
     reconcile(client)
+    # The pass the Start asked for has run (card #123): the kill below is
+    # staged after the board last saw the lane alive, as a real kill is.
+    settle(client)
     launched = machine_floor.state()["launch_log"][0]
     stamp = datetime.now(UTC).isoformat()
     machine_floor.write_journal(

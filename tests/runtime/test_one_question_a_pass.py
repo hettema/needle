@@ -44,7 +44,9 @@ def lay(
     sleepers: list[subprocess.Popen[bytes]] = []
     stores: list[Store] = []
 
-    def make(*, far: int = 3, near: int = 0, command: str = "needle") -> SimpleNamespace:
+    def make(
+        *, far: int = 3, near: int = 0, command: str = "needle", desktop: str = "laptop"
+    ) -> SimpleNamespace:
         git(corpus, "init", "-q", "-b", "develop")
         git(corpus, "add", "-A")
         git(
@@ -65,7 +67,7 @@ def lay(
                 name="laptop",
                 machine_id=machine_floor.machine_id,
                 host=None,
-                desktop=True,
+                desktop=desktop == "laptop",
                 ground=None,
                 command="needle",
                 added_at=NOW,
@@ -74,7 +76,7 @@ def lay(
                 name="rented",
                 machine_id=other.machine_id,
                 host="rented",
-                desktop=False,
+                desktop=desktop == "rented",
                 ground=None,
                 command=command,
                 added_at=NOW,
@@ -430,3 +432,101 @@ def test_a_stop_on_either_machine_is_on_the_card_and_its_ending_is_named_outside
     sessions = stopped
     deaths = b.store.deaths(b.slug)
     assert all(s.session_id in deaths for s in sessions.values())  # type: ignore[attr-defined]
+
+
+# ── the review's findings (Codex, call 105) ────────────────────────────
+
+
+def test_the_newest_act_on_a_session_stands_over_an_older_answer(lay):
+    from runtime.service import Answer
+
+    b = lay(far=1)
+    b.loops.reconcile_now()
+    b.loops.reconcile_now()
+    rented = b.runtime.machine_named("rented")
+    seen = b.runtime.observed["rented"]
+    session = next(s for s in seen.observation.sessions if s.pid is not None)
+    asked = clock.now()
+    b.runtime._put_acted(rented, session)
+    b.runtime._put_acted(rented, session.model_copy(update={"pid": None}))
+    old_answer = Answer(rented, seen.observation, False, None, asked, 0.1)
+    assert b.runtime._accept(old_answer)
+    rows = [s for s in b.runtime.sessions() if s.session_id == session.session_id]
+    assert [r.pid for r in rows] == [None], "the stop is newer than the launch"
+
+
+def test_a_machine_is_unread_until_its_first_answer_and_nothing_reads_it_over_the_wire(
+    lay, machine_floor: Floor
+):
+    b = lay(far=1)
+    b.loops.reconcile_now()
+    late = machine_floor.lay_host("late")
+    hosts = machine_floor.state()["hosts"]
+    hosts["late"]["env"]["NEEDLE_FAKE_SLOW"] = "4"
+    machine_floor.update(hosts=hosts)
+    b.store.add_machine(
+        Machine(
+            name="late",
+            machine_id=late.machine_id,
+            host="late",
+            desktop=False,
+            ground=None,
+            command="needle",
+            added_at=NOW,
+        )
+    )
+    b.runtime.ask_machines(b.loops._asks())
+    assert "late" in b.runtime.unread
+    before = len(ssh_words(machine_floor))
+    b.runtime.rooms()
+    b.runtime.sessions()
+    b.runtime.scopes()
+    b.runtime.boots("late")
+    b.runtime.limits("alpha", machine_name="late")
+    assert [w for w in ssh_words(machine_floor, before) if "observe --ask" not in w] == []
+
+
+def test_another_machines_group_is_read_from_its_answer(lay, machine_floor: Floor):
+    b = lay(far=1)
+    b.loops.reconcile_now()
+    before = len(ssh_words(machine_floor))
+    assert b.runtime.scope_pids("needle-card-1-far.scope", machine_name="rented") == []
+    assert ssh_words(machine_floor, before) == []
+    machine_floor.host_down("rented")
+    b.loops.reconcile_now()
+    before = len(ssh_words(machine_floor))
+    assert b.runtime.scope_pids("needle-card-1-far.scope", machine_name="rented") is None
+    assert ssh_words(machine_floor, before) == []
+
+
+def test_a_failed_answer_keeps_the_question_time_of_what_it_keeps(lay, machine_floor: Floor):
+    b = lay(far=1)
+    b.loops.reconcile_now()
+    kept = b.runtime.observed["rented"].asked_at
+    machine_floor.host_down("rented")
+    b.loops.reconcile_now()
+    seen = b.runtime.observed["rented"]
+    assert not seen.fresh and seen.observation is not None
+    assert seen.asked_at == kept, "the windows it lists are read against their own question"
+
+
+def test_an_older_needle_on_the_desktop_answers_its_limits_and_windows(
+    lay, machine_floor: Floor, tmp_path: Path
+):
+    older = tmp_path / "older-needle"
+    older.write_text(
+        "#!/bin/sh\n"
+        'if [ "$1" = observe ]; then echo "invalid choice: observe" >&2; exit 2; fi\n'
+        'exec needle "$@"\n',
+        encoding="utf-8",
+    )
+    older.chmod(0o755)
+    b = lay(far=1, command=str(older), desktop="rented")
+    b.loops.reconcile_now()
+    seen = b.runtime.observed["rented"]
+    assert seen.fresh and seen.behind
+    assert seen.observation is not None and seen.observation.windows is not None
+    assert "alpha" in seen.observation.limits
+    before = len(ssh_words(machine_floor))
+    b.runtime.limits("alpha", machine_name="rented")
+    assert ssh_words(machine_floor, before) == [], "a park reads the answer, not the wire"
