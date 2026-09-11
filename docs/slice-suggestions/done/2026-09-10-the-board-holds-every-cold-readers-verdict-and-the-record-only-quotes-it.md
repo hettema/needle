@@ -4,6 +4,10 @@
 **Fix:** now — the intent it breaks is written (`docs/HOW-WE-WORK.md` §5: a trace the actor can write without doing the act is a place to lie; §13 as card #110 rewrote it: every round's repairs are read cold and the verdict is on the record before the round ships), the fix stays inside the call the board already records and the door that reads it, and it removes the class — a verdict the writer types and the board checks by clauses — rather than an instance: the call carries the round it reads and the board keeps the reader's answer whole, so the door consumes the answer and never the writer's quotation
 **Found by:** the lane on card #110 (docs/plans/done/2026-09-10-a-fix-says-who-else-it-reaches-and-what-it-assumes-and-a-colleague-checks-both-before-it-ships.md), in the review's cold read of round ten, asked the representation question after three rounds on one shape
 
+## Resolution — superseded by the owner
+
+On 2026-09-11 the owner adopted Needle #131: independent review, fixing all verified in-scope findings, verification, then completion. Per-repair cold verdicts are no longer required. Building structured obligations for those verdicts would reinstate the removed method. This suggestion is archived without implementing that mechanism; its original evidence below is retained as history. The implementing plan is `docs/plans/2026-09-11-work-finishes-after-review-and-verified-fixes.md`.
+
 ## The intent it breaks
 
 A card cannot close until a colleague of the other kind has read every round's fixes and every claim it broke was answered — and what proves that must be something the writer could not have typed. Today the writer types the verdict into the record and the board checks the words against a checklist; three cold readers running each found a case the checklist lacked, and the last showed a call from another project whose stored answer said one thing while the record quoted another, accepted. What he loses while it does: the one thing this card was for — a close that cannot be talked past — rests on a list of clauses that grows by one each time a reader finds the next hole.

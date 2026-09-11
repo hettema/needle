@@ -6,6 +6,10 @@
 **Effort gate:** medium — the change is one read routed to the machine the work ran on, through a verb and the remote client whose shape already exists for a lane's documents; the judgment is which store a record's call number belongs to when both machines number calls independently, and that a machine which does not answer is refused in its own words and never read as a missing call — both settled in the rulings below.
 **Sequencing:** none. Shares `api/doors.py`, `api/runtime_cli.py`, `runtime/remote.py` and `runtime/service.py` with #123, which is in flight; the fold settles it.
 
+## Subsequent owner ruling — 2026-09-11
+
+Needle #131 supersedes the implementation below: the owner removed mandatory per-repair cold reviews, so closing no longer depends on their call rows on either machine. The original plan and evidence are preserved below; no remote verdict-storage mechanism is being built. The intended outcome — finished remote work can close without repeating its reviews — is carried by `docs/plans/2026-09-11-work-finishes-after-review-and-verified-fixes.md`.
+
 ## Intent
 
 A card is closed the same way wherever its work ran: once a colleague of the
