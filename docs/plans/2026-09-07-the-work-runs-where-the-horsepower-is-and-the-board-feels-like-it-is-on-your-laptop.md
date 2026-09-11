@@ -213,7 +213,7 @@ round's repairs (the record's eighth to twelfth passes, thirty-three
 findings; the loop for this half ended under §13's three-passes rule
 with one corner of the clone record filed as a defect and the revert
 script's last five repaired for the rehearsal to prove; the record says
-which and why). **Deviated, then ruled otherwise:** the move was made and held for three
+which and why). **Deviated, then ruled otherwise, then ruled back (Rulings, 2026-09-11 morning: the board goes to the rented machine for good after card #123):** the move was made and held for three
 hours (15:44Z–18:31Z) and every clause was shown live but one; then the
 owner ruled the board back to the laptop for the shape's sake (Rulings,
 2026-09-10 evening): with the board on the machine, a pass asks the
@@ -547,17 +547,34 @@ then a day of use on both before the other slots move.
   over the wire as one more runtime verb (`push`), the same way it asks
   for a lane's edits.
 
+- **The rented machine delivers the intent: fire work off, close the
+  laptop, come back to it finished — so the board goes to the rented
+  machine for good** (the owner's ruling, 2026-09-11 morning, written on
+  the card by the session answering him on the rented machine and to this
+  lane: "I want the rented box to deliver on the intent, not to stay on
+  the laptop"). The first night proved the evening's shape wrong for that
+  intent: the laptop suspends when its lid closes, the board sleeps with
+  it, a lane on the rented machine that ends its turn waits for a board
+  that never answers, its process leaves after eight hours idle, and the
+  morning's board reads it as died with nothing folded — twenty commits
+  safe in the lane and nothing landed. Order: the one-question pass (card
+  #123) first, so a sleeping laptop leaves its last reading standing
+  instead of stalling the board; then `tools/board-move` for good, and
+  the laptop's board address keeps reaching it as item 3 promised.
+  Rejected: the laptop kept awake on lid close (a laptop can be off or
+  away; the intent is the machine's, not the lid's). Superseded: the
+  evening's ruling below, kept for its reasons.
 - **The board stays on the laptop; the rented machine is the horsepower**
   (the owner's ruling, 2026-09-10 evening, on Codex's reading of the
-  first live day). The board's reads of another machine cost a second per
-  question per lane under its lock, so the board lives where most lanes
-  are and reads the few over the wire; a lane on the rented machine
-  reaches the board through the tunnel end laid there and its `needle`
-  handing board verbs across. Rejected for now: the board on the machine
-  with today's wire (the doors wait minutes behind a pass); the batch
-  observation that would make either home fast is the next slice, not an
-  emergency. The move and its revert stay as the record's tools, proven
-  both ways in one day.
+  first live day; superseded the next morning, above). The board's reads
+  of another machine cost a second per question per lane under its lock,
+  so the board lives where most lanes are and reads the few over the
+  wire; a lane on the rented machine reaches the board through the tunnel
+  end laid there and its `needle` handing board verbs across. Rejected
+  for now: the board on the machine with today's wire (the doors wait
+  minutes behind a pass); the batch observation that would make either
+  home fast is the next slice, not an emergency. The move and its revert
+  stay as the record's tools, proven both ways in one day.
 
 ## Deliberately not
 
