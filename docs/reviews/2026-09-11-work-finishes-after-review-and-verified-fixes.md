@@ -1,11 +1,11 @@
 # Review — work finishes after review and verified fixes
 
-**Plan:** docs/plans/2026-09-11-work-finishes-after-review-and-verified-fixes.md
+**Plan:** docs/plans/done/2026-09-11-work-finishes-after-review-and-verified-fixes.md
 **Reviewer:** Independent Codex session 01a090ab-7288-73b1-a71e-7f30accdb36d, Needle call 84, read-only.
 **Diff range:** Needle base 1ecfa89 plus the frozen uncommitted implementation read by call 84; external instruction diffs at HR b8c0099f3, machine 3cda66b and HR3 a3a6a56. Repairs below were subsequently verified by the implementing colleagues, not represented as part of that earlier independent reading.
 **Findings:** 3
-**Verification:** Initial close-path checks: 22 passed; final absolute shared-pointer test passed. After the fenced-evidence repair, all 13 review-rule tests passed. Template parsed through review_of and progress_line: 3 found, 1 fixed, 1 no change, 1 filed. The complete remote suite passed across 93 modules and 719 tests at 9bbd860; distribution remains in progress.
-**Completion:** Not complete yet: waiting only for canonical-source distribution on both machines.
+**Verification:** Initial close-path checks: 22 passed; final absolute shared-pointer test passed. After the fenced-evidence repair, all 13 review-rule tests passed. Template parsed through review_of and progress_line: 3 found, 1 fixed, 1 no change, 1 filed. The complete remote suite passed across 93 modules and 719 tests at 9bbd860; distribution is complete.
+**Completion:** Complete: all three independent findings repaired and verified; canonical code and instructions active on both machines; #124 and #504 closed using unchanged reviews.
 
 ## Dispositions
 
@@ -32,3 +32,5 @@ Final comprehensive verification: on rented, 93 isolated module runs covered 719
 The last instruction inventory found no mandatory recursive review wording in active canonical instructions, relevant skills or hooks across Needle, HR, HR3, machine, dennis-os, rented-machine and portfolio. Historical material and worktree snapshots were explicitly excluded. HR3's required hosted Verify run passed for 476da5b: https://github.com/hettema/hr3/actions/runs/34605188865 . HR, machine and HR3 current roots are synchronized on both machines.
 
 Dennis reported clicking Watch on #131 and seeing a dead session. The actual implementation continued in the local card-131-review-once worktree and verification on rented. No Watch/session-status bug was changed.
+
+Activation: Needle develop/main were promoted at d7ea496 and both main checkouts synchronized. The board restarted and GET /api/projects returned successfully. SHA-256 comparison confirmed twelve canonical instruction and enforcement files identical across laptop and rented. Both global colleague instruction links resolve to canonical Needle HOW-WE-WORK. #124 and #504 then closed into Executed with their existing delivered/watch text and original review paths, with no new review or copied call. #130's remote-close outcome is therefore met by #131; its old mechanism is explicitly superseded. #117's proposed per-repair obligation storage is retired rather than implemented.

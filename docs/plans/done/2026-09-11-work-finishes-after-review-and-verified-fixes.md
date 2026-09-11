@@ -1,6 +1,6 @@
 # Work finishes after review and verified fixes
 
-**Status:** NEW — owner authorised implementation in conversation on 2026-09-11.
+**Status:** SHIPPED — implemented, verified and active on both machines on 2026-09-11.
 **Written:** 2026-09-11, Dennis: "go into the relevant files and just make this way of working clear again"; "fix all findings"; "make sure there are no contradictions". Adopted sequence: code, independent review, fix all verified findings within scope, verify repairs, done; no mandatory recursive cold reads.
 **Effort gate:** high — shared instructions and the close validator must agree across projects and machines without rewriting historical evidence.
 **Sequencing:** none; preserve concurrent #123/#124 and #130 work.
@@ -19,11 +19,17 @@ Read docs/research/2026-09-11-review-fix-loop-diagnosis.md. Existing sources: HO
 Replace §13's method with the owner's finite workflow; keep scope, independent judgment, truthful records and meaningful repair verification. Project instructions point to it. Done means: canonical active instructions on registered projects and both machines contain no contrary automatic-loop requirement; historical and experimental records retain their original wording as history.
 Hands out: search — inventory instructions and links; verifies the reported files and a final contradiction search.
 
+**Met:** Active canonical instructions agree across the inspected projects; twelve instruction/enforcement files match by SHA-256 on laptop and rented. Existing worktree snapshots are historical and the owner ruling was delivered to running lanes.
+
 ### 2. The board accepts the adopted workflow
 Align the opening brief, review record shape and close validator; retain record existence, ownership and meaningful evidence, and allow verified no-change/outside-scope dispositions. Done means: a single independent review plus repairs and verification can close without per-repair cold call rows; missing review evidence is refused; existing records remain readable.
 
+**Met:** The complete 719-test suite passes across 93 modules. Actual #124 and #504 closes succeeded with their original review records after activation, without cold-call rows being copied or new readers being commissioned.
+
 ### 3. Verify, review and distribute
 Run applicable suites, one independent review, repair its verified findings and verify repairs. Integrate without overwriting other lanes; update active canonical copies and report any running-session delivery limitation. Done means: the current code and instructions agree on both machines, with a record of the inspected projects, tests and any unresolved delivery limits.
+
+**Met:** Independent review call 84 produced three findings, all repaired and verified. Code and instructions are integrated on develop/main and synced to both machines; the board responds after restart. The review record gives exact test evidence and the limitation on receipt by existing sessions.
 
 ## Acceptance
 

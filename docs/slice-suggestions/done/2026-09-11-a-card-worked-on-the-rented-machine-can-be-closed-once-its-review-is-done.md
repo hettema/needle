@@ -1,6 +1,6 @@
 # A card worked on the rented machine can be closed once its review is done
 
-**Carried by:** docs/plans/2026-09-11-a-card-worked-on-the-rented-machine-can-be-closed-once-its-review-is-done.md
+**Carried by:** docs/plans/done/2026-09-11-a-card-worked-on-the-rented-machine-can-be-closed-once-its-review-is-done.md
 
 **Kind:** defect
 **Fix:** now — the close rule card #110 wrote into docs/reviews/README.md refuses a record whose readers the board holds no row for, and card #83 made the rented machine a place cards are worked; a reader asked from there is recorded only on that machine, so recording every reader where the board is, or having the close look on the machine the work is on as it already does for that work's sessions, lets every card worked there close, not one.

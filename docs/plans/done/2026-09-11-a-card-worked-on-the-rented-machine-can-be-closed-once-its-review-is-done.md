@@ -1,14 +1,14 @@
 # A card worked on the rented machine can be closed once its review is done
 
 **Carries:** docs/slice-suggestions/done/2026-09-11-a-card-worked-on-the-rented-machine-can-be-closed-once-its-review-is-done.md
-**Status:** NEW — planned, not started; placed at the top of Up next on 2026-09-11 at the owner's word ("For 130, please write the plan and put it at the top of up next so I can kick it off").
+**Status:** CLOSED — outcome delivered by #131 on 2026-09-11; the original mechanism below was superseded by the owner.
 **Written:** 2026-09-11, by the lane on card #124 after its close was refused. The owner's words when it was found: "I think Claude:5d3090d5 is bumping into the same thing", then "I will go with whatever you guys rec". The recommendation he took: fix this first, then close #124 with its record unchanged, rather than re-run its reads from the laptop.
 **Effort gate:** medium — the change is one read routed to the machine the work ran on, through a verb and the remote client whose shape already exists for a lane's documents; the judgment is which store a record's call number belongs to when both machines number calls independently, and that a machine which does not answer is refused in its own words and never read as a missing call — both settled in the rulings below.
 **Sequencing:** none. Shares `api/doors.py`, `api/runtime_cli.py`, `runtime/remote.py` and `runtime/service.py` with #123, which is in flight; the fold settles it.
 
 ## Subsequent owner ruling — 2026-09-11
 
-Needle #131 supersedes the implementation below: the owner removed mandatory per-repair cold reviews, so closing no longer depends on their call rows on either machine. The original plan and evidence are preserved below; no remote verdict-storage mechanism is being built. The intended outcome — finished remote work can close without repeating its reviews — is carried by `docs/plans/2026-09-11-work-finishes-after-review-and-verified-fixes.md`.
+Needle #131 supersedes the implementation below: the owner removed mandatory per-repair cold reviews, so closing no longer depends on their call rows on either machine. The original plan and evidence are preserved below; no remote verdict-storage mechanism is being built. The intended outcome — finished remote work can close without repeating its reviews — is carried by `docs/plans/done/2026-09-11-work-finishes-after-review-and-verified-fixes.md`.
 
 ## Intent
 
@@ -49,6 +49,8 @@ refused saying that machine did not answer, never that the call has no row;
 and a call number present in both stores with different rows is judged
 against the lane machine's row.
 
+**Deviated:** `docs/plans/done/2026-09-11-work-finishes-after-review-and-verified-fixes.md` removes the mandatory call-row requirement altogether under the owner's later ruling; no remote verdict-routing mechanism was built.
+
 ### 2. The cards stuck on this close
 With item 1 folded and the laptop's board restarted on it, the cards finished
 on the rented machine close through `needle close` with their review records
@@ -59,6 +61,8 @@ as written, its calls 91 to 99 read from the rented machine's store; #504
 (Hello Revenue) closes the same way, its calls 100 to 104 read there; the
 card of this plan records which of them closed and when, and a card still
 refused says its words.
+
+**Met:** After #131 was activated, Needle #124 and Hello Revenue #504 both closed into Executed using their existing DELIVERED/WATCH text and original review records. Their reviews were not repeated or rewritten and no call rows were copied.
 
 ## Acceptance criteria
 

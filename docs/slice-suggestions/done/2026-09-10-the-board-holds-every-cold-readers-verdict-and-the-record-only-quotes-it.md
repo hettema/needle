@@ -6,7 +6,7 @@
 
 ## Resolution — superseded by the owner
 
-On 2026-09-11 the owner adopted Needle #131: independent review, fixing all verified in-scope findings, verification, then completion. Per-repair cold verdicts are no longer required. Building structured obligations for those verdicts would reinstate the removed method. This suggestion is archived without implementing that mechanism; its original evidence below is retained as history. The implementing plan is `docs/plans/2026-09-11-work-finishes-after-review-and-verified-fixes.md`.
+On 2026-09-11 the owner adopted Needle #131: independent review, fixing all verified in-scope findings, verification, then completion. Per-repair cold verdicts are no longer required. Building structured obligations for those verdicts would reinstate the removed method. This suggestion is archived without implementing that mechanism; its original evidence below is retained as history. The implementing plan is `docs/plans/done/2026-09-11-work-finishes-after-review-and-verified-fixes.md`.
 
 ## The intent it breaks
 

@@ -1,6 +1,6 @@
 # Why review keeps creating work
 
-**Historical research assessment, September 11, 2026, before the owner adopted the finite workflow in card #131.** The later owner ruling and implementation are recorded in `docs/plans/2026-09-11-work-finishes-after-review-and-verified-fixes.md`; the recommendations below describe the earlier research stage.
+**Historical research assessment, September 11, 2026, before the owner adopted the finite workflow in card #131.** The later owner ruling and implementation are recorded in `docs/plans/done/2026-09-11-work-finishes-after-review-and-verified-fixes.md`; the recommendations below describe the earlier research stage.
 
 **Research scope.** Requested by Dennis after investigating Needle #123/#124 and Hello Revenue #503/#504. Keep Kanban; focus on execution throughput. This document reports findings and proposes a bounded change in method. No shared rule, worker, experiment, account or runtime was changed. No new experimental model calls were launched.
 
