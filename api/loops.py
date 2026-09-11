@@ -396,7 +396,9 @@ class Loops:
             try:
                 await self.reconcile()
             except Exception as error:  # noqa: BLE001 — a failed pass never ends the asking
-                log.warning("the pass a post asked for failed (%s: %s)", type(error).__name__, error)
+                log.warning(
+                    "the pass a post asked for failed (%s: %s)", type(error).__name__, error
+                )
 
     async def settled(self) -> None:
         """Every pass posts have asked for has run: what a reader who wants

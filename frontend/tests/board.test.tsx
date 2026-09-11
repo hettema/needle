@@ -530,6 +530,24 @@ describe("the doors", () => {
     expect(facts.some((el) => el.textContent?.includes("rented: did not answer"))).toBe(true);
   });
 
+  it("counts a queue the board never answered on its machine's line and paints the line broken (card #124)", async () => {
+    const b = board();
+    const laptop = { name: "laptop", machine_id: "id-laptop", host: null, desktop: true, ground: null, command: "needle", added_at: "2026-09-09T08:00:00+00:00" };
+    const rented = { ...laptop, name: "rented", machine_id: "id-rented", host: "rented", desktop: false };
+    const room = { available: 9 * 1024 ** 3, swap_free: 8 * 1024 ** 3, floor: 5 * 1024 ** 3, full: false, sentence: null, scopes: [], read_at: "2026-09-09T08:00:00+00:00", marked: [], total: 16 * 1024 ** 3 };
+    b.machine = { missing: [], roles: null, machines: [
+      { machine: laptop, here: true, room: { ...room, stale_queue: 3 }, why: null, high_water: null, killed: 0 },
+      { machine: rented, here: false, room: { ...room, stale_queue: 0 }, why: null, high_water: null, killed: 0 },
+    ] };
+    api.getBoard.mockResolvedValue(b);
+    await renderBoard();
+    const head = document.querySelector(".app-head") as HTMLElement;
+    expect(head).toHaveTextContent("laptop (here): 9.0 GB free; 3 queued over an hour — the board did not answer · rented: 9.0 GB free");
+    expect(head.textContent).not.toMatch(/rented: 9\.0 GB free; /);
+    const facts = Array.from(head.querySelectorAll("[data-meaning='broken']"));
+    expect(facts.some((el) => el.textContent?.includes("3 queued over an hour"))).toBe(true);
+  });
+
   it("says on the open card which machine a lane's session runs on, when the board knows", async () => {
     const d = withLane("working", "Live: a session is working on it, fable on alpha, for 12 m.");
     if (d.lane) d.lane.machine = "rented";

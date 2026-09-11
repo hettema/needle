@@ -924,8 +924,15 @@ class Store:
                     error=posted.error,
                     transcript_path=posted.transcript_path,
                 )
-                session.add(row)
-                session.flush()
+                # Two posts carrying the same event at once — the index, not
+                # the read above, is what holds it; the loser skips the row
+                # and the rest of its batch still lands.
+                try:
+                    with session.begin_nested():
+                        session.add(row)
+                        session.flush()
+                except IntegrityError:
+                    continue
                 out.append(_hook_event(row))
         return out
 

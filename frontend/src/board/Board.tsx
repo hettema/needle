@@ -621,7 +621,7 @@ export function Board({
                   {(board.machine.machines ?? []).length > 1 ? (
                     <Fact
                       {...((board.machine.machines ?? []).some(
-                        (m) => m.room === null,
+                        (m) => m.room === null || (m.room.stale_queue ?? 0) > 0,
                       )
                         ? { meaning: "broken" as const }
                         : {})}
