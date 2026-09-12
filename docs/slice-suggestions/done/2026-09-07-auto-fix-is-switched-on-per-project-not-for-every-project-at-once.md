@@ -1,6 +1,6 @@
 # Auto-fix is switched on per project, not for every project at once
 
-**Carried by:** docs/plans/2026-09-12-auto-fix-is-switched-on-per-project-not-for-every-project-at-once.md — written at the board's Idea door on 2026-09-12 (conversation 147cb888), where the owner asked for it again in his own words and for its plan
+**Carried by:** docs/plans/done/2026-09-12-auto-fix-is-switched-on-per-project-not-for-every-project-at-once.md — written at the board's Idea door on 2026-09-12 (conversation 147cb888), where the owner asked for it again in his own words and for its plan
 **Kind:** idea
 **Fix:** now — the owner ruled it on 2026-09-07 (below), and HOW-WE-WORK §11 already says which project's work enters execution is his ruling while how much the machine can hold is a machine fact; the fix is one field on the dial's setting (the project it is on for) with the memory floor and the lane ceiling left machine-wide, which removes the class — a dial that spends the machine on a board he is not looking at — rather than adding a filter to one beat
 **Found by:** the owner, on 2026-09-07, after the laptop had been pushed past its memory twice: "when auto fix is running, I want it to run for the selected needle, not across needles."
