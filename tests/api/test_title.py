@@ -22,7 +22,6 @@ board. What is held here, against the served fixture:
 import shutil
 from pathlib import Path
 
-import pytest
 from fastapi.testclient import TestClient
 
 from api.cli import main
@@ -293,9 +292,8 @@ def test_a_defects_reading_lands_both_halves_and_the_title_changes_no_routing(
     assert "The title, read cold." in brief and "- dial — " in brief
     # One reading, one command: a mark's result without the title is refused,
     # and a title without the mark's result is refused.
-    with pytest.raises(SystemExit):
-        main(["triage", "proj", str(number), "his", "the record selects neither"])
-    capsys.readouterr()
+    assert main(["triage", "proj", str(number), "his", "the record selects neither"]) == 1
+    assert "A title verdict is" in capsys.readouterr().err
     assert main(["triage", "proj", str(number), "--title", "passes"]) == 1
     assert "lands the mark's result and the title's verdict" in capsys.readouterr().err
     assert (

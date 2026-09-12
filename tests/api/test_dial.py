@@ -814,7 +814,7 @@ def test_a_held_plan_does_not_count_and_the_memory_floor_stops_the_beat(
     verify(client, machine_floor, gate_log)
     capsys.readouterr()
     tick(client)
-    taken = len(machine_floor.state()["launch_log"])
+    taken = acts(machine_floor)
     assert machine_floor.state()["launch_log"][-1]["argv"][-1].startswith(
         "A plan to write for a defect the dial took"
     )
@@ -835,7 +835,7 @@ def test_a_held_plan_does_not_count_and_the_memory_floor_stops_the_beat(
     machine_floor.set_memory(available_gb=2.0, swap_free_gb=8.0)
     turn(client, on=True, lanes=3)
     tick(client)
-    assert len(machine_floor.state()["launch_log"]) == taken, "nothing opened under the floor"
+    assert acts(machine_floor) == taken, "nothing opened under the floor"
     assert column_of(client, tide) == "Planned", "the held plan's Start waited on the floor too"
     full = "the machine is full: 2.0 GB available, 5 GB needed"
     assert board(client)["dial"]["full"] == full
@@ -854,7 +854,7 @@ def test_a_held_plan_does_not_count_and_the_memory_floor_stops_the_beat(
     machine_floor.set_memory(available_gb=16.0, swap_free_gb=1.0)
     tick(client)
     assert board(client)["dial"]["full"] == "the machine is full: 1.0 GB swap free, 5 GB needed"
-    assert len(machine_floor.state()["launch_log"]) == taken
+    assert acts(machine_floor) == taken
     # Room again: the beat opens the held plan's Start — into shared ground,
     # which the door names and the fold settles (item 1).
     assert detail(client, tide)["doors"]["readiness"]["state"] == "shares"
@@ -862,7 +862,7 @@ def test_a_held_plan_does_not_count_and_the_memory_floor_stops_the_beat(
     tick(client)
     assert board(client)["dial"]["full"] is None
     assert column_of(client, tide) == "Executing"
-    assert len(machine_floor.state()["launch_log"]) == taken + 1
+    assert acts(machine_floor) == taken + 1
     started_row = next(h for h in detail(client, tide)["history"] if h["kind"] == "started")
     assert (
         "started by the dial; #241's session is editing engine/metering.py"
@@ -1127,7 +1127,8 @@ def test_his_and_unmarked_defects_are_never_started_and_a_question_leaves_the_ca
     assert detail(client, number)["summary"]["planning"] is None
     tick(client)
     assert acts(machine_floor) == read_so_far + 1, "asked: the owner's from here"
-    assert board(client)["dial"]["running"] == 0
+    state = board(client)["dial"]
+    assert state["running"] == state["triaging"], "nothing runs but readings"
 
 
 def test_a_planning_session_that_dies_ends_the_dials_part_and_the_card_says_why(
@@ -1299,11 +1300,9 @@ def test_a_when_trigger_is_read_on_the_cadence_and_delivered_makes_the_defect_el
         direction=None,
     )
     assert detail(client, number)["summary"]["routing"]["state"] == "triaged when"
-    read_so_far = len(machine_floor.state()["launch_log"])
+    read_so_far = acts(machine_floor)
     tick(client)
-    assert len(machine_floor.state()["launch_log"]) == read_so_far, (
-        "not delivered: the defect waits"
-    )
+    assert acts(machine_floor) == read_so_far, "not delivered: the defect waits"
 
     (repo / "docs" / "tariff.md").write_text("# Tariff\n", encoding="utf-8")
     read_signals(client)

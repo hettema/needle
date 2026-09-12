@@ -714,7 +714,15 @@ class Dial:
                 )
                 tended = Tended.ENDED
             if tended == Tended.ENDED:
-                died = self._readings_that_died(slug, record.card_number)
+                # A parked card's cap is per park (ruling 9), so the note
+                # counts the same way the beat does.
+                parked = self.live.store.card(slug, record.card_number)
+                since = (
+                    parked_at(self.live.store.placements(slug).get(record.card_number))
+                    if parked is not None and parked.place.column == Column.DECISION_MOMENT
+                    else None
+                )
+                died = self._readings_that_died(slug, record.card_number, since=since)
                 left = (
                     "the board reads it again"
                     if died < TRIAGE_ATTEMPTS
@@ -1272,7 +1280,15 @@ class Dial:
     def _moved_on(self, slug: str, card: Card, triage: Triage):
         """The machine's move out of the owner's column on this parked
         reading, from the card's history; None when the reading moved
-        nothing (a `his`, a refused `stale`, or a card he parked himself)."""
+        nothing (a `his`, a refused `stale`, or a card he parked himself).
+        Bounded by the next parked reading on the card, so an older
+        reading's fate is never a later reading's move (review finding 7)."""
+        later = [
+            t.at
+            for t in self.live.store.triages(slug, card.number, ground=Ground.PARKED)
+            if t.at > triage.at
+        ]
+        until = min(later) if later else None
         return next(
             (
                 e
@@ -1280,6 +1296,7 @@ class Dial:
                 if e.kind == AuditKind.MOVED
                 and e.evidence == Evidence.RECORD_ANSWERED
                 and e.at >= triage.at
+                and (until is None or e.at < until)
                 and e.from_place is not None
                 and e.from_place.column == Column.DECISION_MOMENT
             ),

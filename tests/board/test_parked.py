@@ -10,6 +10,7 @@ from board.parked import (
     now_refused,
     owner_parked,
     parked_doubt,
+    parked_words,
     record_answered_missing,
     record_fingerprint,
     waiting_refused,
@@ -22,7 +23,7 @@ from domain.column import Column
 from domain.document import DocumentKind, SuggestionKind
 from domain.evidence import Evidence
 from domain.row import Row, RowKind
-from domain.triage import Ground, Source, Triage, TriageResult
+from domain.triage import Commitment, Ground, Source, Triage, TriageResult
 from tests.board.test_assemble import doc
 from tests.board.test_evidence import placed, reading
 from tests.board.test_lane import NOW, card, facts, lane_for, session
@@ -115,8 +116,9 @@ def test_a_delivered_with_no_readable_signal_is_a_commitment():
     ]
     found = commitments_of(card(rows=rows), [], None)
     assert len(found) == 1
-    assert found[0].startswith("a DELIVERED with no signal the board can read")
-    assert "The read-out, side by side." in found[0]
+    assert found[0].row == RowKind.DELIVERED and found[0].transferable
+    assert found[0].words.startswith("a DELIVERED with no signal the board can read")
+    assert "The read-out, side by side." in found[0].words
 
 
 def test_a_watch_is_accounted_for_only_when_read_as_delivered():
@@ -125,18 +127,21 @@ def test_a_watch_is_accounted_for_only_when_read_as_delivered():
         Row(kind=RowKind.WATCH, text="the bank confirms — owner by 2026-12-01"),
     ]
     unread = commitments_of(card(rows=rows), [], None)
-    assert unread == ["a WATCH nobody has read yet: the bank confirms"]
+    assert [c.words for c in unread] == ["a WATCH nobody has read yet: the bank confirms"]
+    assert unread[0].row == RowKind.WATCH and unread[0].transferable
     failed = commitments_of(card(rows=rows), [], reading(False, "no confirmation"))
-    assert failed[0].startswith("a WATCH whose last reading did not say delivered")
+    assert failed[0].words.startswith("a WATCH whose last reading did not say delivered")
     assert commitments_of(card(rows=rows), [], reading(True)) == []
 
 
 def test_a_question_in_his_words_is_a_commitment_until_he_answers_after_it():
     rows = [Row(kind=RowKind.ASK, text="Which account?")]
     asked = entry(AuditKind.ROW, "ASK Which account?", hours_ago=2)
-    assert commitments_of(card(rows=rows), [asked], None) == [
-        "a question in your words with no answer (ASK): Which account?"
-    ]
+    [question] = commitments_of(card(rows=rows), [asked], None)
+    assert question.words == "a question in your words with no answer (ASK): Which account?"
+    assert question.row == RowKind.ASK and not question.transferable, (
+        "a WATCH cannot carry a question in his words"
+    )
     answered = entry(AuditKind.ANSWERED, "Ruled: the new one", hours_ago=1, actor=Actor.OWNER)
     assert commitments_of(card(rows=rows), [answered, asked], None) == []
     stale_answer = entry(AuditKind.ANSWERED, "Ruled", hours_ago=3, actor=Actor.OWNER)
@@ -149,9 +154,9 @@ def test_a_question_in_his_words_is_a_commitment_until_he_answers_after_it():
 
 def test_a_ruling_nobody_ruled_on_is_a_commitment_and_a_ruled_one_is_not():
     ruling = [Row(kind=RowKind.RULING, text="Which of the two?")]
-    assert commitments_of(card(rows=ruling), [], None) == [
-        "a RULING nobody has ruled on: Which of the two?"
-    ]
+    [open_ruling] = commitments_of(card(rows=ruling), [], None)
+    assert open_ruling.words == "a RULING nobody has ruled on: Which of the two?"
+    assert open_ruling.row == RowKind.RULING and not open_ruling.transferable
     ruled = ruling + [Row(kind=RowKind.RULED, text="The left.")]
     assert commitments_of(card(rows=ruled), [], None) == []
 
@@ -173,21 +178,33 @@ def test_now_needs_a_live_document():
     assert now_refused(doc("p")) is None
 
 
-def test_waiting_is_refused_on_a_failed_signal_and_a_third_time():
+def test_waiting_is_refused_on_a_failed_signal_a_question_and_a_third_time():
     rows = [Row(kind=RowKind.WATCH, text="the bank confirms — owner by 2026-08-01")]
     parked = card(rows=rows)
     same = "the bank confirms — owner by 2026-12-01"
-    assert waiting_refused(parked, "not a signal", last=None, earlier=[], now=NOW)
-    failed = waiting_refused(parked, same, last=reading(False), earlier=[], now=NOW)
+
+    def refused(target, words, *, last=None, earlier=(), commitments=()):
+        return waiting_refused(
+            target, words, last=last, earlier=list(earlier), commitments=list(commitments), now=NOW
+        )
+
+    assert refused(parked, "not a signal")
+    failed = refused(parked, same, last=reading(False))
     assert failed is not None and "already read as not delivered" in failed
-    overdue = waiting_refused(parked, same, last=None, earlier=[], now=NOW)
+    overdue = refused(parked, same)
     assert overdue is not None and "past its due date" in overdue
     other = "the council minutes name the account — owner by 2026-12-01"
-    assert waiting_refused(parked, other, last=reading(False), earlier=[], now=NOW) is None
+    assert refused(parked, other, last=reading(False)) is None
     twice = [read(TriageResult.WAITING, hours_ago=h) for h in (48, 24)]
     assert len(twice) == WAITINGS_PER_CARD
-    third = waiting_refused(card(), other, last=None, earlier=twice, now=NOW)
+    third = refused(card(), other, earlier=twice)
     assert third is not None and "third `waiting` is refused" in third
+    # A question in his words cannot be carried by a WATCH (review finding 4).
+    question = Commitment(row=RowKind.ASK, words="a question: which?", transferable=False)
+    held = refused(card(), other, commitments=[question])
+    assert held is not None and "cannot carry a question" in held and "which?" in held
+    watch = Commitment(row=RowKind.WATCH, words="a WATCH nobody has read", transferable=True)
+    assert refused(card(), other, commitments=[watch]) is None, "a watch transfers"
 
 
 # ── where each result sends the card ────────────────────────────────────
@@ -259,22 +276,61 @@ def test_a_move_on_a_reading_is_retested_per_result():
     )
     stale = read(TriageResult.STALE, hours_ago=1)
     assert record_answered_missing(stale, card(), source_fingerprint=None, commitments=[]) is None
-    assert "unaccounted for" in (
-        record_answered_missing(stale, card(), source_fingerprint=None, commitments=["an ASK"])
-        or ""
+    ask = Commitment(row=RowKind.ASK, words="an ASK", transferable=False)
+    assert "unaccounted for: an ASK" in (
+        record_answered_missing(stale, card(), source_fingerprint=None, commitments=[ask]) or ""
     )
 
 
 def test_the_doubt_names_the_commitment_after_a_refused_stale():
     stale = read(TriageResult.STALE, hours_ago=1, words="the season ended")
-    assert parked_doubt(stale, ["a DELIVERED with no signal: x"]) == (
+    delivered = Commitment(
+        row=RowKind.DELIVERED, words="a DELIVERED with no signal: x", transferable=True
+    )
+    assert parked_doubt(stale, [delivered]) == (
         "a cold reading called it over (the season ended), but this is unaccounted for: "
         "a DELIVERED with no signal: x"
     )
     assert parked_doubt(stale, []) is None
-    assert parked_doubt(read(TriageResult.HIS, hours_ago=1), ["x"]) is None
+    assert parked_doubt(read(TriageResult.HIS, hours_ago=1), [delivered]) is None
     mark = read(TriageResult.STALE, hours_ago=1).model_copy(update={"ground": Ground.MARK})
-    assert parked_doubt(mark, ["x"]) is None
+    assert parked_doubt(mark, [delivered]) is None
+
+
+def test_the_face_never_says_you_parked_it_on_a_card_the_machine_parked():
+    """Review finding 3: after a refused `stale` whose commitment has since
+    been settled, the words say so and wait for his move — never that he
+    parked it, unless he did."""
+    stale = read(TriageResult.STALE, hours_ago=1, words="the season ended")
+    settled = parked_words(stale, doubt=None, parked_by_owner=False, being_read=False)
+    assert settled is not None and settled.startswith(
+        "a cold reading of the record found it over: the season ended, and the board refused"
+    )
+    assert "settled since" in settled and "you parked" not in settled.lower()
+    his_park = parked_words(stale, doubt=None, parked_by_owner=True, being_read=False)
+    assert his_park is not None and his_park.endswith(
+        "You parked it yourself, so it stays until you move it"
+    )
+    doubt = parked_words(stale, doubt="the doubt", parked_by_owner=True, being_read=False)
+    assert doubt == "the doubt"
+    line = parked_words(
+        read(TriageResult.HIS, hours_ago=1, words="which?"),
+        doubt=None,
+        parked_by_owner=False,
+        being_read=False,
+    )
+    assert line == "a cold reading of the record found the decision is yours: which?"
+    assert parked_words(None, doubt=None, parked_by_owner=False, being_read=False) is None
+    reading_now = parked_words(None, doubt=None, parked_by_owner=False, being_read=True)
+    assert reading_now is not None and reading_now.startswith(
+        "a cold reading of the record is judging now"
+    )
+    moved_nothing = parked_words(
+        read(TriageResult.NOW, hours_ago=1), doubt=None, parked_by_owner=False, being_read=False
+    )
+    assert moved_nothing is not None and moved_nothing.endswith(
+        "the board moved nothing, and the card waits for your move"
+    )
 
 
 def test_the_record_fingerprint_is_the_document_and_every_row():

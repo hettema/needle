@@ -24,7 +24,7 @@ from board.lane import (
 from board.leverage import arrange
 from board.moves import GroupLayout
 from board.neighbours import beside_all
-from board.parked import RESULT_WORDS, commitments_of, parked_doubt
+from board.parked import commitments_of, owner_parked, parked_doubt, parked_words
 from board.reconcile import carried_stems, corpus_path_of, ref
 from board.signals import is_due, past_due, read_or_decline
 from board.title import hold_sentence, title_hold
@@ -83,7 +83,7 @@ from domain.project import Project
 from domain.row import ROW_HALF, Row, RowHalf, RowKind
 from domain.signal import Reading, Signal, SignalKind, WindowlessSession
 from domain.team import Composition
-from domain.triage import Grade, Routed, Routing, TitleReading, Triage, TriageResult
+from domain.triage import Grade, Routed, Routing, TitleReading, Triage
 from domain.verdict import Verdict, VerdictLine
 from domain.watercooler import WatercoolerLine
 
@@ -600,6 +600,7 @@ def state_of(
     grade: Grade | None = None,
     decision: Triage | None = None,
     doubt: str | None = None,
+    parked_by_owner: bool = False,
 ) -> CardState:
     """The one function that names a card's state (plan 27, item 2). The
     order is the rule's precedence: broken before yours, yours before live,
@@ -711,29 +712,19 @@ def state_of(
         return _state("title fails", Meaning.BROKEN, detail=hold_sentence(hold), hint="open to see")
     if card.place.column == Column.DECISION_MOMENT:
         # A cold reading of the record says what the decision is (card
-        # #82): his line, when it found the decision his; the doubt, when
-        # it called the card over and a commitment is unaccounted for; the
-        # reading's own words when he parked the card himself and the board
-        # moved nothing. Before a reading, the column's own words.
-        if doubt is not None:
-            why = doubt
-        elif decision is not None and decision.result == TriageResult.HIS:
-            why = f"a cold reading of the record {RESULT_WORDS[decision.result]}: {decision.words}"
-        elif decision is not None:
-            why = (
-                f"a cold reading of the record {RESULT_WORDS[decision.result]}: "
-                f"{decision.words}. You parked it yourself, so it stays until you move it"
-            )
-        elif triaging is not None:
-            why = (
-                "a cold reading of the record is judging now whether this needs you; the "
-                "column's word until it lands: nothing here moves without a word from you"
-            )
-        else:
-            why = (
-                standing.words
-                or "it sits in Decision moment, and nothing there moves without a word from you"
-            )
+        # #82): his line, the doubt of a refused close, or what the reading
+        # found on a card he parked himself — `board/parked.py::parked_words`
+        # is the one place the words come from. Before a reading, the
+        # column's own words.
+        why = parked_words(
+            decision,
+            doubt=doubt,
+            parked_by_owner=parked_by_owner,
+            being_read=triaging is not None,
+        ) or (
+            standing.words
+            or "it sits in Decision moment, and nothing there moves without a word from you"
+        )
         return _state(
             "your move",
             Meaning.YOURS,
@@ -1111,6 +1102,7 @@ def summarize(
             grade=grade,
             decision=decision,
             doubt=doubt,
+            parked_by_owner=owner_parked(placement),
         )
     except ValidationError as refusal:
         face = _refused_face(card, refusal)

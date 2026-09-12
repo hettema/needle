@@ -66,7 +66,7 @@ from domain.notice import Shown
 from domain.project import Project
 from domain.row import Row
 from domain.signal import SessionWork, SignalKind
-from domain.triage import Ground
+from domain.triage import Commitment, Ground
 from domain.watercooler import WatercoolerLine
 from domain.window import WindowKind
 from infrastructure import clock
@@ -590,7 +590,13 @@ class Live:
         read (card #82): the cards in Decision moment, whose face may carry
         the doubt of a refused `stale`, and the cards a cold reading moved,
         whose placement is re-tested against the commitments on them. A
-        handful of queries, never one per card on the board."""
+        handful of queries, never one per card on the board: on the served
+        store's copy on 2026-09-12, Hello Revenue's 38 parked cards cost
+        12 ms beside the 52 ms the same read spends on the cards and their
+        placements. If a board ever reads slow here, the shape to take is
+        two queries — the latest answer per card, which `answers` already
+        is, and the newest ASK or Q writing per card — handed to
+        `commitments_of` in place of the history."""
         placements = self.store.placements(slug)
         wanted = [
             c.number
@@ -603,7 +609,7 @@ class Live:
         ]
         return {n: self.store.history(slug, n) for n in wanted}
 
-    def commitments(self, slug: str, number: int) -> list[str]:
+    def commitments(self, slug: str, number: int) -> list[Commitment]:
         """What on the card nothing accounts for (card #82, item 3), from
         its rows and history as they stand."""
         readings = self.store.readings(slug, number)

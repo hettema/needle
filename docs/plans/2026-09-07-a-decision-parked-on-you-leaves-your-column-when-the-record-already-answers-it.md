@@ -142,13 +142,16 @@ answer of his after it, a RULING with no RULED. `Doors._decide` writes the
 record stays open so the same reader can land `his` (ruling 10), and the
 face carries the doubt from the row and the rows as they stand
 (`parked_doubt`). `waiting` accounts by transfer to the WATCH row it
-writes, and is itself refused when it would defer a signal already read
-as not delivered or past due, or a third time on one card (ruling 6,
-`waiting_refused`). The fixture's #219 (a DELIVERED and a WATCH the board
+writes, and is itself refused when the card holds a question in his words
+or a RULING nobody has ruled on (ruling 13, review finding 4), when it
+would defer a signal already read as not delivered or past due, or a
+third time on one card (ruling 6, `waiting_refused`); on a card he parked
+himself it writes no WATCH at all (review finding 2). The fixture's #219 (a DELIVERED and a WATCH the board
 cannot read) is the planted card: `stale` refused naming "The read-out,
 with the two seasons side by side.", then `waiting` moves it to Executed
 (`tests/api/test_parked_cards.py`); #147's unanswered ASK refuses `stale`
-until the owner's answer accounts for it, after which `stale` closes it.
+until the owner's answer accounts for it, after which `stale` closes it;
+#149's unanswered ASK refuses `waiting`.
 `tests/board/test_parked.py` holds each clause. The first real run's
 refusals are read by hand in the review record's verification section, as
 far as the run has gone by the close; the rest is the WATCH row below.
@@ -276,6 +279,19 @@ signal the board starts for a reader of another make.
   re-read until parked again or answered; the reading's own record stays
   open, so the same reader can land `his` with the commitment as the
   line, and the beat ends the record when the turn is over.
+- **A question in his words never rides a WATCH row** *(review finding
+  4, 2026-09-12)*. Item 3's transfer clause — a commitment "transferred
+  to a named WATCH row that still watches it" — can carry a promise to
+  watch something (a DELIVERED with no readable signal, a WATCH nobody has
+  read), never an ASK or a Q with no answer of his, nor a RULING nobody
+  has ruled on: a `waiting` on such a card would send his question to
+  Executed, where the signal's delivery closes the card with the question
+  never answered, a silent exit. So `waiting` is refused while one stands
+  and the answer is `his` with it as the line. `now` is not refused on it:
+  a `now` says the record already answers the decision the question asks,
+  names the source, and sends the card back into execution where he ranks
+  it — the audit reads that claim against the source; the dangerous exit
+  stays `stale` (ruling 1).
 - **Pacing** *(challenge 9)*. Every unread defect and title on every board
   is read before the first parked card (the served board held 120 unread
   defects and every switch off on 2026-09-12), at one reading a beat; the

@@ -18,7 +18,7 @@ from domain.evidence import Evidence, EvidenceState, Standing
 from domain.lane import HANDS_ON, Lane, LaneState
 from domain.row import RowKind
 from domain.signal import Reading
-from domain.triage import Triage
+from domain.triage import Commitment, Triage
 
 BY_COLUMN: dict[Column, Evidence] = {
     Column.EXECUTING: Evidence.HANDS_ON,
@@ -52,7 +52,7 @@ def missing_fact(
     *,
     decision: Triage | None = None,
     decision_source: str | None = None,
-    commitments: list[str] | None = None,
+    commitments: list[Commitment] | None = None,
 ) -> str | None:
     """The fact the predicate needs and this read does not have, or None
     when it holds. `decision` is the card's latest cold reading as a
@@ -120,7 +120,7 @@ def standing_for(
     read: bool,
     decision: Triage | None = None,
     decision_source: str | None = None,
-    commitments: list[str] | None = None,
+    commitments: list[Commitment] | None = None,
 ) -> Standing:
     """Where the card's placement stands on this read. `read` is whether the
     loop has read the machine since the board was served; before that every

@@ -31,7 +31,7 @@ from domain.evidence import Evidence
 from domain.lane import HANDS_ON, Lane
 from domain.row import Row, RowKind
 from domain.signal import Reading
-from domain.triage import Ground, Source, Triage, TriageResult
+from domain.triage import Commitment, Ground, Source, Triage, TriageResult
 
 WAITINGS_PER_CARD = 2
 """How many readings may send one parked card to wait (ruling 6): a WATCH
@@ -121,46 +121,76 @@ def _answered_after(history: list[AuditEntry], kind: RowKind) -> bool:
     )
 
 
-def commitments_of(card: Card, history: list[AuditEntry], last: Reading | None) -> list[str]:
+def commitments_of(card: Card, history: list[AuditEntry], last: Reading | None) -> list[Commitment]:
     """Every commitment on the card that nothing accounts for (card #82,
-    item 3), each in one sentence naming the row. A commitment is what the
-    card's rows promise: a DELIVERED with no signal the board can read; a
-    WATCH nobody has read, or whose last reading did not say delivered; a
-    question in the owner's words (an ASK or a Q) with no answer of his
-    after it; a RULING nobody has ruled on. Accounted for means fulfilled
-    with evidence on the card (the signal read as delivered), withdrawn by
-    his answer, or ruled on. Age, shipped code and an absent signal are
-    not read here at all, so none of them can qualify: the other make's
-    objection was that a reader takes inactivity or shipped code as
-    permission to abandon a commitment, and this function cannot see
-    either. `history` is the card's, newest first, as the store answers
-    it."""
-    found: list[str] = []
+    item 3), each naming the row. A commitment is what the card's rows
+    promise: a DELIVERED with no signal the board can read; a WATCH nobody
+    has read, or whose last reading did not say delivered; a question in
+    the owner's words (an ASK or a Q) with no answer of his after it; a
+    RULING nobody has ruled on. Accounted for means fulfilled with evidence
+    on the card (the signal read as delivered), withdrawn by his answer, or
+    ruled on. Age, shipped code and an absent signal are not read here at
+    all, so none of them can qualify: the other make's objection was that
+    a reader takes inactivity or shipped code as permission to abandon a
+    commitment, and this function cannot see either. `history` is the
+    card's, newest first, as the store answers it."""
+    found: list[Commitment] = []
     watch = next((r.text for r in card.rows if r.kind == RowKind.WATCH), None)
     signal, why = read_or_decline(watch)
     delivered = next((r for r in card.rows if r.kind == RowKind.DELIVERED), None)
     if delivered is not None and signal is None:
         found.append(
-            f"a DELIVERED with no signal the board can read ({why}): {first_line(delivered.text)}"
+            Commitment(
+                row=RowKind.DELIVERED,
+                words=f"a DELIVERED with no signal the board can read ({why}): "
+                f"{first_line(delivered.text)}",
+                transferable=True,
+            )
         )
     if signal is not None:
         if last is None:
-            found.append(f"a WATCH nobody has read yet: {signal.what}")
+            found.append(
+                Commitment(
+                    row=RowKind.WATCH,
+                    words=f"a WATCH nobody has read yet: {signal.what}",
+                    transferable=True,
+                )
+            )
         elif not last.delivered:
             found.append(
-                f"a WATCH whose last reading did not say delivered ({first_line(last.words)}): "
-                f"{signal.what}"
+                Commitment(
+                    row=RowKind.WATCH,
+                    words=f"a WATCH whose last reading did not say delivered "
+                    f"({first_line(last.words)}): {signal.what}",
+                    transferable=True,
+                )
             )
     for kind in (RowKind.ASK, RowKind.Q):
         row = next((r for r in card.rows if r.kind == kind), None)
         if row is not None and not _answered_after(history, kind):
             found.append(
-                f"a question in your words with no answer ({kind.value}): {first_line(row.text)}"
+                Commitment(
+                    row=kind,
+                    words=f"a question in your words with no answer ({kind.value}): "
+                    f"{first_line(row.text)}",
+                    transferable=False,
+                )
             )
     ruling = next((r for r in card.rows if r.kind == RowKind.RULING), None)
     if ruling is not None and not has_row(card, RowKind.RULED):
-        found.append(f"a RULING nobody has ruled on: {first_line(ruling.text)}")
+        found.append(
+            Commitment(
+                row=RowKind.RULING,
+                words=f"a RULING nobody has ruled on: {first_line(ruling.text)}",
+                transferable=False,
+            )
+        )
     return found
+
+
+def unaccounted(commitments: list[Commitment]) -> str:
+    """The commitments in one clause, for a refusal, a history line or a face."""
+    return "; ".join(c.words for c in commitments)
 
 
 def waiting_refused(
@@ -169,18 +199,32 @@ def waiting_refused(
     *,
     last: Reading | None,
     earlier: list[Triage],
+    commitments: list[Commitment],
     now: datetime,
 ) -> str | None:
-    """Why a `waiting` may not land on this card, or None (ruling 6). Two
-    refusals. The card's WATCH was already read as not delivered, or is
-    past due, and the new signal watches the same thing: the card would go
-    back to wait on a signal that already failed, and fail again, and be
-    parked again, and be read again — a cycle he never sees. And two
-    readings already sent this card to wait: the third answer is his.
-    `earlier` is every earlier parked reading on the card."""
+    """Why a `waiting` may not land on this card, or None (ruling 6, and
+    ruling 13 from the review). Three refusals. A question in the owner's
+    words, or a RULING nobody has ruled on, stands on the card: a WATCH
+    row cannot carry either, so a `waiting` would send his question to
+    Executed, where the signal's delivery would close the card with the
+    question never answered — the silent exit item 3 forbids. The card's
+    WATCH was already read as not delivered, or is past due, and the new
+    signal watches the same thing: the card would go back to wait on a
+    signal that already failed, and fail again, and be parked again, and
+    be read again — a cycle he never sees. And two readings already sent
+    this card to wait: the third answer is his. `earlier` is every earlier
+    parked reading on the card."""
     signal, why = read_or_decline(words)
     if signal is None:
         return f"a `waiting` names a signal the board can read: {why}"
+    held = [c for c in commitments if not c.transferable]
+    if held:
+        return (
+            "a WATCH row cannot carry a question in the owner's words or a ruling nobody has "
+            "ruled on, and this card holds one: "
+            + unaccounted(held)
+            + "; the result is `his`, with it as the line"
+        )
     waited = sum(1 for t in earlier if t.result == TriageResult.WAITING)
     if waited >= WAITINGS_PER_CARD:
         return (
@@ -293,7 +337,7 @@ def where_after_parked_reading(
     )
 
 
-def parked_doubt(latest: Triage | None, commitments: list[str]) -> str | None:
+def parked_doubt(latest: Triage | None, commitments: list[Commitment]) -> str | None:
     """The doubt a parked card's face carries after a `stale` the door
     refused (card #82, item 3): which commitment the reading did not
     account for, re-read on every read from the rows as they stand — so a
@@ -304,8 +348,45 @@ def parked_doubt(latest: Triage | None, commitments: list[str]) -> str | None:
         return None
     return (
         f"a cold reading called it over ({latest.words}), but this is unaccounted for: "
-        + "; ".join(commitments)
+        + unaccounted(commitments)
     )
+
+
+def parked_words(
+    latest: Triage | None,
+    *,
+    doubt: str | None,
+    parked_by_owner: bool,
+    being_read: bool,
+) -> str | None:
+    """Why a card in Decision moment is there, after its cold reading, in
+    the face's words (card #82; review finding 3): the doubt of a refused
+    `stale` first; his line on a `his`; on a card he parked himself, what
+    the reading found and that it stays for him; on a `stale` the door
+    refused whose commitment has since been settled, that it is settled
+    and the card waits for his move — never "you parked it yourself" on a
+    card the machine parked. None when no reading has landed: the
+    column's own words, or that a reading is on now."""
+    if doubt is not None:
+        return doubt
+    if latest is None or latest.ground != Ground.PARKED:
+        if being_read:
+            return (
+                "a cold reading of the record is judging now whether this needs you; the "
+                "column's word until it lands: nothing here moves without a word from you"
+            )
+        return None
+    found = f"a cold reading of the record {RESULT_WORDS[latest.result]}: {latest.words}"
+    if latest.result == TriageResult.HIS:
+        return found
+    if parked_by_owner:
+        return f"{found}. You parked it yourself, so it stays until you move it"
+    if latest.result == TriageResult.STALE:
+        return (
+            f"{found}, and the board refused to close it over what was then unaccounted for; "
+            "that is settled since, and the card waits for your move"
+        )
+    return f"{found}; the board moved nothing, and the card waits for your move"
 
 
 def record_answered_missing(
@@ -313,7 +394,7 @@ def record_answered_missing(
     card: Card,
     *,
     source_fingerprint: str | None,
-    commitments: list[str],
+    commitments: list[Commitment],
 ) -> str | None:
     """The fact a `RECORD_ANSWERED` placement needs and this read does not
     have, or None when it holds (ruling 8): per result, because "a reading
@@ -342,6 +423,6 @@ def record_answered_missing(
         return None
     if decision.result == TriageResult.STALE:
         if commitments:
-            return "a commitment on it is unaccounted for: " + "; ".join(commitments)
+            return "a commitment on it is unaccounted for: " + unaccounted(commitments)
         return None
     return f"the reading landed {decision.result.value}, which moves nothing"

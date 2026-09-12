@@ -29,6 +29,7 @@ from enum import StrEnum
 from pydantic import BaseModel, model_validator
 
 from domain.card import Actor
+from domain.row import RowKind
 
 
 class TriageResult(StrEnum):
@@ -93,6 +94,19 @@ what is over is `stale`, and what is his is `his` with one line he can
 answer. No `cannot-tell`: a decision the evidence cannot settle is his,
 with the missing evidence as the line — a card in his column never lands
 as nobody's."""
+
+
+class Commitment(BaseModel):
+    """One thing on a parked card nothing accounts for (card #82, item 3):
+    which row promised it, the sentence the door and the face say, and
+    whether a WATCH row can carry it — a promise to watch something can be
+    transferred to a signal the board reads; a question in the owner's
+    words, or a ruling nobody has ruled on, cannot. Read from the rows by
+    `board/parked.py::commitments_of`, never stored."""
+
+    row: RowKind
+    words: str
+    transferable: bool
 
 
 class Direction(StrEnum):

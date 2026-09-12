@@ -37,6 +37,7 @@ from board.parked import (
     now_refused,
     owner_parked,
     record_fingerprint,
+    unaccounted,
     waiting_refused,
     where_after_parked_reading,
 )
@@ -1315,11 +1316,13 @@ class Doors:
                 )
         earlier = self.live.store.triages(slug, number, ground=Ground.PARKED)
         last = detail.readings[0] if detail.readings else None
+        commitments = self.live.commitments(slug, number)
         if result == TriageResult.WAITING:
-            refused = waiting_refused(card, words, last=last, earlier=earlier, now=now)
+            refused = waiting_refused(
+                card, words, last=last, earlier=earlier, commitments=commitments, now=now
+            )
             if refused is not None:
                 raise DoorRefused(refused[0].upper() + refused[1:] + ".")
-        commitments = self.live.commitments(slug, number)
         document_text = None
         if document is not None:
             path = Path(self.live.projects[slug].project.path) / document.path
@@ -1353,18 +1356,23 @@ class Doors:
                 AuditKind.DIAL,
                 Actor.MACHINE,
                 f"A cold reading landed stale ({words}); refused to move the card: "
-                "unaccounted for — " + "; ".join(commitments),
+                "unaccounted for — " + unaccounted(commitments),
             )
             self.live.bump()
             self.loops.reconcile_now()
             raise DoorRefused(
                 f"#{number} stays: a card leaves Decision moment only when every commitment "
                 "on it is accounted for, and this is not — "
-                + "; ".join(commitments)
+                + unaccounted(commitments)
                 + ". Land `his` with the commitment as the line, or `waiting` with the signal "
                 "that accounts for it."
             )
-        if result == TriageResult.WAITING:
+        placement = self.live.store.placements(slug).get(number)
+        his_park = owner_parked(placement)
+        if result == TriageResult.WAITING and not his_park:
+            # The WATCH is written only where the card moves on it: on a card
+            # he parked himself the result lands with the signal in its words
+            # and the card's own WATCH stays (ruling 7; review finding 2).
             replaced_watch = next((r.text for r in card.rows if r.kind == RowKind.WATCH), None)
             self.live.add_row(slug, number, Row(kind=RowKind.WATCH, text=words), Actor.SESSION)
         self.live.add_row(
@@ -1377,8 +1385,7 @@ class Doors:
         landing = where_after_parked_reading(
             result, words, source=resolved, document=document, replaced_watch=replaced_watch
         )
-        placement = self.live.store.placements(slug).get(number)
-        if landing.column is not None and owner_parked(placement):
+        if landing.column is not None and his_park:
             self.live.note(
                 slug,
                 number,

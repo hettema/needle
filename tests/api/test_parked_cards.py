@@ -34,7 +34,7 @@ BERTH_FIRST = 139
 BANK = 147
 """Parked with an ASK and no document: what a `stale` may not close."""
 COUNCIL = 149
-"""Parked with an ASK: what `waiting` sends to Executed."""
+"""Parked with an ASK: what `waiting` may not send anywhere."""
 PRICING = 219
 """Parked with a DELIVERED and a WATCH the board cannot read (item 3's case)."""
 PARKED_IN_ORDER = [BERTH_FIRST, BANK, COUNCIL, PRICING]
@@ -145,36 +145,44 @@ def test_every_parked_card_is_read_once_and_the_four_results_land_where_the_plan
     tick(client)
     assert BANK not in open_readings(client), "not read again until parked again or answered"
 
-    # ── #149: `waiting` writes the WATCH row and moves the card ────────
+    # ── #149: an ASK in his words cannot ride a WATCH, so `waiting` is
+    # refused and the reading lands `his` (review finding 4) ────────────
     read_the_rail_until(client, machine_floor, COUNCIL)
     signal = "the season report was read before the council — owner by 2026-12-01"
-    assert triage(COUNCIL, "waiting", signal) == 0
-    assert "moved to Executed" in capsys.readouterr().out
-    reconcile(client)
-    assert column_of(client, COUNCIL) == "Executed"
-    opened = detail(client, COUNCIL)
-    assert any(r["kind"] == "WATCH" and r["text"] == signal for r in opened["record"])
-    moved = next(h for h in opened["history"] if h["kind"] == "moved")
-    assert moved["actor"] == "machine" and moved["evidence"] == "record-answered"
-    assert "a cold reading found it waits for a signal" in moved["detail"]
-    assert opened["summary"]["standing"]["state"] == "held"
+    assert triage(COUNCIL, "waiting", signal) == 1
+    refused = capsys.readouterr().err
+    assert "cannot carry a question in the owner's words" in refused
+    assert "Read the season report before Thursday's council." in refused
+    assert column_of(client, COUNCIL) == "Decision moment"
+    assert triage(COUNCIL, "his", "Have you read the season report before Thursday?") == 0
+    capsys.readouterr()
 
-    # ── #219: the DELIVERED with no signal refuses `stale`; `waiting` moves
+    # ── #219: the DELIVERED with no signal refuses `stale`; `waiting` writes
+    # the WATCH row and moves the card ────────────────────────────────────
     read_the_rail_until(client, machine_floor, PRICING)
     assert triage(PRICING, "stale", "the season is over") == 1
     refused = capsys.readouterr().err
     assert "a DELIVERED with no signal the board can read" in refused
     assert "The read-out, with the two seasons side by side." in refused
     assert column_of(client, PRICING) == "Decision moment"
-    assert triage(PRICING, "waiting", "your ruling on the five forks — owner by 2026-12-01") == 0
-    capsys.readouterr()
+    signal = "your ruling on the five forks — owner by 2026-12-01"
+    assert triage(PRICING, "waiting", signal) == 0
+    assert "moved to Executed" in capsys.readouterr().out
     reconcile(client)
     assert column_of(client, PRICING) == "Executed"
-    moved = next(h for h in history(client, PRICING) if h["kind"] == "moved")
+    opened = detail(client, PRICING)
+    assert any(r["kind"] == "WATCH" and r["text"] == signal for r in opened["record"])
+    moved = next(h for h in opened["history"] if h["kind"] == "moved")
+    assert moved["actor"] == "machine" and moved["evidence"] == "record-answered"
+    assert "a cold reading found it waits for a signal" in moved["detail"]
     assert "the WATCH it replaced: Your ruling on the five forks." in moved["detail"]
+    assert opened["summary"]["standing"]["state"] == "held"
 
-    # ── #139 again, parked by the owner: the result lands, nothing moves ─
+    # ── #139 again, parked by the owner: the result lands, nothing moves,
+    # and a `waiting` writes no WATCH on a card he holds (review finding 2).
     read_the_rail_until(client, machine_floor, BERTH_FIRST)
+    assert triage(BERTH_FIRST, "waiting", "the fourth ruling lands — owner by 2026-12-01") == 1
+    assert "cannot carry a question in the owner's words" in capsys.readouterr().err
     assert (
         triage(
             BERTH_FIRST,
@@ -193,6 +201,7 @@ def test_every_parked_card_is_read_once_and_the_four_results_land_where_the_plan
     assert "You parked it yourself" in face(client, BERTH_FIRST)
     said = next(h for h in history(client, BERTH_FIRST) if h["kind"] == "dial")
     assert "you parked the card yourself, so it stays until you move it" in said["detail"]
+    assert not any(r["kind"] == "WATCH" for r in detail(client, BERTH_FIRST)["record"])
 
     # ── the Loop's count: one card came back after a reading moved it ──
     assert main(["decisions", "all", "--returned", "--count"]) == 0

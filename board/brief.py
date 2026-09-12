@@ -17,7 +17,7 @@ from domain.row import RowKind
 from domain.signal import Signal
 from domain.slot import Make
 from domain.team import Challenge, Route
-from domain.triage import CorpusLaneKind, Direction, Source, Triage
+from domain.triage import Commitment, CorpusLaneKind, Direction, Source, Triage
 from domain.watercooler import WatercoolerLine
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
@@ -714,7 +714,7 @@ def decision_brief(
     today: str,
     *,
     document_text: str | None,
-    commitments: list[str],
+    commitments: list[Commitment],
 ) -> str:
     """What the cold reading of a card parked on the owner opens with
     (card #82, item 1): the same seat as a mark's reading and the same
@@ -737,7 +737,7 @@ def decision_brief(
         else "\n\nNo document is written behind this card: the rows above are its whole record."
     )
     open_commitments = (
-        "\n".join(f"  - {c}" for c in commitments)
+        "\n".join(f"  - {c.words}" for c in commitments)
         if commitments
         else "  (none: nothing on the card is unaccounted for)"
     )
