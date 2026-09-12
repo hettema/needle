@@ -407,6 +407,53 @@ _SEQUENCING_CARD = re.compile(
 plan may hang on it — "Needle #20 (Needle's plan 08, whose item 2 …)"."""
 
 
+_HELD_LOOSE = re.compile(
+    r"^(?:plans?\s+)?(\d{1,3})\b(?![-.:/]\d)\s*(?:\((?:[^()]|\([^()]*\))*\))?\s*"
+)
+"""A name the hold grammar loses: a bare plan number ("after 08 and 11") or
+`plan N`, with a parenthesis the writer may hang on it — never a date or a
+time, which a digit after a separator marks."""
+
+
+_HOLD_WORD = re.compile(r"\b(?:after|behind|once|waits?\s+on|depends?\s+on|follows?)\b", re.I)
+"""The words that say a line means a hold. "beside #15" leads with a name
+and means shared ground, which is never a hold (INTENT.md lesson 4); the
+loose reading returns only the names a hold word precedes."""
+
+
+def held_names_of(line: str | None) -> list[str]:
+    """Every name a Sequencing line leads with after a hold word, read
+    loosely, as written (card #69, item 4): the strict names
+    `sequenced_cards_of` reads and, between and after them, the ones it
+    loses — a bare number, `plan N` — so the board can say a hold was
+    meant that it cannot place, instead of the hold silently never
+    holding. The reading stops where the strict one does: at the first
+    thing that is neither a name nor filler."""
+    if not line:
+        return []
+    rest = line
+    found: list[str] = []
+    meant = False
+    while True:
+        filler = _SEQUENCING_FILLER.match(rest)
+        assert filler is not None  # the pattern matches the empty string
+        meant = meant or _HOLD_WORD.search(filler.group(0)) is not None
+        rest = rest[filler.end() :]
+        strict = _SEQUENCING_CARD.match(rest)
+        if strict is not None:
+            words = strict.group(1).strip()
+            name = f"{words} #{strict.group(2)}" if words else f"#{strict.group(2)}"
+            rest = rest[strict.end() :]
+        else:
+            loose = _HELD_LOOSE.match(rest)
+            if loose is None:
+                return found
+            name = loose.group(0).split("(")[0].strip()
+            rest = rest[loose.end() :]
+        if meant:
+            found.append(name)
+
+
 def sequenced_cards_of(line: str | None) -> list[SequencedCard]:
     """The cards a `Sequencing:` line names first, in order, each with the
     words before its `#` as written (the plan "as many lanes as the machine
@@ -1066,6 +1113,7 @@ def parse_document(
         gate_why=gate_why,
         sequencing=sequencing,
         sequenced=sequenced_cards_of(sequencing) if kind == DocumentKind.PLAN else [],
+        held_names=held_names_of(sequencing) if kind == DocumentKind.PLAN else [],
         found_by=found_by,
         card_ref=int(card_match.group(1)) if card_match else None,
         suggestion_kind=suggestion_kind_of(kind, _field(fields, "Kind"), title, found_by),

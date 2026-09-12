@@ -878,6 +878,8 @@ def state_of(
                 Meaning.QUIET,
                 detail=readiness.why,
             )
+        if readiness.state == StartState.HOLD_UNREAD:
+            return _state("hold unread", Meaning.BROKEN, detail=readiness.why, hint="open to see")
         if readiness.state == StartState.UNREAD:
             return _state("not read yet", Meaning.QUIET, detail=readiness.why)
         if readiness.state == StartState.NOWHERE:

@@ -359,6 +359,43 @@ def test_a_sequencing_line_naming_a_card_in_flight_holds_start_until_it_ships(
     assert summary_of(client)["state"]["word"] == "free to start"
     assert machine_floor.state()["launch_log"] == []
 
+    # Card #69, item 4: a line that means a hold on a plan number the board
+    # cannot place — "after 08 and 11" — no longer reads as prose that holds
+    # nothing. Start closes in the voice of an unreadable gate, the pill
+    # says so, and the head counts it under Broken until the line is fixed.
+
+    def resequence(line: str) -> None:
+        plan.write_text(
+            re.sub(r"\*\*Sequencing:\*\* .*", f"**Sequencing:** {line}", plan.read_text())
+        )
+        git(repo, "add", ".")
+        git(repo, "commit", "-q", "-m", "sequencing")
+        client.app.state.loops.live.rescan("proj")
+        reconcile(client)
+
+    resequence("after 08 and 11 (the two pricing plans).")
+    unread = detail(client)
+    assert not unread["doors"]["start"]["offered"]
+    assert unread["doors"]["start"]["why"] == (
+        "Something is wrong: its Sequencing line means a hold on '08' and '11', which the "
+        "board cannot place, so it cannot start. A hold names a card as #N, or <project> #N "
+        "for another board's. Fix the line and Start opens, or waits on the card it names."
+    )
+    assert unread["doors"]["readiness"]["state"] == "hold unread"
+    assert unread["doors"]["readiness"]["unplaced"] == ["08", "11"]
+    face = summary_of(client)
+    assert face["state"]["word"] == "hold unread" and face["state"]["meaning"] == "broken"
+    assert "hold unread" in face["claims"]
+    assert claim_count(client.get("/api/projects/proj/board").json(), "hold unread") == 1
+    # A name after the first unplaceable one is read too: "#241" holds once
+    # "HR #409" is written as the board knows it, and until then the line
+    # says which name it cannot place.
+    resequence("after HR #409 and #241.")
+    assert detail(client)["doors"]["readiness"]["unplaced"] == ["HR #409"]
+    resequence("after #241 (the deploy).")
+    assert detail(client)["doors"]["start"]["offered"], "#241 is Done: the hold cleared"
+    assert claim_count(client.get("/api/projects/proj/board").json(), "hold unread") == 0
+
 
 def move(client: TestClient, number: int, column: str) -> None:
     response = client.post(
@@ -506,6 +543,37 @@ def test_discuss_opens_a_conversation_that_is_never_hands_on(
     )
     assert column_of(client, CARD) == "Up next"
     assert detail(client)["doors"]["start"]["offered"], "a discussion never blocks Start"
+
+
+def test_the_discuss_door_and_the_lane_brief_carry_the_live_documents_beside_the_card(
+    client: TestClient, machine_floor: Floor
+):
+    """Card #69, items 2 and 3: the Discuss door's brief names each live
+    document on the card's ground with its intent sentence and asks the
+    first message to say which of three things each is; the lane's brief
+    names them too, and its filing rule says look first."""
+    pricing = next(
+        c["number"]
+        for col in client.get("/api/projects/proj/board").json()["columns"]
+        for g in col["groups"]
+        for c in g["cards"]
+        if c["title"] == "The skipper sees the price before the berth"
+    )
+    talked = client.post(f"/api/projects/proj/cards/{pricing}/discuss")
+    assert talked.status_code == 200, talked.text
+    command = machine_floor.state()["spawned"][0]["command"][-1]
+    assert "The live documents beside this card, by intent" in command
+    # The command is a shell line, so an apostrophe in a sentence is escaped there.
+    assert "The pricing rule, judged against a real season (plan) — A season" in command
+    assert "price (defect) — A skipper pays what the tariff says today." in command
+    assert "shares office/pricing.py and does not name it" in command
+    assert "the same card under another name" in command
+    lane = client.app.state.doors.brief_for_lane(
+        client.app.state.loops.live.detail("proj", pricing), "proj"
+    )
+    assert "The live documents beside this card, by intent" in lane
+    assert "The pricing rule, judged against a real season (plan)" in lane
+    assert "Look first: before you write, read the live defects and plans" in lane
 
 
 # ── 5: the close and the signal ────────────────────────────────────────
@@ -984,12 +1052,49 @@ def test_idea_opens_a_conversation_the_rail_lists_and_a_document_it_writes_is_bo
         in history[-1]["detail"]
     )
 
-    # An empty first line: the session asks.
+    # An empty first line: the session asks, and no neighbours are read.
     machine_floor.update(clients=[])
     again = client.post("/api/projects/proj/idea", json={"text": ""})
     assert again.status_code == 200, again.text
     second = machine_floor.state()["spawned"][1]["command"][-1]
     assert "ask him, in one line, what is on his mind" in second
+    assert "live documents beside" not in second and "near his line" not in second
+    # The first line shared no rare word with any live document, and the brief said so.
+    assert "No live document on this board is near his line by its words" in command
+
+    # Card #69, item 3: a line that shares a live suggestion's words opens with
+    # that card, its intent sentence, and the three-way instruction the first
+    # message answers — same card, compatible work, or a contradiction put to
+    # him as one question. The door stayed one input.
+    machine_floor.update(clients=[])
+    near = client.post(
+        "/api/projects/proj/idea",
+        json={"text": "the waiting list should remember who asked first for a berth"},
+    )
+    assert near.status_code == 200, near.text
+    third = machine_floor.state()["spawned"][2]["command"][-1]
+    forgets = next(
+        c["number"]
+        for col in born["columns"]
+        for g in col["groups"]
+        for c in g["cards"]
+        if c["title"] == "The waiting list forgets who asked first"
+    )
+    assert "The live documents beside his line, by intent" in third
+    assert (
+        f"#{forgets} The waiting list forgets who asked first (idea) — Two boats waiting for "
+        "the same berth are offered it in the order the list was last edited, not the order "
+        "they asked. [docs/slice-suggestions/2026-09-01-the-waiting-list-forgets-who-asked-"
+        "first.md; near by its words (asked, first, list, waiting) — a candidate, not a verdict]"
+    ) in third
+    assert "near by its words (asked, first, list, waiting) — a candidate, not a verdict" in third
+    assert "the same card under another name" in third
+    assert "compatible work on shared ground" in third
+    assert (
+        "a contradiction — two intents that cannot both hold — put to him as one question" in third
+    )
+    assert "You judge; the board only retrieved" in third
+    assert "already in the corpus under another name" not in third, "one way to say it"
 
 
 def test_two_lanes_in_one_file_collide_on_both_cards_know_each_other_and_the_fold_says_so(
@@ -1775,5 +1880,5 @@ def test_a_document_born_beside_a_neighbour_it_does_not_name_is_counted_and_the_
     assert card["beside"]["neighbours"] and all(
         n["ground"] == "words" for n in card["beside"]["neighbours"]
     )
-    assert card["beside"]["sentence"].endswith("by its words — a candidate, not a verdict.")
+    assert card["beside"]["sentence"].endswith("by its words — candidates, not a verdict.")
     assert not card["beside"]["counted"]

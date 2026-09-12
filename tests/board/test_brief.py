@@ -143,7 +143,9 @@ def test_the_reading_brief_files_by_the_rule_and_reads_a_trigger_as_a_trigger():
         tags=[],
         deep="",
         citations=[],
-        link=DocumentLink(kind=DocumentKind.SUGGESTION, stem="s", title="The thing", archived=False),
+        link=DocumentLink(
+            kind=DocumentKind.SUGGESTION, stem="s", title="The thing", archived=False
+        ),
         origin=CardOrigin.ARRIVED,
         born_at=NOW,
         rows=[],
@@ -200,7 +202,9 @@ def test_the_planning_brief_carries_the_five_rules_and_the_one_exit_to_the_owner
         tags=[],
         deep="",
         citations=[],
-        link=DocumentLink(kind=DocumentKind.SUGGESTION, stem="s", title="The thing", archived=False),
+        link=DocumentLink(
+            kind=DocumentKind.SUGGESTION, stem="s", title="The thing", archived=False
+        ),
         origin=CardOrigin.ARRIVED,
         born_at=NOW,
         rows=[],
@@ -212,7 +216,13 @@ def test_the_planning_brief_carries_the_five_rules_and_the_one_exit_to_the_owner
     brief = planning_brief(detail, project, "2026-09-05", skill=None, first_lane=False)
     assert brief.startswith("A plan to write for a defect the dial took, on Harbourmaster (/srv/p)")
     assert "never hands on any tree" in brief and "docs/plans/README.md describes" in brief
-    for rule in ("1. The title", "2. Each item", "3. The plan carries an item", "4. When the terrain", "5. When the fix implies a decision"):
+    for rule in (
+        "1. The title",
+        "2. Each item",
+        "3. The plan carries an item",
+        "4. When the terrain",
+        "5. When the fix implies a decision",
+    ):
         assert rule in brief, rule
     assert "`**Class:**" in brief
     assert 'needle row proj 7 ASK "' in brief
@@ -222,3 +232,160 @@ def test_the_planning_brief_carries_the_five_rules_and_the_one_exit_to_the_owner
     assert "the board's own repository" not in brief
     own = planning_brief(detail, project, "2026-09-05", skill="/hm-plan-write", first_lane=True)
     assert "/hm-plan-write" in own and "the board's own repository" in own
+
+
+def _detail_beside():
+    """A defect's detail with one live plan beside it on a file and one
+    idea near it by words, as the corpus reading hands them in (card #69)."""
+    from domain.document import SuggestionKind
+    from domain.neighbour import Beside, Neighbour, NeighbourGround
+
+    document = Document(
+        kind=DocumentKind.SUGGESTION,
+        stem="s",
+        path="docs/slice-suggestions/s.md",
+        archived=False,
+        title="The slip shows last month's price",
+        date=None,
+        status=None,
+        status_word=None,
+        gate=None,
+        gate_why=None,
+        sequencing=None,
+        found_by=None,
+        card_ref=None,
+        suggestion_kind=SuggestionKind.DEFECT,
+        cites=[],
+        handouts=[],
+        items=[],
+        head_fields=[],
+        fingerprint="deadbeefdeadbeef",
+        intent_heading="The intent it breaks",
+        intent="A skipper pays what the tariff says today.",
+        essence="A skipper pays what the tariff says today.",
+        read_at=NOW,
+    )
+    card = Card(
+        number=7,
+        project="proj",
+        place=Place(column=Column.DEFECTS, group=None, position=0),
+        title=document.title,
+        gate=None,
+        tags=[],
+        deep="",
+        citations=[],
+        link=DocumentLink(
+            kind=DocumentKind.SUGGESTION, stem="s", title=document.title, archived=False
+        ),
+        origin=CardOrigin.ARRIVED,
+        born_at=NOW,
+        rows=[],
+    )
+    beside = Beside(
+        neighbours=[
+            Neighbour(
+                number=109,
+                title="The skipper sees the price before the berth",
+                essence="A skipper knows what a night costs before choosing where to lie.",
+                kind=DocumentKind.PLAN,
+                suggestion_kind=None,
+                path="docs/plans/2026-09-02-the-skipper-sees-the-price-before-the-berth.md",
+                ground=NeighbourGround.FILES,
+                files=["office/pricing.py"],
+                words=[],
+                named=False,
+                rulings=["Shown, never enforced", "Naming is citing"],
+            ),
+            Neighbour(
+                number=265,
+                title="The waiting list forgets who asked first",
+                essence="Two boats asked for the same berth.",
+                kind=DocumentKind.SUGGESTION,
+                suggestion_kind=SuggestionKind.IDEA,
+                path="docs/slice-suggestions/w.md",
+                ground=NeighbourGround.WORDS,
+                files=[],
+                words=["berth", "price"],
+                named=False,
+                rulings=[],
+            ),
+        ],
+        unnamed=[109],
+        counted=True,
+        born=NOW.date(),
+        sentence="sits beside #109 on office/pricing.py and does not name it.",
+        clears="the reading that verifies its mark folds it into #109 or cites #109 in the file",
+    )
+    index = CorpusIndex(documents=[document], read_at=NOW)
+    lane, doors = nothing_read(card, "/srv/p", NOW)
+    detail = assemble_detail(
+        card, index, [], NOW, lane=lane, doors=doors, readings=[], beside=beside
+    )
+    return detail, Project(slug="proj", name="Harbourmaster", path="/srv/p", registered_at=NOW)
+
+
+NEIGHBOUR_LINE = (
+    "  #109 The skipper sees the price before the berth (plan) — A skipper knows what a "
+    "night costs before choosing where to lie. "
+    "[docs/plans/2026-09-02-the-skipper-sees-the-price-before-the-berth.md; shares "
+    "office/pricing.py and does not name it] Its rulings: Shown, never enforced; Naming is "
+    "citing."
+)
+CANDIDATE_LINE = (
+    "  #265 The waiting list forgets who asked first (idea) — Two boats asked for the same "
+    "berth. [docs/slice-suggestions/w.md; near by its words (berth, price) — a candidate, "
+    "not a verdict]"
+)
+
+
+def test_every_brief_that_writes_a_document_carries_the_neighbours_by_intent():
+    """Card #69, item 2: the reading brief, the planning brief and the
+    reading that verifies a mark each name the live neighbours with card,
+    intent sentence, ground and rulings; the planning brief says the three
+    things a plan does with one; the filing rule says look first; the
+    reading's brief says a `now` on a plan's ground lands as `when` on that
+    plan's card. The block is composed into the briefs, never into
+    `render`, which `needle card` prints."""
+    from board.brief import (
+        LOOK_FIRST,
+        PLAN_DISPOSITIONS,
+        beside_text,
+        filing_rule,
+        planning_brief,
+        reading_brief,
+        triage_brief,
+    )
+    from board.signals import parse_watch
+
+    detail, project = _detail_beside()
+    block = beside_text(detail.summary.beside)
+    assert NEIGHBOUR_LINE in block and CANDIDATE_LINE in block
+    assert block.startswith("The live documents beside this card, by intent")
+    assert "#109" not in render(detail, project)
+    assert beside_text(None).startswith("The live documents beside this card: none")
+
+    signal = parse_watch("a second slip exists — session the mail log by 2026-12-31 every 1d")
+    reading = reading_brief(detail, project, signal, "2026-09-05")
+    assert NEIGHBOUR_LINE in reading and CANDIDATE_LINE in reading
+    assert LOOK_FIRST in reading, "the reading files by the rule, which says look first"
+    assert LOOK_FIRST in filing_rule("anyone")
+
+    planning = planning_brief(detail, project, "2026-09-05", skill=None, first_lane=False)
+    assert NEIGHBOUR_LINE in planning and PLAN_DISPOSITIONS in planning
+    for way in ("CARRY it", "SEQUENCE after it", "CITE it"):
+        assert way in planning, way
+    assert "The defects among them are the ones to carry" in planning
+
+    triage = triage_brief(
+        detail, project, "2026-09-05", document_text="# x", source=None, vocabulary=[]
+    )
+    assert NEIGHBOUR_LINE in triage
+    assert "it lands as `when` on that plan's card" in triage
+    assert "grep -E 'column: (Executed|Done)'" in triage
+    # The trigger the brief teaches parses through the one signal parser.
+    trigger = parse_watch(
+        "#109 has shipped — command uv run needle card proj 109 | grep -E "
+        "'column: (Executed|Done)' by 2026-12-31 every 2d"
+    )
+    assert trigger.kind.value == "command" and trigger.every_hours == 48
+    assert trigger.target == "uv run needle card proj 109 | grep -E 'column: (Executed|Done)'"

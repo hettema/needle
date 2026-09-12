@@ -64,15 +64,16 @@ SHOWN = 3
 """How many word candidates a document shows: the nearest, by score then
 card number, so the list is the same on every read."""
 
-WORD_FLOOR = 8.0
-"""The rarity score a word candidate needs. A shared word scores
-ln(N / namers), so on a board of sixty documents one word two share scores
-about 3.4 and a word eight share about 2: a candidate needs two or three
-rare words in common, or several ordinary ones. Measured 2026-09-12 at
-this floor: read by their own words, 13 of Needle's 63 live documents find
-a candidate, 141 of Hello Revenue's 224 and 3 of Omarchy's 27, never more
-than three; at 3.0 every document found three, which is a list and not a
-candidate; at 10.0 Needle found five."""
+RARE_WORDS = 2
+"""The rarity a word candidate needs: as much as this many words each shared
+by only two documents on the board. A shared word scores ln(N / namers), so
+the floor is RARE_WORDS × ln(N / 2) — 4.8 on the fixture's 22 documents, 6.9
+on Needle's 63, 9.4 on Hello Revenue's 224 — and grows with the board, since
+on a large board two rare words are a stronger sign than on a small one.
+Measured 2026-09-12: read by their own words, 15 of Needle's 63 live
+documents find a candidate, 111 of Hello Revenue's 224 and 3 of Omarchy's
+27, never more than three; a fixed floor of 3 found three for every
+document, which is a list and not a candidate."""
 
 STOP_WORDS: frozenset[str] = frozenset(
     [
@@ -257,6 +258,7 @@ def _neighbour(
         title=document.title,
         essence=document.essence,
         kind=document.kind,
+        suggestion_kind=document.suggestion_kind,
         path=document.path,
         ground=ground,
         files=files,
@@ -290,20 +292,21 @@ class Corpus:
         self.weight: dict[str, float] = {
             word: math.log(total / count)
             for word, count in word_count.items()
-            if count > 1 and not _glue(count, total)
+            if not _glue(count, total)
         }
 
     def by_words(self, words: set[str], *, but: int | None = None) -> list[Neighbour]:
         """The nearest documents to a set of words, as candidates: the
         rarity score of the words shared, above the floor, the top few in a
         fixed order. `but` leaves one card out — the document's own."""
+        floor = RARE_WORDS * math.log(max(len(self.pairs), 2) / 2)
         scored: list[tuple[float, int, Card, Document, list[str]]] = []
         for card, document in self.pairs:
             if card.number == but:
                 continue
             shared = sorted(w for w in words & self.words[card.number] if w in self.weight)
             score = sum(self.weight[w] for w in shared)
-            if shared and score >= WORD_FLOOR:
+            if shared and score >= floor:
                 scored.append((score, card.number, card, document, shared))
         scored.sort(key=lambda entry: (-entry[0], entry[1]))
         return [

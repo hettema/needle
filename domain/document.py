@@ -254,6 +254,11 @@ class Document(BaseModel):
     """The cards the Sequencing line names first, in order (the plan "as
     many lanes as the machine can hold", item 2): what the board holds a
     Start to. Empty for a line that names none, and for a suggestion."""
+    held_names: list[str] = []
+    """Every name the Sequencing line leads with, read loosely and as
+    written — the strict names and the ones the grammar loses, a bare
+    number or `plan N` — so the board can say when a hold was meant that
+    it cannot place (card #69, item 4). Empty for a suggestion."""
     found_by: str | None
     card_ref: int | None
     """A `**Card:** #N` line names the card this document belongs to."""

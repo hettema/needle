@@ -211,6 +211,7 @@ def _summary(
     collision: Collision | None = None,
     placement: Placement | None = PLACEMENT,
     waits: list[Wait] | None = None,
+    unplaced: list[str] | None = None,
 ):
     """One card as the page receives it, through the real derivation."""
     the_lane = lane if lane is not None else lane_for(card, _facts(worktrees={}))
@@ -232,6 +233,7 @@ def _summary(
         signal_evidence=None,
         suggestion_live=suggestion_live,
         waits=waits or [],
+        unplaced=unplaced or [],
         routed=routed,
     )
     # A card the machine put in Executing on hands-on evidence, with no lane
@@ -429,6 +431,10 @@ def language_cases() -> list[dict[str, object]]:
                     )
                 ],
             ),
+        ),
+        (
+            "hold unread",
+            _summary(_card(900, column=Column.PLANNED), unplaced=["08", "11"]),
         ),
         ("no effort level", _summary(_card(900, column=Column.UP_NEXT, gate=None))),
         ("nowhere to run", _summary(_card(900, column=Column.UP_NEXT), placement=None)),

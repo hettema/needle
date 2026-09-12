@@ -12,6 +12,7 @@ boards and says where each stands. Pure: the caller hands in the projects
 and a way to find a card.
 """
 
+import re
 from collections.abc import Callable
 
 from domain.card import Card
@@ -66,6 +67,31 @@ def waits_for(
                 shipped=column in SHIPPED,
             )
         )
+    return out
+
+
+_STRICT = re.compile(r"^((?:[A-Za-z][\w'’-]*\s+){0,2})#(\d+)$")
+
+
+def unplaced(
+    names: list[str],
+    *,
+    here: str,
+    projects: dict[str, str],
+) -> list[str]:
+    """The names a Sequencing line leads with that the board cannot place
+    (card #69, item 4): a bare plan number or `plan N` — the plan's own
+    numbering, which no board holds — and `<Words> #N` whose words are no
+    project's, so a hold the writer meant is said to be unreadable rather
+    than silently never holding. A `#N` no board holds yet is placed: it
+    holds today, loudly and self-clearingly, the shape of a card not born.
+    The names after the first unplaceable one are read too, since the
+    strict reading drops them ("after HR #409 and #123" held nothing)."""
+    out: list[str] = []
+    for name in names:
+        strict = _STRICT.match(name)
+        if strict is None or _project_of(strict.group(1).strip() or None, here, projects) is None:
+            out.append(name)
     return out
 
 

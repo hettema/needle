@@ -1400,3 +1400,96 @@ def test_needle_dial_reads_and_turns_the_dial_from_the_terminal(
     assert main(["dial", "--lanes", "0"]) == 0
     assert "0 fix lanes at most across every board" in capsys.readouterr().out
     assert board(client)["dial"]["dial"]["lanes"] == 0
+
+
+def test_a_now_on_ground_a_live_plan_covers_is_read_with_the_plan_beside_it_and_lands_when(
+    client: TestClient, machine_floor: Floor, repo: Path, store: Store, capsys
+):
+    """Card #69, item 2: the reading that verifies a mark, and the planning
+    session after it, open with the live documents beside the defect — the
+    plan whose Terrain names the defect's file, with its card and intent
+    sentence — and the reading is told a `now` on ground a live plan holds
+    lands as `when` on that plan's card, with a trigger that reads the
+    card's column and costs no session; the trigger parses and routes."""
+    live = client.app.state.loops.live
+    # The fixture's own `now` defect is read first on the rail; it is his here.
+    tide_file = repo / TIDE_PATH
+    tide_file.write_text(
+        tide_file.read_text(encoding="utf-8").replace("**Fix:** now —", "**Fix:** his —"),
+        encoding="utf-8",
+    )
+    write_defect(
+        repo,
+        "2026-09-05-the-price-on-the-map-is-a-day-old",
+        "The price on the map is a day old",
+        "**Fix:** now — the tariff plan says the price shown is today's",
+        body="`office/pricing.py` caches the tariff for a day.",
+    )
+    live.rescan("proj")
+    reconcile(client)
+    number = number_of(client, "The price on the map is a day old")
+    plan = number_of(client, "The skipper sees the price before the berth")
+    turn(client, on=True, lanes=1)
+    reading = read_the_rail_until(client, machine_floor, number)
+    capsys.readouterr()
+    brief = reading["argv"][-1]
+    assert "The live documents beside this defect, by intent" in brief
+    assert (
+        f"  #{plan} The skipper sees the price before the berth (plan) — A skipper knows what "
+        "a night costs before choosing where to lie. "
+        "[docs/plans/2026-09-02-the-skipper-sees-the-price-before-the-berth.md; shares "
+        "office/pricing.py and does not name it]"
+    ) in brief
+    assert "it lands as `when` on that plan's card" in brief
+    trigger = (
+        f"#{plan} has shipped — command uv run needle card proj {plan} | grep -E "
+        "'column: (Executed|Done)' by 2026-12-31 every 2d"
+    )
+    assert (
+        main(
+            [
+                "triage",
+                "proj",
+                str(number),
+                "when",
+                trigger,
+                "--title",
+                "passes",
+                *GRADE,
+            ]
+        )
+        == 0
+    )
+    capsys.readouterr()
+    reconcile(client)
+    opened = detail(client, number)
+    assert opened["summary"]["routing"]["state"] == "triaged when"
+    assert opened["summary"]["routing"]["why"].endswith(trigger)
+    # The door read the trigger through the one signal parser before it
+    # landed (a `when` naming one the board cannot read is refused), and the
+    # defect waits on the plan's card until a commit rewrites its mark
+    # citing the reading (plan 59: a row never routes more freely than the
+    # corpus).
+    assert "waits for a trigger" in opened["summary"]["routing"]["why"]
+
+    # The dial's planning session, on a `now` beside the same plan, carries it too.
+    write_defect(
+        repo,
+        "2026-09-05-the-price-on-the-slip-is-in-the-wrong-currency",
+        "The price on the slip is in the wrong currency",
+        "**Fix:** now — the tariff plan prices in kronor",
+        body="`office/pricing.py` formats the price.",
+    )
+    live.rescan("proj")
+    reconcile(client)
+    second = number_of(client, "The price on the slip is in the wrong currency")
+    verify(client, machine_floor, second)
+    capsys.readouterr()
+    tick(client)
+    planning = machine_floor.state()["launch_log"][-1]
+    assert planning["argv"][planning["argv"].index("-n") + 1].startswith(f"planning-card-{second}-")
+    brief = planning["argv"][-1]
+    assert f"  #{plan} The skipper sees the price before the berth (plan)" in brief
+    assert f"  #{number} The price on the map is a day old (defect)" in brief
+    for way in ("CARRY it", "SEQUENCE after it", "CITE it"):
+        assert way in brief, way

@@ -996,6 +996,7 @@ def doors_for(
     routed: Routed | None = None,
     ruled: str | None = None,
     title_hold: str | None = None,
+    unplaced: list[str] | None = None,
 ) -> Doors:
     """`suggestion_live`: the card's document is a suggestion still in its
     live folder, so Plan may write the plan that carries it. `signal_evidence`
@@ -1057,6 +1058,20 @@ def doors_for(
     elif placement is None:
         start = _nowhere("Start", placement_note)
         state = StartState.UNREAD if placement_note == UNREAD else StartState.NOWHERE
+    elif unplaced:
+        # A hold the plan meant and the board cannot read is broken, not
+        # quiet (card #69, item 4): the line and the grammar disagree, and
+        # a lane that started early is what the writer would find instead.
+        start = _closed(
+            "Start",
+            Meaning.BROKEN,
+            "its Sequencing line means a hold on "
+            + _names(f"'{name}'" for name in unplaced)
+            + ", which the board cannot place, so it cannot start",
+            why="a hold names a card as #N, or <project> #N for another board's",
+            then="fix the line and Start opens, or waits on the card it names",
+        )
+        state = StartState.HOLD_UNREAD
     elif held_by:
         # The plan's own word is the one hold (ruling 3): it says which
         # cards it waits on, and the door opens by itself once they ship.
@@ -1096,6 +1111,7 @@ def doors_for(
         cards=collision.cards if collision is not None and state == StartState.SHARES else [],
         files=collision.files if collision is not None and state == StartState.SHARES else [],
         waits=held_by if state == StartState.WAITS else [],
+        unplaced=unplaced if state == StartState.HOLD_UNREAD and unplaced else [],
     )
     if background:
         if lane.window_open:

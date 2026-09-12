@@ -76,7 +76,7 @@ from board.lane import (
     with_footprints,
 )
 from board.progress import progress_of
-from board.sequencing import waits_for
+from board.sequencing import unplaced, waits_for
 from board.signals import where_after
 from board.title import title_hold
 from board.triage import already_ruled
@@ -2485,6 +2485,7 @@ class Loops:
             gate = document.gate if document is not None and document.gate else card.gate
             collision: Collision | None = None
             waits: list[Wait] = []
+            unread_hold: list[str] = []
             if (
                 gate is not None
                 and card.place.column in STARTABLE_COLUMNS
@@ -2498,6 +2499,10 @@ class Loops:
                         here=live.project.slug,
                         projects=names,
                         find=self.live.store.card,
+                    )
+                if document is not None and document.held_names:
+                    unread_hold = unplaced(
+                        document.held_names, here=live.project.slug, projects=names
                     )
             signal, _ = watch_signal(card)
             last = readings.get(card.number)
@@ -2514,6 +2519,7 @@ class Loops:
                 placement=placement,
                 placement_note=placement_note,
                 collision=collision,
+                unplaced=unread_hold,
                 signal=signal,
                 signal_due_for_owner=asks_owner,
                 signal_evidence=asked_evidence(signal, last),

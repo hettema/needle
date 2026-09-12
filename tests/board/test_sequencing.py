@@ -158,3 +158,44 @@ def test_words_that_name_no_project_end_the_reading():
         named((None, 20), ("beside", 15), (None, 222)), here="needle", projects=PROJECTS, find=find
     )
     assert [w.number for w in waits] == [20]
+
+
+def test_a_line_that_means_a_hold_the_board_cannot_place_says_which_names():
+    """Card #69, item 4: the loose reading keeps the names the grammar loses
+    after a hold word — a bare plan number, `plan N`, a project no board
+    holds — and the board says which it cannot place, so the writer's hold
+    is loud instead of silently never holding. A `#N` no board holds yet is
+    placed (it holds today, the shape of a card not born), and a line that
+    leads with no hold word — "beside #15" — is shared ground, never a hold."""
+    from board.parse import held_names_of
+    from board.sequencing import unplaced
+
+    assert held_names_of("after 08 and 11 (the two pricing plans).") == ["08", "11"]
+    assert held_names_of("after 07. Independent of the page.") == ["07"]
+    assert held_names_of("after plan 08 (the map) and #12") == ["plan 08", "#12"]
+    assert held_names_of("after HR #409 and #123") == ["HR #409", "#123"]
+    assert held_names_of("after omarchy #17 (the shared skill) and Needle #20 (plan 08).") == [
+        "omarchy #17",
+        "Needle #20",
+    ]
+    assert held_names_of("depends on 12") == ["12"]
+    assert held_names_of("beside #15 (both add a call in `api/loops.py`)") == []
+    assert held_names_of("beside 15 and 16 (all three touch `api/loops.py`).") == []
+    assert held_names_of("Hello Revenue #411 first") == []
+    assert held_names_of("after 2026-09-05 folds") == []
+    assert held_names_of("independent of every open card.") == []
+    assert held_names_of(None) == [] and held_names_of("") == []
+
+    placed = dict(here="needle", projects=PROJECTS)
+    assert unplaced(["08", "11"], **placed) == ["08", "11"]
+    assert unplaced(["plan 08", "#12"], **placed) == ["plan 08"]
+    assert unplaced(["HR #409", "#123"], **placed) == ["HR #409"]
+    assert unplaced(["omarchy #17", "Needle #20", "#999"], **placed) == []
+    plan = parse_document(
+        "# A plan\n\n**Status:** PENDING\n**Sequencing:** after 08 and 11.\n\n## Intent\n\nx\n",
+        kind=DocumentKind.PLAN,
+        path="docs/plans/p.md",
+        archived=False,
+        read_at=NOW,
+    )
+    assert plan.sequenced == [] and plan.held_names == ["08", "11"]

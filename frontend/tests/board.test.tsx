@@ -1294,6 +1294,7 @@ describe("the colour language", () => {
     { case: "free to start", word: "free to start", meaning: "proven", border: false, door: "Start" },
     { case: "shares ground", word: "shares ground with #241", meaning: "proven", border: false, door: "Start" },
     { case: "waits", word: "waits on #139", meaning: "quiet", border: false, door: "open to see" },
+    { case: "hold unread", word: "hold unread", meaning: "broken", border: true, door: "open to see" },
     { case: "no effort level", word: "no effort level", meaning: "quiet", border: false, door: "open to see" },
     { case: "nowhere to run", word: "nowhere to run", meaning: "quiet", border: false, door: "open to see" },
     { case: "working", word: "working · 12 min · fable on alpha", meaning: "live", border: true, door: "Watch" },

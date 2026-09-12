@@ -16,6 +16,7 @@ from board import review_rules
 from board.assemble import document_of, is_trigger_card
 from board.brief import (
     FOCUS_EXCERPT,
+    beside_text,
     corpus_lane_name,
     filing_rule,
     focus_brief,
@@ -31,6 +32,7 @@ from board.brief import (
 from board.focus import FOCUS_PATH, is_chosen
 from board.handouts import handouts_row
 from board.lane import HANDS_ON
+from board.neighbours import Corpus, sentence_of, words_of
 from board.parse import plan_stem_of
 from board.signals import GRAMMAR, read_or_decline, where_after, where_after_finding
 from board.team import Unexecutable, team_words
@@ -56,6 +58,7 @@ from domain.focus import (
 from domain.gate import Gate
 from domain.lane import CollisionVerdict, Conversation, DoorResult, Lane, LaneRecord, LaneState
 from domain.launch import LaunchVerdict, Start
+from domain.neighbour import Beside
 from domain.project import Project
 from domain.row import Row, RowKind
 from domain.signal import Finding, SessionWork, SignalKind
@@ -101,16 +104,44 @@ class DoorFailed(Exception):
     message carries the machine's words."""
 
 
-def idea_brief(project: Project, session_id: str, first_line: str | None, today: str) -> str:
+THREE_WAYS = (
+    "For each live document beside it, say in that first message which it is: the same "
+    "card under another name (name the card — then the new evidence goes under that "
+    "card's own heading and nothing new is born), compatible work on shared ground (name "
+    "it, never wait on it), or a contradiction — two intents that cannot both hold — put to "
+    "him as one question he can answer cold: what is true today, both outcomes, what turns "
+    "on each, and your recommendation with its why. You judge; the board only retrieved. "
+)
+"""What the Idea and Discuss doors' first message answers about the
+neighbours the board found (card #69, item 3, rulings 3 and 8): a duplicate
+folds, shared ground is named, and only a contradiction reaches the owner,
+as a fork and never a refusal."""
+
+
+def idea_brief(
+    project: Project,
+    session_id: str,
+    first_line: str | None,
+    today: str,
+    beside: Beside | None = None,
+) -> str:
     """What an idea conversation opens with (plan 07, item 1): whose idea it
     is, that the corpus is the only way in, and that the document names this
-    conversation so the card it becomes says where it was born."""
+    conversation so the card it becomes says where it was born. `beside` is
+    the words read of his opening line against the live corpus (card #69,
+    item 3): the door stays one input, and the comparison comes back in the
+    first reply, after he has typed."""
     short = session_id[:8]
     asked = (
         f'The owner typed this into the door: "{first_line.strip()}" — that is his opening '
         "line; answer it."
         if first_line and first_line.strip()
         else "He typed nothing into the door: ask him, in one line, what is on his mind."
+    )
+    near = (
+        "\n\n" + beside_text(beside, subject="his line") + "\n\n" + THREE_WAYS.rstrip()
+        if beside is not None and beside.neighbours
+        else ""
     )
     return (
         f"An idea from the owner, opened from the board's Idea door on {project.name} "
@@ -127,8 +158,15 @@ def idea_brief(project: Project, session_id: str, first_line: str | None, today:
         "says what prompted it, and push it (`git push origin develop`); the board cards the "
         "file the moment it lands.\n\n"
         "Your FIRST message is two or three short plain sentences — no headers, no file "
-        f"paths. {asked} Challenge the idea where it deserves it, and say when it is already "
-        "in the corpus under another name."
+        f"paths. {asked} Challenge the idea where it deserves it."
+        + near
+        + (
+            "\n\nNo live document on this board is near his line by its words; say so in "
+            "one clause if he asks, and look again by hand before you write, since words are "
+            "retrieval and not proof."
+            if first_line and first_line.strip() and not near
+            else ""
+        )
     )
 
 
@@ -228,7 +266,12 @@ class Doors:
         card = detail.card
         gate = detail.summary.gate
         needle = needle_command()
-        text = render(detail, project) + f"\n\nexecute #{card.number}"
+        text = (
+            render(detail, project)
+            + "\n\n"
+            + beside_text(detail.summary.beside)
+            + f"\n\nexecute #{card.number}"
+        )
         team = team or (detail.team.route if detail.team is not None else None)
         if team is not None:
             text += "\n\n" + team_brief(team, needle)
@@ -608,11 +651,14 @@ class Doors:
         card = detail.card
         needle = needle_command()
         brief = render(detail, project) + (
-            "\n\n(Opened from the card's Discuss door: the owner wants to talk this card "
+            "\n\n"
+            + beside_text(detail.summary.beside)
+            + "\n\n(Opened from the card's Discuss door: the owner wants to talk this card "
             "through before deciding anything. Your FIRST message is two or three short plain "
             "sentences: what this card makes true in your own words, then what he wants to "
             "know — no headers, no file paths, no restating the brief he can see on the card. "
-            "Answer his questions and challenge the card where it deserves it. If he says go, "
+            + (THREE_WAYS if detail.summary.beside and detail.summary.beside.neighbours else "")
+            + "Answer his questions and challenge the card where it deserves it. If he says go, "
             f"launch the lane exactly as the board's Start button would: `{needle} start-card "
             f"{slug} {card.number}` (add `--anyway` only if the board reports a lane collision "
             "and he has read its reason and says start regardless) — his go IS the effort-gate "
@@ -645,7 +691,7 @@ class Doors:
         project = self.live.projects[slug].project
         session_id = str(uuid.uuid4())
         today = clock.now().date().isoformat()
-        brief = idea_brief(project, session_id, first_line, today)
+        brief = idea_brief(project, session_id, first_line, today, self.near_line(slug, first_line))
         try:
             opened, session_id, placement = self.runtime.discuss(
                 repo=project.path,
@@ -671,6 +717,31 @@ class Doors:
                 f"yet ({session_id[:8]}), never "
                 "hands on a tree. What it writes into the corpus becomes a card."
             ),
+        )
+
+    def near_line(self, slug: str, line: str | None) -> Beside | None:
+        """The live documents nearest an opening line typed at the Idea door,
+        by its words (card #69, item 3): the same reader the corpus is read
+        with, over the line instead of a document, as candidates."""
+        if not line or not line.strip():
+            return None
+        cards = self.live.store.cards(slug)
+        index = self.live.projects[slug].index
+        pairs = [
+            (card, document)
+            for card in cards
+            if card.folded_into is None
+            and (document := document_of(card, index)) is not None
+            and not document.archived
+        ]
+        found = Corpus(pairs).by_words(words_of(line))
+        return Beside(
+            neighbours=found,
+            unnamed=[],
+            counted=False,
+            born=None,
+            sentence=sentence_of(found),
+            clears=None,
         )
 
     # ── Plan ───────────────────────────────────────────────────────────

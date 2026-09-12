@@ -9,8 +9,9 @@ from pathlib import Path
 from board.team import team_words
 from board.title import VOCABULARY, Word
 from domain.board import CardDetail
-from domain.document import SuggestionKind
+from domain.document import DocumentKind, SuggestionKind
 from domain.lane import HANDS_ON, Lane
+from domain.neighbour import Beside, Neighbour, NeighbourGround
 from domain.project import Project
 from domain.row import RowKind
 from domain.signal import Signal
@@ -140,6 +141,64 @@ def neighbours_text(lanes: dict[int, Lane], titles: dict[int, str], number: int)
     return "\n".join(lines) if lines else "  (no other lane has hands on this project)"
 
 
+def _neighbour_line(neighbour: Neighbour) -> str:
+    kind = (
+        "plan"
+        if neighbour.kind is DocumentKind.PLAN
+        else "defect"
+        if neighbour.suggestion_kind is SuggestionKind.DEFECT
+        else "idea"
+    )
+    ground = (
+        f"shares {', '.join(neighbour.files)}"
+        + (" and names it" if neighbour.named else " and does not name it")
+        if neighbour.ground == NeighbourGround.FILES
+        else f"near by its words ({', '.join(neighbour.words)}) — a candidate, not a verdict"
+    )
+    essence = f" — {neighbour.essence}" if neighbour.essence else ""
+    rulings = f" Its rulings: {'; '.join(neighbour.rulings)}." if neighbour.rulings else ""
+    return (
+        f"  #{neighbour.number} {neighbour.title} ({kind}){essence} "
+        f"[{neighbour.path}; {ground}]{rulings}"
+    )
+
+
+def beside_text(beside: Beside | None, *, subject: str = "this card") -> str:
+    """The live documents beside a brief's subject, by intent (card #69,
+    item 2): one line each — the card, its title, the first sentence of its
+    intent, its path, the ground and whether the subject names it, and a
+    plan's rulings — read from the corpus at this moment. Every brief that
+    can write a document carries it, composed here and never in `render`,
+    which `needle card`, the Plan door and the Execute door read too."""
+    if beside is None or not beside.neighbours:
+        return (
+            f"The live documents beside {subject}: none — no live plan or suggestion on this "
+            "board shares its ground or its rare words."
+        )
+    lines = [
+        f"The live documents beside {subject}, by intent — read from the corpus now, retrieval "
+        "and never a verdict; you judge whether each is the same thing under another name, "
+        "compatible work on shared ground, or an intent that cannot hold beside this one:"
+    ]
+    lines.extend(_neighbour_line(n) for n in beside.neighbours)
+    return "\n".join(lines)
+
+
+LOOK_FIRST = (
+    "Look first: before you write, read the live defects and plans on the finding's own "
+    "paths and words (the board's list on the card is this card's ground, not the "
+    "finding's — `needle card` on a neighbour shows its); when a card already holds the "
+    "bug, append the new evidence under that card's own document heading and say so in the "
+    "commit instead of writing a second file; a document you do write cites by card (`#N`) "
+    "or by path every live neighbour on its ground, since the head counts a document born "
+    "beside a neighbour it does not name"
+)
+"""What every session that may file a document is told about its neighbours
+(card #69, item 2): the look at the moment of writing is a convention — no
+verb writes a document, so there is no door to refuse at — and the count
+after landing is the mechanism that proves the look happened (ruling 8)."""
+
+
 def reading_name(number: int, title: str) -> str:
     return READING_PREFIX + lane_name(number, title)
 
@@ -256,7 +315,7 @@ def filing_rule(found_by: str) -> str:
         "intent the defect breaks and what he loses while it does; its first sentence is "
         "the line the card shows under its title, so no path or function name in it — and "
         "put the evidence under its own heading after it. Commit it on develop with a body "
-        "saying what prompted it, and push"
+        f"saying what prompted it, and push. {LOOK_FIRST}"
     )
 
 
@@ -296,6 +355,8 @@ def reading_brief(
         "database role, the log rules and the probes; never a credential those rules reserve. "
         "Git, the project's own commands and its documents are yours to read.\n\n"
         + render(detail, project)
+        + "\n\n"
+        + beside_text(detail.summary.beside)
         + ("\n\nThe trigger to read: " if trigger else "\n\nThe signal to read: ")
         + f"{signal.what} — {signal.target}{expect}; due {signal.due.isoformat()}, {cadence}."
         + (
@@ -375,6 +436,10 @@ def planning_brief(
         "and the lane it starts runs as any lane: a worktree, the review rings, a fold on "
         "green, a close the board refuses without a review record.\n\n"
         + render(detail, project)
+        + "\n\n"
+        + beside_text(detail.summary.beside, subject="this defect")
+        + "\n"
+        + PLAN_DISPOSITIONS
         + "\n\nThe suggestion is the material: read it whole, and read the code it names. "
         f"Write the plan into docs/plans/ in the project's plan shape — {shape}. Five rules "
         "this plan holds, because no owner reads it before it runs:\n"
@@ -423,6 +488,20 @@ def planning_brief(
         "after it. Ask the owner nothing in this window: nobody is reading it."
     )
 
+
+PLAN_DISPOSITIONS = (
+    "A plan does one of three things with each live document beside it, and says which in "
+    "its head: CARRY it — a `**Carries:**` line naming its path, when it is the same class "
+    "and this plan fixes it too, so one plan for a class is the default and one plan per "
+    "instance the exception; SEQUENCE after it — `**Sequencing:** after #N`, when it cannot "
+    "run beside it; or CITE it — `#N` in the intent, with one sentence on why this plan is "
+    "whole without it. The defects among them are the ones to carry: a second plan for the "
+    "same class is the drift the board counts. Two intents that cannot both hold is not "
+    "yours to settle: name both in an ASK row (rule 5) and stop."
+)
+"""What the dial's planning session does with a neighbour (card #69, item
+2): carry, sequence or cite, so no plan is born beside one it does not
+name, and a contradiction reaches the owner as one question."""
 
 THE_RULE = (
     "A decision is Dennis's only when the written record does not select among materially "
@@ -545,6 +624,8 @@ def triage_brief(
         "This session is never a lane: no worktree (never EnterWorktree), no edit to any file, "
         "no commit, no push, no window. It writes nothing but its one result.\n\n"
         + render(detail, project)
+        + "\n\n"
+        + beside_text(detail.summary.beside, subject="this defect")
         + f"\n\nThe mark as it stands: **Fix: {mark}**\n"
         f"\n--- the document ({detail.summary.document_path}) ---\n{document_text}\n--- ends ---"
         f"\n\nThe source the mark relies on: {where}"
@@ -588,6 +669,13 @@ def triage_brief(
         "missing. Say what is missing and where it should come from. It routes to nobody; it "
         "does not route to the owner unless the missing thing is itself his decision, in "
         "which case the result is `his`.\n"
+        "- A `now` on a document whose ground a live plan beside it already covers — the "
+        "plan's Terrain names the defect's files, and its intent holds the fix — is not a "
+        "second `now`: it lands as `when` on that plan's card, with a trigger that reads the "
+        f"plan's card column and costs no session: `#N has shipped — command {needle} card "
+        f"{slug} <N> | grep -E 'column: (Executed|Done)' by <YYYY-MM-DD> every 2d`. Say in "
+        "your words which plan and what in its text covers this defect. A neighbour that "
+        "merely shares a file is not that: the plan has to hold the fix.\n"
         "- A `--direction` is required with `now`, from this set, and says which way the "
         "product moves if the machine acts: " + ", ".join(f"`{d.value}`" for d in Direction) + ".\n"
         "- The grade is required with every result, from the document alone: `--reaches`, "

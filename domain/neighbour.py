@@ -15,7 +15,7 @@ from enum import StrEnum
 
 from pydantic import BaseModel
 
-from domain.document import DocumentKind
+from domain.document import DocumentKind, SuggestionKind
 
 
 class NeighbourGround(StrEnum):
@@ -35,6 +35,8 @@ class Neighbour(BaseModel):
     """The first sentence of the neighbour's intent: what the brief carries
     so the session judges by intent, never by title alone."""
     kind: DocumentKind
+    suggestion_kind: SuggestionKind | None
+    """A suggestion's kind — an idea or a defect — so a brief says which."""
     path: str
     ground: NeighbourGround
     files: list[str]
