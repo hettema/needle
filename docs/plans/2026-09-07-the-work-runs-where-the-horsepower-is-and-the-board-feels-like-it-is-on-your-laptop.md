@@ -1,7 +1,15 @@
 # The work runs where the horsepower is, and the board feels like it is on your laptop
 
 **Carries:** docs/slice-suggestions/done/2026-09-07-the-work-runs-where-the-horsepower-is-and-the-board-feels-like-it-is-on-your-laptop.md
-**Status:** IN FLIGHT — started 2026-09-09 by the lane on card #83. The runtime knows a second machine and proves it on the fixture (item 4's fixture half, item 5's readers); the machine itself is not ordered yet, so items 1–3 and the live halves of 4 and 5 wait on the order, which is the owner's act — the lane ended its first turn on that question with the order written out below under *The order*. The owner opened the Netcup account the same evening.
+**Status:** IN FLIGHT — started 2026-09-09, stopped 2026-09-10 at 15:51 with
+one commit still unshared on its branch, restarted 2026-09-13 on the owner's
+word. Item 1 is met. Item 2's sign-ins are done: all five subscriptions answer
+on the rented machine and the three signed in on 2026-09-12 still answer on the
+laptop, so no sign-in displaced its pair; its last clause is the day apart,
+which the loop below reads. Item 2a moved out whole to its own card the same
+day, by his ruling in the Rulings below. What remains is items 3, 4 and 5: the
+board's move to the rented machine for good, the first card started from the
+board and watched onto the screen, and the four build numbers still missing.
 **Written:** 2026-09-07, from Dennis: "My intent is to not be limited by horse power from my machine but still interface as if I'm on my machine." The bound: "up to 100 eur/month, cheaper better." On the flow, after the live pricing and a cold read of another make: "For the rest the flow looks good." On the one thing he raised: "how would we deal with captchas and stuff? Anthropic is throwing captchas nowadays" — answered in item 2: the browser step of every login stays on the laptop, so the rented machine never meets a captcha.
 **Effort gate:** high — the mechanics are a machine record in a pattern that exists (`omarchy-machine`), a tunnel, one login per slot, and the runtime's session and window verbs taught a second machine; the judgment is where a lane runs (item 4's rule) and what must never move (the laptop's own cards), and the failure that would be silent — a token refreshed from two machines invalidating one — is what item 2 proves before anything else moves.
 **Sequencing:** after #107 (the owner's word on 2026-09-09, "please sequence 83 to start after this lands": a walled lane gives its memory back and every lane's space carries the floor as its high mark, which the rented machine's admission and its kill count read), #53 (the floor the rented machine's admission rule reuses is #53's, read every beat) and #68 (a lane the machine ended comes back by itself, which on a second machine is the only way a dead lane returns at all — nobody is sitting at it). Items 1 and 2 can land and be proven before either; the runtime items wait.
@@ -128,46 +136,18 @@ Claude slots, each the same round through the laptop's browser, after the
 day has shown the first pair refreshing apart.
 
 ### 2a. Accounts stay usable and work changes accounts without the owner intervening
-Owner clarification, 2026-09-10: "can we add it to 83's plan? We're waiting
-for a day before we close it out." This makes the existing intent's "same
-account switcher" observable; it does not replace item 2's full-day proof
-or authorize a close merely because a day elapsed.
+Written into this plan on the owner's clarification of 2026-09-10 and widened
+by his ruling of 2026-09-11, that ordinary expiry, disconnection and account
+limits must never need a hand.
 
-The live inspection found only hrclaude signed in on rented. Its selector
-and handoff hooks were present and its own host renewal succeeded, but no
-periodic allowance/renewal or interrupted-session recovery timer was
-installed. A successful model call or selection alone does not prove
-unattended operation or an account change.
-
-Reuse the existing authority: omarchy-machine's `home/.local/bin/claude-acct`
-(selection, renewal locks, supervision and recovery), its allowance-refresh
-and recover units, and Needle's `runtime/rule.py`, `runtime/handoffs.py` and
-`runtime/service.py`. The rented record already carries the usage collector.
-Inspect which recovery responsibilities Needle already performs before
-installing anything; do not create two supervisors for one session. Record
-rented-specific installation and drift detection in rented-machine. The
-absence of laptop unit names is not itself failure if an equivalent active
-reader proves the behavior. Do not create a second chooser or copy logins.
-
-Done means: during item 2's full-day observation, an idle rented account's
-allowance is refreshed and renewable access is renewed without an open
-editor or an owner action; the independent laptop login still works. Once
-the other accounts are signed in, selection considers their actual allowance.
-A safe simulated limit proves that a supervised session and a Needle lane
-resume the same work on an eligible account without duplicate execution;
-the model rule is preserved and unavailable accounts are excluded. A
-simulated transient interruption proves unattended recovery without two
-supervisors resuming the same session. A real sign-out or no eligible
-allowance produces an actionable visible state instead of silent inactivity.
-Installed upkeep survives a user-service restart; rented's drift check
-reports missing upkeep. Record the installed mechanism, time-stamped live
-renewal evidence, and rehearsal evidence separately before marking this met.
-Do not exhaust real allowances or interrupt the owner's running sessions to
-test a handoff. These are close-out requirements within #83, not follow-up
-work after closing it.
-Hands out: execution — run isolated switching/recovery rehearsals and collect
-the full-day renewal evidence; verifies the recorded transitions, no duplicate
-process, and a live call on each independent login before accepting the report.
+**Deviated:** the work moved out whole, by the owner's word of 2026-09-13, to
+`docs/slice-suggestions/2026-09-13-you-close-the-laptop-and-the-work-finishes-without-you.md`,
+which carries every clause this item named and the evening's evidence for each.
+Nothing of it was done here and nothing of it is abandoned. Why it moved: this
+plan's own work — the machine, the sign-ins, the board's home, the rule that
+places work, the numbers — was nearly finished while this item had nothing
+installed at all, and one card that cannot close holds both. The split is in
+the Rulings below.
 
 ### 3. The board serves from the machine, and the laptop's address still reaches it
 `needle serve` runs on the rented machine over the one store, moved once at
@@ -469,9 +449,8 @@ then a day of use on both before the other slots move.
   before, and does not know which machine ran it unless he looks.
 - Every subscription works from both machines a day after its login, with
   no token file copied.
-- Rented renews idle access, selects available accounts, switches on a limit
-  and recovers interrupted work without owner intervention, with item 2a
-  evidenced before close; the day-long wait alone does not satisfy it.
+- Work sent to the rented machine keeps running when the laptop is shut: its
+  own card now, named at item 2a, and no longer a condition of this one's close.
 - An Omarchy card never runs off the laptop.
 - The step from 32 GB to 64 GB is taken, or not, on the loop's numbers.
 
@@ -575,6 +554,20 @@ then a day of use on both before the other slots move.
   minutes behind a pass); the batch observation that would make either
   home fast is the next slice, not an emergency. The move and its revert
   stay as the record's tools, proven both ways in one day.
+
+- **This is two cards: the horsepower, and the laptop being shut** (the
+  owner's ruling, 2026-09-13, asked whether #83 was done and told what was
+  true). Everything this plan set out to do on 2026-09-07 — the machine, the
+  sign-ins, the one board, the rule that places work, the numbers — was nearly
+  finished, while the unattended half added on 2026-09-10 and widened on
+  2026-09-11 had nothing installed at all. One card carrying both could not
+  close, and its stopping told him nothing about which half had stopped: asked
+  what was left on his side, it answered with work he had finished two days
+  earlier. So item 2a leaves whole, with every clause it named, and this plan
+  closes on what it has. Rejected: holding this card open until the unattended
+  work lands (the horsepower is usable today and its evidence goes stale while
+  it waits); and closing item 2a as deviated-and-dropped (the owner's ruling of
+  2026-09-11 stands and the work is wanted, only not here).
 
 ## Deliberately not
 
