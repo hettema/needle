@@ -40,9 +40,10 @@ from board.focus import (
 )
 from board.lane import nothing_read
 from board.leverage import Judged, arrange, wake_line
+from board.parked import commitments_of
 from board.reconcile import SUGGESTION_HOMES, Effects, home_of, reconcile
 from board.triage import Sources
-from domain.audit import AuditKind
+from domain.audit import AuditEntry, AuditKind
 from domain.board import BoardState, CardDetail, MachineState
 from domain.card import Actor, Card, CardOrigin, Place
 from domain.column import Column
@@ -65,6 +66,7 @@ from domain.notice import Shown
 from domain.project import Project
 from domain.row import Row
 from domain.signal import SessionWork, SignalKind
+from domain.triage import Ground
 from domain.watercooler import WatercoolerLine
 from domain.window import WindowKind
 from infrastructure import clock
@@ -368,6 +370,8 @@ class Live:
             planning_sessions=self.store.open_windowless_sessions(slug, SessionWork.PLANNING),
             triage_sessions=self.store.open_windowless_sessions(slug, SessionWork.TRIAGE),
             triages=self.store.latest_triages(slug),
+            decisions=self.store.latest_triages(slug, ground=Ground.PARKED),
+            histories=self._histories_for_parked(slug),
             sources=self.sources(slug),
             dial=self.dial_state(slug),
             title_readings=self.store.latest_title_readings(slug),
@@ -581,6 +585,34 @@ class Live:
             raise StoreRefusal(f"There is no card #{number} on this board.")
         return card
 
+    def _histories_for_parked(self, slug: str) -> dict[int, list[AuditEntry]]:
+        """The history of every card a parked card's rule reads on a board
+        read (card #82): the cards in Decision moment, whose face may carry
+        the doubt of a refused `stale`, and the cards a cold reading moved,
+        whose placement is re-tested against the commitments on them. A
+        handful of queries, never one per card on the board."""
+        placements = self.store.placements(slug)
+        wanted = [
+            c.number
+            for c in self.store.cards(slug)
+            if c.place.column == Column.DECISION_MOMENT
+            or (
+                (placed := placements.get(c.number)) is not None
+                and placed.evidence == Evidence.RECORD_ANSWERED
+            )
+        ]
+        return {n: self.store.history(slug, n) for n in wanted}
+
+    def commitments(self, slug: str, number: int) -> list[str]:
+        """What on the card nothing accounts for (card #82, item 3), from
+        its rows and history as they stand."""
+        readings = self.store.readings(slug, number)
+        return commitments_of(
+            self.card(slug, number),
+            self.store.history(slug, number),
+            readings[0] if readings else None,
+        )
+
     def detail(self, slug: str, number: int) -> CardDetail:
         live = self._live(slug)
         card = self.card(slug, number)
@@ -602,6 +634,7 @@ class Live:
             planning=self.store.open_windowless_sessions(slug, SessionWork.PLANNING).get(number),
             triaging=self.store.open_windowless_sessions(slug, SessionWork.TRIAGE).get(number),
             triage=self.store.triage(slug, number),
+            decision=self.store.triage(slug, number, ground=Ground.PARKED),
             sources=self.sources(slug),
             title_reading=self.store.latest_title_readings(slug).get(number),
             leverage=self.focus_of(slug)[1].get(number),

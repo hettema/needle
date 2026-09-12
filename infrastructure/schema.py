@@ -498,6 +498,10 @@ class TriageRow(Base):
     source_fingerprint: Mapped[str | None] = mapped_column(String(64), nullable=True)
     document_fingerprint: Mapped[str] = mapped_column(String(64))
     session_id: Mapped[str | None] = mapped_column(String(36), nullable=True)
+    ground: Mapped[str] = mapped_column(String(20), server_default="mark")
+    """What was read (card #82): a defect's mark, or a parked card's record.
+    Routing reads marks only; the board's act on a parked card reads the
+    other. Every reading before the column read a mark."""
     # How bad the same reading found it (card #100, item 2): three parts in
     # the owner's words, each with the reading's words for what selected it.
     # Null on a reading from before the scale, which the board reads again.

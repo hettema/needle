@@ -9,6 +9,7 @@ loop makes, so a claim never outlives its evidence in silence.
 """
 
 from board.lane import has_row
+from board.parked import record_answered_missing
 from board.signals import read_or_decline
 from domain.audit import AuditEntry
 from domain.card import Actor, Card
@@ -17,6 +18,7 @@ from domain.evidence import Evidence, EvidenceState, Standing
 from domain.lane import HANDS_ON, Lane, LaneState
 from domain.row import RowKind
 from domain.signal import Reading
+from domain.triage import Triage
 
 BY_COLUMN: dict[Column, Evidence] = {
     Column.EXECUTING: Evidence.HANDS_ON,
@@ -43,9 +45,24 @@ def evidence_of(card: Card, placement: AuditEntry | None) -> tuple[Actor, Eviden
 
 
 def missing_fact(
-    evidence: Evidence, card: Card, lane: Lane | None, last: Reading | None
+    evidence: Evidence,
+    card: Card,
+    lane: Lane | None,
+    last: Reading | None,
+    *,
+    decision: Triage | None = None,
+    decision_source: str | None = None,
+    commitments: list[str] | None = None,
 ) -> str | None:
-    """The fact the predicate needs and this read does not have, or None when it holds."""
+    """The fact the predicate needs and this read does not have, or None
+    when it holds. `decision` is the card's latest cold reading as a
+    parked card, `decision_source` the fingerprint its source reads as
+    today and `commitments` what on the card is unaccounted for: what a
+    `RECORD_ANSWERED` placement is re-tested against (card #82, ruling 8)."""
+    if evidence == Evidence.RECORD_ANSWERED:
+        return record_answered_missing(
+            decision, card, source_fingerprint=decision_source, commitments=commitments or []
+        )
     if evidence == Evidence.HANDS_ON:
         if lane is None or lane.state == LaneState.NONE:
             return "no work on it exists — no copy of the code on disk and no session"
@@ -101,10 +118,15 @@ def standing_for(
     last: Reading | None,
     *,
     read: bool,
+    decision: Triage | None = None,
+    decision_source: str | None = None,
+    commitments: list[str] | None = None,
 ) -> Standing:
     """Where the card's placement stands on this read. `read` is whether the
     loop has read the machine since the board was served; before that every
-    machine placement is evidence unknown, the 0.1 import's included."""
+    machine placement is evidence unknown, the 0.1 import's included. The
+    three keyword facts are a parked card's reading and what it is re-tested
+    against (card #82); absent, a placement on that reading is doubted."""
     actor, evidence = evidence_of(card, placement)
     if evidence is None:
         return Standing(actor=actor, evidence=None, state=EvidenceState.TRUSTED, words=None)
@@ -115,7 +137,15 @@ def standing_for(
             else "not tested yet: the loop has not read the machine"
         )
         return Standing(actor=actor, evidence=evidence, state=EvidenceState.UNKNOWN, words=words)
-    gone = missing_fact(evidence, card, lane, last)
+    gone = missing_fact(
+        evidence,
+        card,
+        lane,
+        last,
+        decision=decision,
+        decision_source=decision_source,
+        commitments=commitments,
+    )
     if gone is None:
         return Standing(actor=actor, evidence=evidence, state=EvidenceState.HELD, words=None)
     return Standing(actor=actor, evidence=evidence, state=EvidenceState.DOUBTED, words=DOUBT + gone)

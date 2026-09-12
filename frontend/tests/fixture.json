@@ -151,6 +151,7 @@
                   "source_fingerprint": null,
                   "document_fingerprint": "a10183e30d9dd775",
                   "session_id": "eeee0001-0000-4000-8000-000000000000",
+                  "ground": "mark",
                   "grade": {
                     "breaks": "lies",
                     "breaks_words": "the skipper believes a number that is not true",
@@ -2108,12 +2109,12 @@
       {
         "definition": {
           "column": "Executed",
-          "note": "Built and archived; waiting for the signal that says it delivered.",
+          "note": "Built and archived, or sent here to wait; the signal named on the card says when it delivered.",
           "definition": [
-            "Built work, its plan archived, waiting for the signal that says it delivered.",
+            "Built work, its plan archived, waiting for the signal that says it delivered — or a card that was parked on you and, read again cold, waits for a signal the board can read; the reason is on its history.",
             "A card enters here with its WATCH row naming that signal. Done is a closed loop, not a claim: this is never where cards go to be forgotten."
           ],
-          "moved_by": "you, in this slice; the close of a session's work, from slice 03",
+          "moved_by": "you, in this slice; the close of a session's work, from slice 03; the board, on a second reading of a card parked on you",
           "ranked": false,
           "yours": false,
           "furled_on_laptop": true
@@ -2189,9 +2190,9 @@
       {
         "definition": {
           "column": "Done",
-          "note": "The signal arrived.",
+          "note": "The signal arrived, or a second reading found the decision over.",
           "definition": [
-            "The signal named on the card arrived and somebody read it.",
+            "The signal named on the card arrived and somebody read it — or the card was parked on you, a second reading found what it asked about is over, and the reason is on its history.",
             "From slice 03 the board or a session reads the signal and moves the card here itself."
           ],
           "moved_by": "you, in this slice; the board or a session, from slice 03",
@@ -2681,6 +2682,7 @@
           "source_fingerprint": null,
           "document_fingerprint": "a10183e30d9dd775",
           "session_id": "eeee0001-0000-4000-8000-000000000000",
+          "ground": "mark",
           "grade": {
             "breaks": "lies",
             "breaks_words": "the skipper believes a number that is not true",
@@ -2939,6 +2941,7 @@
         "source_fingerprint": null,
         "document_fingerprint": "a10183e30d9dd775",
         "session_id": "eeee0001-0000-4000-8000-000000000000",
+        "ground": "mark",
         "grade": {
           "breaks": "lies",
           "breaks_words": "the skipper believes a number that is not true",
@@ -2950,6 +2953,7 @@
       },
       "triaging": null,
       "source": null,
+      "decision": null,
       "team": null
     },
     "232": {
@@ -3256,6 +3260,7 @@
       "triage": null,
       "triaging": null,
       "source": null,
+      "decision": null,
       "team": null
     },
     "267": {
@@ -3531,6 +3536,7 @@
       "triage": null,
       "triaging": null,
       "source": null,
+      "decision": null,
       "team": null
     },
     "252": {
@@ -3819,6 +3825,7 @@
       "triage": null,
       "triaging": null,
       "source": null,
+      "decision": null,
       "team": null
     },
     "242": {
@@ -4103,6 +4110,7 @@
       "triage": null,
       "triaging": null,
       "source": null,
+      "decision": null,
       "team": null
     },
     "120": {
@@ -4320,6 +4328,7 @@
       "triage": null,
       "triaging": null,
       "source": null,
+      "decision": null,
       "team": null
     },
     "105": {
@@ -4521,6 +4530,7 @@
       "triage": null,
       "triaging": null,
       "source": null,
+      "decision": null,
       "team": null
     },
     "263": {
@@ -4772,6 +4782,7 @@
       "triage": null,
       "triaging": null,
       "source": null,
+      "decision": null,
       "team": null
     },
     "264": {
@@ -5023,6 +5034,7 @@
       "triage": null,
       "triaging": null,
       "source": null,
+      "decision": null,
       "team": null
     },
     "265": {
@@ -5293,6 +5305,7 @@
       "triage": null,
       "triaging": null,
       "source": null,
+      "decision": null,
       "team": null
     },
     "266": {
@@ -5544,6 +5557,7 @@
       "triage": null,
       "triaging": null,
       "source": null,
+      "decision": null,
       "team": null
     },
     "196": {
@@ -5855,6 +5869,7 @@
       "triage": null,
       "triaging": null,
       "source": null,
+      "decision": null,
       "team": null
     },
     "109": {
@@ -6183,6 +6198,7 @@
       "triage": null,
       "triaging": null,
       "source": null,
+      "decision": null,
       "team": null
     },
     "172": {
@@ -6483,6 +6499,7 @@
       "triage": null,
       "triaging": null,
       "source": null,
+      "decision": null,
       "team": null
     },
     "262": {
@@ -6748,6 +6765,7 @@
       "triage": null,
       "triaging": null,
       "source": null,
+      "decision": null,
       "team": null
     },
     "269": {
@@ -7043,6 +7061,7 @@
       "triage": null,
       "triaging": null,
       "source": null,
+      "decision": null,
       "team": null
     },
     "253": {
@@ -7355,6 +7374,7 @@
       "triage": null,
       "triaging": null,
       "source": null,
+      "decision": null,
       "team": null
     },
     "241": {
@@ -7675,6 +7695,7 @@
       "triage": null,
       "triaging": null,
       "source": null,
+      "decision": null,
       "team": null
     },
     "228": {
@@ -7897,6 +7918,7 @@
       "triage": null,
       "triaging": null,
       "source": null,
+      "decision": null,
       "team": null
     },
     "237": {
@@ -8243,6 +8265,7 @@
       "triage": null,
       "triaging": null,
       "source": null,
+      "decision": null,
       "team": null
     },
     "174": {
@@ -8604,6 +8627,7 @@
       "triage": null,
       "triaging": null,
       "source": null,
+      "decision": null,
       "team": null
     },
     "259": {
@@ -8904,6 +8928,7 @@
       "triage": null,
       "triaging": null,
       "source": null,
+      "decision": null,
       "team": null
     },
     "223": {
@@ -9196,6 +9221,7 @@
       "triage": null,
       "triaging": null,
       "source": null,
+      "decision": null,
       "team": null
     },
     "219": {
@@ -9564,6 +9590,7 @@
       "triage": null,
       "triaging": null,
       "source": null,
+      "decision": null,
       "team": null
     },
     "147": {
@@ -9795,6 +9822,7 @@
       "triage": null,
       "triaging": null,
       "source": null,
+      "decision": null,
       "team": null
     },
     "139": {
@@ -10110,6 +10138,7 @@
       "triage": null,
       "triaging": null,
       "source": null,
+      "decision": null,
       "team": null
     },
     "149": {
@@ -10339,6 +10368,7 @@
       "triage": null,
       "triaging": null,
       "source": null,
+      "decision": null,
       "team": null
     },
     "134": {
@@ -10635,6 +10665,7 @@
       "triage": null,
       "triaging": null,
       "source": null,
+      "decision": null,
       "team": null
     },
     "201": {
@@ -10861,6 +10892,7 @@
       "triage": null,
       "triaging": null,
       "source": null,
+      "decision": null,
       "team": null
     }
   },
@@ -12164,6 +12196,7 @@
           "source_fingerprint": null,
           "document_fingerprint": "f1x7ur3f1n6erpr",
           "session_id": "dddd0001-0000-4000-8000-000000000000",
+          "ground": "mark",
           "grade": null
         },
         "title_reading": null,

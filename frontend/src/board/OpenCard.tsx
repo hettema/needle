@@ -377,6 +377,29 @@ export function OpenCard({ card, onMoveTo }: { card: CardSummary; onMoveTo: (num
         </Section>
       ) : null}
 
+      {detail.decision || (detail.summary.triaging && detail.card.place.column === "Decision moment") ? (
+        <Section title="The decision" from="a card parked on you is read again cold, and the board moves it where the record says">
+          {detail.decision ? (
+            <Quiet>
+              Read {detail.decision.at.slice(0, 10)} · landed <b>{detail.decision.result}</b> · decision {detail.decision.decision}
+              {" — "}
+              {detail.decision.words}
+            </Quiet>
+          ) : null}
+          {detail.summary.triaging && detail.card.place.column === "Decision moment" ? (
+            <Quiet>
+              A second reading is judging this decision now: {detail.summary.triaging.session_id.slice(0, 8)} on {detail.summary.triaging.slot}, since {ago(detail.summary.triaging.started_at)}. It has no share of the context that parked the card, and it writes nothing but its result.
+            </Quiet>
+          ) : null}
+          {doors.answer.offered && detail.decision && detail.decision.result === "his" && detail.card.place.column === "Decision moment" ? (
+            <Ask>
+              {doors.answer.why}
+              <AnswerBox onSend={(text) => void through("answer", { text })} disabled={opening !== null} hint="Your sentence is the ruling; the board reads the card again with it" label="Rule" />
+            </Ask>
+          ) : null}
+        </Section>
+      ) : null}
+
       {detail.trigger || (detail.summary.fix?.mark === "when" && detail.trigger_note) ? (
         <Section title="The trigger" from={detail.trigger ? `Fix: when · ${detail.trigger.kind} · due ${detail.trigger.due} · every ${detail.trigger.every_hours}h` : "Fix: when, and the board cannot read it"}>
           {detail.trigger ? (

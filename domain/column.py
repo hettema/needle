@@ -136,22 +136,28 @@ COLUMN_DEFINITIONS: list[ColumnDefinition] = [
     ),
     ColumnDefinition(
         column=Column.EXECUTED,
-        note="Built and archived; waiting for the signal that says it delivered.",
+        note="Built and archived, or sent here to wait; the signal named on the card says "
+        "when it delivered.",
         definition=[
-            "Built work, its plan archived, waiting for the signal that says it delivered.",
+            "Built work, its plan archived, waiting for the signal that says it delivered — "
+            "or a card that was parked on you and, read again cold, waits for a signal the "
+            "board can read; the reason is on its history.",
             "A card enters here with its WATCH row naming that signal. Done is a closed loop, "
             "not a claim: this is never where cards go to be forgotten.",
         ],
-        moved_by="you, in this slice; the close of a session's work, from slice 03",
+        moved_by="you, in this slice; the close of a session's work, from slice 03; the "
+        "board, on a second reading of a card parked on you",
         ranked=False,
         yours=False,
         furled_on_laptop=True,
     ),
     ColumnDefinition(
         column=Column.DONE,
-        note="The signal arrived.",
+        note="The signal arrived, or a second reading found the decision over.",
         definition=[
-            "The signal named on the card arrived and somebody read it.",
+            "The signal named on the card arrived and somebody read it — or the card was parked "
+            "on you, a second reading found what it asked about is over, and the reason is on "
+            "its history.",
             "From slice 03 the board or a session reads the signal and moves the card here itself.",
         ],
         moved_by="you, in this slice; the board or a session, from slice 03",

@@ -137,11 +137,22 @@ def is_defect(client: TestClient, number: int, slug: str = "proj") -> bool:
     return card["summary"]["kind"] == "defect"
 
 
+def is_parked(client: TestClient, number: int, slug: str = "proj") -> bool:
+    card = client.get(f"/api/projects/{slug}/cards/{number}").json()
+    return card["card"]["place"]["column"] == "Decision moment"
+
+
 def land_on_the_way(client: TestClient, number: int, slug: str = "proj") -> None:
     """Land the result a reading on the way needs: `his` with a passing
     title on a defect, a passing title alone on a plan or an idea (card
-    #74, item 3: every live title is read cold by the same seat)."""
+    #74, item 3: every live title is read cold by the same seat), and
+    `his` with one line on a card parked on the owner (card #82: the same
+    seat reads his column, behind the defects and the titles)."""
     argv = ["triage", slug, str(number)]
+    if is_parked(client, number, slug):
+        argv += ["his", "the record does not say which of the two you want; which?"]
+        assert main(argv) == 0
+        return
     if is_defect(client, number, slug):
         argv += ["his", "the record does not select between the two shapes this could take"]
         argv += GRADE

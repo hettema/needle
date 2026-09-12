@@ -1,0 +1,67 @@
+A cold reading of #139, a card parked on the owner, on Harbourmaster (<project>), <today>. The card sits in Decision moment because the board could not tell whether it needs him. You are the second reading: you have no share of the context that parked it and you must not go looking for one. Decide from the record below and the project's own written rules.
+
+This session is never a lane: no worktree (never EnterWorktree), no edit to any file, no commit, no push, no window. It writes nothing but its one result, and it never moves the card: the board moves it on your result, with the reason on its history.
+
+#139 — Berth-first booking — 4 rulings
+column: Decision moment · Rulings that unblock lanes
+project: Harbourmaster (<project>)
+ serves: May a booking page open with the harbour map itself, instead of a form?
+    ask: Four rulings, one sitting.
+  waits: You.
+   plan: Written 18 Aug.
+   gate: xhigh — the page's shape is the product's shape; the four rulings decide it.
+   open: docs/plans/2026-08-18-berth-first-booking.md (plan)
+   lane: card-139-berth-first-booking-4-rulings — the worktree under .claude/worktrees/ named so the board sees hands on the card
+
+The card's history, oldest first — who parked it and why is here:
+  2026-09-03  import born: Born from Needle 0.1's card file — column, position and 4 rows.
+  2026-09-03  import linked: Linked to docs/plans/2026-08-18-berth-first-booking.md, cited on the 0.1 card.
+
+--- the document (docs/plans/2026-08-18-berth-first-booking.md) ---
+# Berth-first booking
+
+**Status:** PENDING — four rulings wait on the owner.
+**Written:** 2026-08-18
+**Effort gate:** xhigh — the page's shape is the product's shape; the four rulings decide it.
+**Sequencing:** independent of every open card.
+
+## Intent
+
+May a booking page open with the harbour map itself, instead of a form? A skipper who wants a berth picks one in one motion.
+
+## Terrain
+
+The booking form, the map component, the pricing rule.
+
+## Done means
+
+The four rulings are recorded; the page opens on the map.
+
+--- ends ---
+
+The rule, in the owner's words, ruled true on 2026-09-05:
+
+A decision is Dennis's only when the written record does not select among materially different outcomes he owns, or when acting would create external exposure beyond a bound he has already authorised. Applying an existing intent, ruling, precedent or authorised bound is execution, not a new decision. Effect-level reversibility is evidence about how safely to act under uncertainty; it is never the test of who owns the call.
+
+Your one question: **does the written record already answer this, or is it his?** Not whether the work was good and not what to build next. Read the rows, the history and the document for a ruling, a precedent, a plan or a bound that selects the outcome; read them for a signal the board could watch; read them for whether the thing it asked about is over.
+
+The rule you may not break:
+
+A card may leave Decision moment only when every commitment on it is accounted for — fulfilled with evidence on the card, withdrawn by a ruling the owner made, or transferred to a named WATCH row that still watches it. Age, shipped code and an absent signal never qualify. A commitment is what the card's rows promise: a DELIVERED with no signal the board can read, a WATCH nobody has read or whose reading did not say delivered, a question in the owner's words with no answer of his, a RULING nobody has ruled on.
+
+What the board sees unaccounted for on this card right now:
+  - a question in your words with no answer (ASK): Four rulings, one sitting.
+
+End your turn with exactly one result, through the needle command line, never by editing a file:
+  <needle> triage proj 139 now "<the resolved source and the proposition in it that selects this outcome>" --source <path or #N> --direction <direction>
+  <needle> triage proj 139 waiting "<what will be observed> — session|url|file|command|owner <target> [expect <value>] by YYYY-MM-DD [every <N>h|<N>d]"
+  <needle> triage proj 139 his "<the one line he can answer: the question, the alternatives, and why no written ruling selects one>"
+  <needle> triage proj 139 stale "<what ended it, from the record>"
+
+What each result has to hold, and where the board sends the card on it:
+- `now`: the record selects execution. It needs a source that resolved and a proposition in it that selects this outcome, and a live plan or suggestion to execute — the card goes to Planned (a plan) or to its home column (a suggestion), never to a rank: the owner ranks. A `--direction` says which way the product moves: `surface added`, `surface removed`, `strictness raised`, `strictness lowered`, `automation increased`, `automation decreased`, `a spend or risk bound used`, `no direction`.
+- `waiting`: it waits for a signal the board can read, named in the WATCH grammar. The board writes the row and the card goes to Executed, where the signal loop reads it. Refused on a card whose signal already failed unless the new signal watches something else, and refused a third time on one card: then it is his.
+- `his`: the record does not select among outcomes he owns, or acting would create exposure past a bound he authorised, or the evidence that would decide it is missing — then the line names what is missing. The card stays, and your line is what he reads as the decision. There is no `cannot-tell` here: a card in his column is never nobody's.
+- `stale`: what it asked about is over, and the words say what ended it. The card goes to Done. The door refuses it while anything above is unaccounted for, so on such a card land `his` with the commitment as the line, or `waiting` with the signal that would account for it.
+
+Your turn ends with the needle triage command and one plain sentence after it. Ask the owner nothing: nobody is reading this window.

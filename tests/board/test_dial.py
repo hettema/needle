@@ -5,6 +5,7 @@ from datetime import UTC, datetime, timedelta
 
 from board.dial import (
     LIVE_STAGES,
+    Candidate,
     column_defects,
     defects_count,
     dial_state,
@@ -490,3 +491,24 @@ def test_who_is_home_follows_ancestry_and_names_strangers(monkeypatch):
     assert states["needle-reading-card-2-y.scope"].nobody_home
     assert not states["needle-card-3-z.scope"].nobody_home, "an empty group is nobody's leftovers"
     assert states["needle-card-4-w.scope"].nobody_home, "a stale copy owns nothing"
+
+
+def test_parked_cards_queue_behind_every_defect_and_title_oldest_park_first():
+    """Card #82, ruling 9: a parked card's place in the reading queue is a
+    leading rank, never its date against a defect's birth — a park older
+    than a defect would otherwise jump it."""
+    old_park = Candidate(
+        project="proj",
+        card=card(1, "a", born=NOW - timedelta(days=30)),
+        document=None,
+        parked_since=NOW - timedelta(days=20),
+    )
+    young_defect = Candidate(project="proj", card=card(2, "b", born=NOW), document=None)
+    newer_park = Candidate(
+        project="proj",
+        card=card(3, "c", born=NOW - timedelta(days=40)),
+        document=None,
+        parked_since=NOW - timedelta(days=1),
+    )
+    ordered = sorted([newer_park, old_park, young_defect], key=lambda c: c.age_key)
+    assert [c.card.number for c in ordered] == [2, 1, 3]

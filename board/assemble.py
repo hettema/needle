@@ -24,6 +24,7 @@ from board.lane import (
 from board.leverage import arrange
 from board.moves import GroupLayout
 from board.neighbours import beside_all
+from board.parked import RESULT_WORDS, commitments_of, parked_doubt
 from board.reconcile import carried_stems, corpus_path_of, ref
 from board.signals import is_due, past_due, read_or_decline
 from board.title import hold_sentence, title_hold
@@ -82,7 +83,7 @@ from domain.project import Project
 from domain.row import ROW_HALF, Row, RowHalf, RowKind
 from domain.signal import Reading, Signal, SignalKind, WindowlessSession
 from domain.team import Composition
-from domain.triage import Grade, Routed, Routing, TitleReading, Triage
+from domain.triage import Grade, Routed, Routing, TitleReading, Triage, TriageResult
 from domain.verdict import Verdict, VerdictLine
 from domain.watercooler import WatercoolerLine
 
@@ -120,6 +121,7 @@ CLAIM_WORDS: dict[Claim, tuple[str, str]] = {
         "documents beside a neighbour they do not name",
     ),
     Claim.HOLD_UNREAD: ("hold the board cannot place", "holds the board cannot place"),
+    Claim.DECISION_BEING_READ: ("decision being read", "decisions being read"),
 }
 """Each claim's words, singular and plural: the head's breakdown (plan 27, item 1)."""
 
@@ -596,6 +598,8 @@ def state_of(
     hold: str | None = None,
     defect: bool = False,
     grade: Grade | None = None,
+    decision: Triage | None = None,
+    doubt: str | None = None,
 ) -> CardState:
     """The one function that names a card's state (plan 27, item 2). The
     order is the rule's precedence: broken before yours, yours before live,
@@ -706,14 +710,37 @@ def state_of(
         # below this line — a Start, a plan door — is offered while they do.
         return _state("title fails", Meaning.BROKEN, detail=hold_sentence(hold), hint="open to see")
     if card.place.column == Column.DECISION_MOMENT:
+        # A cold reading of the record says what the decision is (card
+        # #82): his line, when it found the decision his; the doubt, when
+        # it called the card over and a commitment is unaccounted for; the
+        # reading's own words when he parked the card himself and the board
+        # moved nothing. Before a reading, the column's own words.
+        if doubt is not None:
+            why = doubt
+        elif decision is not None and decision.result == TriageResult.HIS:
+            why = f"a cold reading of the record {RESULT_WORDS[decision.result]}: {decision.words}"
+        elif decision is not None:
+            why = (
+                f"a cold reading of the record {RESULT_WORDS[decision.result]}: "
+                f"{decision.words}. You parked it yourself, so it stays until you move it"
+            )
+        elif triaging is not None:
+            why = (
+                "a cold reading of the record is judging now whether this needs you; the "
+                "column's word until it lands: nothing here moves without a word from you"
+            )
+        else:
+            why = (
+                standing.words
+                or "it sits in Decision moment, and nothing there moves without a word from you"
+            )
         return _state(
             "your move",
             Meaning.YOURS,
             detail=say(
                 Meaning.YOURS,
                 "rule on this card",
-                why=standing.words
-                or "it sits in Decision moment, and nothing there moves without a word from you",
+                why=why,
                 then="open it for the record and every choice; it stays here until you move it",
             ),
             door=_door(
@@ -961,7 +988,10 @@ def claims_of(
     if planning is not None:
         claims.append(Claim.PLANNING)
     if triaging is not None:
-        claims.append(Claim.MARK_BEING_READ if defect else Claim.TITLE_BEING_READ)
+        if card.place.column == Column.DECISION_MOMENT:
+            claims.append(Claim.DECISION_BEING_READ)
+        else:
+            claims.append(Claim.MARK_BEING_READ if defect else Claim.TITLE_BEING_READ)
     if routed is not None and routed.state == Routing.TRIAGED_HIS and answer_offered:
         claims.append(Claim.RULING_YOURS)
     if hold is not None and card.place.column not in SHIPPED:
@@ -1021,6 +1051,8 @@ def summarize(
     title_reading: TitleReading | None = None,
     leverage: CardLeverage | None = None,
     beside: Beside | None = None,
+    decision: Triage | None = None,
+    history: list[AuditEntry] | None = None,
 ) -> CardSummary:
     """`doors` is the card's doors as the loop last read them; before its
     first read they are the closed doors of `nothing_read`. The state line and
@@ -1028,14 +1060,30 @@ def summarize(
     session reading the card's signal right now (plan 09); `planning` the
     dial's session writing its plan (plan 11); `triaging` the session
     verifying its mark and `triage` its latest verified reading (plan 59);
-    `title_reading` the latest cold reading of its title (card #74)."""
+    `title_reading` the latest cold reading of its title (card #74);
+    `decision` its latest cold reading as a card parked on the owner and
+    `history` the card's own, given only where a parked card's rule reads
+    it — the commitments on the card, re-tested on every read (card #82)."""
     document = document_of(card, index)
     text, source = essence(card, document)
     state = document_state(card, document)
     path = document.path if document is not None else cited_path(card)
     doors = doors if doors is not None else nothing_read(card, project_path, now)[1]
     routed = routing_for(card, document, triage, sources)
-    standing = standing_for(card, placement, lane, last, read=read)
+    commitments = commitments_of(card, history, last) if history is not None else None
+    standing = standing_for(
+        card,
+        placement,
+        lane,
+        last,
+        read=read,
+        decision=decision,
+        decision_source=sources.fingerprint_of(decision.source_ref)
+        if sources is not None and decision is not None
+        else None,
+        commitments=commitments,
+    )
+    doubt = parked_doubt(decision, commitments or []) if commitments is not None else None
     signal, signal_note = watch_signal(card)
     trigger, _ = trigger_signal(document)
     hold = title_hold(title_reading, document)
@@ -1061,6 +1109,8 @@ def summarize(
             hold=hold,
             defect=defect,
             grade=grade,
+            decision=decision,
+            doubt=doubt,
         )
     except ValidationError as refusal:
         face = _refused_face(card, refusal)
@@ -1247,6 +1297,8 @@ def assemble_board(
     leverage: Arrangement | None = None,
     leverages: dict[int, CardLeverage] | None = None,
     beside: dict[int, Beside] | None = None,
+    decisions: dict[int, Triage] | None = None,
+    histories: dict[int, list[AuditEntry]] | None = None,
 ) -> BoardState:
     """`snapshot`, `readings`, `trunk` and `machine` are what the loop has
     read; before its first read they are absent and the board says so.
@@ -1261,6 +1313,8 @@ def assemble_board(
     triages = triages or {}
     title_readings = title_readings or {}
     leverages = leverages or {}
+    decisions = decisions or {}
+    histories = histories or {}
     watercooler = watercooler or []
     placements = placements or {}
     trunk = trunk or TrunkState(level=None, behind=0, note=None, read_at=None)
@@ -1296,6 +1350,8 @@ def assemble_board(
             title_reading=title_readings.get(n),
             leverage=leverages.get(n),
             beside=beside.get(n),
+            decision=decisions.get(n),
+            history=histories.get(n),
         )
         for n, c in by_number.items()
     }
@@ -1446,6 +1502,7 @@ def assemble_detail(
     leverage: CardLeverage | None = None,
     team: Composition | None = None,
     beside: Beside | None = None,
+    decision: Triage | None = None,
 ) -> CardDetail:
     """`readings` newest first; `read` is whether the loop has read the
     machine; `folded` the cards folded under this one; `reading` the
@@ -1477,6 +1534,8 @@ def assemble_detail(
             title_reading=title_reading,
             leverage=leverage,
             beside=beside,
+            decision=decision,
+            history=history,
         ),
         brief=brief,
         record=record,
@@ -1499,4 +1558,5 @@ def assemble_detail(
         triaging=triaging,
         source=sources.resolve(triage.source_ref) if sources is not None and triage else None,
         team=team,
+        decision=decision,
     )

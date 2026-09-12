@@ -7,9 +7,11 @@ result in `api/doors.py`.
 Three things live here and nothing else: the fingerprint a row binds itself
 to, the cheap bar a `Fix:` line's reason has to clear, and the one function
 that turns a document's mark plus a reading's result into the routing state
-the CLI, the dial and the page all show. Nothing anywhere else branches on
-matching the words `now`, `his` or `unmarked` — that is the drift this
-module exists to make impossible.
+the CLI, the dial and the page all show — with the grade's order beside it
+(card #100). Nothing anywhere else branches on matching the words `now`,
+`his` or `unmarked` — that is the drift this module exists to make
+impossible. What the same reading means on wider ground — a card parked on
+the owner (card #82) — is `board/parked.py`.
 """
 
 import hashlib

@@ -49,6 +49,50 @@ class TriageResult(StrEnum):
     CANNOT_TELL = "cannot-tell"
     """The evidence that would decide it is missing; the words say what is
     missing and where it should come from. The card stays nobody's."""
+    WAITING = "waiting"
+    """A parked card waits for a signal the board can read, named in the
+    WATCH grammar (card #82, item 1); the board writes the row and the
+    signal loop owns the card from there."""
+    STALE = "stale"
+    """A parked card is over — what it asked about ended, and the words say
+    what ended it (card #82, item 1). The one exit the door refuses while a
+    commitment on the card is unaccounted for (item 3)."""
+
+
+class Ground(StrEnum):
+    """What a reading read (card #82, item 1). One reading, two grounds:
+    plan 59's verifies a defect's `Fix:` mark against the source it cites;
+    card #82's reads a card parked in the owner's column against the §1
+    test. The results share a table and a verb; the ground says which
+    results a reading may land and which readers may act on it — routing
+    reads marks and never a parked reading."""
+
+    MARK = "mark"
+    """A defect's mark, read against its source (plan 59)."""
+    PARKED = "parked"
+    """A card in Decision moment, read against its own record (card #82)."""
+
+
+MARK_RESULTS: frozenset[TriageResult] = frozenset(
+    {
+        TriageResult.NOW,
+        TriageResult.HIS,
+        TriageResult.WHEN,
+        TriageResult.SPLIT,
+        TriageResult.CANNOT_TELL,
+    }
+)
+"""What a mark's reading may land."""
+
+PARKED_RESULTS: frozenset[TriageResult] = frozenset(
+    {TriageResult.NOW, TriageResult.HIS, TriageResult.WAITING, TriageResult.STALE}
+)
+"""What a parked card's reading may land (card #82, item 1): what the
+record settles is execution (`now`), what waits for a signal is `waiting`,
+what is over is `stale`, and what is his is `his` with one line he can
+answer. No `cannot-tell`: a decision the evidence cannot settle is his,
+with the missing evidence as the line — a card in his column never lands
+as nobody's."""
 
 
 class Direction(StrEnum):
@@ -288,6 +332,8 @@ class Triage(BaseModel):
     """The suggestion text this result classified."""
     session_id: str | None
     """The triage session that landed it; None when the owner ruled by hand."""
+    ground: Ground = Ground.MARK
+    """What was read: a defect's mark, or a parked card's record (card #82)."""
     grade: Grade | None = None
     """How bad the defect is, from the same reading (card #100, item 2).
     None on a reading landed before the scale existed; such a defect is
@@ -311,8 +357,9 @@ class Fate(BaseModel):
 
 
 class Decision(BaseModel):
-    """One line of `needle fixes` decisions: a decision a colleague took off
-    the owner's rail, with its source, its direction and its fate."""
+    """One line of `needle decisions`: a decision a colleague took off the
+    owner's defects, or off his column (card #82), with its source, its
+    direction and its fate."""
 
     decision: str
     parent: str | None
@@ -320,14 +367,23 @@ class Decision(BaseModel):
     card_number: int
     title: str
     at: datetime
+    ground: Ground
+    """What the reading read: a mark, or a parked card's record. The cold
+    audit never reads a parked `now` as a mark's."""
     result: TriageResult
     words: str
     direction: Direction | None
     source: str
     """The source as the reading resolved it, or why it resolved nowhere."""
-    routing: Routing
-    """Where the card routes now: a decision whose row went stale says so."""
+    routing: Routing | None
+    """Where the card routes now, for a mark's reading: a decision whose
+    row went stale says so. None for a parked card's reading, which routes
+    nothing."""
     fate: Fate
+    returned: bool
+    """A parked card's reading moved the card out of the owner's column and
+    the card is back in it (card #82, the Loop): displaced work, not
+    relief. False for a mark's reading."""
 
 
 class CorpusLaneKind(StrEnum):

@@ -118,6 +118,7 @@ from domain.notice import Moment, Notice
 from domain.session import Session, SessionKind, SessionState
 from domain.signal import SessionWork, Signal, SignalKind, WindowlessSession
 from domain.slot import Handoff, Placement, rung_words
+from domain.triage import Ground
 from domain.watercooler import Note
 from domain.window import Window, WindowKind
 from infrastructure import clock
@@ -2473,6 +2474,7 @@ class Loops:
         readings = self.live.store.last_readings(live.project.slug)
         names = {slug: p.project.name for slug, p in self.live.projects.items()}
         triages = self.live.store.latest_triages(live.project.slug)
+        decisions = self.live.store.latest_triages(live.project.slug, ground=Ground.PARKED)
         titles = self.live.store.latest_title_readings(live.project.slug)
         sources = self.live.sources(live.project.slug)
         answers = self.live.store.answers(live.project.slug)
@@ -2528,8 +2530,12 @@ class Loops:
                 and not document.archived,
                 waits=waits,
                 routed=routing_for(card, document, triages.get(card.number), sources),
-                ruled=already_ruled(triages.get(card.number), answers.get(card.number)),
+                ruled=already_ruled(
+                    triages.get(card.number) or decisions.get(card.number),
+                    answers.get(card.number),
+                ),
                 title_hold=title_hold(titles.get(card.number), document),
+                decision=decisions.get(card.number),
             )
         return doors
 

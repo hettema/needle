@@ -74,6 +74,9 @@ class Claim(StrEnum):
     rewrites it and the next reading clears the mark (card #74, item 3)."""
     TITLE_BEING_READ = "title being read"
     """A plan or an idea whose title a cold reading is judging right now."""
+    DECISION_BEING_READ = "decision being read"
+    """A card parked on the owner that a cold reading is judging right now
+    against the record (card #82, item 1)."""
     RULING_YOURS = "ruling yours"
     """A defect a reading put on the owner's pile and he has not ruled on.
     The pile drained at zero for the board's whole life partly because
@@ -112,6 +115,7 @@ CLAIM_MEANING: dict[Claim, Meaning] = {
     Claim.TITLE_BEING_READ: Meaning.LIVE,
     Claim.BESIDE_UNNAMED: Meaning.BROKEN,
     Claim.HOLD_UNREAD: Meaning.BROKEN,
+    Claim.DECISION_BEING_READ: Meaning.LIVE,
 }
 """Which of the three head words each claim counts under; the two other
 meanings never claim anyone."""
@@ -469,6 +473,10 @@ class CardDetail(BaseModel):
     source: Source | None
     """The source that reading relied on, as it resolves today: how the card
     shows a row whose ground has moved."""
+    decision: Triage | None = None
+    """The latest cold reading of the card as one parked on the owner
+    (card #82): what it landed and the words, so the open card can show
+    the line he can answer, or why the board moved it."""
     team: Composition | None = None
     """The team the board assigned the card at its first Start (card #58):
     who drives, who challenges and why the evidence chose it; None until

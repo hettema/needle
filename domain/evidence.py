@@ -39,6 +39,13 @@ class Evidence(StrEnum):
     """Planned: the machine had parked the card for an archived suggestion,
     and a live plan carries it now (the plan "as many lanes as the machine
     can hold", item 5). Holds while the plan stays live."""
+    RECORD_ANSWERED = "record-answered"
+    """Planned, a home column, Executed or Done: a cold reading of a card
+    parked on the owner found the record already answers the decision
+    (card #82, item 2), and the board acted on it. Re-tested per result
+    (ruling 8): on `now`, the source the reading named still reads as it
+    did; on `waiting`, the WATCH row still names the reading's signal; on
+    `stale`, no commitment on the card is unaccounted for."""
 
 
 class EvidenceState(StrEnum):

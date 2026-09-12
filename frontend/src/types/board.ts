@@ -22,7 +22,7 @@ import type { Grade, Routed, Source, TitleReading, Triage } from "./triage";
 import type { Verdict, VerdictLine } from "./verdict";
 import type { WatercoolerLine } from "./watercooler";
 
-export const CLAIM_VALUES = ["verdict", "lane asking", "signal asking", "decision", "lane ended", "doubted", "signal overdue", "document gone", "colliding", "document without card", "no review", "lane working", "conversation", "signal reading", "planning", "mark being read", "title fails", "title being read", "ruling yours", "beside unnamed", "hold unread"] as const;
+export const CLAIM_VALUES = ["verdict", "lane asking", "signal asking", "decision", "lane ended", "doubted", "signal overdue", "document gone", "colliding", "document without card", "no review", "lane working", "conversation", "signal reading", "planning", "mark being read", "title fails", "title being read", "decision being read", "ruling yours", "beside unnamed", "hold unread"] as const;
 export type Claim = (typeof CLAIM_VALUES)[number];
 
 export const ESSENCE_SOURCE_VALUES = ["card", "document"] as const;
@@ -94,6 +94,7 @@ export interface CardDetail {
   triage: Triage | null;
   triaging: WindowlessSession | null;
   source: Source | null;
+  decision?: Triage | null;
   team?: Composition | null;
 }
 
@@ -226,4 +227,5 @@ export const CLAIM_MEANING: Record<Claim, Meaning> = {
   "title being read": "live",
   "beside unnamed": "broken",
   "hold unread": "broken",
+  "decision being read": "live",
 };

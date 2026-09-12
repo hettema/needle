@@ -47,7 +47,7 @@ from domain.row import RowKind
 from domain.session import Session, SessionKind, SessionState
 from domain.signal import Signal
 from domain.slot import Make, Placement, rung_words
-from domain.triage import Routed, Routing
+from domain.triage import Routed, Routing, Triage, TriageResult
 from domain.window import Window, WindowKind
 
 _LANE_DIR = re.compile(r"/\.claude/worktrees/card-(\d+)-[^/]*(?:/|$)")
@@ -997,6 +997,7 @@ def doors_for(
     ruled: str | None = None,
     title_hold: str | None = None,
     unplaced: list[str] | None = None,
+    decision: Triage | None = None,
 ) -> Doors:
     """`suggestion_live`: the card's document is a suggestion still in its
     live folder, so Plan may write the plan that carries it. `signal_evidence`
@@ -1009,7 +1010,10 @@ def doors_for(
     all, exactly once (plan 59, item 5). `title_hold` is why a cold reading
     could not place the card from its title, when the last one could not
     (card #74, item 3): the one hold that is the board's on every project's
-    card, since Start is the one door every card goes through."""
+    card, since Start is the one door every card goes through. `decision`
+    is the latest cold reading of the card as one parked on the owner
+    (card #82): a `his` opens Answer the way a defect's does, and his
+    sentence is what re-reads the card."""
     live = lane.session is not None and lane.session.pid is not None and lane.state in HANDS_ON
     background = live and lane.session is not None and lane.session.kind == SessionKind.BACKGROUND
     shares = collision is not None and collision.verdict == CollisionVerdict.COLLIDES
@@ -1165,6 +1169,20 @@ def doors_for(
             why="a second reading says the decision is yours",
             then="your sentence is the ruling, and a short session writes it into the "
             "document, citing your answer",
+        )
+    elif (
+        decision is not None
+        and decision.result == TriageResult.HIS
+        and card.place.column == Column.DECISION_MOMENT
+    ):
+        # A card parked on him whose cold reading found the decision his
+        # (card #82, ruling 5): the line is one he can answer, here.
+        answer = _open(
+            "Answer",
+            "rule on this",
+            why=f"a second reading says the decision is yours: {decision.words}",
+            then="your sentence is the ruling on the card, and the board reads the card again "
+            "with it and moves it where the record then says",
         )
     else:
         answer = _closed("Answer", Meaning.QUIET, "there is no live session to answer")

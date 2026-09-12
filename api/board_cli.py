@@ -343,22 +343,35 @@ def decisions(
         return 1
     loops.reconcile_now()
     rows = Dial(live, runtime, loops, doors).decisions(slug)
+    if args.returned:
+        # The Loop of card #82: a parked card the reading moved out of the
+        # owner's column that is back in it is displaced work, not relief.
+        rows = [line for line in rows if line.returned]
     if args.first:
         rows = rows[: args.first]
+    if args.count:
+        print(len(rows))
+        return 0
     if not rows:
-        print("no decision has been taken on a defect yet")
+        print(
+            "no card has come back to the owner's column after a reading moved it"
+            if args.returned
+            else "no decision has been taken on a defect or a parked card yet"
+        )
         return 0
     for line in rows:
         came = f" (out of {line.parent})" if line.parent else ""
         print(
             f"{line.at.date().isoformat()}  {line.project} #{line.card_number:<4} "
-            f"{line.result.value:<12} {line.decision}{came}"
+            f"{line.ground.value:<7} {line.result.value:<12} {line.decision}{came}"
         )
         print(f"      {line.title}")
         print(f"      says: {line.words}")
         print(f"      source: {line.source}")
         print(f"      direction: {line.direction.value if line.direction else 'none recorded'}")
-        print(f"      routes as: {line.routing.value}; fate: {line.fate.words}")
+        routes = f"routes as: {line.routing.value}; " if line.routing is not None else ""
+        back = " — returned to the owner's column" if line.returned else ""
+        print(f"      {routes}fate: {line.fate.words}{back}")
     taken = [line for line in rows if line.result == TriageResult.NOW]
     counts: dict[str, int] = {}
     for line in taken:
@@ -1246,7 +1259,8 @@ def register(sub: "argparse._SubParsersAction[argparse.ArgumentParser]") -> None
         "result",
         nargs="?",
         choices=[r.value for r in TriageResult],
-        help="the mark's result; a defect's reading lands one, a plan's or an idea's lands none",
+        help="the mark's result; a defect's reading lands one, a plan's or an idea's lands "
+        "none; a parked card's reading lands now, his, waiting or stale",
     )
     p_triage.add_argument(
         "words", nargs="?", help="what the source said, in the words the result needs"
@@ -1254,9 +1268,9 @@ def register(sub: "argparse._SubParsersAction[argparse.ArgumentParser]") -> None
     p_triage.add_argument(
         "-t",
         "--title",
-        required=True,
+        default="",
         help='the title\'s verdict: "passes", or what you could not place, in words the '
-        "writer can act on",
+        "writer can act on; every reading but a parked card's lands one",
     )
     p_triage.add_argument("--failed", help="the words that failed, comma-separated")
     p_triage.add_argument("--source", help="the path or #N the result rests on")
@@ -1305,6 +1319,12 @@ def register(sub: "argparse._SubParsersAction[argparse.ArgumentParser]") -> None
     )
     p_decisions.add_argument("slug", help="a project's slug, or all")
     p_decisions.add_argument("--first", type=int, help="only the first N, for the cold audit")
+    p_decisions.add_argument(
+        "--returned",
+        action="store_true",
+        help="only parked cards a reading moved out of the owner's column that are back in it",
+    )
+    p_decisions.add_argument("--count", action="store_true", help="print how many, not the list")
     p_decisions.set_defaults(board=True, run=_with_board(decisions))
 
     p_fold = sub.add_parser(

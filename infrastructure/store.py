@@ -70,6 +70,7 @@ from domain.triage import (
     CorpusLaneKind,
     Direction,
     Grade,
+    Ground,
     Often,
     Reach,
     TitleReading,
@@ -1635,12 +1636,15 @@ class Store:
         document_fingerprint: str,
         session_id: str | None,
         grade: Grade | None = None,
+        ground: Ground = Ground.MARK,
     ) -> Triage:
         """One reading's result, kept whole. Never replaced: a card's
         readings are a history, so the audit the loop asks for can see a
         mark that was verified one way and then another. `grade` is how
         bad the same reading found it (card #100, item 2); the door refuses
-        a defect's result without one, and the owner's hand ruling has none."""
+        a defect's result without one, and the owner's hand ruling has none.
+        `ground` is what was read (card #82): a mark, or a parked card's
+        record, whose `document_fingerprint` is then the record's."""
         with self._session() as session, session.begin():
             if session.get(CardRow, (slug, number)) is None:
                 raise StoreRefusal(f"There is no card #{number} on this board.")
@@ -1659,6 +1663,7 @@ class Store:
                 source_fingerprint=source_fingerprint,
                 document_fingerprint=document_fingerprint,
                 session_id=session_id,
+                ground=ground.value,
                 breaks=grade.breaks.value if grade is not None else None,
                 breaks_words=grade.breaks_words if grade is not None else None,
                 reach=grade.reach.value if grade is not None and grade.reach else None,
@@ -1670,32 +1675,49 @@ class Store:
             session.flush()
             return _triage(row)
 
-    def triages(self, slug: str | None = None, number: int | None = None) -> list[Triage]:
-        """Every reading, oldest first; of one project or one card when named."""
+    def triages(
+        self,
+        slug: str | None = None,
+        number: int | None = None,
+        *,
+        ground: Ground | None = None,
+    ) -> list[Triage]:
+        """Every reading, oldest first; of one project or one card when
+        named; of one ground when named, every ground otherwise (card #82:
+        the audit `needle decisions` prints reads both)."""
         with self._session() as session:
             query = select(TriageRow)
             if slug is not None:
                 query = query.where(TriageRow.project_slug == slug)
             if number is not None:
                 query = query.where(TriageRow.card_number == number)
+            if ground is not None:
+                query = query.where(TriageRow.ground == ground.value)
             return [_triage(r) for r in session.scalars(query.order_by(TriageRow.id))]
 
-    def triage(self, slug: str, number: int) -> Triage | None:
-        """The newest reading on one card: what routing is read from when
-        the board is asked about one card rather than a whole project."""
+    def triage(self, slug: str, number: int, *, ground: Ground = Ground.MARK) -> Triage | None:
+        """The newest reading of one ground on one card: what routing is
+        read from when the board is asked about one card rather than a whole
+        project. A mark's unless asked otherwise, so no reader of routing
+        meets a parked card's result by default (card #82)."""
         with self._session() as session:
             row = session.scalars(
                 select(TriageRow)
-                .where(TriageRow.project_slug == slug, TriageRow.card_number == number)
+                .where(
+                    TriageRow.project_slug == slug,
+                    TriageRow.card_number == number,
+                    TriageRow.ground == ground.value,
+                )
                 .order_by(TriageRow.id.desc())
             ).first()
             return _triage(row) if row is not None else None
 
-    def latest_triages(self, slug: str) -> dict[int, Triage]:
-        """The newest reading on each of the project's cards: what routing
-        is read from."""
+    def latest_triages(self, slug: str, *, ground: Ground = Ground.MARK) -> dict[int, Triage]:
+        """The newest reading of one ground on each of the project's cards:
+        a mark's is what routing is read from; a parked card's is what the
+        board acted on and the face shows (card #82)."""
         latest: dict[int, Triage] = {}
-        for triage in self.triages(slug):
+        for triage in self.triages(slug, ground=ground):
             latest[triage.card_number] = triage
         return latest
 
@@ -3138,6 +3160,7 @@ def _triage(row: TriageRow) -> Triage:
         source_fingerprint=row.source_fingerprint,
         document_fingerprint=row.document_fingerprint,
         session_id=row.session_id,
+        ground=Ground(row.ground),
         grade=Grade(
             breaks=Breaks(row.breaks),
             breaks_words=row.breaks_words or "",

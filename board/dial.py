@@ -180,19 +180,26 @@ def defects_count(slug: str, cards: list[Card], index: CorpusIndex) -> DefectsCo
 
 
 class Candidate(BaseModel):
-    """A defect the dial may take, or open a reading on, with what it is
-    ranked by: the grade its current reading landed and its age. A
-    candidate for a reading has no grade yet, so among those age alone
-    orders (card #100, item 3: the queue of readings stays oldest first)."""
+    """A defect the dial may take, or a card to open a reading on, with
+    what it is ranked by: the grade its current reading landed and its
+    age. A candidate for a reading has no grade yet, so among those age
+    alone orders (card #100, item 3: the queue of readings stays oldest
+    first) — behind every defect and title, the cards parked on the owner,
+    oldest park first (card #82, ruling 9): `parked_since` is set on those
+    and they rank after the rest, never by their date against a defect's
+    birth. `document` is None only for a parked card with no document."""
 
     project: str
     card: Card
-    document: Document
+    document: Document | None
     grade: Grade | None = None
+    parked_since: datetime | None = None
 
     @property
-    def age_key(self) -> tuple[datetime, int]:
-        return (self.card.born_at, self.card.number)
+    def age_key(self) -> tuple[int, datetime, int]:
+        if self.parked_since is not None:
+            return (1, self.parked_since, self.card.number)
+        return (0, self.card.born_at, self.card.number)
 
     @property
     def order_key(self) -> GradeKey:

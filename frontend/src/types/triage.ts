@@ -13,6 +13,9 @@ export type CorpusLaneKind = (typeof CORPUS_LANE_KIND_VALUES)[number];
 export const DIRECTION_VALUES = ["surface added", "surface removed", "strictness raised", "strictness lowered", "automation increased", "automation decreased", "a spend or risk bound used", "no direction"] as const;
 export type Direction = (typeof DIRECTION_VALUES)[number];
 
+export const GROUND_VALUES = ["mark", "parked"] as const;
+export type Ground = (typeof GROUND_VALUES)[number];
+
 export const OFTEN_VALUES = ["every-time", "sometimes", "once-seen"] as const;
 export type Often = (typeof OFTEN_VALUES)[number];
 
@@ -25,7 +28,7 @@ export type Routing = (typeof ROUTING_VALUES)[number];
 export const TITLE_VERDICT_VALUES = ["placeable", "unplaceable"] as const;
 export type TitleVerdict = (typeof TITLE_VERDICT_VALUES)[number];
 
-export const TRIAGE_RESULT_VALUES = ["now", "his", "when", "split", "cannot-tell"] as const;
+export const TRIAGE_RESULT_VALUES = ["now", "his", "when", "split", "cannot-tell", "waiting", "stale"] as const;
 export type TriageResult = (typeof TRIAGE_RESULT_VALUES)[number];
 
 export interface CorpusLane {
@@ -51,12 +54,14 @@ export interface Decision {
   card_number: number;
   title: string;
   at: string;
+  ground: Ground;
   result: TriageResult;
   words: string;
   direction: Direction | null;
   source: string;
-  routing: Routing;
+  routing: Routing | null;
   fate: Fate;
+  returned: boolean;
 }
 
 export interface Fate {
@@ -119,8 +124,13 @@ export interface Triage {
   source_fingerprint: string | null;
   document_fingerprint: string;
   session_id: string | null;
+  ground?: Ground;
   grade?: Grade | null;
 }
+
+export const MARK_RESULTS: readonly TriageResult[] = ["cannot-tell", "his", "now", "split", "when"];
+
+export const PARKED_RESULTS: readonly TriageResult[] = ["his", "now", "stale", "waiting"];
 
 export const REACH_WORDS: Record<Reach, string> = {
   "client": "a client or the public",

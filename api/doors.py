@@ -33,6 +33,13 @@ from board.focus import FOCUS_PATH, is_chosen
 from board.handouts import handouts_row
 from board.lane import HANDS_ON
 from board.neighbours import Corpus, sentence_of, words_of
+from board.parked import (
+    now_refused,
+    owner_parked,
+    record_fingerprint,
+    waiting_refused,
+    where_after_parked_reading,
+)
 from board.parse import plan_stem_of
 from board.signals import GRAMMAR, read_or_decline, where_after, where_after_finding
 from board.team import Unexecutable, team_words
@@ -61,15 +68,17 @@ from domain.launch import LaunchVerdict, Start
 from domain.neighbour import Beside
 from domain.project import Project
 from domain.row import Row, RowKind
-from domain.signal import Finding, SessionWork, SignalKind
+from domain.signal import Finding, SessionWork, SignalKind, WindowlessSession
 from domain.slot import rung_words
 from domain.team import Route
 from domain.triage import (
+    PARKED_RESULTS,
     Breaks,
     CorpusLane,
     CorpusLaneKind,
     Direction,
     Grade,
+    Ground,
     Routing,
     TitleVerdict,
     TriageResult,
@@ -535,6 +544,28 @@ class Doors:
         retrying — so he is never asked the same question twice, whatever
         the lane does next."""
         routed = detail.summary.routing
+        decision = detail.decision
+        parked_his = (
+            detail.card.place.column == Column.DECISION_MOMENT
+            and decision is not None
+            and decision.result == TriageResult.HIS
+        )
+        if parked_his:
+            # A parked card whose cold reading said the decision is his
+            # (card #82, ruling 5): his sentence is the ruling on the
+            # record, and the reading opens again to read the record with
+            # it in — the answer is what re-reads the card.
+            said = f"Ruled: {text}"
+            self.live.note(slug, number, AuditKind.ANSWERED, Actor.OWNER, said)
+            self.live.bump()
+            self.loops.reconcile_now()
+            return DoorResult(
+                door="answer",
+                said=(
+                    f"{said} — the board reads the card again with your answer in its record "
+                    "and moves it where the record now says; it stays here until then."
+                ),
+            )
         if routed is None or routed.state != Routing.TRIAGED_HIS:
             raise DoorRefused(
                 f"#{number} is not on your pile: it routes as "
@@ -1031,6 +1062,21 @@ class Doors:
         its own kind has to carry."""
         detail = self._detail(slug, number)
         document = detail.document
+        if detail.card.place.column == Column.DECISION_MOMENT:
+            # A card parked on the owner (card #82): the reading judges the
+            # decision against the record, never a mark or a title, and
+            # the board moves the card on the result.
+            return self._decide(
+                slug,
+                number,
+                detail,
+                result=result,
+                words=words,
+                source=source,
+                direction=direction,
+                title=title,
+                grade=grade,
+            )
         if document is None or document.archived:
             raise DoorRefused(
                 f"#{number} has no live document; a reading judges a live plan or suggestion."
@@ -1065,21 +1111,7 @@ class Doors:
             raise DoorRefused(
                 "A result without its reasoning records nothing; say what the source said."
             )
-        open_now = next(
-            (
-                r
-                for r in self.live.store.windowless_sessions(
-                    slug, work=SessionWork.TRIAGE, open_only=True
-                )
-                if r.card_number == number
-            ),
-            None,
-        )
-        if open_now is None:
-            raise DoorRefused(
-                f"No triage is open for #{number}. A result lands from the reading the board "
-                "started and nowhere else; that is what makes it independent."
-            )
+        open_now = self._open_reading(slug, number)
         sources = self.live.sources(slug)
         resolved = sources.resolve(source)
         if result == TriageResult.NOW:
@@ -1189,6 +1221,190 @@ class Doors:
                 f"(decision {record.decision}); graded: {graded}; its title read as "
                 f"{read.verdict.value}."
             ),
+        )
+
+    # ── a parked card's reading, and the board's act on it (card #82) ──
+
+    def _open_reading(self, slug: str, number: int) -> WindowlessSession:
+        open_now = next(
+            (
+                r
+                for r in self.live.store.windowless_sessions(
+                    slug, work=SessionWork.TRIAGE, open_only=True
+                )
+                if r.card_number == number
+            ),
+            None,
+        )
+        if open_now is None:
+            raise DoorRefused(
+                f"No triage is open for #{number}. A result lands from the reading the board "
+                "started and nowhere else; that is what makes it independent."
+            )
+        return open_now
+
+    def _decide(
+        self,
+        slug: str,
+        number: int,
+        detail: CardDetail,
+        *,
+        result: TriageResult | None,
+        words: str | None,
+        source: str | None,
+        direction: Direction | None,
+        title: str,
+        grade: Grade | None,
+    ) -> DoorResult:
+        """A cold reading's result on a card parked on the owner, in one act
+        (card #82, items 1 to 3): the four results and what each has to
+        carry, the row written and bound to the record it read, the TRIAGED
+        row, the reading's record ended, and the move — `now` to Planned or
+        the home column, `waiting` to Executed with the WATCH row written
+        first, `stale` to Done, `his` nowhere with the line on the face.
+        Every move is the machine's, with the reading as its evidence.
+
+        Three refusals hold the rulings. A `stale` on a card carrying an
+        unaccounted commitment writes the row first and then refuses
+        (item 3): the face carries the doubt naming the commitment, the
+        card is not read again until parked again or answered, and the
+        reading's record stays open so the same reader can land `his`
+        (ruling 10). A `waiting` that would defer a failed signal, or a
+        third on one card, is refused (ruling 6). A `now` on a card with
+        nothing live to execute is refused (ruling 4). And a card the
+        owner parked himself is never moved: the result lands with its
+        history line and the card stays (ruling 7)."""
+        card = detail.card
+        if result is None or result not in PARKED_RESULTS:
+            raise DoorRefused(
+                f"#{number} is parked on the owner: its reading lands one of "
+                + ", ".join(sorted(r.value for r in PARKED_RESULTS))
+                + (f", not {result.value}" if result is not None else "")
+                + ". There is no cannot-tell here: missing evidence is `his`, with the "
+                "missing thing as the line."
+            )
+        if title.strip() or grade is not None:
+            raise DoorRefused(
+                f"#{number} is parked on the owner: its reading judges the decision, not the "
+                "title and not a grade."
+            )
+        words = (words or "").strip()
+        if not words:
+            raise DoorRefused(
+                "A result without its words records nothing: say what the record says."
+            )
+        open_now = self._open_reading(slug, number)
+        now = clock.now()
+        sources = self.live.sources(slug)
+        resolved = sources.resolve(source)
+        document = detail.document
+        if result == TriageResult.NOW:
+            refused = now_refused(document)
+            if refused is not None:
+                raise DoorRefused(refused.capitalize() + ".")
+            if resolved is None or resolved.fingerprint is None:
+                raise DoorRefused(
+                    "A `now` needs a source the board can read: "
+                    + (resolved.note if resolved is not None else "this result names none")
+                    + ". Prose shaped like a source is not a source."
+                )
+            if direction is None:
+                raise DoorRefused(
+                    "A `now` records which way it moves the product; name one of: "
+                    + ", ".join(d.value for d in Direction)
+                )
+        earlier = self.live.store.triages(slug, number, ground=Ground.PARKED)
+        last = detail.readings[0] if detail.readings else None
+        if result == TriageResult.WAITING:
+            refused = waiting_refused(card, words, last=last, earlier=earlier, now=now)
+            if refused is not None:
+                raise DoorRefused(refused[0].upper() + refused[1:] + ".")
+        commitments = self.live.commitments(slug, number)
+        document_text = None
+        if document is not None:
+            path = Path(self.live.projects[slug].project.path) / document.path
+            document_text = path.read_text(encoding="utf-8", errors="replace")
+        previous = earlier[-1] if earlier else None
+        record = self.live.store.record_triage(
+            slug,
+            number,
+            at=now,
+            actor=Actor.SESSION,
+            result=result,
+            words=words,
+            decision=uuid.uuid4().hex[:16],
+            parent=previous.decision if previous is not None else None,
+            direction=direction,
+            source_ref=resolved.ref if resolved is not None else None,
+            source_path=resolved.path if resolved is not None else None,
+            source_fingerprint=resolved.fingerprint if resolved is not None else None,
+            document_fingerprint=record_fingerprint(document_text, card.rows),
+            session_id=open_now.session_id,
+            ground=Ground.PARKED,
+        )
+        replaced_watch: str | None = None
+        if result == TriageResult.STALE and commitments:
+            # The row is the durable thing: the face carries the doubt from
+            # it, and the card is not read again for this park. The refusal
+            # comes after, and the reading's record stays open for `his`.
+            self.live.note(
+                slug,
+                number,
+                AuditKind.DIAL,
+                Actor.MACHINE,
+                f"A cold reading landed stale ({words}); refused to move the card: "
+                "unaccounted for — " + "; ".join(commitments),
+            )
+            self.live.bump()
+            self.loops.reconcile_now()
+            raise DoorRefused(
+                f"#{number} stays: a card leaves Decision moment only when every commitment "
+                "on it is accounted for, and this is not — "
+                + "; ".join(commitments)
+                + ". Land `his` with the commitment as the line, or `waiting` with the signal "
+                "that accounts for it."
+            )
+        if result == TriageResult.WAITING:
+            replaced_watch = next((r.text for r in card.rows if r.kind == RowKind.WATCH), None)
+            self.live.add_row(slug, number, Row(kind=RowKind.WATCH, text=words), Actor.SESSION)
+        self.live.add_row(
+            slug,
+            number,
+            Row(kind=RowKind.TRIAGED, text=triaged_row(record, resolved)),
+            Actor.SESSION,
+        )
+        self.live.store.end_windowless_session(open_now.id, now)
+        landing = where_after_parked_reading(
+            result, words, source=resolved, document=document, replaced_watch=replaced_watch
+        )
+        placement = self.live.store.placements(slug).get(number)
+        if landing.column is not None and owner_parked(placement):
+            self.live.note(
+                slug,
+                number,
+                AuditKind.DIAL,
+                Actor.MACHINE,
+                f"{landing.reason}; you parked the card yourself, so it stays until you move it",
+            )
+            where = "stays: you parked it yourself"
+        elif landing.column is not None:
+            self.live.move(
+                slug,
+                number,
+                Place(column=landing.column, group=None, position=0),
+                actor=Actor.MACHINE,
+                detail=landing.reason,
+                evidence=landing.evidence,
+            )
+            where = f"moved to {landing.column.value}"
+        else:
+            self.live.note(slug, number, AuditKind.DIAL, Actor.MACHINE, landing.reason)
+            where = "stays, with your line as the decision he reads"
+        self.live.bump()
+        self.loops.reconcile_now()
+        return DoorResult(
+            door="triage",
+            said=f"#{number} read as {result.value}; {where} (decision {record.decision}).",
         )
 
     # ── the short lanes that write the corpus (items 4 and 5) ──────────
@@ -1752,6 +1968,7 @@ class Doors:
         lane that folded anything outside docs/ needs a review record that
         exists (plan 11, item 1) — an unattended lane's "clean" is a refused
         close, not a remembered rule."""
+        self._refuse_a_close_under_a_reading(slug, number)
         signal, why = read_or_decline(watch)
         if signal is None:
             raise DoorRefused(f"The WATCH row names no signal: {why}")
@@ -1797,6 +2014,23 @@ class Doors:
             + (", HANDED OUT" if handed is not None else "")
             + f" written; the signal is read {signal.kind.value} {signal.target} by {signal.due}.",
         )
+
+    def _refuse_a_close_under_a_reading(self, slug: str, number: int) -> None:
+        """A reading session lands its result and the board moves the card;
+        it never moves the card itself (card #82, item 2). The close is the
+        one door a session moves a card through, and the door cannot tell
+        a reading session from a lane's, so it refuses every close while a
+        reading is open on the card — a lane the owner resumed on a parked
+        card waits the reading out, at most its ceiling."""
+        for record in self.live.store.windowless_sessions(
+            slug, work=SessionWork.TRIAGE, open_only=True
+        ):
+            if record.card_number == number:
+                raise DoorRefused(
+                    f"A reading is open on #{number} ({record.session_id[:8]}): a reading "
+                    "lands its result through `needle triage` and the board moves the card. "
+                    "Nothing else moves it while the reading is open."
+                )
 
     def _refuse_an_unstanced_promise(self, slug: str, number: int, card: Card) -> None:
         """Every promise the plan made gets a stance at the close (the

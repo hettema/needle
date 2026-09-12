@@ -692,6 +692,111 @@ def triage_brief(
     )
 
 
+COMMITMENT_RULE = (
+    "A card may leave Decision moment only when every commitment on it is accounted for — "
+    "fulfilled with evidence on the card, withdrawn by a ruling the owner made, or "
+    "transferred to a named WATCH row that still watches it. Age, shipped code and an absent "
+    "signal never qualify. A commitment is what the card's rows promise: a DELIVERED with no "
+    "signal the board can read, a WATCH nobody has read or whose reading did not say "
+    "delivered, a question in the owner's words with no answer of his, a RULING nobody has "
+    "ruled on."
+)
+"""The rule of card #82, item 3, from the other make's cold read of the
+plan: the dangerous exit is a card closed as over that carried a
+commitment, which takes the owner's decision without any external exposure.
+Carried into the brief verbatim and held by the door, which refuses `stale`
+while `board/parked.py::commitments_of` names anything."""
+
+
+def decision_brief(
+    detail: CardDetail,
+    project: Project,
+    today: str,
+    *,
+    document_text: str | None,
+    commitments: list[str],
+) -> str:
+    """What the cold reading of a card parked on the owner opens with
+    (card #82, item 1): the same seat as a mark's reading and the same
+    independence — no share of the context that parked it — with the §1
+    test in his words, the card's whole record (every row and its
+    history), the document it cites, and the rule of item 3 as the thing
+    the reading may not do. It asks one question: does the written record
+    already answer this, or is it his? It never moves the card; it lands
+    one of four results and the board moves."""
+    card = detail.card
+    needle = needle_command()
+    slug = card.project
+    history = "\n".join(
+        f"  {entry.at.date().isoformat()} {entry.actor.value:>7} {entry.kind.value}: {entry.detail}"
+        for entry in reversed(detail.history)
+    )
+    document = (
+        f"\n\n--- the document ({detail.summary.document_path}) ---\n{document_text}\n--- ends ---"
+        if document_text is not None
+        else "\n\nNo document is written behind this card: the rows above are its whole record."
+    )
+    open_commitments = (
+        "\n".join(f"  - {c}" for c in commitments)
+        if commitments
+        else "  (none: nothing on the card is unaccounted for)"
+    )
+    return (
+        f"A cold reading of #{card.number}, a card parked on the owner, on {project.name} "
+        f"({project.path}), {today}. The card sits in Decision moment because the board could "
+        "not tell whether it needs him. You are the second reading: you have no share of the "
+        "context that parked it and you must not go looking for one. Decide from the record "
+        "below and the project's own written rules.\n\n"
+        "This session is never a lane: no worktree (never EnterWorktree), no edit to any file, "
+        "no commit, no push, no window. It writes nothing but its one result, and it never "
+        "moves the card: the board moves it on your result, with the reason on its history.\n\n"
+        + render(detail, project)
+        + f"\n\nThe card's history, oldest first — who parked it and why is here:\n{history}"
+        + document
+        + f"\n\nThe rule, in the owner's words, ruled true on 2026-09-05:\n\n{THE_RULE}\n\n"
+        "Your one question: **does the written record already answer this, or is it his?** "
+        "Not whether the work was good and not what to build next. Read the rows, the history "
+        "and the document for a ruling, a precedent, a plan or a bound that selects the "
+        "outcome; read them for a signal the board could watch; read them for whether the "
+        "thing it asked about is over.\n\n"
+        f"The rule you may not break:\n\n{COMMITMENT_RULE}\n\n"
+        "What the board sees unaccounted for on this card right now:\n"
+        + open_commitments
+        + "\n\nEnd your turn with exactly one result, through the needle command line, never "
+        "by editing a file:\n"
+        f'  {needle} triage {slug} {card.number} now "<the resolved source and the proposition '
+        'in it that selects this outcome>" --source <path or #N> --direction <direction>\n'
+        f'  {needle} triage {slug} {card.number} waiting "<what will be observed> — '
+        "session|url|file|command|owner <target> [expect <value>] by YYYY-MM-DD "
+        '[every <N>h|<N>d]"\n'
+        f'  {needle} triage {slug} {card.number} his "<the one line he can answer: the question, '
+        'the alternatives, and why no written ruling selects one>"\n'
+        f'  {needle} triage {slug} {card.number} stale "<what ended it, from the record>"\n\n'
+        "What each result has to hold, and where the board sends the card on it:\n"
+        "- `now`: the record selects execution. It needs a source that resolved and a "
+        "proposition in it that selects this outcome, and a live plan or suggestion to execute "
+        "— the card goes to Planned (a plan) or to its home column (a suggestion), never to a "
+        "rank: the owner ranks. A `--direction` says which way the product moves: "
+        + ", ".join(f"`{d.value}`" for d in Direction)
+        + ".\n"
+        "- `waiting`: it waits for a signal the board can read, named in the WATCH grammar. The "
+        "board writes the row and the card goes to Executed, where the signal loop reads it. "
+        "Refused on a card whose signal already failed unless the new signal watches something "
+        "else, and refused a third time on one card: then it is his.\n"
+        "- `his`: the record does not select among outcomes he owns, or acting would create "
+        "exposure past a bound he authorised, or the evidence that would decide it is missing "
+        "— then the line names what is missing. The card stays, and your line is what he reads "
+        "as the decision. There is no `cannot-tell` here: a card in his column is never "
+        "nobody's.\n"
+        "- `stale`: what it asked about is over, and the words say what ended it. The card goes "
+        "to Done. The door refuses it while anything above is unaccounted for, so on such a "
+        "card land `his` with the commitment as the line, or `waiting` with the signal that "
+        "would account for it.\n\n"
+        "Your turn ends with the needle triage command and one plain sentence after it. Ask "
+        "the owner nothing: nobody is reading this window."
+    )
+
+
 GRADE_QUESTION = (
     "Your second question, of the document alone: **how bad is it?** Three parts, each in the "
     "owner's words, each with the words from the document that selected it. Grade from the "
