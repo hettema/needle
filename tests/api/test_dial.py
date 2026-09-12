@@ -112,6 +112,17 @@ def acts(machine_floor: Floor) -> int:
     )
 
 
+def last_act(machine_floor: Floor) -> dict:
+    """The newest launch that was a planning session or a Start — never a
+    reading, which the same beat may open after its act (card #82: a
+    parked card's reading follows a Start in one beat)."""
+    return next(
+        launch
+        for launch in reversed(machine_floor.state()["launch_log"])
+        if not launch["argv"][launch["argv"].index("-n") + 1].startswith("triage-card-")
+    )
+
+
 def reading_for(machine_floor: Floor) -> int | None:
     """The card the last launch opened a reading of, when it opened one."""
     log = machine_floor.state()["launch_log"]
@@ -815,7 +826,7 @@ def test_a_held_plan_does_not_count_and_the_memory_floor_stops_the_beat(
     capsys.readouterr()
     tick(client)
     taken = acts(machine_floor)
-    assert machine_floor.state()["launch_log"][-1]["argv"][-1].startswith(
+    assert last_act(machine_floor)["argv"][-1].startswith(
         "A plan to write for a defect the dial took"
     )
     assert [(f.card_number, f.stage.value) for f in store.fix_lanes("proj")] == [
@@ -868,7 +879,7 @@ def test_a_held_plan_does_not_count_and_the_memory_floor_stops_the_beat(
         "started by the dial; #241's session is editing engine/metering.py"
         in (started_row["detail"])
     )
-    assert "SHARED GROUND" in machine_floor.state()["launch_log"][-1]["argv"][-1]
+    assert "SHARED GROUND" in last_act(machine_floor)["argv"][-1]
     # The number the owner set is what he set, through all of it.
     assert store.dial("proj").lanes == 3
     # One lane was the number already, so the first turn wrote the switch's
@@ -1314,9 +1325,9 @@ def test_a_when_trigger_is_read_on_the_cadence_and_delivered_makes_the_defect_el
     assert fired["readings"][0]["delivered"] is True
     assert column_of(client, number) == "Defects"
     tick(client)
-    log = machine_floor.state()["launch_log"]
-    assert len(log) == read_so_far + 1 and log[-1]["argv"][
-        log[-1]["argv"].index("-n") + 1
+    act = last_act(machine_floor)
+    assert acts(machine_floor) == read_so_far + 1 and act["argv"][
+        act["argv"].index("-n") + 1
     ].startswith(f"planning-card-{number}-"), "delivered: eligible as a now"
 
 
