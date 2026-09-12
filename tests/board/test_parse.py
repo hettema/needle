@@ -258,3 +258,31 @@ def test_a_suggestions_fix_mark_is_read_from_its_head_and_only_there():
     # A plan carries no mark, whatever its head says.
     plan = parse("# A plan\n\n**Fix:** now\n\n## Intent\n\nx\n")
     assert plan.fix is None and plan.fix_note is None
+
+
+def test_a_document_names_paths_cards_documents_and_its_rulings():
+    """What a document names, read once for the neighbours reading (card
+    #69): backticked repository paths each once, every `#N`, every corpus
+    document by path with or without backticks, and a plan's rulings."""
+    text = (
+        "# A plan\n\n**Carries:** docs/slice-suggestions/2026-09-05-x.md\n"
+        "**Sequencing:** after #8 and Needle #20.\n\n## Intent\n\n"
+        "Beside #74, see `board/lane.py::doors_for` and `api/app.py:12`, and again "
+        "`board/lane.py`; cites `docs/plans/done/2026-09-01-old.md` and #8 twice.\n\n"
+        "## Rulings\n\n- **Shown, never enforced.** A row and a count.\n"
+        "- **Naming is citing** — a card or a path anywhere.\n- plain bullet, no lead.\n\n"
+        "## Deliberately not\n\n- **Not a ruling.** Under another heading.\n"
+    )
+    plan = parse(text)
+    assert plan.named_paths == ["board/lane.py", "api/app.py", "docs/plans/done/2026-09-01-old.md"]
+    assert plan.named_cards == [8, 20, 74]
+    assert plan.named_documents == ["2026-09-05-x", "2026-09-01-old"]
+    assert plan.rulings == ["Shown, never enforced", "Naming is citing"]
+    suggestion = parse_document(
+        "# A defect\n\n**Kind:** defect\n\n## Rulings\n\n- **Never read.** x\n",
+        kind=DocumentKind.SUGGESTION,
+        path="docs/slice-suggestions/s.md",
+        archived=False,
+        read_at=AT,
+    )
+    assert suggestion.rulings == [] and suggestion.named_paths == []

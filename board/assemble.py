@@ -23,6 +23,7 @@ from board.lane import (
 )
 from board.leverage import arrange
 from board.moves import GroupLayout
+from board.neighbours import beside_all
 from board.reconcile import carried_stems, corpus_path_of, ref
 from board.signals import is_due, past_due, read_or_decline
 from board.title import hold_sentence, title_hold
@@ -76,6 +77,7 @@ from domain.gate import Gate
 from domain.hook import HeardMark
 from domain.lane import HANDS_ON, Doors, Lane, LaneSnapshot, LaneState, StartState
 from domain.meaning import Meaning, opening_of, say
+from domain.neighbour import Beside
 from domain.project import Project
 from domain.row import ROW_HALF, Row, RowHalf, RowKind
 from domain.signal import Reading, Signal, SignalKind, WindowlessSession
@@ -113,6 +115,11 @@ CLAIM_WORDS: dict[Claim, tuple[str, str]] = {
     Claim.RULING_YOURS: ("defect waiting on your ruling", "defects waiting on your ruling"),
     Claim.TITLE_FAILS: ("title you could not place", "titles you could not place"),
     Claim.TITLE_BEING_READ: ("title being read", "titles being read"),
+    Claim.BESIDE_UNNAMED: (
+        "document beside a neighbour it does not name",
+        "documents beside a neighbour they do not name",
+    ),
+    Claim.HOLD_UNREAD: ("hold the board cannot place", "holds the board cannot place"),
 }
 """Each claim's words, singular and plural: the head's breakdown (plan 27, item 1)."""
 
@@ -914,6 +921,8 @@ def claims_of(
     answer_offered: bool = False,
     hold: str | None = None,
     defect: bool = False,
+    beside: Beside | None = None,
+    unplaced: bool = False,
 ) -> list[Claim]:
     """Every claim the card makes on the owner's eye, in the head's order.
     A card can carry several; the head counts each. `placement` is the
@@ -955,6 +964,10 @@ def claims_of(
         claims.append(Claim.RULING_YOURS)
     if hold is not None and card.place.column not in SHIPPED:
         claims.append(Claim.TITLE_FAILS)
+    if beside is not None and beside.counted and card.place.column not in SHIPPED:
+        claims.append(Claim.BESIDE_UNNAMED)
+    if unplaced and card.place.column not in SHIPPED:
+        claims.append(Claim.HOLD_UNREAD)
     return claims
 
 
@@ -969,6 +982,21 @@ def shipped_without_review(card: Card, placement: AuditEntry | None) -> bool:
     if any(r.kind == RowKind.REVIEW for r in card.rows):
         return False
     return placement is not None and placement.actor in (Actor.SESSION, Actor.MACHINE)
+
+
+def beside_of(cards: list[Card], index: CorpusIndex) -> dict[int, Beside]:
+    """Every standing card's neighbours in one read of the corpus (card
+    #69, item 1): the cards with a live document, read against each other
+    by `board/neighbours.py`. The one derivation the board, the open card
+    and the briefs all read."""
+    pairs: list[tuple[Card, Document]] = []
+    for card in cards:
+        if card.folded_into is not None:
+            continue
+        document = document_of(card, index)
+        if document is not None and not document.archived:
+            pairs.append((card, document))
+    return beside_all(pairs)
 
 
 def summarize(
@@ -990,6 +1018,7 @@ def summarize(
     project_path: str = "",
     title_reading: TitleReading | None = None,
     leverage: CardLeverage | None = None,
+    beside: Beside | None = None,
 ) -> CardSummary:
     """`doors` is the card's doors as the loop last read them; before its
     first read they are the closed doors of `nothing_read`. The state line and
@@ -1064,6 +1093,8 @@ def summarize(
             answer_offered=doors.answer.offered,
             hold=hold,
             defect=defect,
+            beside=beside if card.folded_into is None else None,
+            unplaced=doors.readiness.state == StartState.HOLD_UNREAD,
         ),
         folded=folded or [],
         is_new=is_new(card, now),
@@ -1080,6 +1111,7 @@ def summarize(
         title_reading=title_reading,
         leverage=leverage,
         grade=grade,
+        beside=beside if card.folded_into is None else None,
     )
 
 
@@ -1212,6 +1244,7 @@ def assemble_board(
     focus: FocusStrip | None = None,
     leverage: Arrangement | None = None,
     leverages: dict[int, CardLeverage] | None = None,
+    beside: dict[int, Beside] | None = None,
 ) -> BoardState:
     """`snapshot`, `readings`, `trunk` and `machine` are what the loop has
     read; before its first read they are absent and the board says so.
@@ -1236,6 +1269,7 @@ def assemble_board(
     lanes = snapshot.lanes if snapshot is not None else {}
     doors = snapshot.doors if snapshot is not None else {}
     folded = folded_under(cards)
+    beside = beside if beside is not None else beside_of(cards, index)
 
     def doors_of(card: Card) -> Doors:
         found = doors.get(card.number)
@@ -1259,6 +1293,7 @@ def assemble_board(
             sources=sources,
             title_reading=title_readings.get(n),
             leverage=leverages.get(n),
+            beside=beside.get(n),
         )
         for n, c in by_number.items()
     }
@@ -1408,6 +1443,7 @@ def assemble_detail(
     title_reading: TitleReading | None = None,
     leverage: CardLeverage | None = None,
     team: Composition | None = None,
+    beside: Beside | None = None,
 ) -> CardDetail:
     """`readings` newest first; `read` is whether the loop has read the
     machine; `folded` the cards folded under this one; `reading` the
@@ -1438,6 +1474,7 @@ def assemble_detail(
             sources=sources,
             title_reading=title_reading,
             leverage=leverage,
+            beside=beside,
         ),
         brief=brief,
         record=record,

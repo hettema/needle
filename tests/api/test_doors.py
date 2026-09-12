@@ -1666,3 +1666,113 @@ def test_the_close_refuses_executed_while_the_archived_plan_carries_an_unstanced
     git(repo, "commit", "-q", "-m", "stanced")
     assert main(close) == 0
     assert capsys.readouterr().out.startswith("#253 closed into Executed")
+
+
+def test_a_document_born_beside_a_neighbour_it_does_not_name_is_counted_and_the_row_says_who_clears_it(
+    client: TestClient, repo: Path, monkeypatch: pytest.MonkeyPatch
+):
+    """Card #69, item 1: a suggestion born naming a file a live plan's Terrain
+    names shows that plan's card and the file on its own card, on the board
+    and on the open card from the one reading; the head counts it under
+    Broken once it is born after the reader; naming the neighbour clears
+    it. A suggestion naming no file but a live plan's words shows the card
+    as a candidate, said as a candidate, and is never counted."""
+    from board import neighbours
+
+    # The reader is born the day after the fixture's cards were, so those
+    # read as born blind and the one written below as born knowing.
+    monkeypatch.setattr(neighbours, "COUNTED_FROM", (NOW + timedelta(days=1)).date())
+    board = client.get("/api/projects/proj/board").json()
+    before = claim_count(board, "beside unnamed")
+    assert before == 0
+    pricing = next(
+        c
+        for col in board["columns"]
+        for g in col["groups"]
+        for c in g["cards"]
+        if c["title"] == "The skipper sees the price before the berth"
+    )
+    # The fixture's own live documents were born with the board, before the
+    # reader: shown as a quiet fact, never counted.
+    assert pricing["beside"]["sentence"].startswith("sits beside #")
+    assert "office/pricing.py" in pricing["beside"]["sentence"] and not pricing["beside"]["counted"]
+    assert "beside unnamed" not in pricing["claims"]
+
+    path = repo / "docs" / "slice-suggestions" / "2026-09-06-the-price-on-the-map-is-a-day-old.md"
+    path.write_text(
+        "# The price on the map is a day old\n\n**Kind:** defect\n**Fix:** now — the tariff "
+        "plan says the price shown is today's\n**Found by:** the owner, 2026-09-06.\n\n"
+        "## The intent it breaks\n\nA skipper sees today's price on the map.\n\n## Observation\n\n"
+        "`office/pricing.py` caches the tariff for a day.\n",
+        encoding="utf-8",
+    )
+    client.app.state.loops.live.rescan("proj")
+    board = client.get("/api/projects/proj/board").json()
+    assert claim_count(board, "beside unnamed") == before + 1
+    card = next(
+        c
+        for col in board["columns"]
+        for g in col["groups"]
+        for c in g["cards"]
+        if c["title"] == "The price on the map is a day old"
+    )
+    beside = card["beside"]
+    assert beside["counted"] and "beside unnamed" in card["claims"]
+    numbers = [n["number"] for n in beside["neighbours"]]
+    assert pricing["number"] in numbers
+    named = next(n for n in beside["neighbours"] if n["number"] == pricing["number"])
+    assert named["ground"] == "files" and named["files"] == ["office/pricing.py"]
+    assert named["essence"] == "A skipper knows what a night costs before choosing where to lie."
+    assert not named["named"]
+    assert beside["clears"].startswith("the reading that verifies its mark folds it into")
+    # The open card reads the same reading.
+    opened = detail(client, card["number"])
+    assert opened["summary"]["beside"] == beside
+    # The head's filter is the claim on the card: every card with it, and no other.
+    carrying = [
+        c["number"]
+        for col in board["columns"]
+        for g in col["groups"]
+        for c in g["cards"]
+        if "beside unnamed" in c["claims"]
+    ]
+    assert carrying == [card["number"]]
+
+    # Naming every neighbour by its card clears the count.
+    path.write_text(
+        path.read_text(encoding="utf-8")
+        + "\nBeside "
+        + ", ".join(f"#{n}" for n in beside["unnamed"])
+        + ", whose plans show the price on the map.\n",
+        encoding="utf-8",
+    )
+    client.app.state.loops.live.rescan("proj")
+    board = client.get("/api/projects/proj/board").json()
+    assert claim_count(board, "beside unnamed") == before
+    card = summary_of(client, card["number"])
+    assert not card["beside"]["counted"]
+    assert next(n for n in card["beside"]["neighbours"] if n["number"] == pricing["number"])["named"]
+
+    # A candidate by words: shown, said as one, never counted.
+    words = repo / "docs" / "slice-suggestions" / "2026-09-06-the-waiting-list-loses-a-boat.md"
+    words.write_text(
+        "# The waiting list loses a boat that asked twice\n\n**Kind:** defect\n**Fix:** now — x\n"
+        "**Found by:** the owner, 2026-09-06.\n\n## The intent it breaks\n\nA boat on the "
+        "waiting list is offered every berth that fits it.\n",
+        encoding="utf-8",
+    )
+    client.app.state.loops.live.rescan("proj")
+    board = client.get("/api/projects/proj/board").json()
+    assert claim_count(board, "beside unnamed") == before
+    card = next(
+        c
+        for col in board["columns"]
+        for g in col["groups"]
+        for c in g["cards"]
+        if c["title"] == "The waiting list loses a boat that asked twice"
+    )
+    assert card["beside"]["neighbours"] and all(
+        n["ground"] == "words" for n in card["beside"]["neighbours"]
+    )
+    assert card["beside"]["sentence"].endswith("by its words — a candidate, not a verdict.")
+    assert not card["beside"]["counted"]

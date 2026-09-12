@@ -12,7 +12,7 @@ export type CollisionVerdict = (typeof COLLISION_VERDICT_VALUES)[number];
 export const LANE_STATE_VALUES = ["none", "working", "asking", "stopped", "blocked", "moving", "ended"] as const;
 export type LaneState = (typeof LANE_STATE_VALUES)[number];
 
-export const START_STATE_VALUES = ["free", "shares", "waits", "no gate", "nowhere to run", "lane exists", "elsewhere", "unread", "title fails"] as const;
+export const START_STATE_VALUES = ["free", "shares", "waits", "no gate", "nowhere to run", "lane exists", "elsewhere", "unread", "title fails", "hold unread"] as const;
 export type StartState = (typeof START_STATE_VALUES)[number];
 
 export interface Checkouts {
@@ -155,6 +155,7 @@ export interface Readiness {
   cards: number[];
   files: string[];
   waits: Wait[];
+  unplaced?: string[];
 }
 
 export interface ReviewText {

@@ -10,6 +10,7 @@ import {
   AnswerBox,
   Ask,
   Band,
+  BesideLine,
   Button,
   Carries,
   Clash,
@@ -24,6 +25,7 @@ import {
   Items,
   Markdown,
   MoveTo,
+  Neighbours,
   Note,
   Notice,
   OpenBody,
@@ -270,6 +272,13 @@ export function OpenCard({ card, onMoveTo }: { card: CardSummary; onMoveTo: (num
           </Note>
         ) : null}
       </Section>
+
+      {detail.summary.beside && detail.summary.beside.neighbours.length ? (
+        <Section title="Beside it" from={detail.summary.beside.counted ? `born ${detail.summary.beside.born ?? "later"} beside ${detail.summary.beside.unnamed.length} it does not name; cleared when ${detail.summary.beside.clears ?? "it names them"}` : "the live documents on its ground, read from the corpus on every read; shown, never enforced"}>
+          <BesideLine beside={detail.summary.beside} />
+          <Neighbours beside={detail.summary.beside} />
+        </Section>
+      ) : null}
 
       {items.length ? (
         <Section title="The plan's items" from={itemsFrom}>

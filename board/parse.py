@@ -938,6 +938,65 @@ def _disposition(
     )
 
 
+NAMED_PATH = re.compile(r"`([\w.-]+(?:/[\w.-]+)+\.\w+)(?:::[\w.:]+|#[\w.-]+|:\d+)?`")
+"""A repository path a document names in backticks — `api/app.py`,
+`board/moves.py::apply_move`, `frontend/src/App.tsx:12` — the one shape
+the lane reader (`board/collision.py::footprint`) and the document reader
+(`board/neighbours.py`) both read, so a plan's ground is one thing."""
+_DOCUMENT_PATH = re.compile(r"docs/(?:plans|slice-suggestions)/(?:done/)?([\w.-]+?)\.md")
+_RULINGS_HEADING = re.compile(r"^##\s+.*\brulings?\b", re.I)
+
+
+def named_paths_of(text: str) -> list[str]:
+    """Every repository path the text names in backticks, each once, in
+    order of first mention; whether it exists is the caller's to ask."""
+    seen: list[str] = []
+    for path in NAMED_PATH.findall(text):
+        if path not in seen:
+            seen.append(path)
+    return seen
+
+
+def named_cards_of(text: str) -> list[int]:
+    """Every card the text cites as `#N`, each once, in order — a `Carries:`
+    line, a Sequencing name, prose: naming is citing (card #69, ruling 4)."""
+    seen: list[int] = []
+    for number in _CARD_REF.findall(text):
+        if int(number) not in seen:
+            seen.append(int(number))
+    return seen
+
+
+def named_documents_of(text: str) -> list[str]:
+    """The stems of every corpus document the text names by path, backticked
+    or plain, live or archived — the other way a writer already names a
+    neighbour (four of Needle's six live `Carries:` lines carry no
+    backticks)."""
+    seen: list[str] = []
+    for stem in _DOCUMENT_PATH.findall(text):
+        if stem not in seen:
+            seen.append(stem)
+    return seen
+
+
+def rulings_of(text: str) -> list[str]:
+    """The bold leads of the entries under a `## Rulings` heading, in order:
+    what a plan settled, carried into the brief of anything written beside
+    it (card #69, item 2). Needle's shape — a bulleted list with a bold
+    lead; a plan that keeps its rulings elsewhere carries none."""
+    leads: list[str] = []
+    for line in _section(_unfenced(text), _RULINGS_HEADING):
+        if line is None:
+            continue
+        stripped = _LIST_MARKER.sub("", line.strip(), count=1)
+        if stripped == line.strip():
+            continue
+        bold = _ITEM_BOLD.match(stripped)
+        if bold:
+            leads.append(_plain(bold.group(1)).strip().rstrip(".:—-– "))
+    return leads
+
+
 def cites_of(fields: list[HeadField]) -> list[str]:
     """The suggestion stems a document's head names, in order, each once:
     what a plan carries (plan 06, item 5). The head only — a plan's body
@@ -1013,6 +1072,10 @@ def parse_document(
         fix=fix,
         fix_note=fix_note,
         cites=cites_of(fields),
+        named_paths=named_paths_of(text),
+        named_cards=named_cards_of(text),
+        named_documents=named_documents_of(text),
+        rulings=rulings_of(text) if kind == DocumentKind.PLAN else [],
         handouts=handouts_of(text),
         items=items_of(text) if kind == DocumentKind.PLAN else [],
         head_fields=fields,

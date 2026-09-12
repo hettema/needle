@@ -19,17 +19,17 @@ card's strip shows it bare beside a state word that already carries the
 meaning.
 """
 
-import re
 from collections.abc import Callable
 
+from board.parse import named_paths_of
 from domain.lane import Collision, CollisionVerdict
-
-_NAMED_PATH = re.compile(r"`([\w.-]+(?:/[\w.-]+)+\.\w+)(?:::[\w.:]+|#[\w.-]+|:\d+)?`")
 
 
 def footprint(text: str, exists: Callable[[str], bool]) -> set[str]:
-    """The repository files a document names in backticks and that exist."""
-    return {path for path in _NAMED_PATH.findall(text) if exists(path)}
+    """The repository files a document names in backticks and that exist:
+    the one path shape (`board/parse.py::named_paths_of`) narrowed to what
+    a lane can edit."""
+    return {path for path in named_paths_of(text) if exists(path)}
 
 
 def _shown(files: list[str]) -> str:

@@ -268,6 +268,19 @@ class Document(BaseModel):
     cites: list[str]
     """The suggestion stems the document's head names, in order: the
     suggestions a plan carries (plan 06, item 5)."""
+    named_paths: list[str] = []
+    """Every repository path the text names in backticks, each once: the
+    ground the document declares (card #69), which the lane reader
+    narrows to the files that exist."""
+    named_cards: list[int] = []
+    """Every card the text cites as `#N`, each once: naming is citing
+    (card #69, ruling 4)."""
+    named_documents: list[str] = []
+    """The stems of every corpus document the text names by path,
+    backticked or plain."""
+    rulings: list[str] = []
+    """The bold leads under a plan's `## Rulings` heading, in order; empty
+    for a suggestion and for a plan that keeps its rulings elsewhere."""
     handouts: list[Handout]
     """Every `Hands out:` sentence in the body, in order, each with its item
     (plan 12, item 2); empty for a plan that hands nothing out."""

@@ -319,6 +319,11 @@ class StartState(StrEnum):
     TITLE_FAILS = "title fails"
     """A cold reading could not place the card from its title; Start stays
     closed until a reading of a rewritten title passes (card #74, item 3)."""
+    HOLD_UNREAD = "hold unread"
+    """The plan's Sequencing line means a hold the board cannot place — a
+    bare plan number, `plan N`, a project no board holds — so the writer
+    or the owner fixes the line before a lane starts early (card #69,
+    item 4)."""
 
 
 class Readiness(BaseModel):
@@ -334,6 +339,9 @@ class Readiness(BaseModel):
     waits: list[Wait]
     """The cards the plan's Sequencing names that have not shipped, when the
     state is `waits`."""
+    unplaced: list[str] = []
+    """The names on the Sequencing line the board could not place, as
+    written, when the state is `hold unread`."""
 
 
 class Doors(BaseModel):

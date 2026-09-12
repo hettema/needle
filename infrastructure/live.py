@@ -22,6 +22,7 @@ from pathlib import Path
 from board.assemble import (
     assemble_board,
     assemble_detail,
+    beside_of,
     card_gate,
     document_of,
     folded_under,
@@ -59,6 +60,7 @@ from domain.focus import (
     ReadingKind,
 )
 from domain.lane import Doors, Lane, LaneSnapshot
+from domain.neighbour import Beside
 from domain.notice import Shown
 from domain.project import Project
 from domain.row import Row
@@ -112,6 +114,10 @@ class LiveProject:
         self.task: asyncio.Task[None] | None = None
         self.snapshot: LaneSnapshot | None = None
         """Every lane and every card's doors, as the loop last read them."""
+        self.beside: tuple[tuple[object, ...], dict[int, Beside]] | None = None
+        """The neighbours reading of the last read, with the key it was read
+        under (the index and the cards' identities), so a board read and an
+        open card read the same reading (card #69)."""
 
 
 class Live:
@@ -306,6 +312,24 @@ class Live:
             raise StoreRefusal(f'No project "{slug}" is on the board.')
         return live
 
+    def beside(self, slug: str, cards: list[Card] | None = None) -> dict[int, Beside]:
+        """Every card's neighbours on this project as of the last corpus
+        read (card #69, item 1): read once per index and card set and
+        kept, since the board read and the open card's detail must show
+        one reading and the index only changes when the corpus does."""
+        live = self._live(slug)
+        cards = cards if cards is not None else self.store.cards(slug)
+        key = (
+            live.index.read_at,
+            tuple(
+                (c.number, c.link.stem if c.link is not None else None, c.folded_into)
+                for c in cards
+            ),
+        )
+        if live.beside is None or live.beside[0] != key:
+            live.beside = (key, beside_of(cards, live.index))
+        return live.beside[1]
+
     def sources(self, slug: str) -> Sources:
         """A source reader for one read of one project: the corpus's own
         paths resolved against the project root, and a card number resolved
@@ -323,10 +347,12 @@ class Live:
     def board(self, slug: str) -> BoardState:
         live = self._live(slug)
         focus, leverages, leverage = self.focus_of(slug)
+        cards = self.store.cards(slug)
         return assemble_board(
             project=live.project,
             layout=self.store.layout(slug),
-            cards=self.store.cards(slug),
+            cards=cards,
+            beside=self.beside(slug, cards),
             index=live.index,
             version=self.version,
             watching=live.watching,
@@ -580,6 +606,7 @@ class Live:
             title_reading=self.store.latest_title_readings(slug).get(number),
             leverage=self.focus_of(slug)[1].get(number),
             team=self.store.composition(slug, number),
+            beside=self.beside(slug).get(number),
         )
 
     def lane_and_doors(self, slug: str, card: Card) -> tuple[Lane | None, Doors]:

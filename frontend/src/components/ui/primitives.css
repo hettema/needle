@@ -531,6 +531,26 @@ button.chip:focus-visible { outline: 2px solid var(--ink); outline-offset: 1px; 
 .card.open .heard .hsay { white-space: normal; }
 .heard .hwho { flex: none; font-family: var(--mono); font-size: 9px; letter-spacing: .09em; text-transform: uppercase; }
 .heard .hsay { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* What a document sits beside (card #69): quiet like the watercooler's
+ * line while it names its neighbours; in the broken colour, counted on the
+ * head, when it does not. */
+.beside {
+  display: flex; align-items: baseline; gap: 7px;
+  margin-top: 7px;
+  font-size: 11px; line-height: 1.4; color: var(--ink-3);
+}
+.beside[data-meaning] { color: var(--meaning); }
+.beside .bwho { flex: none; font-family: var(--mono); font-size: 9px; letter-spacing: .09em; text-transform: uppercase; }
+.beside .bsay { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.card.open .beside { margin: 0 0 8px; }
+.card.open .beside .bsay { white-space: normal; }
+.neighbours { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.neighbour { display: flex; flex-direction: column; gap: 2px; font-size: 12px; line-height: 1.45; }
+.neighbour .nhead { display: flex; flex-wrap: wrap; gap: 4px 8px; align-items: baseline; }
+.neighbour .nground { font-family: var(--mono); font-size: 10px; color: var(--ink-3); }
+.neighbour[data-meaning] .nground { color: var(--meaning); }
+.neighbour .nsay { color: var(--ink-2); }
+.neighbour .nrulings { font-size: 11px; color: var(--ink-3); }
 .standing {
   font-family: var(--mono); font-size: 9px; letter-spacing: .07em; text-transform: uppercase;
   padding: 2.5px 6px; border-radius: var(--r-chip); white-space: nowrap;

@@ -10,7 +10,7 @@ A skipper pays what the tariff says today. A slip that shows last month's price 
 
 ## Observation
 
-`office/slip.py::price_of` reads the tariff table by the month the berth was let, not the month the slip is printed. Every tariff change since spring has produced a week of wrong slips.
+`office/slip.py::price_of` reads the tariff table in `office/pricing.py` by the month the berth was let, not the month the slip is printed. Every tariff change since spring has produced a week of wrong slips.
 
 ## What would hold it
 

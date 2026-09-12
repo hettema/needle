@@ -64,6 +64,10 @@ export interface Document {
   fix?: Fix | null;
   fix_note?: string | null;
   cites: string[];
+  named_paths?: string[];
+  named_cards?: number[];
+  named_documents?: string[];
+  rulings?: string[];
   handouts: Handout[];
   items: Item[];
   head_fields: HeadField[];

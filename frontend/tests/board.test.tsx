@@ -1407,6 +1407,58 @@ describe("the colour language", () => {
   });
 });
 
+describe("what a document sits beside (card #69)", () => {
+  it("shows the neighbours on the resting card as a quiet fact, lists them on the open one, and counts one born unnamed on the head", async () => {
+    // The fixture's slip defect names office/pricing.py, which two live plans
+    // name in their Terrain — read by the real derivation, born before the reader.
+    const b = board();
+    const slip = cardOf(b, 268);
+    expect(slip.beside?.sentence).toBe("sits beside #109, #219 on office/pricing.py and does not name them.");
+    expect(slip.beside?.counted).toBe(false);
+    // The same card born after the reader is counted, and the head says so.
+    const clears = "the reading that verifies its mark folds it into #109, #219 or cites #109, #219 in the file";
+    slip.beside = { ...slip.beside!, counted: true, born: "2026-09-20", clears };
+    slip.claims = ["beside unnamed"];
+    withClaims(b, "broken", [["beside unnamed", 1]]);
+    const d = detail(268);
+    d.summary.beside = slip.beside;
+    api.getBoard.mockResolvedValue(b);
+    api.getCard.mockResolvedValue(d);
+    await renderBoard();
+    // The Defects column starts furled on a laptop; the slip defect is in it.
+    await userEvent.click(screen.getByRole("button", { name: "Defects — click to unfurl" }));
+    // A candidate by words is said as one, quietly.
+    const forgets = screen.getByText("#265").closest("article") as HTMLElement;
+    expect(within(forgets).getByRole("note")).toHaveTextContent("besidenear #196 by its words — a candidate, not a verdict.");
+    // The counted card carries the broken colour and the head counts it.
+    const resting = screen.getByText("#268").closest("article") as HTMLElement;
+    const line = within(resting).getByRole("status");
+    expect(line).toHaveTextContent("unnamedsits beside #109, #219 on office/pricing.py and does not name them.");
+    expect(line.dataset["meaning"]).toBe("broken");
+    expect(line).toHaveAttribute("title", `Cleared when ${clears}`);
+    expect(screen.getByRole("button", { name: /^Broken/ })).toHaveTextContent("Broken 1");
+    // The open card lists each neighbour with its intent sentence and its ground.
+    await userEvent.click(screen.getByText("The slip shows last month's price"));
+    const open = await waitFor(() => {
+      const el = screen.getByText("#268").closest("article") as HTMLElement;
+      expect(el.className).toContain("open");
+      return el;
+    });
+    const section = (await within(open).findByText("Beside it")).closest(".sec") as HTMLElement;
+    expect(section).toHaveTextContent("born 2026-09-20 beside 2 it does not name");
+    const listed = within(section).getAllByRole("listitem");
+    expect(listed).toHaveLength(2);
+    expect(listed[0]).toHaveTextContent("#109 The skipper sees the price before the berth");
+    expect(listed[0]).toHaveTextContent("on office/pricing.py · not named");
+    expect(listed[0]).toHaveTextContent("A skipper knows what a night costs before choosing where to lie.");
+    expect(listed[0]?.dataset["meaning"]).toBe("broken");
+    // The head's word filters the board to the card carrying the claim.
+    await userEvent.click(screen.getByRole("button", { name: /^Broken/ }));
+    const shown = Array.from(document.querySelectorAll("article")).map((el) => el.querySelector(".cid")?.textContent);
+    expect(shown).toEqual(["#268"]);
+  });
+});
+
 describe("the focus strip and the Leverage lens (card #87)", () => {
   it("shows the chosen focus on every lens, and the lens shows the board as the focus would arrange it without writing", async () => {
     await renderBoard();

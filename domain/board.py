@@ -19,6 +19,7 @@ from domain.hook import HeardMark
 from domain.lane import Collision, Conversation, Doors, Lane, LaneState, Progress
 from domain.machine import MachineRoom
 from domain.meaning import OPENING, Meaning, opened, opening_of
+from domain.neighbour import Beside
 from domain.project import Project
 from domain.row import Row
 from domain.signal import Reading, Signal, SignalKind, WindowlessSession
@@ -78,6 +79,15 @@ class Claim(StrEnum):
     The pile drained at zero for the board's whole life partly because
     nothing counted it: a door he cannot find is not a door (plan 59, item
     5)."""
+    BESIDE_UNNAMED = "beside unnamed"
+    """A live document born beside a neighbour on its ground that it does
+    not name (card #69, item 1): its writer's brief carried the neighbour
+    and the document says nothing of it. Cleared by an act on the file —
+    cite it, carry it, fold into it — never by ranking."""
+    HOLD_UNREAD = "hold unread"
+    """A plan whose Sequencing line means a hold the board cannot place —
+    a bare plan number, `plan N`, a project no board holds — so the hold
+    silently never held (card #69, item 4)."""
 
 
 CLAIM_MEANING: dict[Claim, Meaning] = {
@@ -100,6 +110,8 @@ CLAIM_MEANING: dict[Claim, Meaning] = {
     Claim.RULING_YOURS: Meaning.YOURS,
     Claim.TITLE_FAILS: Meaning.BROKEN,
     Claim.TITLE_BEING_READ: Meaning.LIVE,
+    Claim.BESIDE_UNNAMED: Meaning.BROKEN,
+    Claim.HOLD_UNREAD: Meaning.BROKEN,
 }
 """Which of the three head words each claim counts under; the two other
 meanings never claim anyone."""
@@ -245,6 +257,10 @@ class CardSummary(BaseModel):
     """How bad this defect is, from the reading that stands for its document
     today (card #100, item 2); None on anything but a graded defect, and on
     a defect whose document changed since it was graded."""
+    beside: Beside | None = None
+    """The live documents on this document's ground, read against the
+    project's corpus on every read (card #69, item 1); None for a card
+    with no live document, and for one beside nothing."""
 
 
 class GroupView(BaseModel):

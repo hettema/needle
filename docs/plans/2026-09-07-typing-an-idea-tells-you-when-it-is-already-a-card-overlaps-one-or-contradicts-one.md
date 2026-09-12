@@ -6,6 +6,7 @@
 **Effort gate:** high — the code is four readers widened (the corpus read against itself, the briefs, the head's claims, the Sequencing verdict) with a fixture test each and a page change behind them; the judgment is what counts as a neighbour and what the door says about one, and a reading that gets it wrong is silent: a door that names no neighbour looks exactly like a door with none to name.
 **Class:** the head counts live documents beside a neighbour they do not name, as a broken claim beside "document without card", on every board; and a reader of another make reads the first ten births after the fold for conflicts missed, invented or silently chosen (the Loop), so a wrong reading is loud within three weeks, never silent.
 **Formerly:** The door tells you when your idea is already a card, overlaps one or contradicts one, and nothing is born blind to its neighbours (retitled 2026-09-07 to the bar docs/plans/README.md sets, card #74 on Needle)
+**Challenged:** 2026-09-12, by claude (opus on gmail, session c288acc6, call 109): 9 material corrections before build
 
 ## Intent
 
@@ -256,6 +257,83 @@ no grammar change: `docs/plans/README.md` is not touched (ruling 4).
   so there is no door to refuse at — while the count after landing and the
   reading before routing are the mechanisms; by HOW-WE-WORK §5 a failure
   that shows loud on the head within one read may stay a convention.
+
+### From the challenge before build (2026-09-12, call 109)
+
+A colleague of the same make with no share of the lane's context read the
+plan and the lane's design cold and measured the reading over Needle's 63
+and Hello Revenue's 224 live documents. Nine corrections, each landed
+here because the plan's letter would have failed its intent:
+
+- **Ground is what a document names, not what exists.** The lane reads
+  neighbours by the paths a document names whether or not the file exists
+  today: two plans naming a file one of them will create share ground, the
+  reader stays pure, and the fixture project has no source tree, so the
+  done-means could not be tested through `footprint`'s existence check.
+  Cost named: a mistyped or long-renamed path is ground too.
+- **A path or a word nearly every document shares is not ground.** The
+  challenge measured 199 file-ground pairs on Needle and 671 on Hello
+  Revenue, nearly all through the few core files every plan names, and a
+  word rule of "two shared words" gave a median of 21 neighbours per
+  document on Needle. One rule for paths and words alike: what a large
+  share of the project's live documents name is glue, not ground — the
+  cut is a share of the live corpus, read per project on every read, never
+  a hand-kept list, so `docs/plans/README.md` drops out and a live plan
+  three documents cite stays. Words are scored by rarity in the project's
+  own live corpus, a candidate needs a floor the measurement set
+  (`board/neighbours.py` carries the numbers), and the three shown are
+  ordered by score then card number so the list never flickers between
+  reads. Rejected: a blanket drop of `docs/` (loses the real citations of
+  a live plan), and a hand-written stop list (the glue is the project's
+  own nouns).
+- **The count starts at the reader's birth.** Fifty of Needle's 63 live
+  documents, and 156 of Hello Revenue's 224, would carry the claim on day
+  one — documents born blind before any brief carried a neighbour, which
+  is not the failure the count exists to show, and fifty rows on the
+  owner's pile is the eight parked decisions §1 was shaped by, sixfold.
+  So a document counts only when its card was born on or after the
+  reader shipped (`board/neighbours.py::COUNTED_FROM`); older documents
+  show their neighbours on the card and in every brief as a quiet fact,
+  and the Loop's "expect 0" reads the count as a claim about births.
+- **Naming is every form a writer already uses.** A `Carries:` line is
+  written without backticks four times in six on Needle, and a
+  Sequencing name is read by its own parser; so a document names a
+  neighbour when its text cites the neighbour's card (`#N`), its
+  Sequencing line names it, or the neighbour's document path appears
+  anywhere in the text, backticked or plain.
+- **The row names an act the board can see.** "The owner clears it when he
+  ranks" asked for an act that edits nothing: ranking moves a card and
+  the claim lifts only when the document names the neighbour. The row says
+  what clears it — cite it, carry it, or fold this card into it — and for
+  a plan, that Discuss puts a session on it that can; for a defect, the
+  reading that verifies its mark.
+- **A word candidate never counts on the head.** Every document shares
+  words with something, so a count that included candidates could never
+  reach the Loop's zero; only file ground counts, and a candidate shows on
+  the card and in the briefs said as a candidate (ruling 3).
+- **`after #999` is not unplaced.** A `#N` no board holds yet holds today,
+  loudly and self-clearingly ("starts by itself once #999 (not on the
+  board) ships"), which is the shape of a card not yet born; item 4 reads
+  as unplaced only the names the grammar genuinely loses — a bare number,
+  `plan N`, and `<Words> #N` whose words are no project's — and carries
+  the tail the strict reading dropped after the first such name, since
+  "after HR #409 and #123" silently held nothing.
+- **The block goes into the briefs that write, not into `render`.**
+  `render` is read by `needle card`, the Plan door per carried card and
+  the Execute door; the neighbours block is its own function composed into
+  the five briefs item 2 names and the Idea door, and the Plan door gets
+  it once.
+- **The trigger a reading writes costs no session.** A `now` on ground a
+  live plan covers lands as `when` with a `command` trigger that reads the
+  plan's card column through `needle card`, never a `session` row that
+  opens a windowless reading every two days per routed defect.
+- Also settled: the Idea door's three-way instruction replaces its existing
+  "say when it is already in the corpus under another name" sentence
+  rather than sitting beside it; `#N` is read by the parser's one card
+  reference; the rulings a brief carries are the bold leads under a plan's
+  `## Rulings` heading, which is Needle's shape — a board whose plans keep
+  rulings in a bold numbered list carries none, as the item's "where the
+  plan has a Rulings section" already allows.
 
 ## Deliberately not
 

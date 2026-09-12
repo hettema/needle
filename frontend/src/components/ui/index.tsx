@@ -11,6 +11,7 @@ import type { DialState } from "../../types/dial";
 import type { CardLeverage, FocusState, FocusStrip, Leverage, ProposedMove } from "../../types/focus";
 import type { DocumentState, Fix, Item, Review, SuggestionKind } from "../../types/document";
 import type { Progress } from "../../types/lane";
+import type { Beside } from "../../types/neighbour";
 import type { Standing } from "../../types/evidence";
 import type { RowKind } from "../../types/row";
 import type { Routed } from "../../types/triage";
@@ -1035,6 +1036,42 @@ export function Passes({ review }: { review: Review }) {
         </div>
       ))}
     </div>
+  );
+}
+
+/**
+ * What a document sits beside (card #69, item 1): the live documents on its
+ * ground, in the board's one sentence. Quiet while the document names them
+ * or was born before the reader; broken — counted on the head — when it
+ * does not name a file neighbour and was born once the brief carried it.
+ */
+export function BesideLine({ beside }: { beside: Beside }) {
+  if (!beside.sentence) return null;
+  return (
+    <div className="beside" role={beside.counted ? "status" : "note"} {...(beside.counted ? { "data-meaning": "broken" as const } : {})} title={beside.clears ? `Cleared when ${beside.clears}` : "Read from the corpus on every read; shown, never enforced"}>
+      <span className="bwho">{beside.counted ? "unnamed" : "beside"}</span>
+      <span className="bsay">{beside.sentence}</span>
+    </div>
+  );
+}
+
+/** The open card's list of neighbours: each with its intent sentence, its ground and whether this document names it. */
+export function Neighbours({ beside }: { beside: Beside }) {
+  return (
+    <ul className="neighbours">
+      {beside.neighbours.map((n) => (
+        <li key={n.number} className="neighbour" data-ground={n.ground} {...(n.ground === "files" && !n.named ? { "data-meaning": "broken" as const } : {})}>
+          <span className="nhead">
+            <Cid n={n.number} /> {n.title}
+            <span className="nground">
+              {n.ground === "files" ? `on ${n.files.join(", ")} · ${n.named ? "named" : "not named"}` : `by its words (${n.words.join(", ")}) · a candidate, not a verdict`}
+            </span>
+          </span>
+          {n.essence ? <span className="nsay">{n.essence}</span> : null}
+          {n.rulings.length ? <span className="nrulings">Its rulings: {n.rulings.join("; ")}.</span> : null}
+        </li>
+      ))}
+    </ul>
   );
 }
 
