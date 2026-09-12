@@ -8,6 +8,7 @@ ends up living in a database session, or a process in the board.
 """
 
 import ast
+import sys
 
 from tests.ratchets.paths import BACKEND_PACKAGES, python_files
 
@@ -22,28 +23,10 @@ ALLOWED: dict[str, set[str]] = {
 PURE_THIRD_PARTY = {"pydantic"}
 """What domain/ and board/ may import beyond the standard library."""
 
-STDLIB_HINT = {
-    "re",
-    "html",
-    "enum",
-    "datetime",
-    "typing",
-    "collections",
-    "dataclasses",
-    "pathlib",
-    "json",
-    "hashlib",
-    "os",
-    "sys",
-    "inspect",
-    "importlib",
-    "types",
-    "functools",
-    "itertools",
-    "asyncio",
-    "contextlib",
-    "argparse",
-}
+STDLIB = frozenset(sys.stdlib_module_names)
+"""The standard library as the interpreter itself names it — never a
+hand-kept list, which refused `math` the first time a pure reader took a
+logarithm (card #69)."""
 
 
 def _imports(source: str) -> set[str]:
@@ -69,7 +52,7 @@ def test_no_layer_imports_upward():
 def test_domain_and_board_stay_pure():
     for package in ("domain", "board"):
         for path in python_files(package):
-            third = _imports(path.read_text(encoding="utf-8")) - set(BACKEND_PACKAGES) - STDLIB_HINT
+            third = _imports(path.read_text(encoding="utf-8")) - set(BACKEND_PACKAGES) - STDLIB
             unexpected = third - PURE_THIRD_PARTY
             assert not unexpected, (
                 f"{path} imports {unexpected}; {package} is pure and may use only pydantic "

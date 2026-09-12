@@ -124,6 +124,7 @@ the fixture a triage reading of a `now` whose files a live
 plan's Terrain names lands `when` on that plan's card
 (`tests/api/test_triage.py`).
 Hands out: execution — the backend and frontend suites after the brief change (`uv run pytest -q`, `npx vitest run --root frontend`), every failure verbatim; verifies by re-running the one failing test it reports before acting on it.
+**Met:** `tests/board/test_brief.py::test_every_brief_that_writes_a_document_carries_the_neighbours_by_intent` reads the neighbour line — card, title, intent sentence, path, ground, rulings — in the reading brief, the planning brief and the mark's reading, the three dispositions in the planning brief, the look-first sentence in the filing rule (and so in every brief that carries it), and the `when` trigger's shape through the one signal parser; `tests/api/test_doors.py::test_the_discuss_door_and_the_lane_brief_carry_the_live_documents_beside_the_card` reads the lane brief and the Discuss door on the fixture; `tests/api/test_dial.py::test_a_now_on_ground_a_live_plan_covers_is_read_with_the_plan_beside_it_and_lands_when` opens the reading on a `now` defect naming `office/pricing.py`, which the fixture plan's Terrain names, reads the plan on its brief, lands `when` with a trigger on that plan's card through the triage verb, and reads the planning brief with the plan and the defect beside it. The triage test the item named `tests/api/test_triage.py` lives in `test_dial.py`, where the seat's helpers are.
 
 ### 3. The Idea door's first reply names each neighbour and what it is to the idea, before anything is written
 The opening line is not a document yet, so item 1's words read runs on the
@@ -161,6 +162,7 @@ Done means: on the fixture a plan with `**Sequencing:** after 08 and 11`
 shows the verdict line and its Start pill says so; `after #8` holds as
 today and opens when #8 ships; both forms are in
 `tests/board/test_sequencing.py`; the verdict's words are on the page.
+**Met:** `tests/api/test_doors.py::test_a_sequencing_line_naming_a_card_in_flight_holds_start_until_it_ships` writes `after 08 and 11` on the fixture's metered plan and reads the closed Start door's sentence, the pill `hold unread` with `['08', '11']`, the face word in the broken colour and the head's count; `after #241` holds and opens when #241 ships in the same test; both forms and the loose reading are in `tests/board/test_sequencing.py::test_a_line_that_means_a_hold_the_board_cannot_place_says_which_names`; the page renders the `hold unread` case from `tools/board_fixture.py`'s language table in `frontend/tests/board.test.tsx` ("the colour language"). One tightening beyond the letter: a `#N` no board holds keeps today's self-clearing wait, and only a name after a hold word counts, so "beside #15" stays shared ground (the challenge's correction).
 
 ## Terrain
 
