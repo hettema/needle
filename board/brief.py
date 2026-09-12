@@ -751,6 +751,8 @@ def decision_brief(
         "no commit, no push, no window. It writes nothing but its one result, and it never "
         "moves the card: the board moves it on your result, with the reason on its history.\n\n"
         + render(detail, project)
+        + "\n\n"
+        + beside_text(detail.summary.beside)
         + f"\n\nThe card's history, oldest first — who parked it and why is here:\n{history}"
         + document
         + f"\n\nThe rule, in the owner's words, ruled true on 2026-09-05:\n\n{THE_RULE}\n\n"

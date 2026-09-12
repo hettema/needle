@@ -13,6 +13,8 @@ project: Harbourmaster (<project>)
    open: docs/plans/2026-08-18-berth-first-booking.md (plan)
    lane: card-139-berth-first-booking-4-rulings — the worktree under .claude/worktrees/ named so the board sees hands on the card
 
+The live documents beside this card: none — no live plan or suggestion on this board shares its ground or its rare words.
+
 The card's history, oldest first — who parked it and why is here:
   2026-09-03  import born: Born from Needle 0.1's card file — column, position and 4 rows.
   2026-09-03  import linked: Linked to docs/plans/2026-08-18-berth-first-booking.md, cited on the 0.1 card.
