@@ -145,6 +145,13 @@ def settle(client: TestClient) -> None:
     client.portal.call(client.app.state.loops.settled)
 
 
+def rescan(client: TestClient) -> None:
+    """The corpus read, in the server's own thread: the watcher hears a
+    written file and rescans there too, and two sweeps of one birth from
+    two threads would card it twice (seen once under six parallel suites)."""
+    client.portal.call(client.app.state.loops.live.rescan, "proj")
+
+
 def reconcile(client: TestClient) -> None:
     """The lane loop, under its own lock: a direct call would race the
     registry watcher, which hears the floor's own state files move."""
@@ -1786,7 +1793,7 @@ def test_a_document_born_beside_a_neighbour_it_does_not_name_is_counted_and_the_
 
     # The reader is born the day after the fixture's cards were, so those
     # read as born blind and the one written below as born knowing.
-    monkeypatch.setattr(neighbours, "COUNTED_FROM", (NOW + timedelta(days=1)).date())
+    monkeypatch.setattr(neighbours, "COUNTED_FROM", NOW + timedelta(days=1))
     board = client.get("/api/projects/proj/board").json()
     before = claim_count(board, "beside unnamed")
     assert before == 0
@@ -1811,7 +1818,7 @@ def test_a_document_born_beside_a_neighbour_it_does_not_name_is_counted_and_the_
         "`office/pricing.py` caches the tariff for a day.\n",
         encoding="utf-8",
     )
-    client.app.state.loops.live.rescan("proj")
+    rescan(client)
     board = client.get("/api/projects/proj/board").json()
     assert claim_count(board, "beside unnamed") == before + 1
     card = next(
@@ -1851,7 +1858,7 @@ def test_a_document_born_beside_a_neighbour_it_does_not_name_is_counted_and_the_
         + ", whose plans show the price on the map.\n",
         encoding="utf-8",
     )
-    client.app.state.loops.live.rescan("proj")
+    rescan(client)
     board = client.get("/api/projects/proj/board").json()
     assert claim_count(board, "beside unnamed") == before
     card = summary_of(client, card["number"])
@@ -1867,7 +1874,7 @@ def test_a_document_born_beside_a_neighbour_it_does_not_name_is_counted_and_the_
         "waiting list is offered every berth that fits it.\n",
         encoding="utf-8",
     )
-    client.app.state.loops.live.rescan("proj")
+    rescan(client)
     board = client.get("/api/projects/proj/board").json()
     assert claim_count(board, "beside unnamed") == before
     card = next(

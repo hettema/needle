@@ -179,6 +179,18 @@ def test_a_line_that_means_a_hold_the_board_cannot_place_says_which_names():
         "Needle #20",
     ]
     assert held_names_of("depends on 12") == ["12"]
+    # A quantity after a hold word is not a plan number: what follows a bare
+    # number has to be the end, a separator, filler or another name.
+    for prose in (
+        "after 2 ChatGPT accounts exist",
+        "after 50 builds have run",
+        "once 10 clients are live",
+        "after 3 weeks of the signal",
+        "waits on 2 of the boards being level",
+        "after the 5 GB floor lands",
+    ):
+        assert held_names_of(prose) == [], prose
+    assert held_names_of("after 12 (the reader) and 13 (the item read)") == ["12", "13"]
     assert held_names_of("beside #15 (both add a call in `api/loops.py`)") == []
     assert held_names_of("beside 15 and 16 (all three touch `api/loops.py`).") == []
     assert held_names_of("Hello Revenue #411 first") == []

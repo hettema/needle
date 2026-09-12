@@ -248,6 +248,20 @@ def test_word_candidates_are_the_nearest_few_in_a_fixed_order():
     typed = corpus.by_words(words_of("a ledger of foghorn tests kept by the lighthouse keeper"))
     assert [n.number for n in typed] == [1, 2, 4]
     assert corpus.by_words(words_of("nothing here at all")) == []
+    # A board of three is read as one of eight when the floor is set: one
+    # shared word makes no candidate there, three rare ones do.
+    tiny = [
+        (card(1), suggestion("t1", "# One\n\n**Kind:** idea\n\n## Observation\n\nThe foghorn.\n")),
+        (
+            card(2),
+            suggestion("t2", "# Two\n\n**Kind:** idea\n\n## Observation\n\nA foghorn test.\n"),
+        ),
+        (card(3), suggestion("t3", "# Three\n\n**Kind:** idea\n\n## Observation\n\nThe quay.\n")),
+    ]
+    assert beside_all(tiny)[1].neighbours == []
+    assert [n.number for n in Corpus(tiny).by_words(words_of("the foghorn test at the quay"))] == [
+        2
+    ]
 
 
 def test_only_a_document_born_after_the_reader_counts(monkeypatch: pytest.MonkeyPatch):
@@ -258,7 +272,7 @@ def test_only_a_document_born_after_the_reader_counts(monkeypatch: pytest.Monkey
     assert read[1].unnamed == [2] and not read[1].counted and read[1].clears is None
     assert read[1].born == date(2026, 9, 1)
     assert read[2].unnamed == [1] and read[2].counted and read[2].clears is not None
-    monkeypatch.setattr(neighbours, "COUNTED_FROM", date(2026, 8, 1))
+    monkeypatch.setattr(neighbours, "COUNTED_FROM", datetime(2026, 8, 1, tzinfo=UTC))
     assert beside_all([(card(1, born=old), a), (card(2), b)])[1].counted
 
 

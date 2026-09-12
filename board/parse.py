@@ -408,11 +408,16 @@ plan may hang on it — "Needle #20 (Needle's plan 08, whose item 2 …)"."""
 
 
 _HELD_LOOSE = re.compile(
-    r"^(?:plans?\s+)?(\d{1,3})\b(?![-.:/]\d)\s*(?:\((?:[^()]|\([^()]*\))*\))?\s*"
+    r"^(?:(?P<plan>plans?\s+)?(\d{1,3}))\b(?![-.:/]\d)\s*(?:\((?:[^()]|\([^()]*\))*\))?"
+    r"\s*(?=$|[,;.—–-]|(?:after|behind|once|waits?\s+on|depends?\s+on|follows?|and|then|also|"
+    r"both|the|cards?)\b|(?:plans?\s+)?\d|#|[A-Z][\w'’-]*\s*#)"
 )
 """A name the hold grammar loses: a bare plan number ("after 08 and 11") or
 `plan N`, with a parenthesis the writer may hang on it — never a date or a
-time, which a digit after a separator marks."""
+time, which a digit after a separator marks, and never a quantity: a bare
+number counts only when what follows it is the end, a separator, filler or
+another name, so "after 2 ChatGPT accounts exist" and "after 3 weeks of the
+signal" hold on nothing (the review's first finding, 2026-09-12)."""
 
 
 _HOLD_WORD = re.compile(r"\b(?:after|behind|once|waits?\s+on|depends?\s+on|follows?)\b", re.I)

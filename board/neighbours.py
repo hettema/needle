@@ -31,28 +31,32 @@ their neighbours as a quiet fact.
 
 import math
 import re
-from datetime import date
+from datetime import UTC, datetime
 
 from domain.card import Card
 from domain.document import Document, DocumentKind, SuggestionKind
 from domain.neighbour import Beside, Neighbour, NeighbourGround
 
-COUNTED_FROM = date(2026, 9, 13)
-"""The day this reader shipped: a document whose card was born on or after
-it counts on the head when it names no neighbour, because its writer's
-brief carried the neighbour (item 2). Earlier births were blind and are
-shown, never counted (the challenge before build, 2026-09-12)."""
+COUNTED_FROM = datetime(2026, 9, 12, 21, 45, tzinfo=UTC)
+"""The moment this reader shipped: a document whose card was born at or
+after it counts on the head when it names no neighbour, because its
+writer's brief carried the neighbour (item 2). Earlier births were blind
+and are shown, never counted (the challenge before build, 2026-09-12). A
+moment and not a day, in UTC as cards are born: a day would have exempted
+every birth between the fold and midnight (the review's second finding)."""
 
 GLUE_SHARE = 0.08
 """A path or a word named by more than this share of a project's live
-documents is glue, not ground. Measured 2026-09-12 over Needle (63 live
-documents), Hello Revenue (224) and Omarchy (27): at this share Needle's
-glue is its nine core files and two doctrine documents (`api/loops.py`,
-`api/doors.py`, `board/assemble.py`, `docs/plans/README.md` …), a grounded
-document has a median of three file neighbours (fifteen at most, from
-twenty-five at 0.12), and a live plan three documents cite stays ground;
-Hello Revenue's paths are spread so wide that nothing there is glue and
-its median is four."""
+documents is glue, not ground. Measured 2026-09-12 at 21:10Z over the
+corpora as they stood — Needle 65 live documents, Hello Revenue 226,
+Omarchy 27 (the numbers move with the corpus; the reading is per read):
+Needle's glue is eleven paths — eight code files (`api/loops.py`,
+`api/doors.py`, `board/assemble.py`, `board/lane.py` …) and three doctrine
+documents — a grounded Needle document has a median of two file
+neighbours and twelve at most (twenty-five at 0.12), and a live plan three
+documents cite stays ground; Hello Revenue's paths are spread so wide
+that nothing there is glue and its grounded median is between three and
+four; Omarchy has no glue and a median of nought."""
 
 GLUE_FLOOR = 6
 """The share never turns a path five documents name into glue on a small
@@ -67,13 +71,21 @@ card number, so the list is the same on every read."""
 RARE_WORDS = 2
 """The rarity a word candidate needs: as much as this many words each shared
 by only two documents on the board. A shared word scores ln(N / namers), so
-the floor is RARE_WORDS × ln(N / 2) — 4.8 on the fixture's 22 documents, 6.9
-on Needle's 63, 9.4 on Hello Revenue's 224 — and grows with the board, since
+the floor is RARE_WORDS × ln(N / 2) — 4.8 on the fixture's 22 documents, 7.0
+on Needle's 65, 9.5 on Hello Revenue's 226 — and grows with the board, since
 on a large board two rare words are a stronger sign than on a small one.
-Measured 2026-09-12: read by their own words, 15 of Needle's 63 live
-documents find a candidate, 111 of Hello Revenue's 224 and 3 of Omarchy's
-27, never more than three; a fixed floor of 3 found three for every
-document, which is a list and not a candidate."""
+Measured 2026-09-12 at 21:10Z, same corpora as `GLUE_SHARE`: read by their
+own words, 15 of Needle's 65 live documents find a candidate, 120 of Hello
+Revenue's 226 and 10 of Omarchy's 27, never more than three; a fixed floor
+of 3 found three for every document, which is a list and not a
+candidate."""
+
+SMALL_BOARD = 8
+"""A board with fewer live documents than this is read as one of this many
+when the words are weighed and the floor is set, so a candidate on a board
+of three still needs rare words in common: with N alone the floor
+RARE_WORDS × ln(N / 2) is nothing at two documents and less than one
+shared word at three (the review's fourth finding)."""
 
 STOP_WORDS: frozenset[str] = frozenset(
     [
@@ -289,8 +301,12 @@ class Corpus:
             card.number: {p for p in document.named_paths if not _glue(path_count[p], total)}
             for card, document in self.pairs
         }
+        # A small board is read as one of SMALL_BOARD documents for the
+        # weights and the floor alike, so a candidate always needs rare
+        # words in common and a board of three is not all candidates.
+        self.size = max(total, SMALL_BOARD)
         self.weight: dict[str, float] = {
-            word: math.log(total / count)
+            word: math.log(self.size / count)
             for word, count in word_count.items()
             if not _glue(count, total)
         }
@@ -299,7 +315,7 @@ class Corpus:
         """The nearest documents to a set of words, as candidates: the
         rarity score of the words shared, above the floor, the top few in a
         fixed order. `but` leaves one card out — the document's own."""
-        floor = RARE_WORDS * math.log(max(len(self.pairs), 2) / 2)
+        floor = RARE_WORDS * math.log(self.size / 2)
         scored: list[tuple[float, int, Card, Document, list[str]]] = []
         for card, document in self.pairs:
             if card.number == but:
@@ -351,7 +367,7 @@ class Corpus:
             n.number for n in neighbours if n.ground == NeighbourGround.FILES and not n.named
         ]
         born = card.born_at.date()
-        counted = bool(unnamed) and born >= COUNTED_FROM
+        counted = bool(unnamed) and card.born_at >= COUNTED_FROM
         return Beside(
             neighbours=neighbours,
             unnamed=unnamed,
