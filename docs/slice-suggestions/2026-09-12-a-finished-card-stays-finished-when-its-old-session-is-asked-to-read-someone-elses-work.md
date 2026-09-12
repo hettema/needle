@@ -38,3 +38,23 @@ and the honest answer was that nothing was happening on it at all.
 - Not the same thing as a lane whose work is genuinely unfinished: the card
   had its close recorded, its plan archived, its review record written and
   its work folded, and the board had already stopped its session once.
+- The guard meant to refuse exactly this is defeated by its own clock.
+  `board/lane.py:621 should_enter_executing` does refuse a card that already
+  says DELIVERED — but only when the DELIVERED row was written *after* this
+  life's hands went on (`:626-630`, `lane.hands_on_since`). Card #123's
+  DELIVERED was written 2026-09-11T17:41Z and these hands went on
+  2026-09-12T14:20Z, so the guard reads the card's own close as stale and
+  lets it through. The guard's narrower shape was right for what shaped it
+  (a second life of the *same* work, card #147, named at `:653`); it was
+  never asked about a session sitting there for a *different* card.
+- The exit is wrong too, so the card does not simply go back when the
+  session leaves. `board/lane.py:744 where_a_card_goes` asks
+  `close_is_current` (`:673`), which measures the close against the moment
+  the card last entered Executing — the spurious entry. The close is older
+  than that, so it reads as a previous life's, and the card falls to the
+  next clause (`:769`): **Decision moment**, "the work folded into
+  origin/develop, but no session wrote it up". That sentence is false — the
+  write-up, the review record and the archived plan are all on the card —
+  and it puts a shipped card back on the owner's attention for a reason
+  nobody can act on. Both reads take the same correction: ask the session
+  which card it was started for.
