@@ -130,8 +130,7 @@ def test_a_suggestion_naming_a_file_a_live_plans_terrain_names_sits_beside_that_
     assert beside.neighbours[0].essence.startswith("A season's real bookings say")
     assert beside.unnamed == [judged.number, see.number]
     assert beside.sentence == (
-        f"sits beside #{judged.number}, #{see.number} on office/pricing.py and does not name "
-        "them."
+        f"sits beside #{judged.number}, #{see.number} on office/pricing.py and does not name them."
     )
     # A defect's count is cleared by the reading that verifies its mark.
     assert beside.counted and beside.clears is not None
@@ -163,7 +162,7 @@ def test_a_suggestion_naming_no_file_shows_the_nearest_by_words_as_a_candidate()
 
 
 def test_a_document_that_carries_or_cites_the_neighbour_clears_the_count():
-    a = plan("a", "# A\n\n**Effort gate:** low — x\n\n## Intent\n\nOne.\n\n## Terrain\n\n`x/y.py`\n")
+    a = plan("a", "# A\n\n**Effort gate:** low — x\n\n## Intent\n\nOne.\n\n## Terrain\n\n`x/y.py`")
     # Cites the neighbour's card in prose.
     b = plan("b", "# B\n\n## Intent\n\nBeside #1, whole without it.\n\n## Terrain\n\n`x/y.py`\n")
     # Carries the neighbour by a plain path, no backticks.
@@ -174,7 +173,9 @@ def test_a_document_that_carries_or_cites_the_neighbour_clears_the_count():
     )
     d = suggestion("d", "# D\n\n**Kind:** idea\n\n## Observation\n\nSeen in `x/z.py`.\n")
     # Names the neighbour on its Sequencing line.
-    e = plan("e", "# E\n\n**Sequencing:** after #1.\n\n## Intent\n\nThree.\n\n## Terrain\n\n`x/w.py`\n")
+    e = plan(
+        "e", "# E\n\n**Sequencing:** after #1.\n\n## Intent\n\nThree.\n\n## Terrain\n\n`x/w.py`\n"
+    )
     f = plan("f", "# F\n\n## Intent\n\nFour.\n\n## Terrain\n\n`x/w.py`\n")
     pairs = [(card(1), a), (card(2), b), (card(3), c), (card(4), d), (card(5), e), (card(6), f)]
     read = beside_all(pairs + padding(30, 10))

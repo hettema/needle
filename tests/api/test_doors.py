@@ -1668,7 +1668,7 @@ def test_the_close_refuses_executed_while_the_archived_plan_carries_an_unstanced
     assert capsys.readouterr().out.startswith("#253 closed into Executed")
 
 
-def test_a_document_born_beside_a_neighbour_it_does_not_name_is_counted_and_the_row_says_who_clears_it(
+def test_a_document_born_beside_a_neighbour_it_does_not_name_is_counted_and_the_row_says_who_clears(
     client: TestClient, repo: Path, monkeypatch: pytest.MonkeyPatch
 ):
     """Card #69, item 1: a suggestion born naming a file a live plan's Terrain
@@ -1751,7 +1751,8 @@ def test_a_document_born_beside_a_neighbour_it_does_not_name_is_counted_and_the_
     assert claim_count(board, "beside unnamed") == before
     card = summary_of(client, card["number"])
     assert not card["beside"]["counted"]
-    assert next(n for n in card["beside"]["neighbours"] if n["number"] == pricing["number"])["named"]
+    named = next(n for n in card["beside"]["neighbours"] if n["number"] == pricing["number"])
+    assert named["named"]
 
     # A candidate by words: shown, said as one, never counted.
     words = repo / "docs" / "slice-suggestions" / "2026-09-06-the-waiting-list-loses-a-boat.md"
