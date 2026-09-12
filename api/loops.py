@@ -2503,7 +2503,7 @@ class Loops:
             last = readings.get(card.number)
             asks_owner = signal_asks_owner(card, signal, last, now)
             if not asks_owner:
-                # A Backlog defect's trigger asks him the same way (plan 11, item 5).
+                # A defect's trigger asks him the same way (plan 11, item 5).
                 trigger, _ = trigger_signal(document)
                 if trigger_asks_owner(card, trigger, last, now):
                     signal, asks_owner = trigger, True
@@ -2531,7 +2531,7 @@ class Loops:
 
     def read_signals_now(self) -> None:
         """Read every Executed card's signal whose cadence asks for it, and
-        move the card on what it says; and every Backlog defect's `Fix: when`
+        move the card on what it says; and every defect's `Fix: when`
         trigger on the same cadence by the same readers (plan 11, item 5),
         which moves nothing — a delivered trigger makes the defect eligible
         for the dial. A `session` signal is read by a session the loop starts

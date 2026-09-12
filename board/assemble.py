@@ -1096,12 +1096,18 @@ def defects_column(
     defects nobody has read yet, since a grade is what the order is made of
     and an unread defect has none. The store's groups are read whole and
     re-drawn; nothing here writes. The line under the column's name counts
-    what `routing_of` says of each card — how many are his, how many nobody
-    has read yet, how many wait on a signal, how many are fixing themselves —
-    and never the words."""
+    what `routing_of` says of each graded card — how many are his, how many
+    wait on a signal, how many are fixing themselves — beside the unread,
+    counted by the same predicate as the line over them, and never the
+    words."""
     summaries = [summary for group in groups for summary in group.cards]
     graded = [s for s in summaries if s.grade is not None]
     unread = [s for s in summaries if s.grade is None]
+    # One predicate for the line over the unread and the head's count of
+    # them: a card is read once a grade stands for its document today.
+    # The head splits the graded by where they route, and names apart the
+    # cards with no live document, which route nowhere (the cold review of
+    # card #100 found the two lines one apart on the served board).
 
     def key(summary: CardSummary):
         card = cards[summary.number]
@@ -1112,14 +1118,13 @@ def defects_column(
     drawn = [GroupView(name=None, cards=graded)]
     if unread:
         drawn.append(GroupView(name=f"{len(unread)} {UNREAD_LINE}", cards=unread, machine=True))
-    counts = {"yours": 0, "unread": 0, "waits": 0, "fixing": 0, "unsettled": 0}
+    counts = {"yours": 0, "waits": 0, "fixing": 0, "unsettled": 0, "no_document": 0}
     for summary in summaries:
         routed = summary.routing
-        triage = triages.get(summary.number)
         if routed is None:
-            continue
-        if triage is None or routed.state == Routing.STALE:
-            counts["unread"] += 1
+            counts["no_document"] += 1
+        elif summary.grade is None:
+            continue  # counted once, as the unread
         elif routed.state == Routing.TRIAGED_HIS:
             counts["yours"] += 1
         elif routed.state == Routing.TRIAGED_WHEN:
@@ -1130,12 +1135,14 @@ def defects_column(
             counts["unsettled"] += 1
     parts = [
         f"{counts['yours']} yours",
-        f"{counts['unread']} {UNREAD_LINE}",
+        f"{len(unread) - counts['no_document']} {UNREAD_LINE}",
         f"{counts['waits']} waiting on a signal",
         f"{counts['fixing']} fixing themselves",
     ]
     if counts["unsettled"]:
         parts.append(f"{counts['unsettled']} read and settled by nobody")
+    if counts["no_document"]:
+        parts.append(f"{counts['no_document']} with no live document")
     return drawn, " · ".join(parts)
 
 

@@ -201,7 +201,7 @@ class Review(BaseModel):
     filed: int
     filed_names: list[str]
     """The filed findings by their disposition titles: what this lane will
-    not fix, and what lands on the defects rail when it folds."""
+    not fix, and what lands in Defects when it folds."""
     dispositions: list[Disposition]
     verdicts: list[ColdRead]
     caught: int

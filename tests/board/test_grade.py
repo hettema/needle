@@ -78,6 +78,15 @@ def test_a_grade_names_all_three_parts_with_their_words_or_nothing_alone():
     assert band_of(nothing) == Band.NOTHING
     with pytest.raises(ValidationError, match="names no reach"):
         grade(Breaks.NOTHING, Reach.YOU, None)
+    with pytest.raises(ValidationError, match="names no reach"):
+        Grade(
+            breaks=Breaks.NOTHING,
+            breaks_words="nothing is wrong",
+            reach=None,
+            reach_words="stray words",
+            often=None,
+            often_words=None,
+        )
 
 
 def test_the_band_is_the_doctrines_two_cuts_in_order():

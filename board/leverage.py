@@ -21,7 +21,7 @@ The rules, each held by a test in `tests/board/test_leverage.py`:
   never a score;
 - a card in Up next that does not address the limit is shown in Not now
   with a wake trigger written from the focus's recheck;
-- a Backlog defect that helps remove the limit stays where it is with the
+- a defect (in Defects) that helps remove the limit stays where it is with the
   Plan door open, never in Up next: the corpus is the status and a
   suggestion cannot enter execution without a plan;
 - protects-progress cards keep their column and order after the

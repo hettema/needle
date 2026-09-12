@@ -29,7 +29,8 @@ const IDLE: MoveStatus = { kind: "idle" };
 
 export function GroupBlock({ column, group, slots, open, focused, statuses, draggable, lens, selected, moves, onOpen, onRetry, onFocus, onMoveTo, onSelect }: GroupBlockProps) {
   const id = groupId(column.definition.column, group.name);
-  const { setNodeRef } = useDroppable({ id, data: { column: column.definition.column, group: group.name } });
+  // A group the board drew (the line over the unread defects) is no drop target: the store has no such group, and the column's order is the board's.
+  const { setNodeRef } = useDroppable({ id, data: { column: column.definition.column, group: group.name }, disabled: group.machine ?? false });
   return (
     <>
       {group.name !== null ? <GroupHead name={group.name} machine={group.machine ?? false} /> : null}

@@ -259,8 +259,11 @@ def defects(
     each card's grade, its routing and its age (card #100, item 3): what
     the Loop reads. `--lies` keeps the defects graded as lying; `--on` keeps
     the boards whose auto-fix is on; `--unplanned-over 7d` keeps the ones
-    graded longer ago than that and still unplanned, which in this column
-    is every card; `--count` prints how many instead of the list."""
+    first graded longer ago than that and still unplanned, which in this
+    column is every card — the clock is the first reading that graded the
+    card, so a re-reading of a touched document never restarts the seven
+    days (the cold review of card #100); `--count` prints how many instead
+    of the list."""
     slug = None if args.slug == "all" else args.slug
     if slug is not None and slug not in live.projects:
         print(f'no project "{slug}" is on the board', file=sys.stderr)
@@ -286,7 +289,9 @@ def defects(
                 if args.lies and (grade is None or grade.breaks != Breaks.LIES):
                     continue
                 if over is not None and (
-                    card.triage is None or grade is None or now - card.triage.at < over
+                    grade is None
+                    or (first := _first_graded(live, project_slug, card.number)) is None
+                    or now - first < over
                 ):
                     continue
                 kept.append((group, card))
@@ -309,6 +314,13 @@ def defects(
     if args.count:
         print(total)
     return 0
+
+
+def _first_graded(live: Live, slug: str, number: int) -> datetime | None:
+    """When the card was first graded: the earliest reading that carries a
+    grade, whatever readings came after."""
+    graded = [t.at for t in live.store.triages(slug, number) if t.grade is not None]
+    return min(graded) if graded else None
 
 
 _DAYS = re.compile(r"^(\d+)d$")

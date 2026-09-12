@@ -726,7 +726,7 @@ class Doors:
 
     def signal(self, slug: str, number: int, *, delivered: bool) -> DoorResult:
         """The owner's reading: of an Executed card's signal, which moves the
-        card where the reading says; or of a Backlog defect's `Fix: when`
+        card where the reading says; or of a defect's `Fix: when`
         trigger (plan 11, item 5), which moves nothing — delivered makes the
         defect eligible for the dial."""
         detail = self._detail(slug, number)
@@ -856,7 +856,7 @@ class Doors:
         if detail.card.place.column != Column.EXECUTED and not trigger_card:
             raise DoorRefused(
                 f"#{number} is in {detail.card.place.column}; a reading is of an Executed "
-                "card's signal, or of a Backlog defect's Fix: when trigger."
+                "card's signal, or of a defect's Fix: when trigger."
             )
         signal = detail.trigger if trigger_card else detail.signal
         if signal is None:

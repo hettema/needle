@@ -328,7 +328,13 @@ class Dial:
                         Candidate(project=slug, card=card, document=document, grade=grade)
                     )
                 elif self._wants_a_reading(
-                    slug, card, routed, snapshot, ran_before=card.number in ran, triage=triage
+                    slug,
+                    card,
+                    routed,
+                    snapshot,
+                    ran_before=card.number in ran,
+                    triage=triage,
+                    triage_open=card.number in open_triage,
                 ):
                     # No placement check here: a reading is a windowless
                     # session in the project's own checkout, so the card's
@@ -382,24 +388,28 @@ class Dial:
         *,
         ran_before: bool,
         triage: Triage | None = None,
+        triage_open: bool = False,
     ) -> bool:
         """Whether the board should open a reading on this defect now. Only
         the two states that mean *nobody has verified today's text*: a
         cannot-tell is not retried, because the evidence it named has to
         arrive first — and when it does, the document or the source moves and
         the row goes stale, which is this same door. And a reading that
-        verified the mark but landed no grade — every reading from before
-        card #100 — is read again, since the column has no order for it.
+        landed no grade — every reading from before card #100, a cannot-tell
+        among them, since the grade is from the document alone — is read
+        again, because the column has no order for it.
 
         And only where a reading could still change what the machine does. A
         card with a lane on it, one carrying a question, or one the dial has
         already taken once is the owner's from here, so a session spent
         reading its mark is a session spent on an answer nothing will act
-        on."""
-        ungraded = (
-            triage is not None and triage.grade is None and routed.state != Routing.CANNOT_TELL
-        )
+        on. And never while a reading is already open on the card: under a
+        number above one the beat would otherwise open the same reading
+        every minute and read nothing else (the cold review of card #100)."""
+        ungraded = triage is not None and triage.grade is None
         if routed.state not in (Routing.NEEDS_TRIAGE, Routing.STALE) and not ungraded:
+            return False
+        if triage_open:
             return False
         lane = snapshot.lanes.get(card.number)
         if lane is not None and (lane.state != LaneState.NONE or lane.path is not None):

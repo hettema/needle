@@ -5,14 +5,14 @@ from datetime import UTC, datetime, timedelta
 
 from board.dial import (
     LIVE_STAGES,
+    column_defects,
+    defects_count,
     dial_state,
     filed_against,
     filed_by_the_card,
     filer_of,
     held_lanes,
     is_quiet,
-    column_defects,
-    defects_count,
     running,
     switch_was_on,
     why_not_eligible,

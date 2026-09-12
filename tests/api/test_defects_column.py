@@ -411,7 +411,16 @@ def test_a_defect_verified_before_the_scale_is_read_again_before_it_is_taken(
     )
     client.app.state.loops.live.rescan("proj")
     reconcile(client)
+    write_defect(
+        repo,
+        "2026-09-05-the-fuel-log-names-no-boat",
+        "The fuel log names no boat",
+        "**Fix:** now — the fuel plan says every fill names the boat",
+    )
+    client.app.state.loops.live.rescan("proj")
+    reconcile(client)
     number = number_of(client, "The harbour map is a year old")
+    other = number_of(client, "The fuel log names no boat")
     document = detail(client, number)["document"]
     store.record_triage(
         "proj",
@@ -429,6 +438,24 @@ def test_a_defect_verified_before_the_scale_is_read_again_before_it_is_taken(
         document_fingerprint=document["fingerprint"],
         session_id=None,
     )
+    # A cannot-tell from before the scale is read again too: the grade is
+    # from the document alone, whatever the mark's evidence (review finding 5).
+    store.record_triage(
+        "proj",
+        other,
+        at=clock.now(),
+        actor=Actor.SESSION,
+        result=TriageResult.CANNOT_TELL,
+        words="the fuel plan is not in the corpus",
+        decision="0ld0ld0ld0ld0ld1",
+        parent=None,
+        direction=None,
+        source_ref=None,
+        source_path=None,
+        source_fingerprint=None,
+        document_fingerprint=detail(client, other)["document"]["fingerprint"],
+        session_id=None,
+    )
     client.app.state.loops.live.bump()
     reconcile(client)
     assert detail(client, number)["summary"]["routing"]["state"] == "triaged now"
@@ -440,4 +467,72 @@ def test_a_defect_verified_before_the_scale_is_read_again_before_it_is_taken(
     before = acts(machine_floor)
     tick(client)
     assert acts(machine_floor) == before, "not planned: read again first"
-    assert number in open_readings(client), "the beat opened the reading that grades it"
+    assert open_readings(client).keys() == {number}, "the beat opened the reading that grades it"
+    # Under a number of two the next beat opens the other card's reading,
+    # never the same card's again (review finding 1: the beat asks whether a
+    # reading is already open before it opens one).
+    turn(client, lanes=2)
+    launched = len(machine_floor.state()["launch_log"])
+    tick(client)
+    assert open_readings(client).keys() == {number, other}
+    tick(client)
+    assert len(machine_floor.state()["launch_log"]) == launched + 1, "one reading per card"
+    assert open_readings(client).keys() == {number, other}
+
+
+def test_the_loops_clock_is_the_first_grade_not_the_latest_reading(
+    client: TestClient, repo: Path, store: Store, capsys
+):
+    """`needle defects --unplanned-over 7d` counts from the first reading
+    that graded the card: a re-reading of a touched document never restarts
+    the seven days (review finding 9)."""
+    from datetime import timedelta
+
+    from domain.card import Actor
+    from domain.triage import Breaks, Direction, Grade, Often, Reach, TriageResult
+    from infrastructure import clock
+
+    write_defect(
+        repo,
+        "2026-09-05-the-office-clock-lies-about-noon",
+        "The office clock lies about noon",
+        "**Fix:** now — the clock plan says the office clock is the harbour's",
+    )
+    client.app.state.loops.live.rescan("proj")
+    reconcile(client)
+    number = number_of(client, "The office clock lies about noon")
+    fingerprint = detail(client, number)["document"]["fingerprint"]
+    lies = Grade(
+        breaks=Breaks.LIES,
+        breaks_words="noon is shown an hour off",
+        reach=Reach.CLIENT,
+        reach_words="every skipper reads it",
+        often=Often.EVERY_TIME,
+        often_words="all day",
+    )
+    for days_ago, decision in ((8, "f1rstf1rstf1rst0"), (0, "l4testl4testl4t0")):
+        store.record_triage(
+            "proj",
+            number,
+            at=clock.now() - timedelta(days=days_ago),
+            actor=Actor.SESSION,
+            result=TriageResult.NOW,
+            words="the clock plan says so",
+            decision=decision,
+            parent=None,
+            direction=Direction.NONE,
+            source_ref=None,
+            source_path=None,
+            source_fingerprint=None,
+            document_fingerprint=fingerprint,
+            session_id=None,
+            grade=lies,
+        )
+        client.app.state.loops.live.bump()
+    # The board is off: --on keeps nothing; without it the card counts from
+    # its first grade, eight days ago, though its latest reading is today.
+    capsys.readouterr()
+    assert main(["defects", "proj", "--lies", "--unplanned-over", "7d", "--count"]) == 0
+    assert capsys.readouterr().out.strip() == "1"
+    assert main(["defects", "proj", "--lies", "--on", "--unplanned-over", "7d", "--count"]) == 0
+    assert capsys.readouterr().out.strip() == "0"

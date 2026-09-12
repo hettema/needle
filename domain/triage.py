@@ -164,7 +164,10 @@ class Grade(BaseModel):
         if not self.breaks_words.strip():
             raise ValueError("a grade says what in the document selected what breaks")
         if self.breaks == Breaks.NOTHING:
-            if self.reach is not None or self.often is not None:
+            if any(
+                part is not None
+                for part in (self.reach, self.reach_words, self.often, self.often_words)
+            ):
                 raise ValueError("a grade of nothing names no reach and no how-often")
             return self
         missing = [
