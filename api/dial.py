@@ -269,7 +269,7 @@ class Dial:
         fix_lanes = store.fix_lanes()
         if self._full() is not None:
             return
-        held = held_lanes(fix_lanes, self.live.start_offered)
+        held = held_lanes(fix_lanes, self.live.start_offered, self.live.switched_on)
         triaging = self._triaging()
         # Every switch carries the one number; the caller returned already
         # when no board was on, so there is one to read it from.
@@ -706,8 +706,15 @@ class Dial:
         the card says why."""
         slug = live.project.slug
         store = self.live.store
-        detail = self.live.detail(slug, card.number)
-        why = self._full() if detail.doors.start.offered else detail.doors.start.why
+        # The switch is read at the start as at the planning (card #80): a
+        # plan written while the board was on waits, held and counted as
+        # held, while the owner has it off, and starts by itself when he
+        # turns it back on.
+        if not self.live.switched_on(slug):
+            why = "this board's switch is off"
+        else:
+            detail = self.live.detail(slug, card.number)
+            why = self._full() if detail.doors.start.offered else detail.doors.start.why
         if why is not None:
             if fix.note != why:
                 store.stage_fix_lane(fix.id, FixStage.PLANNED, fix.planned_at or now, note=why)
@@ -1221,7 +1228,11 @@ class Dial:
                     and record.folded_at is not None
                     and self.runtime.reverted(live.project.path, record.tip),
                     class_closer=_class_closer(document),
-                    switch_was_on=switch_was_on(changes, fix.project, fix.planning_started_at),
+                    switch_was_on=switch_was_on(changes, fix.project, fix.planning_started_at)
+                    and (
+                        fix.started_at is None
+                        or switch_was_on(changes, fix.project, fix.started_at)
+                    ),
                 )
             )
         return Fixes(

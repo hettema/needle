@@ -1495,13 +1495,18 @@ class Store:
 
     # ── the dial (plan 11) ─────────────────────────────────────────────
 
-    def dial(self, slug: str) -> Dial:
-        """One board's switch with the machine's number beside it (card
-        #80). A board with no row is off; a machine with no row holds one
-        lane."""
+    def fix_lanes_at_most(self) -> int:
+        """The machine's number of fix lanes, from its own row (card #80):
+        one while the owner has never set it."""
         with self._session() as session:
             machine = session.get(DialRow, 1)
-            lanes = 1 if machine is None or machine.lanes is None else machine.lanes
+            return 1 if machine is None or machine.lanes is None else machine.lanes
+
+    def dial(self, slug: str) -> Dial:
+        """One board's switch with the machine's number beside it (card
+        #80). A board with no row is off."""
+        lanes = self.fix_lanes_at_most()
+        with self._session() as session:
             row = session.scalar(select(DialRow).where(DialRow.project_slug == slug))
             return _dial(slug, row, lanes)
 
@@ -1510,9 +1515,8 @@ class Store:
         the machine's number: what the beat reads before any rail, what
         `needle dial` prints, and where a head reads which other boards are
         on (card #80)."""
+        lanes = self.fix_lanes_at_most()
         with self._session() as session:
-            machine = session.get(DialRow, 1)
-            lanes = 1 if machine is None or machine.lanes is None else machine.lanes
             rows = {
                 row.project_slug: row
                 for row in session.scalars(select(DialRow).where(DialRow.project_slug.is_not(None)))
@@ -1557,6 +1561,8 @@ class Store:
                 if session.get(ProjectRow, project) is None:
                     raise StoreRefusal(f'No project "{project}" is on the board.')
                 row = session.scalar(select(DialRow).where(DialRow.project_slug == project))
+                if row is None and not on:
+                    return self.dials()  # off is how a board is born: nothing to write
                 if row is None:
                     row = DialRow(project_slug=project, on=False, lanes=None)
                     session.add(row)

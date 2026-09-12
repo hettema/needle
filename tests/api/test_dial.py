@@ -16,6 +16,7 @@ from pathlib import Path
 
 import pytest
 from fastapi.testclient import TestClient
+from sqlalchemy import select
 
 from api.cli import main
 from domain.card import Actor, CardOrigin
@@ -357,6 +358,32 @@ def test_the_switch_is_one_per_board_and_the_number_is_the_machines(
     assert store.dial_changes()[-1].actor is Actor.OWNER
     assert main(["dial", "on"]) == 1
     assert "needle dial <slug> on" in capsys.readouterr().err
+    # Turning off a board that has never been turned writes nothing at all
+    # (review finding 3): off is how a board is born.
+    rows = len(store.dial_changes())
+    assert main(["dial", "two", "off"]) == 0
+    capsys.readouterr()
+    assert len(store.dial_changes()) == rows
+    with Store(store.path)._session() as session:
+        from infrastructure.schema import DialRow
+
+        assert [r.project_slug for r in session.scalars(select(DialRow))] == [None, "two", "proj"]
+
+
+def test_needle_dial_reads_the_number_on_a_board_with_no_project(
+    tmp_path: Path, monkeypatch, capsys
+):
+    """Review finding 2: a fresh board has no page to read the head through,
+    and `needle dial` still prints the machine's number."""
+    empty = Store(tmp_path / "empty.db")
+    try:
+        assert empty.dials() == [] and empty.fix_lanes_at_most() == 1
+        assert empty.dial("nowhere").on is False
+    finally:
+        empty.close()
+    monkeypatch.setenv("NEEDLE_DB", str(tmp_path / "empty.db"))
+    assert main(["dial", "--lanes", "3"]) == 0
+    assert capsys.readouterr().out == "no project is on the board; 3 fix lanes at most\n"
 
 
 def read_every_rail(client: TestClient, machine_floor: Floor, verified: dict[str, int]) -> None:
@@ -445,6 +472,39 @@ def test_the_beat_plans_a_defect_only_on_a_board_whose_switch_is_on(
         ("two", True),
         ("proj", True),
     ]
+    # The switch is read at the Start as at the planning (review finding 1):
+    # B's plan lands, B is turned off, and the beat holds the planned card —
+    # no Start, counted as held, the reason on the record — until B is on.
+    land_plan(
+        repo,
+        TIDE_PATH,
+        "2026-09-05-the-quay-clock-is-the-offices",
+        "The quay clock is the office's",
+    )
+    client.app.state.loops.live.rescan("proj")
+    assert column_of(client, tide) == "Planned"
+    turn(client, on=False, slug="proj")
+    taken = len(machine_floor.state()["launch_log"])
+    tick(client)
+    assert len(machine_floor.state()["launch_log"]) == taken, "no Start while the board is off"
+    assert column_of(client, tide) == "Planned"
+    lane = next(f for f in store.fix_lanes("proj") if f.card_number == tide)
+    assert (lane.stage.value, lane.note) == ("planned", "this board's switch is off")
+    assert board(client)["dial"]["held"] == 1
+    assert any(
+        h["detail"] == "Start waits: this board's switch is off"
+        for h in detail(client, tide)["history"]
+    )
+    turn(client, on=True, slug="proj")
+    tick(client)
+    assert len(machine_floor.state()["launch_log"]) == taken + 1
+    assert column_of(client, tide) == "Executing"
+    capsys.readouterr()
+    assert main(["fixes", "all", "--started-off", "--count"]) == 0
+    assert capsys.readouterr().out == "0\n"
+    # `--count` alone is refused rather than ignored (review finding 6).
+    assert main(["fixes", "all", "--count"]) == 1
+    assert "--started-off" in capsys.readouterr().err
 
 
 # ── items 4 and 6: the path from the rail to a running lane ────────────

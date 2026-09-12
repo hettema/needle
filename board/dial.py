@@ -232,18 +232,25 @@ def why_not_eligible(
 
 
 def held_lanes(
-    fix_lanes: list[FixLane], start_offered: Callable[[str, int], bool | None]
+    fix_lanes: list[FixLane],
+    start_offered: Callable[[str, int], bool | None],
+    switched_on: Callable[[str], bool],
 ) -> list[FixLane]:
-    """The fix lanes at the planned stage whose Start door is closed — parked,
-    waiting on a Sequencing card, nowhere to run, or not read yet. Such a
-    card is no process: on the dial's first night four of them held four
-    slots while fourteen eligible defects waited. `start_offered` answers
-    from the loop's last read; None (unread) is closed."""
+    """The fix lanes at the planned stage the dial cannot start — the Start
+    door closed (parked, waiting on a Sequencing card, nowhere to run, or
+    not read yet), or the board's switch off since the plan was written
+    (card #80). Such a card is no process: on the dial's first night four
+    of them held four slots while fourteen eligible defects waited.
+    `start_offered` answers from the loop's last read; None (unread) is
+    closed. `switched_on` answers from the store."""
     return [
         lane
         for lane in fix_lanes
         if lane.stage == FixStage.PLANNED
-        and start_offered(lane.project, lane.card_number) is not True
+        and (
+            start_offered(lane.project, lane.card_number) is not True
+            or not switched_on(lane.project)
+        )
     ]
 
 
@@ -318,11 +325,13 @@ def switch_was_on(changes: Sequence[DialChange], slug: str, moment: datetime) ->
     (card #80, item 3): the last turn at or before the moment that turned
     this board — by name, or a turn from before the switch was per board,
     which turned every board — says. No turn by then is off, which is how
-    every board is born. A change of the number alone turns nothing."""
+    every board is born. A change of the number alone turns nothing. The
+    rows are read in the order of their moments, not their ids, so a clock
+    that stepped back between two turns cannot end the read early."""
     state = False
-    for change in changes:
+    for change in sorted(changes, key=lambda c: (c.at, c.id)):
         if change.at > moment:
-            break
+            continue
         if change.on is None or change.project not in (None, slug):
             continue
         state = change.on

@@ -517,15 +517,21 @@ class Live:
             for slug in self.projects
         )
         switches = self.store.dials()
+        on = {s.project for s in switches if s.on}
         return dial_state(
             next((s for s in switches if s.project == slug), self.store.dial(slug)),
             switches,
             fix_lanes,
             lanes,
-            held=held_lanes(fix_lanes, self.start_offered),
+            held=held_lanes(fix_lanes, self.start_offered, on.__contains__),
             room=self.headroom,
             triaging=triaging,
         )
+
+    def switched_on(self, slug: str) -> bool:
+        """Whether a board's auto-fix switch is on, from the store (card #80):
+        what the beat reads before a board's rail and before a Start."""
+        return self.store.dial(slug).on
 
     def start_offered(self, slug: str, number: int) -> bool | None:
         """Whether a card's Start door is open, from the loop's last read of

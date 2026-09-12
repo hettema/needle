@@ -307,9 +307,12 @@ def test_a_planned_card_whose_start_is_closed_is_held_and_does_not_count():
     ]
     doors = {2: False, 3: True}  # 4 is unread: None, which is closed
 
-    held = held_lanes(lanes, lambda project, number: doors.get(number))
+    held = held_lanes(lanes, lambda project, number: doors.get(number), lambda project: True)
     assert [f.card_number for f in held] == [2, 4]
     assert running(lanes, held) == 3, "planning, the planned card whose door is open, started"
+    # A planned card whose board's switch is off is held too (card #80).
+    off = held_lanes(lanes, lambda project, number: doors.get(number), lambda project: False)
+    assert [f.card_number for f in off] == [2, 3, 4]
     assert running(lanes) == 5, "without the held list every live stage counts, as before"
 
 

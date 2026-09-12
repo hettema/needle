@@ -710,8 +710,11 @@ def dial(args: argparse.Namespace, live: Live, runtime: Runtime, loops: Loops, d
                 else ""
             )
         )
-    state = control.state(shown[0].project if shown else next(iter(live.projects)))
-    lanes = state.dial.lanes
+    lanes = live.store.fix_lanes_at_most()
+    if not shown:
+        print(f"no project is on the board; {lanes} fix lane{'' if lanes == 1 else 's'} at most")
+        return 0
+    state = control.state(shown[0].project)
     print(
         f"{lanes} fix lane{'' if lanes == 1 else 's'} at most across every board; "
         f"{state.running} live now"
@@ -794,6 +797,9 @@ def fixes(
     if slug is not None and slug not in live.projects:
         print(f'no project "{slug}" is on the board', file=sys.stderr)
         return 1
+    if args.count and not args.started_off:
+        print("--count counts the lanes --started-off selects; name both", file=sys.stderr)
+        return 1
     loops.reconcile_now()
     report = Dial(live, runtime, loops, doors).fixes(slug)
     if args.started_off:
@@ -813,7 +819,7 @@ def fixes(
                 else ", never on"
             )
         )
-    lanes = report.switches[0].lanes if report.switches else 1
+    lanes = live.store.fix_lanes_at_most()
     print(f"{lanes} fix lane{'' if lanes == 1 else 's'} at most across every board")
     if not report.lanes:
         print(
