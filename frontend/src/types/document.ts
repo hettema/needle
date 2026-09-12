@@ -58,6 +58,7 @@ export interface Document {
   gate_why: string | null;
   sequencing: string | null;
   sequenced?: SequencedCard[];
+  held_names?: string[];
   found_by: string | null;
   card_ref: number | null;
   suggestion_kind: SuggestionKind | null;
