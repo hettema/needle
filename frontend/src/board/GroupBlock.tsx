@@ -32,7 +32,7 @@ export function GroupBlock({ column, group, slots, open, focused, statuses, drag
   const { setNodeRef } = useDroppable({ id, data: { column: column.definition.column, group: group.name } });
   return (
     <>
-      {group.name !== null && !group.rail ? <GroupHead name={group.name} /> : null}
+      {group.name !== null ? <GroupHead name={group.name} machine={group.machine ?? false} /> : null}
       <GroupBody nodeRef={setNodeRef} id={id} label={`${column.definition.column}${group.name ? ` · ${group.name}` : ""}`}>
         {slots.map((slot) =>
           slot.kind === "gap" ? (

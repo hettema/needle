@@ -72,5 +72,6 @@ the birth reading in `board/brief.py` name it by path.
   the machine", "the machine is full".
 - **windowless** — a session that runs with no window (a reading, a planning
   session). Say "a session nobody watches", "in the background".
-- **rail** — the defects strip pinned at the top of Backlog. Say "the
-  defects", "at the top of the backlog".
+- **rail** — what the defects were before they had a column of their own
+  (card #100): a strip pinned at the top of Backlog. Say "the defects",
+  "the Defects column".

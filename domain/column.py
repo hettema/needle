@@ -1,4 +1,4 @@
-"""The eight columns and their grammar.
+"""The nine columns and their grammar.
 
 The columns are the owner's, carried from Needle 0.1. Their definitions are
 data rather than prose in a README because the page shows them one hover away
@@ -14,6 +14,7 @@ from domain.meaning import Meaning, say
 
 
 class Column(StrEnum):
+    DEFECTS = "Defects"
     BACKLOG = "Backlog"
     PLANNED = "Planned"
     UP_NEXT = "Up next"
@@ -44,11 +45,27 @@ class ColumnDefinition(BaseModel):
 
 COLUMN_DEFINITIONS: list[ColumnDefinition] = [
     ColumnDefinition(
-        column=Column.BACKLOG,
-        note="Ideas written up as suggestions, ranked below the line. Planning one is what "
-        "promotes it.",
+        column=Column.DEFECTS,
+        note="What is broken, gravest first. The board keeps the order from each defect's "
+        "second reading; planning one is what promotes it.",
         definition=[
-            "Written ideas. A suggestion exists on disk; nobody has planned it yet.",
+            "Written defects: a suggestion whose document says Kind: defect. The board puts it "
+            "here and an idea in Backlog on every read, from the document's own word.",
+            "The order is the board's, gravest first from the second reading's grade: what "
+            "lies before what loses, what loses before what costs, and what only looks wrong "
+            "last; the ones nobody has read yet sit under the line. You do not rank it.",
+        ],
+        moved_by="the board, from the document; a plan appearing promotes it",
+        ranked=False,
+        yours=False,
+        furled_on_laptop=True,
+    ),
+    ColumnDefinition(
+        column=Column.BACKLOG,
+        note="Ideas written up as suggestions. Planning one is what promotes it.",
+        definition=[
+            "Written ideas. A suggestion exists on disk; nobody has planned it yet. A "
+            "suggestion whose document says defect sits in Defects instead.",
             "Planning one is what promotes it — the column is the stage of the writing, never "
             "a label somebody applied.",
         ],
@@ -157,12 +174,3 @@ COLUMN_DEFINITIONS: list[ColumnDefinition] = [
 ]
 
 COLUMN_BY_NAME: dict[Column, ColumnDefinition] = {d.column: d for d in COLUMN_DEFINITIONS}
-
-DEFECTS_RAIL = "Defects"
-"""The name of Backlog's one machine-kept group: the defects rail (plan 06,
-item 2). A suggestion whose document says `Kind: defect` sits here and one
-that says idea does not; the corpus keeps it so on every read, so the rail
-is a lens on what is written, never a label somebody applied."""
-
-DEFECTS_RAIL_POSITION = -1
-"""Before every group the owner named, which start at 0."""

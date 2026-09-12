@@ -19,7 +19,7 @@ from collections.abc import Callable
 from pydantic import BaseModel
 
 from domain.card import Card, CardOrigin, DocumentLink
-from domain.column import DEFECTS_RAIL, Column
+from domain.column import Column
 from domain.corpus import CorpusIndex
 from domain.document import DOCUMENT_FOLDER, Document, DocumentKind, DocumentRef, SuggestionKind
 
@@ -27,12 +27,26 @@ BIRTH_COLUMN: dict[DocumentKind, Column] = {
     DocumentKind.PLAN: Column.PLANNED,
     DocumentKind.SUGGESTION: Column.BACKLOG,
 }
+"""Where a document's card is born, by kind — except a suggestion whose
+document says defect, which is born in Defects (`home_of`)."""
+
+SUGGESTION_HOMES: frozenset[Column] = frozenset({Column.DEFECTS, Column.BACKLOG})
+"""The two columns the corpus keeps a suggestion's card in by its `Kind:`
+line (card #100, item 1): a defect in Defects, an idea in Backlog. A card
+anywhere else sits where the owner or the work put it."""
+
+
+def home_of(kind: SuggestionKind | None) -> Column:
+    """Where a suggestion's card reads by its document's word: Defects for
+    a defect, Backlog for an idea or a suggestion that names no kind."""
+    return Column.DEFECTS if kind == SuggestionKind.DEFECT else Column.BACKLOG
+
 
 SHIPPED: frozenset[Column] = frozenset({Column.EXECUTED, Column.DONE})
 """A card here is shipped work; a plan citing its suggestion carries nothing
 that is still open, so it neither relinks nor folds."""
 
-PROMOTED_FROM: frozenset[Column] = frozenset({Column.BACKLOG, Column.NOT_NOW})
+PROMOTED_FROM: frozenset[Column] = frozenset({Column.DEFECTS, Column.BACKLOG, Column.NOT_NOW})
 """Where a plan appearing is what promotes a card to Planned. Anywhere else
 the card sits where the owner put it, and the plan is simply its document."""
 
@@ -44,7 +58,7 @@ class Born(BaseModel):
     """The document's `Found by` line, so a birth can say which conversation
     it came from when the line names one (plan 07, item 1)."""
     kind: SuggestionKind | None
-    """A suggestion's kind: a defect is born on Backlog's defects rail (plan 06, item 2)."""
+    """A suggestion's kind: a defect is born in Defects, an idea in Backlog (card #100)."""
 
 
 class Renamed(BaseModel):
@@ -95,11 +109,12 @@ class Folded(BaseModel):
 
 
 class Rehomed(BaseModel):
-    """A Backlog card whose document's kind and whose group disagree: a
-    defect belongs on the rail and an idea below it."""
+    """A card whose document's kind and whose column disagree: a defect
+    belongs in Defects and an idea in Backlog (card #100, item 1), on every
+    read, from the document's own word."""
 
     card_number: int
-    into_rail: bool
+    into: Column
     kind: SuggestionKind
 
 
@@ -369,7 +384,9 @@ def reconcile(
         born.append(
             Born(
                 document=ref(document),
-                column=BIRTH_COLUMN[document.kind],
+                column=home_of(document.suggestion_kind)
+                if document.kind == DocumentKind.SUGGESTION
+                else BIRTH_COLUMN[document.kind],
                 found_by=document.found_by,
                 kind=document.suggestion_kind,
             )
@@ -395,7 +412,7 @@ def reconcile(
                 )
             )
 
-    # The defects rail follows the document's word, on every read.
+    # Defects and Backlog follow the document's word, on every read.
     folding = {f.card_number for f in folded}
     for card in cards:
         if (
@@ -403,19 +420,16 @@ def reconcile(
             or card.link.kind != DocumentKind.SUGGESTION
             or card.folded_into is not None
             or card.number in folding
-            or card.place.column != Column.BACKLOG
+            or card.place.column not in SUGGESTION_HOMES
         ):
             continue
         document = index.find(card.link.kind, card.link.stem)
         if document is None or document.suggestion_kind is None:
             continue
-        in_rail = card.place.group == DEFECTS_RAIL
-        wants_rail = document.suggestion_kind == SuggestionKind.DEFECT
-        if in_rail != wants_rail:
+        wants = home_of(document.suggestion_kind)
+        if card.place.column != wants:
             rehomed.append(
-                Rehomed(
-                    card_number=card.number, into_rail=wants_rail, kind=document.suggestion_kind
-                )
+                Rehomed(card_number=card.number, into=wants, kind=document.suggestion_kind)
             )
 
     # A card whose suggestion a plan takes over in this same read is not a

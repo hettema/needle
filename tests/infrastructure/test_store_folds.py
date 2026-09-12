@@ -1,4 +1,4 @@
-"""The store's part of plan 06: a defect born on Backlog's rail and rehomed by
+"""The store's part of plan 06: a defect born in Defects and rehomed by
 its document's word (item 2), a card folded under the card whose plan
 carries it and following it from then on (item 5), and the write stamp the
 server reads to tell another process's commit from its own (item 6)."""
@@ -13,7 +13,7 @@ from board.reconcile import Born, Effects, Folded, Rehomed, Relinked
 from domain.audit import AuditKind
 from domain.board import TrunkState
 from domain.card import Actor, CardOrigin, Place
-from domain.column import DEFECTS_RAIL, Column
+from domain.column import Column
 from domain.document import DocumentKind, DocumentRef, SuggestionKind
 from domain.project import Project
 from infrastructure.corpus import scan
@@ -47,14 +47,14 @@ PLAN = DocumentRef(
 )
 
 
-def test_a_defect_is_born_on_the_rail_above_every_named_group_and_an_idea_below(board: Store):
+def test_a_defect_is_born_in_defects_and_an_idea_in_backlog(board: Store):
     born = board.apply_effects(
         "proj",
         effects(
             born=[
                 Born(
                     document=suggestion_ref("d"),
-                    column=Column.BACKLOG,
+                    column=Column.DEFECTS,
                     found_by=None,
                     kind=SuggestionKind.DEFECT,
                 ),
@@ -71,19 +71,19 @@ def test_a_defect_is_born_on_the_rail_above_every_named_group_and_an_idea_below(
     )
     defect, idea = (board.card("proj", n) for n in born)
     assert defect is not None and defect.place == Place(
-        column=Column.BACKLOG, group=DEFECTS_RAIL, position=0
+        column=Column.DEFECTS, group=None, position=0
     )
-    assert idea is not None and idea.place.group is None
-    backlog = [g for g in board.layout("proj") if g.column == Column.BACKLOG]
-    assert backlog[0].name == DEFECTS_RAIL and backlog[0].numbers == [defect.number]
-    assert "reads on the defects rail" in board.history("proj", defect.number)[0].detail
-    # The document's word moves a card on and off the rail.
+    assert idea is not None and idea.place == Place(column=Column.BACKLOG, group=None, position=0)
+    defects = [g for g in board.layout("proj") if g.column == Column.DEFECTS]
+    assert defects[0].name is None and defects[0].numbers == [defect.number]
+    assert "reads in Defects" in board.history("proj", defect.number)[0].detail
+    # The document's word moves a card between the two columns.
     board.apply_effects(
         "proj",
         effects(
             rehomed=[
-                Rehomed(card_number=defect.number, into_rail=False, kind=SuggestionKind.IDEA),
-                Rehomed(card_number=idea.number, into_rail=True, kind=SuggestionKind.DEFECT),
+                Rehomed(card_number=defect.number, into=Column.BACKLOG, kind=SuggestionKind.IDEA),
+                Rehomed(card_number=idea.number, into=Column.DEFECTS, kind=SuggestionKind.DEFECT),
             ]
         ),
         origin=CardOrigin.ARRIVED,
@@ -91,8 +91,8 @@ def test_a_defect_is_born_on_the_rail_above_every_named_group_and_an_idea_below(
     )
     moved_off = board.card("proj", defect.number)
     moved_on = board.card("proj", idea.number)
-    assert moved_off is not None and moved_off.place.group is None
-    assert moved_on is not None and moved_on.place.group == DEFECTS_RAIL
+    assert moved_off is not None and moved_off.place.column == Column.BACKLOG
+    assert moved_on is not None and moved_on.place.column == Column.DEFECTS
     row = board.history("proj", moved_on.number)[0]
     assert row.actor == Actor.CORPUS and "Kind: defect" in row.detail
 

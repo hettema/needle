@@ -268,23 +268,22 @@ def test_a_plan_naming_a_card_by_number_still_folds_the_other_suggestions_it_cit
     assert [(f.card_number, f.into) for f in effects.folded] == [(8, 7)]
 
 
-def test_a_backlog_card_follows_its_documents_kind_onto_and_off_the_rail():
-    from domain.card import Place
-    from domain.column import DEFECTS_RAIL
-
-    on_rail = card(5, _slink("d"), Column.BACKLOG).model_copy(
-        update={"place": Place(column=Column.BACKLOG, group=DEFECTS_RAIL, position=0)}
+def test_a_suggestions_card_follows_its_documents_kind_between_defects_and_backlog():
+    in_defects = card(5, _slink("d"), Column.DEFECTS)
+    in_backlog = card(6, _slink("i"), Column.BACKLOG)
+    effects = reconcile(
+        index(_suggestion("d", "idea"), _suggestion("i", "defect")), [in_defects, in_backlog]
     )
-    below = card(6, _slink("i"), Column.BACKLOG)
-    effects = reconcile(index(_suggestion("d", "idea"), _suggestion("i", "defect")), [on_rail, below])
-    assert [(r.card_number, r.into_rail, r.kind.value) for r in effects.rehomed] == [
-        (5, False, "idea"),
-        (6, True, "defect"),
+    assert [(r.card_number, r.into, r.kind.value) for r in effects.rehomed] == [
+        (5, Column.BACKLOG, "idea"),
+        (6, Column.DEFECTS, "defect"),
     ]
-    settled = reconcile(index(_suggestion("d", "defect"), _suggestion("i", "idea")), [on_rail, below])
+    settled = reconcile(
+        index(_suggestion("d", "defect"), _suggestion("i", "idea")), [in_defects, in_backlog]
+    )
     assert settled.rehomed == []
     elsewhere = reconcile(index(_suggestion("i", "defect")), [card(6, _slink("i"), Column.UP_NEXT)])
-    assert elsewhere.rehomed == [], "the rail is Backlog's; a defect queued by the owner stays queued"
+    assert elsewhere.rehomed == [], "a defect queued by the owner stays queued"
 
 
 def test_a_suggestion_is_born_with_its_kind():

@@ -381,9 +381,11 @@ class FixLaneRow(Base):
 
 
 class RailAtOnRow(Base):
-    """The defects rail of each project at the moment its switch was first
+    """The Defects column of each project at the moment its switch was first
     turned on, by who filed each card (plan 11, item 6; per board since card
-    #80): the baseline the thirty-lane look reads the rail against."""
+    #80): the baseline the thirty-lane look reads the column against. The
+    table keeps the name it was born with, from when the defects were a
+    strip on Backlog (card #100 made them a column)."""
 
     __tablename__ = "rail_at_on"
     __table_args__ = (UniqueConstraint("project_slug", "filer", name="uq_rail_at_on"),)
@@ -496,6 +498,15 @@ class TriageRow(Base):
     source_fingerprint: Mapped[str | None] = mapped_column(String(64), nullable=True)
     document_fingerprint: Mapped[str] = mapped_column(String(64))
     session_id: Mapped[str | None] = mapped_column(String(36), nullable=True)
+    # How bad the same reading found it (card #100, item 2): three parts in
+    # the owner's words, each with the reading's words for what selected it.
+    # Null on a reading from before the scale, which the board reads again.
+    breaks: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    breaks_words: Mapped[str | None] = mapped_column(Text, nullable=True)
+    reach: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    reach_words: Mapped[str | None] = mapped_column(Text, nullable=True)
+    often: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    often_words: Mapped[str | None] = mapped_column(Text, nullable=True)
 
 
 class TitleReadingRow(Base):

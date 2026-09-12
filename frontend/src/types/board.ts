@@ -17,7 +17,7 @@ import type { Project } from "./project";
 import type { Row } from "./row";
 import type { Reading, Signal, SignalKind, WindowlessSession } from "./signal";
 import type { Composition } from "./team";
-import type { Routed, Source, TitleReading, Triage } from "./triage";
+import type { Grade, Routed, Source, TitleReading, Triage } from "./triage";
 import type { Verdict, VerdictLine } from "./verdict";
 import type { WatercoolerLine } from "./watercooler";
 
@@ -133,6 +133,7 @@ export interface CardSummary {
   triage: Triage | null;
   title_reading: TitleReading | null;
   leverage?: CardLeverage | null;
+  grade?: Grade | null;
 }
 
 export interface ClaimCount {
@@ -145,6 +146,7 @@ export interface ColumnView {
   definition: ColumnDefinition;
   groups: GroupView[];
   count: number;
+  line?: string | null;
 }
 
 export interface FaceDoor {
@@ -163,7 +165,7 @@ export interface FoldedCard {
 export interface GroupView {
   name: string | null;
   cards: CardSummary[];
-  rail: boolean;
+  machine?: boolean;
 }
 
 export interface Loop {

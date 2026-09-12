@@ -62,7 +62,7 @@ Findings fall in three rings, and the ring decides what happens to them (owner
 ruling 2026-09-04). **Inside the change:** resolved in the lane under §13. **Adjacent — the seams the change touches:** fixed in the lane
 when the fix serves this slice's intent, otherwise filed as a suggestion in
 the corpus with the finding as its evidence and `**Kind:** defect` on its
-second line, so it lands on the defects rail, not among the ideas. **Outside the change:** never
+second line, so it lands in the Defects column, not among the ideas. **Outside the change:** never
 fixed in the lane; filed as a suggestion (`**Kind:** defect`), which is a card
 by the next read. Every suggestion also says who fixes it, on a `**Fix:**`
 line under the kind (plan 11): `now` when the intent it breaks is written,

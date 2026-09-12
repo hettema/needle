@@ -1,7 +1,6 @@
-import { useState } from "react";
 import type { ColumnView } from "../types/board";
 import type { ProposedMove } from "../types/focus";
-import { ColumnBox, ColumnHead, ColumnNote, ColumnTop, Definition, MoreRow, RailGroup, Stack, Tool } from "../components/ui";
+import { ColumnBox, ColumnHead, ColumnLine, ColumnNote, ColumnTop, Definition, MoreRow, Stack, Tool } from "../components/ui";
 import type { MoveStatus } from "../state/board";
 import { GroupBlock } from "./GroupBlock";
 import { groupSlots, throughLens, type LensKind, type Lift } from "./dnd";
@@ -33,19 +32,12 @@ export function ColumnBlock({ column, index, total, lens, lift, open, focused, s
   const name = column.definition.column;
   const wide = open !== null && column.groups.some((g) => g.cards.some((c) => c.number === open));
   const draggable = lens === "rank";
-  // The defects rail starts furled to its one line; the owner opens it for the second scan.
-  const [railOpen, setRailOpen] = useState(false);
   let budget = unfurled ? Number.POSITIVE_INFINITY : FOLD_AT;
   // The rank digit is gone from the card — position is rank — but the drop
   // preview still names the rank a card would land on.
   let rank = 1;
-  let furledInRail = 0;
   const blocks = column.groups.map((group) => {
     const seen = throughLens(group.cards, lens);
-    if (group.rail && !railOpen) {
-      furledInRail += seen.length;
-      return { group, slots: [] };
-    }
     const visible = seen.slice(0, Math.max(0, budget));
     budget -= visible.length;
     const { slots, rankNext } = groupSlots(column, group, visible, draggable ? lift : null, rank);
@@ -53,7 +45,7 @@ export function ColumnBlock({ column, index, total, lens, lift, open, focused, s
     return { group, slots };
   });
   const shown = blocks.reduce((n, b) => n + b.slots.filter((s) => s.kind === "card").length, 0);
-  const hidden = Math.max(0, column.count - furledInRail - shown);
+  const hidden = Math.max(0, column.count - shown);
 
   return (
     <ColumnBox wide={wide} column={name}>
@@ -75,39 +67,30 @@ export function ColumnBlock({ column, index, total, lens, lift, open, focused, s
           }
           definition={<Definition name={name} paragraphs={column.definition.definition} movedBy={column.definition.moved_by} toLeft={index >= total - 2} />}
         />
-        <ColumnNote>{column.definition.note}</ColumnNote>
+        {column.line ? <ColumnLine>{column.line}</ColumnLine> : <ColumnNote>{column.definition.note}</ColumnNote>}
       </ColumnTop>
       <Stack>
-        {blocks.map(({ group, slots }) => {
-          const block = (
-            <GroupBlock
-              key={group.name ?? ""}
-              column={column}
-              group={group}
-              slots={slots}
-              lift={lift}
-              open={open}
-              focused={focused}
-              statuses={statuses}
-              draggable={draggable}
-              lens={lens}
-              selected={selected}
-              moves={moves}
-              onOpen={onOpen}
-              onRetry={onRetry}
-              onFocus={onFocus}
-              onMoveTo={onMoveTo}
-              onSelect={onSelect}
-            />
-          );
-          return group.rail ? (
-            <RailGroup key="rail" count={group.cards.length} open={railOpen} onToggle={() => setRailOpen((v) => !v)}>
-              {block}
-            </RailGroup>
-          ) : (
-            block
-          );
-        })}
+        {blocks.map(({ group, slots }) => (
+          <GroupBlock
+            key={group.name ?? ""}
+            column={column}
+            group={group}
+            slots={slots}
+            lift={lift}
+            open={open}
+            focused={focused}
+            statuses={statuses}
+            draggable={draggable}
+            lens={lens}
+            selected={selected}
+            moves={moves}
+            onOpen={onOpen}
+            onRetry={onRetry}
+            onFocus={onFocus}
+            onMoveTo={onMoveTo}
+            onSelect={onSelect}
+          />
+        ))}
         {hidden > 0 ? <MoreRow onClick={onUnfurl}>+ {hidden} more in {name}</MoreRow> : null}
       </Stack>
     </ColumnBox>

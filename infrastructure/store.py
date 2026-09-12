@@ -30,9 +30,9 @@ from domain.audit import AuditEntry, AuditKind
 from domain.board import Beat, TrunkState
 from domain.call import Call, HowKnown
 from domain.card import Actor, Card, CardOrigin, DocumentLink, Place, RowRecord
-from domain.column import COLUMN_DEFINITIONS, DEFECTS_RAIL, DEFECTS_RAIL_POSITION, Column
-from domain.dial import Dial, DialChange, Filer, FixLane, FixStage, RailCount
-from domain.document import DOCUMENT_FOLDER, DocumentKind, DocumentRef, SuggestionKind
+from domain.column import COLUMN_DEFINITIONS, Column
+from domain.dial import DefectsCount, Dial, DialChange, Filer, FixLane, FixStage
+from domain.document import DOCUMENT_FOLDER, DocumentKind, DocumentRef
 from domain.ending import Cause, Death, Park, Recovery, Sighting
 from domain.entrance import Entrance
 from domain.evidence import Evidence
@@ -65,9 +65,13 @@ from domain.signal import Reading, SessionWork, WindowlessSession
 from domain.slot import Rung
 from domain.team import Composition, Route
 from domain.triage import (
+    Breaks,
     CorpusLane,
     CorpusLaneKind,
     Direction,
+    Grade,
+    Often,
+    Reach,
     TitleReading,
     TitleVerdict,
     Triage,
@@ -568,24 +572,18 @@ class Store:
             for folded in effects.folded:
                 _fold(session, slug, folded.card_number, folded.into, folded.plan, at)
             for rehomed in effects.rehomed:
-                if rehomed.into_rail:
-                    _landing_group(session, slug, Column.BACKLOG, rail=True)
                 _move(
                     session,
                     slug,
                     rehomed.card_number,
-                    Place(
-                        column=Column.BACKLOG,
-                        group=DEFECTS_RAIL if rehomed.into_rail else None,
-                        position=_END,
-                    ),
+                    Place(column=rehomed.into, group=None, position=_END),
                     Actor.CORPUS,
                     at,
                     detail=f"its document says Kind: {rehomed.kind.value}; "
                     + (
-                        "a defect reads on the defects rail"
-                        if rehomed.into_rail
-                        else "an idea reads below the rail"
+                        "a defect reads in Defects"
+                        if rehomed.into == Column.DEFECTS
+                        else "an idea reads in Backlog"
                     ),
                     evidence=None,
                 )
@@ -622,12 +620,7 @@ class Store:
                     detail="Its document's title changed." + said,
                 )
             for birth in effects.born:
-                group = _landing_group(
-                    session,
-                    slug,
-                    birth.column,
-                    rail=birth.column == Column.BACKLOG and birth.kind == SuggestionKind.DEFECT,
-                )
+                group = _landing_group(session, slug, birth.column)
                 position = _group_size(session, group.id)
                 number = project.next_card_number
                 conversation = _conversation_named(session, slug, birth.found_by)
@@ -654,8 +647,8 @@ class Store:
                 place = Place(column=birth.column, group=group.name, position=position)
                 how = "at registration" if origin == CardOrigin.FOUNDING else "after registration"
                 detail = f"Born from {birth.document.path}, {how}."
-                if group.name == DEFECTS_RAIL:
-                    detail += " Its document says Kind: defect, so it reads on the defects rail."
+                if birth.column == Column.DEFECTS:
+                    detail += " Its document says Kind: defect, so it reads in Defects."
                 if conversation is not None:
                     day = conversation.started_at.date().isoformat()
                     detail += (
@@ -1512,7 +1505,7 @@ class Store:
 
     def dials(self) -> list[Dial]:
         """Every registered board's switch, in the board's order, each with
-        the machine's number: what the beat reads before any rail, what
+        the machine's number: what the beat reads before any column, what
         `needle dial` prints, and where a head reads which other boards are
         on (card #80)."""
         lanes = self.fix_lanes_at_most()
@@ -1598,8 +1591,8 @@ class Store:
                 for r in rows
             ]
 
-    def record_rail_at_on(self, rail: RailCount) -> bool:
-        """One board's rail as it stood when its switch was first turned on,
+    def record_defects_at_on(self, rail: DefectsCount) -> bool:
+        """One board's Defects column as it stood when its switch was first turned on,
         once: a second call for the same board writes nothing and answers
         False. The rows plan 11 recorded for every board at the one dial's
         first on (2026-09-05) stand as each of those boards' baseline."""
@@ -1611,14 +1604,14 @@ class Store:
                 session.add(RailAtOnRow(project_slug=rail.project, filer=filer.value, count=count))
             return True
 
-    def rail_at_on(self) -> list[RailCount]:
+    def defects_at_on(self) -> list[DefectsCount]:
         with self._session() as session:
             rows = session.scalars(select(RailAtOnRow).order_by(RailAtOnRow.id)).all()
             by_project: dict[str, dict[Filer, int]] = {}
             for row in rows:
                 by_project.setdefault(row.project_slug, {})[Filer(row.filer)] = row.count
             return [
-                RailCount(project=slug, counts=counts, total=sum(counts.values()))
+                DefectsCount(project=slug, counts=counts, total=sum(counts.values()))
                 for slug, counts in by_project.items()
             ]
 
@@ -1641,10 +1634,13 @@ class Store:
         source_fingerprint: str | None,
         document_fingerprint: str,
         session_id: str | None,
+        grade: Grade | None = None,
     ) -> Triage:
         """One reading's result, kept whole. Never replaced: a card's
         readings are a history, so the audit the loop asks for can see a
-        mark that was verified one way and then another."""
+        mark that was verified one way and then another. `grade` is how
+        bad the same reading found it (card #100, item 2); the door refuses
+        a defect's result without one, and the owner's hand ruling has none."""
         with self._session() as session, session.begin():
             if session.get(CardRow, (slug, number)) is None:
                 raise StoreRefusal(f"There is no card #{number} on this board.")
@@ -1663,6 +1659,12 @@ class Store:
                 source_fingerprint=source_fingerprint,
                 document_fingerprint=document_fingerprint,
                 session_id=session_id,
+                breaks=grade.breaks.value if grade is not None else None,
+                breaks_words=grade.breaks_words if grade is not None else None,
+                reach=grade.reach.value if grade is not None and grade.reach else None,
+                reach_words=grade.reach_words if grade is not None else None,
+                often=grade.often.value if grade is not None and grade.often else None,
+                often_words=grade.often_words if grade is not None else None,
             )
             session.add(row)
             session.flush()
@@ -3136,6 +3138,16 @@ def _triage(row: TriageRow) -> Triage:
         source_fingerprint=row.source_fingerprint,
         document_fingerprint=row.document_fingerprint,
         session_id=row.session_id,
+        grade=Grade(
+            breaks=Breaks(row.breaks),
+            breaks_words=row.breaks_words or "",
+            reach=Reach(row.reach) if row.reach else None,
+            reach_words=row.reach_words,
+            often=Often(row.often) if row.often else None,
+            often_words=row.often_words,
+        )
+        if row.breaks is not None
+        else None,
     )
 
 
@@ -3269,10 +3281,6 @@ def _move(
             )
     if to.group is None:
         _landing_group(session, slug, to.column)
-    elif to.column == Column.BACKLOG and to.group == DEFECTS_RAIL:
-        # A defect pulled back from Not now lands on the rail, which a
-        # Backlog with no other defect may not have yet (card #87, item 5).
-        _landing_group(session, slug, to.column, rail=True)
     layout = _layout(session, slug)
     try:
         result = apply_move(layout, number, to)
@@ -3397,21 +3405,17 @@ def _layout(session: Session, slug: str) -> list[GroupLayout]:
     ]
 
 
-def _landing_group(session: Session, slug: str, column: Column, *, rail: bool = False) -> GroupRow:
-    """The column's unnamed group, made at the column's end when it has none;
-    with `rail`, Backlog's defects rail, made before every named group when
-    it has none (plan 06, item 2).
+def _landing_group(session: Session, slug: str, column: Column) -> GroupRow:
+    """The column's unnamed group, made at the column's end when it has none.
 
     A card born from the corpus, or moved to a column without naming a group,
-    lands here: below the owner's named groups, never above them — except a
-    defect, which reads on the rail above them.
+    lands here: below the owner's named groups, never above them.
     """
-    name = DEFECTS_RAIL if rail else None
     existing = session.scalar(
         select(GroupRow).where(
             GroupRow.project_slug == slug,
             GroupRow.column == column.value,
-            GroupRow.name.is_(None) if name is None else GroupRow.name == name,
+            GroupRow.name.is_(None),
         )
     )
     if existing is not None:
@@ -3419,10 +3423,8 @@ def _landing_group(session: Session, slug: str, column: Column, *, rail: bool = 
     siblings = session.scalars(
         select(GroupRow).where(GroupRow.project_slug == slug, GroupRow.column == column.value)
     ).all()
-    position = (
-        DEFECTS_RAIL_POSITION if rail else max([g.position for g in siblings], default=-1) + 1
-    )
-    group = GroupRow(project_slug=slug, column=column.value, name=name, position=position)
+    position = max([g.position for g in siblings], default=-1) + 1
+    group = GroupRow(project_slug=slug, column=column.value, name=None, position=position)
     session.add(group)
     session.flush()
     return group

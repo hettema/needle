@@ -11,8 +11,8 @@ from board.dial import (
     filer_of,
     held_lanes,
     is_quiet,
-    rail_count,
-    rail_defects,
+    column_defects,
+    defects_count,
     running,
     switch_was_on,
     why_not_eligible,
@@ -21,7 +21,7 @@ from board.lane import lane_for
 from board.parse import parse_document
 from board.triage import routing_of
 from domain.card import Actor, Card, CardOrigin, DocumentLink, Place
-from domain.column import DEFECTS_RAIL, Column
+from domain.column import Column
 from domain.corpus import CorpusIndex
 from domain.dial import (
     MEMORY_FLOOR_BYTES,
@@ -57,7 +57,7 @@ def card(number: int, stem: str, *, rows: list[Row] | None = None, born: datetim
     return Card(
         number=number,
         project="proj",
-        place=Place(column=Column.BACKLOG, group=DEFECTS_RAIL, position=0),
+        place=Place(column=Column.DEFECTS, group=None, position=0),
         title="The thing",
         gate=None,
         tags=[],
@@ -133,7 +133,7 @@ def test_filed_against_counts_defects_only_and_the_archived_on_request(tmp_path)
     assert filer_of(None) == Filer.UNKNOWN
 
 
-def test_the_rail_is_counted_by_filer_over_defects_standing_on_their_own():
+def test_the_column_is_counted_by_filer_over_defects_standing_on_their_own():
     documents = [
         suggestion("a", "**Kind:** defect\n**Found by:** the owner"),
         suggestion("b", "**Kind:** defect\n**Found by:** the lane on card #3"),
@@ -143,10 +143,10 @@ def test_the_rail_is_counted_by_filer_over_defects_standing_on_their_own():
     index = CorpusIndex(documents=documents, read_at=NOW)
     cards = [card(1, "a"), card(2, "b"), card(3, "c"), card(4, "d")]
     cards[3].folded_into = 1
-    assert [c.number for c, _ in rail_defects(cards, index)] == [1, 2]
-    rail = rail_count("proj", cards, index)
-    assert rail.total == 2
-    assert rail.counts == {Filer.OWNER: 1, Filer.FEATURE_LANE: 1}
+    assert [c.number for c, _ in column_defects(cards, index)] == [1, 2]
+    count = defects_count("proj", cards, index)
+    assert count.total == 2
+    assert count.counts == {Filer.OWNER: 1, Filer.FEATURE_LANE: 1}
 
 
 def verified(document, result: TriageResult = TriageResult.NOW) -> Triage:

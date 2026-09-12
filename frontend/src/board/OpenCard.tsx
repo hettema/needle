@@ -340,6 +340,19 @@ export function OpenCard({ card, onMoveTo }: { card: CardSummary; onMoveTo: (num
               {detail.triage.direction ? ` · ${detail.triage.direction}` : ""}
             </Quiet>
           ) : null}
+          {detail.summary.grade ? (
+            <Quiet>
+              <span data-grade={detail.summary.grade.breaks}>
+                How bad: <b>{detail.summary.grade.breaks}</b>
+                {detail.summary.grade.reach ? ` · reaches ${detail.summary.grade.reach}` : ""}
+                {detail.summary.grade.often ? ` · ${detail.summary.grade.often.replace("-", " ")}` : ""}
+              </span>
+              {" — "}
+              {[detail.summary.grade.breaks_words, detail.summary.grade.reach_words, detail.summary.grade.often_words].filter(Boolean).join("; ")}
+            </Quiet>
+          ) : detail.triage && detail.summary.routing && detail.summary.routing.state !== "stale" ? (
+            <Quiet>Not graded: this reading landed before the board graded defects; the next reading grades it.</Quiet>
+          ) : null}
           {detail.source ? <Quiet>The source it read: {detail.source.note}</Quiet> : null}
           {detail.summary.triaging ? (
             <Quiet>

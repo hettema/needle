@@ -11,7 +11,7 @@
     "generated_at": "2026-09-04T08:30:00Z",
     "corpus": {
       "live_plans": 11,
-      "live_suggestions": 9,
+      "live_suggestions": 10,
       "archived": 8,
       "watching": true,
       "watch_note": null,
@@ -33,7 +33,7 @@
         }
       ],
       "live": [],
-      "unplanned_defects": 2,
+      "unplanned_defects": 3,
       "unplanned_ideas": 7,
       "arrived_today": 1
     },
@@ -72,20 +72,118 @@
     "columns": [
       {
         "definition": {
-          "column": "Backlog",
-          "note": "Ideas written up as suggestions, ranked below the line. Planning one is what promotes it.",
+          "column": "Defects",
+          "note": "What is broken, gravest first. The board keeps the order from each defect's second reading; planning one is what promotes it.",
           "definition": [
-            "Written ideas. A suggestion exists on disk; nobody has planned it yet.",
-            "Planning one is what promotes it — the column is the stage of the writing, never a label somebody applied."
+            "Written defects: a suggestion whose document says Kind: defect. The board puts it here and an idea in Backlog on every read, from the document's own word.",
+            "The order is the board's, gravest first from the second reading's grade: what lies before what loses, what loses before what costs, and what only looks wrong last; the ones nobody has read yet sit under the line. You do not rank it."
           ],
-          "moved_by": "you, or by a plan appearing",
+          "moved_by": "the board, from the document; a plan appearing promotes it",
           "ranked": false,
           "yours": false,
-          "furled_on_laptop": false
+          "furled_on_laptop": true
         },
         "groups": [
           {
-            "name": "Defects",
+            "name": null,
+            "cards": [
+              {
+                "number": 268,
+                "title": "The slip shows last month's price",
+                "essence": "A skipper pays what the tariff says today.",
+                "essence_source": "document",
+                "gate": null,
+                "tags": [],
+                "document_state": "suggestion",
+                "document_path": "docs/slice-suggestions/2026-09-05-the-slip-shows-last-months-price.md",
+                "kind": "defect",
+                "fix": {
+                  "mark": "now",
+                  "why": "the tariff plan says the price on a slip is the price on the day it is printed, and the slip reads the month before",
+                  "trigger": null
+                },
+                "routing": {
+                  "state": "triaged now",
+                  "why": "a reading verified it: the tariff plan says the price on a slip is the price on the day it is printed"
+                },
+                "state": {
+                  "word": "lies",
+                  "meaning": "quiet",
+                  "detail": "Nothing for you: a second reading graded it: it shows something false as true, reaching a client or the public, sometimes. The skipper believes a number that is not true; a skipper pays what the slip says; every tariff change since spring has produced a week of wrong slips.",
+                  "loop": null,
+                  "door": null,
+                  "hint": "open to see"
+                },
+                "claims": [],
+                "folded": [],
+                "is_new": false,
+                "age_date": "2026-09-05",
+                "place": {
+                  "column": "Defects",
+                  "group": null,
+                  "position": 2
+                },
+                "lane_state": "none",
+                "colliding": null,
+                "progress": null,
+                "standing": {
+                  "actor": "corpus",
+                  "evidence": null,
+                  "state": "trusted",
+                  "words": null
+                },
+                "reading": null,
+                "planning": null,
+                "triaging": null,
+                "triage": {
+                  "id": 1,
+                  "project": "harbourmaster",
+                  "card_number": 268,
+                  "at": "2026-09-04T05:30:00Z",
+                  "actor": "session",
+                  "result": "now",
+                  "words": "the tariff plan says the price on a slip is the price on the day it is printed",
+                  "decision": "c0ffee0000000001",
+                  "parent": null,
+                  "direction": "no direction",
+                  "source_ref": null,
+                  "source_path": null,
+                  "source_fingerprint": null,
+                  "document_fingerprint": "1156a06cd69c3775",
+                  "session_id": "eeee0001-0000-4000-8000-000000000000",
+                  "grade": {
+                    "breaks": "lies",
+                    "breaks_words": "the skipper believes a number that is not true",
+                    "reach": "client",
+                    "reach_words": "a skipper pays what the slip says",
+                    "often": "sometimes",
+                    "often_words": "every tariff change since spring has produced a week of wrong slips"
+                  }
+                },
+                "title_reading": null,
+                "leverage": {
+                  "state": "unread",
+                  "leverage": null,
+                  "likelihood": null,
+                  "words": null,
+                  "sentence": "Nothing for you: this card has not been read against the focus yet. It keeps its place until a reading lands.",
+                  "hold": null,
+                  "read_at": null
+                },
+                "grade": {
+                  "breaks": "lies",
+                  "breaks_words": "the skipper believes a number that is not true",
+                  "reach": "client",
+                  "reach_words": "a skipper pays what the slip says",
+                  "often": "sometimes",
+                  "often_words": "every tariff change since spring has produced a week of wrong slips"
+                }
+              }
+            ],
+            "machine": false
+          },
+          {
+            "name": "2 nobody has read yet",
             "cards": [
               {
                 "number": 232,
@@ -115,8 +213,8 @@
                 "is_new": false,
                 "age_date": "2026-09-01",
                 "place": {
-                  "column": "Backlog",
-                  "group": "Defects",
+                  "column": "Defects",
+                  "group": null,
                   "position": 0
                 },
                 "lane_state": "none",
@@ -141,7 +239,8 @@
                   "sentence": "Nothing for you: this card has not been read against the focus yet. It keeps its place until a reading lands.",
                   "hold": null,
                   "read_at": null
-                }
+                },
+                "grade": null
               },
               {
                 "number": 267,
@@ -175,8 +274,8 @@
                 "is_new": false,
                 "age_date": "2026-09-04",
                 "place": {
-                  "column": "Backlog",
-                  "group": "Defects",
+                  "column": "Defects",
+                  "group": null,
                   "position": 1
                 },
                 "lane_state": "none",
@@ -201,11 +300,30 @@
                   "sentence": "Nothing for you: this card has not been read against the focus yet. It keeps its place until a reading lands.",
                   "hold": null,
                   "read_at": null
-                }
+                },
+                "grade": null
               }
             ],
-            "rail": true
-          },
+            "machine": true
+          }
+        ],
+        "count": 3,
+        "line": "0 yours · 2 nobody has read yet · 0 waiting on a signal · 1 fixing themselves"
+      },
+      {
+        "definition": {
+          "column": "Backlog",
+          "note": "Ideas written up as suggestions. Planning one is what promotes it.",
+          "definition": [
+            "Written ideas. A suggestion exists on disk; nobody has planned it yet. A suggestion whose document says defect sits in Defects instead.",
+            "Planning one is what promotes it — the column is the stage of the writing, never a label somebody applied."
+          ],
+          "moved_by": "you, or by a plan appearing",
+          "ranked": false,
+          "yours": false,
+          "furled_on_laptop": false
+        },
+        "groups": [
           {
             "name": "Next to plan",
             "cards": [
@@ -260,7 +378,8 @@
                   "sentence": "Nothing for you: this card has not been read against the focus yet. It keeps its place until a reading lands.",
                   "hold": null,
                   "read_at": null
-                }
+                },
+                "grade": null
               },
               {
                 "number": 242,
@@ -313,7 +432,8 @@
                   "sentence": "Nothing for you: this card has not been read against the focus yet. It keeps its place until a reading lands.",
                   "hold": null,
                   "read_at": null
-                }
+                },
+                "grade": null
               },
               {
                 "number": 120,
@@ -360,15 +480,16 @@
                 "triaging": null,
                 "triage": null,
                 "title_reading": null,
-                "leverage": null
+                "leverage": null,
+                "grade": null
               }
             ],
-            "rail": false
+            "machine": false
           },
           {
             "name": "Season opening",
             "cards": [],
-            "rail": false
+            "machine": false
           },
           {
             "name": "Skipper-facing quality",
@@ -418,10 +539,11 @@
                 "triaging": null,
                 "triage": null,
                 "title_reading": null,
-                "leverage": null
+                "leverage": null,
+                "grade": null
               }
             ],
-            "rail": false
+            "machine": false
           },
           {
             "name": null,
@@ -477,7 +599,8 @@
                   "sentence": "Nothing for you: this card has not been read against the focus yet. It keeps its place until a reading lands.",
                   "hold": null,
                   "read_at": null
-                }
+                },
+                "grade": null
               },
               {
                 "number": 264,
@@ -530,7 +653,8 @@
                   "sentence": "Nothing for you: this card has not been read against the focus yet. It keeps its place until a reading lands.",
                   "hold": null,
                   "read_at": null
-                }
+                },
+                "grade": null
               },
               {
                 "number": 265,
@@ -583,7 +707,8 @@
                   "sentence": "Nothing for you: this card has not been read against the focus yet. It keeps its place until a reading lands.",
                   "hold": null,
                   "read_at": null
-                }
+                },
+                "grade": null
               },
               {
                 "number": 266,
@@ -636,13 +761,15 @@
                   "sentence": "Nothing for you: this card has not been read against the focus yet. It keeps its place until a reading lands.",
                   "hold": null,
                   "read_at": null
-                }
+                },
+                "grade": null
               }
             ],
-            "rail": false
+            "machine": false
           }
         ],
-        "count": 10
+        "count": 8,
+        "line": null
       },
       {
         "definition": {
@@ -714,10 +841,11 @@
                   "sentence": "Nothing for you: it helps remove this limit (low likelihood). A berth let sooner is invoiced sooner, if it is invoiced.",
                   "hold": null,
                   "read_at": "2026-09-04T08:30:00Z"
-                }
+                },
+                "grade": null
               }
             ],
-            "rail": false
+            "machine": false
           },
           {
             "name": "Skipper-facing quality",
@@ -775,10 +903,11 @@
                   "sentence": "Nothing for you: it needs evidence. The plan does not say what showing the price moves.",
                   "hold": null,
                   "read_at": "2026-09-04T08:30:00Z"
-                }
+                },
+                "grade": null
               }
             ],
-            "rail": false
+            "machine": false
           },
           {
             "name": "Trust — from the winter review",
@@ -836,10 +965,11 @@
                   "sentence": "Nothing for you: this card has not been read against the focus yet. It keeps its place until a reading lands.",
                   "hold": null,
                   "read_at": null
-                }
+                },
+                "grade": null
               }
             ],
-            "rail": false
+            "machine": false
           },
           {
             "name": null,
@@ -895,10 +1025,11 @@
                   "sentence": "Nothing for you: this card has not been read against the focus yet. It keeps its place until a reading lands.",
                   "hold": null,
                   "read_at": null
-                }
+                },
+                "grade": null
               },
               {
-                "number": 268,
+                "number": 269,
                 "title": "A storm warning reaches every skipper in the harbour",
                 "essence": "Every boat in the harbour hears a gale warning the moment the office does.",
                 "essence_source": "document",
@@ -948,13 +1079,15 @@
                   "sentence": "Nothing for you: this card has not been read against the focus yet. It keeps its place until a reading lands.",
                   "hold": null,
                   "read_at": null
-                }
+                },
+                "grade": null
               }
             ],
-            "rail": false
+            "machine": false
           }
         ],
-        "count": 5
+        "count": 5,
+        "line": null
       },
       {
         "definition": {
@@ -1024,7 +1157,8 @@
                   "sentence": "Nothing for you: it helps remove this limit (high likelihood). It bills the reading the invoice waits on.",
                   "hold": null,
                   "read_at": "2026-09-04T08:30:00Z"
-                }
+                },
+                "grade": null
               },
               {
                 "number": 241,
@@ -1077,7 +1211,8 @@
                   "sentence": "Nothing for you: it protects progress. A gate code before arrival keeps a paid berth usable.",
                   "hold": null,
                   "read_at": "2026-09-04T08:30:00Z"
-                }
+                },
+                "grade": null
               },
               {
                 "number": 228,
@@ -1122,7 +1257,8 @@
                 "triaging": null,
                 "triage": null,
                 "title_reading": null,
-                "leverage": null
+                "leverage": null,
+                "grade": null
               },
               {
                 "number": 237,
@@ -1175,7 +1311,8 @@
                   "sentence": "Nothing for you: this card has not been read against the focus yet. It keeps its place until a reading lands.",
                   "hold": null,
                   "read_at": null
-                }
+                },
+                "grade": null
               },
               {
                 "number": 174,
@@ -1230,13 +1367,15 @@
                   "sentence": "Nothing for you: it does not address this limit. The office file's size does not delay an invoice.",
                   "hold": null,
                   "read_at": "2026-09-04T08:30:00Z"
-                }
+                },
+                "grade": null
               }
             ],
-            "rail": false
+            "machine": false
           }
         ],
-        "count": 5
+        "count": 5,
+        "line": null
       },
       {
         "definition": {
@@ -1298,7 +1437,8 @@
                 "triaging": null,
                 "triage": null,
                 "title_reading": null,
-                "leverage": null
+                "leverage": null,
+                "grade": null
               },
               {
                 "number": 223,
@@ -1351,13 +1491,15 @@
                   "sentence": "Nothing for you: this card has not been read against the focus yet. It keeps its place until a reading lands.",
                   "hold": null,
                   "read_at": null
-                }
+                },
+                "grade": null
               }
             ],
-            "rail": false
+            "machine": false
           }
         ],
-        "count": 2
+        "count": 2,
+        "line": null
       },
       {
         "definition": {
@@ -1436,7 +1578,8 @@
                   "sentence": "Nothing for you: this card has not been read against the focus yet. It keeps its place until a reading lands.",
                   "hold": null,
                   "read_at": null
-                }
+                },
+                "grade": null
               },
               {
                 "number": 147,
@@ -1491,10 +1634,11 @@
                 "triaging": null,
                 "triage": null,
                 "title_reading": null,
-                "leverage": null
+                "leverage": null,
+                "grade": null
               }
             ],
-            "rail": false
+            "machine": false
           },
           {
             "name": "Rulings that unblock lanes",
@@ -1559,10 +1703,11 @@
                   "sentence": "Nothing for you: this card has not been read against the focus yet. It keeps its place until a reading lands.",
                   "hold": null,
                   "read_at": null
-                }
+                },
+                "grade": null
               }
             ],
-            "rail": false
+            "machine": false
           },
           {
             "name": "Actions & sign-offs elsewhere",
@@ -1619,13 +1764,15 @@
                 "triaging": null,
                 "triage": null,
                 "title_reading": null,
-                "leverage": null
+                "leverage": null,
+                "grade": null
               }
             ],
-            "rail": false
+            "machine": false
           }
         ],
-        "count": 4
+        "count": 4,
+        "line": null
       },
       {
         "definition": {
@@ -1697,13 +1844,15 @@
                   "sentence": "Nothing for you: this card has not been read against the focus yet. It keeps its place until a reading lands.",
                   "hold": null,
                   "read_at": null
-                }
+                },
+                "grade": null
               }
             ],
-            "rail": false
+            "machine": false
           }
         ],
-        "count": 1
+        "count": 1,
+        "line": null
       },
       {
         "definition": {
@@ -1722,10 +1871,11 @@
           {
             "name": null,
             "cards": [],
-            "rail": false
+            "machine": false
           }
         ],
-        "count": 0
+        "count": 0,
+        "line": null
       },
       {
         "definition": {
@@ -1789,13 +1939,15 @@
                 "triaging": null,
                 "triage": null,
                 "title_reading": null,
-                "leverage": null
+                "leverage": null,
+                "grade": null
               }
             ],
-            "rail": false
+            "machine": false
           }
         ],
-        "count": 1
+        "count": 1,
+        "line": null
       }
     ],
     "documents_without_card": [],
@@ -1805,7 +1957,7 @@
     "watercooler": [],
     "focus": {
       "state": "chosen",
-      "sentence": "Focus chosen · 5 of 20 cards assessed · 2 moves proposed",
+      "sentence": "Focus chosen · 5 of 21 cards assessed · 2 moves proposed",
       "what_matters": "Every season berth is paid before the boat arrives",
       "what_holds": "The invoice leaves the office late, because the meter readings it waits on arrive as text the office drops",
       "document": {
@@ -1878,8 +2030,8 @@
       "conversation": null,
       "coverage": {
         "assessed": 5,
-        "total": 20,
-        "unread": 15,
+        "total": 21,
+        "unread": 16,
         "needs_evidence": 1,
         "stale": 0,
         "reading": 0,
@@ -1914,19 +2066,23 @@
       "why": null,
       "columns": [
         {
+          "column": "Defects",
+          "groups": [
+            {
+              "name": null,
+              "numbers": [
+                232,
+                267,
+                268
+              ]
+            }
+          ]
+        },
+        {
           "column": "Backlog",
           "groups": [
             {
-              "name": "Defects",
-              "rail": true,
-              "numbers": [
-                232,
-                267
-              ]
-            },
-            {
               "name": "Next to plan",
-              "rail": false,
               "numbers": [
                 252,
                 242,
@@ -1935,19 +2091,16 @@
             },
             {
               "name": "Season opening",
-              "rail": false,
               "numbers": []
             },
             {
               "name": "Skipper-facing quality",
-              "rail": false,
               "numbers": [
                 105
               ]
             },
             {
               "name": null,
-              "rail": false,
               "numbers": [
                 263,
                 264,
@@ -1962,29 +2115,25 @@
           "groups": [
             {
               "name": "Season opening",
-              "rail": false,
               "numbers": []
             },
             {
               "name": "Skipper-facing quality",
-              "rail": false,
               "numbers": [
                 109
               ]
             },
             {
               "name": "Trust — from the winter review",
-              "rail": false,
               "numbers": [
                 172
               ]
             },
             {
               "name": null,
-              "rail": false,
               "numbers": [
                 262,
-                268
+                269
               ]
             }
           ]
@@ -1994,7 +2143,6 @@
           "groups": [
             {
               "name": null,
-              "rail": false,
               "numbers": [
                 253,
                 196,
@@ -2010,7 +2158,6 @@
           "groups": [
             {
               "name": null,
-              "rail": false,
               "numbers": [
                 259,
                 223
@@ -2023,7 +2170,6 @@
           "groups": [
             {
               "name": null,
-              "rail": false,
               "numbers": [
                 219,
                 147
@@ -2031,14 +2177,12 @@
             },
             {
               "name": "Rulings that unblock lanes",
-              "rail": false,
               "numbers": [
                 139
               ]
             },
             {
               "name": "Actions & sign-offs elsewhere",
-              "rail": false,
               "numbers": [
                 149
               ]
@@ -2050,7 +2194,6 @@
           "groups": [
             {
               "name": null,
-              "rail": false,
               "numbers": [
                 134
               ]
@@ -2062,7 +2205,6 @@
           "groups": [
             {
               "name": null,
-              "rail": false,
               "numbers": []
             }
           ]
@@ -2072,7 +2214,6 @@
           "groups": [
             {
               "name": null,
-              "rail": false,
               "numbers": [
                 201,
                 174
@@ -2116,13 +2257,324 @@
     }
   },
   "details": {
+    "268": {
+      "card": {
+        "number": 268,
+        "project": "harbourmaster",
+        "place": {
+          "column": "Defects",
+          "group": null,
+          "position": 2
+        },
+        "title": "The slip shows last month's price",
+        "gate": null,
+        "tags": [],
+        "deep": "",
+        "citations": [
+          "docs/slice-suggestions/2026-09-05-the-slip-shows-last-months-price.md"
+        ],
+        "link": {
+          "kind": "suggestion",
+          "stem": "2026-09-05-the-slip-shows-last-months-price",
+          "title": "The slip shows last month's price",
+          "archived": false
+        },
+        "origin": "founding",
+        "born_at": "2026-09-04T08:30:00Z",
+        "rows": [],
+        "folded_into": null
+      },
+      "summary": {
+        "number": 268,
+        "title": "The slip shows last month's price",
+        "essence": "A skipper pays what the tariff says today.",
+        "essence_source": "document",
+        "gate": null,
+        "tags": [],
+        "document_state": "suggestion",
+        "document_path": "docs/slice-suggestions/2026-09-05-the-slip-shows-last-months-price.md",
+        "kind": "defect",
+        "fix": {
+          "mark": "now",
+          "why": "the tariff plan says the price on a slip is the price on the day it is printed, and the slip reads the month before",
+          "trigger": null
+        },
+        "routing": {
+          "state": "triaged now",
+          "why": "a reading verified it: the tariff plan says the price on a slip is the price on the day it is printed"
+        },
+        "state": {
+          "word": "lies",
+          "meaning": "quiet",
+          "detail": "Nothing for you: a second reading graded it: it shows something false as true, reaching a client or the public, sometimes. The skipper believes a number that is not true; a skipper pays what the slip says; every tariff change since spring has produced a week of wrong slips.",
+          "loop": null,
+          "door": null,
+          "hint": "open to see"
+        },
+        "claims": [],
+        "folded": [],
+        "is_new": false,
+        "age_date": "2026-09-05",
+        "place": {
+          "column": "Defects",
+          "group": null,
+          "position": 2
+        },
+        "lane_state": "none",
+        "colliding": null,
+        "progress": null,
+        "standing": {
+          "actor": "corpus",
+          "evidence": null,
+          "state": "trusted",
+          "words": null
+        },
+        "reading": null,
+        "planning": null,
+        "triaging": null,
+        "triage": {
+          "id": 1,
+          "project": "harbourmaster",
+          "card_number": 268,
+          "at": "2026-09-04T05:30:00Z",
+          "actor": "session",
+          "result": "now",
+          "words": "the tariff plan says the price on a slip is the price on the day it is printed",
+          "decision": "c0ffee0000000001",
+          "parent": null,
+          "direction": "no direction",
+          "source_ref": null,
+          "source_path": null,
+          "source_fingerprint": null,
+          "document_fingerprint": "1156a06cd69c3775",
+          "session_id": "eeee0001-0000-4000-8000-000000000000",
+          "grade": {
+            "breaks": "lies",
+            "breaks_words": "the skipper believes a number that is not true",
+            "reach": "client",
+            "reach_words": "a skipper pays what the slip says",
+            "often": "sometimes",
+            "often_words": "every tariff change since spring has produced a week of wrong slips"
+          }
+        },
+        "title_reading": null,
+        "leverage": {
+          "state": "unread",
+          "leverage": null,
+          "likelihood": null,
+          "words": null,
+          "sentence": "Nothing for you: this card has not been read against the focus yet. It keeps its place until a reading lands.",
+          "hold": null,
+          "read_at": null
+        },
+        "grade": {
+          "breaks": "lies",
+          "breaks_words": "the skipper believes a number that is not true",
+          "reach": "client",
+          "reach_words": "a skipper pays what the slip says",
+          "often": "sometimes",
+          "often_words": "every tariff change since spring has produced a week of wrong slips"
+        }
+      },
+      "brief": [],
+      "record": [],
+      "document": {
+        "kind": "suggestion",
+        "stem": "2026-09-05-the-slip-shows-last-months-price",
+        "path": "docs/slice-suggestions/2026-09-05-the-slip-shows-last-months-price.md",
+        "archived": false,
+        "title": "The slip shows last month's price",
+        "date": "2026-09-05",
+        "status": null,
+        "status_word": null,
+        "gate": null,
+        "gate_why": null,
+        "sequencing": null,
+        "sequenced": [],
+        "found_by": "the owner, 2026-09-05, from a skipper's letter.",
+        "card_ref": null,
+        "suggestion_kind": "defect",
+        "fix": {
+          "mark": "now",
+          "why": "the tariff plan says the price on a slip is the price on the day it is printed, and the slip reads the month before",
+          "trigger": null
+        },
+        "fix_note": null,
+        "cites": [],
+        "handouts": [],
+        "items": [],
+        "head_fields": [
+          {
+            "key": "Kind",
+            "value": "defect"
+          },
+          {
+            "key": "Fix",
+            "value": "now — the tariff plan says the price on a slip is the price on the day it is printed, and the slip reads the month before"
+          },
+          {
+            "key": "Found by",
+            "value": "the owner, 2026-09-05, from a skipper's letter."
+          }
+        ],
+        "fingerprint": "1156a06cd69c3775",
+        "intent_heading": "The intent it breaks",
+        "intent": "A skipper pays what the tariff says today. A slip that shows last month's price is a bill the office has to take back and print again, and until it does the skipper believes a number that is not true.",
+        "essence": "A skipper pays what the tariff says today.",
+        "read_at": "2026-09-04T08:30:00Z"
+      },
+      "other_citations": [],
+      "history": [
+        {
+          "id": 48,
+          "at": "2026-09-04T08:30:00Z",
+          "actor": "corpus",
+          "kind": "born",
+          "card_number": 268,
+          "from_place": null,
+          "to_place": {
+            "column": "Defects",
+            "group": null,
+            "position": 2
+          },
+          "detail": "Born from docs/slice-suggestions/2026-09-05-the-slip-shows-last-months-price.md, at registration. Its document says Kind: defect, so it reads in Defects.",
+          "evidence": null
+        }
+      ],
+      "lane": {
+        "card_number": 268,
+        "name": "card-268-the-slip-shows-last-month-s-pric",
+        "path": null,
+        "state": "none",
+        "sentence": "",
+        "session": null,
+        "question": null,
+        "said": null,
+        "said_at": null,
+        "discussing": [],
+        "window_open": false,
+        "hands_on_since": null,
+        "died": null,
+        "cause": null,
+        "park": null,
+        "moved": null,
+        "folded": false,
+        "trunk_synced": false,
+        "main_synced": false,
+        "edits": [],
+        "declared": [],
+        "colliding": null,
+        "progress": null,
+        "machine": null
+      },
+      "doors": {
+        "start": {
+          "offered": false,
+          "label": "Start",
+          "why": "Nothing for you: a card starts from Up next or Planned, and this one is in Defects. Move it there to start it."
+        },
+        "readiness": {
+          "state": "elsewhere",
+          "why": "Nothing for you: a card starts from Up next or Planned, and this one is in Defects. Move it there to start it.",
+          "cards": [],
+          "files": [],
+          "waits": []
+        },
+        "placement": null,
+        "placement_note": "the runtime has not read this board yet",
+        "collision": null,
+        "waits": [],
+        "watch": {
+          "offered": false,
+          "label": "Watch",
+          "why": "Nothing for you: there is no live session to watch."
+        },
+        "answer": {
+          "offered": false,
+          "label": "Answer",
+          "why": "Nothing for you: there is no live session to answer."
+        },
+        "discuss": {
+          "offered": false,
+          "label": "Discuss",
+          "why": "Nothing for you: the board has not read this project yet, so nothing can start. It reads within a minute and Start opens by itself."
+        },
+        "plan": {
+          "offered": false,
+          "label": "Create plan",
+          "why": "Nothing for you: the board has not read this project yet, so nothing can start. It reads within a minute and Start opens by itself."
+        },
+        "look": {
+          "offered": false,
+          "label": "Look",
+          "why": "Nothing for you: there is no session to look at."
+        },
+        "resume": {
+          "offered": false,
+          "label": "Resume",
+          "why": "Nothing for you: there is no session to look at."
+        },
+        "stop": {
+          "offered": false,
+          "label": "Stop",
+          "why": "Nothing for you: there is no session in the background to stop."
+        },
+        "signal": {
+          "offered": false,
+          "label": "Delivered?",
+          "why": "Nothing for you: no signal waits on your reading."
+        }
+      },
+      "signal": null,
+      "signal_note": "no WATCH row names a signal",
+      "trigger": null,
+      "trigger_note": null,
+      "readings": [],
+      "verdict": null,
+      "verdict_note": "no VERDICT row is written",
+      "watercooler": [],
+      "heard": null,
+      "handouts": {
+        "named": [],
+        "unknown": [],
+        "verdict": null
+      },
+      "triage": {
+        "id": 1,
+        "project": "harbourmaster",
+        "card_number": 268,
+        "at": "2026-09-04T05:30:00Z",
+        "actor": "session",
+        "result": "now",
+        "words": "the tariff plan says the price on a slip is the price on the day it is printed",
+        "decision": "c0ffee0000000001",
+        "parent": null,
+        "direction": "no direction",
+        "source_ref": null,
+        "source_path": null,
+        "source_fingerprint": null,
+        "document_fingerprint": "1156a06cd69c3775",
+        "session_id": "eeee0001-0000-4000-8000-000000000000",
+        "grade": {
+          "breaks": "lies",
+          "breaks_words": "the skipper believes a number that is not true",
+          "reach": "client",
+          "reach_words": "a skipper pays what the slip says",
+          "often": "sometimes",
+          "often_words": "every tariff change since spring has produced a week of wrong slips"
+        }
+      },
+      "triaging": null,
+      "source": null,
+      "team": null
+    },
     "232": {
       "card": {
         "number": 232,
         "project": "harbourmaster",
         "place": {
-          "column": "Backlog",
-          "group": "Defects",
+          "column": "Defects",
+          "group": null,
           "position": 0
         },
         "title": "The night audit re-reads the whole harbour log",
@@ -2184,8 +2636,8 @@
         "is_new": false,
         "age_date": "2026-09-01",
         "place": {
-          "column": "Backlog",
-          "group": "Defects",
+          "column": "Defects",
+          "group": null,
           "position": 0
         },
         "lane_state": "none",
@@ -2210,7 +2662,8 @@
           "sentence": "Nothing for you: this card has not been read against the focus yet. It keeps its place until a reading lands.",
           "hold": null,
           "read_at": null
-        }
+        },
+        "grade": null
       },
       "brief": [
         {
@@ -2270,11 +2723,11 @@
             "position": 2
           },
           "to_place": {
-            "column": "Backlog",
-            "group": "Defects",
+            "column": "Defects",
+            "group": null,
             "position": 0
           },
-          "detail": "Moved Backlog · Next to plan → Backlog · Defects — its document says Kind: defect; a defect reads on the defects rail",
+          "detail": "Moved Backlog · Next to plan → Defects — its document says Kind: defect; a defect reads in Defects",
           "evidence": null
         },
         {
@@ -2334,11 +2787,11 @@
         "start": {
           "offered": false,
           "label": "Start",
-          "why": "Nothing for you: a card starts from Up next or Planned, and this one is in Backlog. Move it there to start it."
+          "why": "Nothing for you: a card starts from Up next or Planned, and this one is in Defects. Move it there to start it."
         },
         "readiness": {
           "state": "elsewhere",
-          "why": "Nothing for you: a card starts from Up next or Planned, and this one is in Backlog. Move it there to start it.",
+          "why": "Nothing for you: a card starts from Up next or Planned, and this one is in Defects. Move it there to start it.",
           "cards": [],
           "files": [],
           "waits": []
@@ -2412,8 +2865,8 @@
         "number": 267,
         "project": "harbourmaster",
         "place": {
-          "column": "Backlog",
-          "group": "Defects",
+          "column": "Defects",
+          "group": null,
           "position": 1
         },
         "title": "The tide clock drifts a minute a day",
@@ -2466,8 +2919,8 @@
         "is_new": false,
         "age_date": "2026-09-04",
         "place": {
-          "column": "Backlog",
-          "group": "Defects",
+          "column": "Defects",
+          "group": null,
           "position": 1
         },
         "lane_state": "none",
@@ -2492,7 +2945,8 @@
           "sentence": "Nothing for you: this card has not been read against the focus yet. It keeps its place until a reading lands.",
           "hold": null,
           "read_at": null
-        }
+        },
+        "grade": null
       },
       "brief": [],
       "record": [],
@@ -2551,11 +3005,11 @@
           "card_number": 267,
           "from_place": null,
           "to_place": {
-            "column": "Backlog",
-            "group": "Defects",
+            "column": "Defects",
+            "group": null,
             "position": 1
           },
-          "detail": "Born from docs/slice-suggestions/2026-09-04-the-tide-clock-drifts-a-minute-a-day.md, at registration. Its document says Kind: defect, so it reads on the defects rail.",
+          "detail": "Born from docs/slice-suggestions/2026-09-04-the-tide-clock-drifts-a-minute-a-day.md, at registration. Its document says Kind: defect, so it reads in Defects.",
           "evidence": null
         }
       ],
@@ -2589,11 +3043,11 @@
         "start": {
           "offered": false,
           "label": "Start",
-          "why": "Nothing for you: a card starts from Up next or Planned, and this one is in Backlog. Move it there to start it."
+          "why": "Nothing for you: a card starts from Up next or Planned, and this one is in Defects. Move it there to start it."
         },
         "readiness": {
           "state": "elsewhere",
-          "why": "Nothing for you: a card starts from Up next or Planned, and this one is in Backlog. Move it there to start it.",
+          "why": "Nothing for you: a card starts from Up next or Planned, and this one is in Defects. Move it there to start it.",
           "cards": [],
           "files": [],
           "waits": []
@@ -2753,7 +3207,8 @@
           "sentence": "Nothing for you: this card has not been read against the focus yet. It keeps its place until a reading lands.",
           "hold": null,
           "read_at": null
-        }
+        },
+        "grade": null
       },
       "brief": [
         {
@@ -3022,7 +3477,8 @@
           "sentence": "Nothing for you: this card has not been read against the focus yet. It keeps its place until a reading lands.",
           "hold": null,
           "read_at": null
-        }
+        },
+        "grade": null
       },
       "brief": [
         {
@@ -3277,7 +3733,8 @@
         "triaging": null,
         "triage": null,
         "title_reading": null,
-        "leverage": null
+        "leverage": null,
+        "grade": null
       },
       "brief": [],
       "record": [],
@@ -3486,7 +3943,8 @@
         "triaging": null,
         "triage": null,
         "title_reading": null,
-        "leverage": null
+        "leverage": null,
+        "grade": null
       },
       "brief": [],
       "record": [],
@@ -3690,7 +4148,8 @@
           "sentence": "Nothing for you: this card has not been read against the focus yet. It keeps its place until a reading lands.",
           "hold": null,
           "read_at": null
-        }
+        },
+        "grade": null
       },
       "brief": [],
       "record": [],
@@ -3926,7 +4385,8 @@
           "sentence": "Nothing for you: this card has not been read against the focus yet. It keeps its place until a reading lands.",
           "hold": null,
           "read_at": null
-        }
+        },
+        "grade": null
       },
       "brief": [],
       "record": [],
@@ -4162,7 +4622,8 @@
           "sentence": "Nothing for you: this card has not been read against the focus yet. It keeps its place until a reading lands.",
           "hold": null,
           "read_at": null
-        }
+        },
+        "grade": null
       },
       "brief": [],
       "record": [],
@@ -4398,7 +4859,8 @@
           "sentence": "Nothing for you: this card has not been read against the focus yet. It keeps its place until a reading lands.",
           "hold": null,
           "read_at": null
-        }
+        },
+        "grade": null
       },
       "brief": [],
       "record": [],
@@ -4651,7 +5113,8 @@
           "sentence": "Nothing for you: it helps remove this limit (low likelihood). A berth let sooner is invoiced sooner, if it is invoiced.",
           "hold": null,
           "read_at": "2026-09-04T08:30:00Z"
-        }
+        },
+        "grade": null
       },
       "brief": [
         {
@@ -4937,7 +5400,8 @@
           "sentence": "Nothing for you: it needs evidence. The plan does not say what showing the price moves.",
           "hold": null,
           "read_at": "2026-09-04T08:30:00Z"
-        }
+        },
+        "grade": null
       },
       "brief": [
         {
@@ -5218,7 +5682,8 @@
           "sentence": "Nothing for you: this card has not been read against the focus yet. It keeps its place until a reading lands.",
           "hold": null,
           "read_at": null
-        }
+        },
+        "grade": null
       },
       "brief": [
         {
@@ -5486,7 +5951,8 @@
           "sentence": "Nothing for you: this card has not been read against the focus yet. It keeps its place until a reading lands.",
           "hold": null,
           "read_at": null
-        }
+        },
+        "grade": null
       },
       "brief": [],
       "record": [],
@@ -5656,9 +6122,9 @@
       "source": null,
       "team": null
     },
-    "268": {
+    "269": {
       "card": {
-        "number": 268,
+        "number": 269,
         "project": "harbourmaster",
         "place": {
           "column": "Planned",
@@ -5684,7 +6150,7 @@
         "folded_into": null
       },
       "summary": {
-        "number": 268,
+        "number": 269,
         "title": "A storm warning reaches every skipper in the harbour",
         "essence": "Every boat in the harbour hears a gale warning the moment the office does.",
         "essence_source": "document",
@@ -5734,7 +6200,8 @@
           "sentence": "Nothing for you: this card has not been read against the focus yet. It keeps its place until a reading lands.",
           "hold": null,
           "read_at": null
-        }
+        },
+        "grade": null
       },
       "brief": [],
       "record": [],
@@ -5815,11 +6282,11 @@
       "other_citations": [],
       "history": [
         {
-          "id": 48,
+          "id": 49,
           "at": "2026-09-04T08:30:00Z",
           "actor": "corpus",
           "kind": "born",
-          "card_number": 268,
+          "card_number": 269,
           "from_place": null,
           "to_place": {
             "column": "Planned",
@@ -5831,8 +6298,8 @@
         }
       ],
       "lane": {
-        "card_number": 268,
-        "name": "card-268-a-storm-warning-reaches-every-sk",
+        "card_number": 269,
+        "name": "card-269-a-storm-warning-reaches-every-sk",
         "path": null,
         "state": "none",
         "sentence": "",
@@ -6028,7 +6495,8 @@
           "sentence": "Nothing for you: it helps remove this limit (high likelihood). It bills the reading the invoice waits on.",
           "hold": null,
           "read_at": "2026-09-04T08:30:00Z"
-        }
+        },
+        "grade": null
       },
       "brief": [
         {
@@ -6325,7 +6793,8 @@
           "sentence": "Nothing for you: it protects progress. A gate code before arrival keeps a paid berth usable.",
           "hold": null,
           "read_at": "2026-09-04T08:30:00Z"
-        }
+        },
+        "grade": null
       },
       "brief": [
         {
@@ -6607,7 +7076,8 @@
         "triaging": null,
         "triage": null,
         "title_reading": null,
-        "leverage": null
+        "leverage": null,
+        "grade": null
       },
       "brief": [
         {
@@ -6841,7 +7311,8 @@
           "sentence": "Nothing for you: this card has not been read against the focus yet. It keeps its place until a reading lands.",
           "hold": null,
           "read_at": null
-        }
+        },
+        "grade": null
       },
       "brief": [
         {
@@ -7152,7 +7623,8 @@
           "sentence": "Nothing for you: it does not address this limit. The office file's size does not delay an invoice.",
           "hold": null,
           "read_at": "2026-09-04T08:30:00Z"
-        }
+        },
+        "grade": null
       },
       "brief": [
         {
@@ -7474,7 +7946,8 @@
         "triaging": null,
         "triage": null,
         "title_reading": null,
-        "leverage": null
+        "leverage": null,
+        "grade": null
       },
       "brief": [
         {
@@ -7768,7 +8241,8 @@
           "sentence": "Nothing for you: this card has not been read against the focus yet. It keeps its place until a reading lands.",
           "hold": null,
           "read_at": null
-        }
+        },
+        "grade": null
       },
       "brief": [
         {
@@ -8064,7 +8538,8 @@
           "sentence": "Nothing for you: this card has not been read against the focus yet. It keeps its place until a reading lands.",
           "hold": null,
           "read_at": null
-        }
+        },
+        "grade": null
       },
       "brief": [
         {
@@ -8356,7 +8831,8 @@
         "triaging": null,
         "triage": null,
         "title_reading": null,
-        "leverage": null
+        "leverage": null,
+        "grade": null
       },
       "brief": [
         {
@@ -8601,7 +9077,8 @@
           "sentence": "Nothing for you: this card has not been read against the focus yet. It keeps its place until a reading lands.",
           "hold": null,
           "read_at": null
-        }
+        },
+        "grade": null
       },
       "brief": [
         {
@@ -8882,7 +9359,8 @@
         "triaging": null,
         "triage": null,
         "title_reading": null,
-        "leverage": null
+        "leverage": null,
+        "grade": null
       },
       "brief": [
         {
@@ -9117,7 +9595,8 @@
           "sentence": "Nothing for you: this card has not been read against the focus yet. It keeps its place until a reading lands.",
           "hold": null,
           "read_at": null
-        }
+        },
+        "grade": null
       },
       "brief": [],
       "record": [
@@ -9390,7 +9869,8 @@
         "triaging": null,
         "triage": null,
         "title_reading": null,
-        "leverage": null
+        "leverage": null,
+        "grade": null
       },
       "brief": [],
       "record": [
@@ -9584,7 +10064,8 @@
         "triaging": null,
         "triage": null,
         "title_reading": null,
-        "leverage": null
+        "leverage": null,
+        "grade": null
       }
     },
     {
@@ -9637,7 +10118,8 @@
         "triaging": null,
         "triage": null,
         "title_reading": null,
-        "leverage": null
+        "leverage": null,
+        "grade": null
       }
     },
     {
@@ -9685,7 +10167,8 @@
         "triaging": null,
         "triage": null,
         "title_reading": null,
-        "leverage": null
+        "leverage": null,
+        "grade": null
       }
     },
     {
@@ -9733,7 +10216,8 @@
         "triaging": null,
         "triage": null,
         "title_reading": null,
-        "leverage": null
+        "leverage": null,
+        "grade": null
       }
     },
     {
@@ -9781,7 +10265,8 @@
         "triaging": null,
         "triage": null,
         "title_reading": null,
-        "leverage": null
+        "leverage": null,
+        "grade": null
       }
     },
     {
@@ -9836,7 +10321,8 @@
         "triaging": null,
         "triage": null,
         "title_reading": null,
-        "leverage": null
+        "leverage": null,
+        "grade": null
       }
     },
     {
@@ -9891,7 +10377,8 @@
         "triaging": null,
         "triage": null,
         "title_reading": null,
-        "leverage": null
+        "leverage": null,
+        "grade": null
       }
     },
     {
@@ -9951,7 +10438,8 @@
         "triaging": null,
         "triage": null,
         "title_reading": null,
-        "leverage": null
+        "leverage": null,
+        "grade": null
       }
     },
     {
@@ -10002,7 +10490,8 @@
         "triaging": null,
         "triage": null,
         "title_reading": null,
-        "leverage": null
+        "leverage": null,
+        "grade": null
       }
     },
     {
@@ -10052,7 +10541,8 @@
         "triaging": null,
         "triage": null,
         "title_reading": null,
-        "leverage": null
+        "leverage": null,
+        "grade": null
       }
     },
     {
@@ -10102,7 +10592,8 @@
         "triaging": null,
         "triage": null,
         "title_reading": null,
-        "leverage": null
+        "leverage": null,
+        "grade": null
       }
     },
     {
@@ -10157,7 +10648,8 @@
         "triaging": null,
         "triage": null,
         "title_reading": null,
-        "leverage": null
+        "leverage": null,
+        "grade": null
       }
     },
     {
@@ -10208,7 +10700,8 @@
         "triaging": null,
         "triage": null,
         "title_reading": null,
-        "leverage": null
+        "leverage": null,
+        "grade": null
       }
     },
     {
@@ -10259,7 +10752,8 @@
         "triaging": null,
         "triage": null,
         "title_reading": null,
-        "leverage": null
+        "leverage": null,
+        "grade": null
       }
     },
     {
@@ -10317,7 +10811,8 @@
         "triaging": null,
         "triage": null,
         "title_reading": null,
-        "leverage": null
+        "leverage": null,
+        "grade": null
       }
     },
     {
@@ -10379,7 +10874,8 @@
         "triaging": null,
         "triage": null,
         "title_reading": null,
-        "leverage": null
+        "leverage": null,
+        "grade": null
       }
     },
     {
@@ -10432,7 +10928,8 @@
         "triaging": null,
         "triage": null,
         "title_reading": null,
-        "leverage": null
+        "leverage": null,
+        "grade": null
       }
     },
     {
@@ -10483,7 +10980,8 @@
         "triaging": null,
         "triage": null,
         "title_reading": null,
-        "leverage": null
+        "leverage": null,
+        "grade": null
       }
     },
     {
@@ -10531,7 +11029,8 @@
         "triaging": null,
         "triage": null,
         "title_reading": null,
-        "leverage": null
+        "leverage": null,
+        "grade": null
       }
     },
     {
@@ -10597,7 +11096,8 @@
         "triaging": null,
         "triage": null,
         "title_reading": null,
-        "leverage": null
+        "leverage": null,
+        "grade": null
       }
     },
     {
@@ -10663,7 +11163,8 @@
         },
         "triage": null,
         "title_reading": null,
-        "leverage": null
+        "leverage": null,
+        "grade": null
       }
     },
     {
@@ -10738,10 +11239,12 @@
           "source_path": null,
           "source_fingerprint": null,
           "document_fingerprint": "f1x7ur3f1n6erpr",
-          "session_id": "dddd0001-0000-4000-8000-000000000000"
+          "session_id": "dddd0001-0000-4000-8000-000000000000",
+          "grade": null
         },
         "title_reading": null,
-        "leverage": null
+        "leverage": null,
+        "grade": null
       }
     }
   ],

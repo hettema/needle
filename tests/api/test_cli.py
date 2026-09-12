@@ -22,10 +22,10 @@ def test_add_registers_imports_and_reads(corpus: Path, database: Path, capsys):
     out = capsys.readouterr().out
     assert "Registered Harbourmaster as harbourmaster" in out
     assert "Imported Needle 0.1's card file: 21 cards" in out
-    assert "Cards: born 7." in out
+    assert "Cards: born 8." in out
     store = Store(database)
     assert [p.slug for p in store.projects()] == ["harbourmaster"]
-    assert len(store.cards("harbourmaster")) == 28
+    assert len(store.cards("harbourmaster")) == 29
     store.close()
 
 
@@ -127,8 +127,8 @@ def test_kinds_prints_every_live_suggestions_kind_and_why(corpus: Path, database
     assert main(["kinds", "harbourmaster"]) == 0
     out = capsys.readouterr().out
     assert out.splitlines()[0] == (
-        "9 live suggestions; 1 with a Kind line; 8 read from their text, 1 of them as "
-        "defects; 1 with a Fix: mark, 8 unmarked"
+        "10 live suggestions; 2 with a Kind line; 8 read from their text, 1 of them as "
+        "defects; 2 with a Fix: mark, 8 unmarked"
     )
     assert "defect  docs/slice-suggestions/" in out and "(its title or Found-by;" in out
     assert "idea    docs/slice-suggestions/" in out and "(no sign of a defect;" in out

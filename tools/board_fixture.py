@@ -56,7 +56,15 @@ from domain.row import Row, RowKind  # noqa: E402
 from domain.session import Session, SessionKind, SessionState  # noqa: E402
 from domain.signal import Reading, SessionWork, WindowlessSession  # noqa: E402
 from domain.slot import Make, Placement  # noqa: E402
-from domain.triage import Triage, TriageResult  # noqa: E402
+from domain.triage import (  # noqa: E402
+    Breaks,
+    Direction,
+    Grade,
+    Often,
+    Reach,
+    Triage,
+    TriageResult,
+)
 from infrastructure.corpus import scan  # noqa: E402
 from infrastructure.live import Live, sweep  # noqa: E402
 from infrastructure.store import Store  # noqa: E402
@@ -664,6 +672,41 @@ def snapshot(into: Path) -> dict[str, object]:
             document_fingerprint=document.fingerprint,
             session_id=None,
         )
+    # One defect the seat has read and graded (card #100): the column shows
+    # it above the line of the ones nobody has read yet, and its face
+    # carries the grade's word.
+    slip = next(
+        c
+        for c in store.cards(project.slug)
+        if c.title == "The slip shows last month's price" and c.link is not None
+    )
+    assert slip.link is not None
+    slip_document = live.projects[project.slug].index.find(slip.link.kind, slip.link.stem)
+    assert slip_document is not None
+    store.record_triage(
+        project.slug,
+        slip.number,
+        at=NOW - timedelta(hours=3),
+        actor=Actor.SESSION,
+        result=TriageResult.NOW,
+        words="the tariff plan says the price on a slip is the price on the day it is printed",
+        decision="c0ffee0000000001",
+        parent=None,
+        direction=Direction.NONE,
+        source_ref=None,
+        source_path=None,
+        source_fingerprint=None,
+        document_fingerprint=slip_document.fingerprint,
+        session_id="eeee0001-0000-4000-8000-000000000000",
+        grade=Grade(
+            breaks=Breaks.LIES,
+            breaks_words="the skipper believes a number that is not true",
+            reach=Reach.CLIENT,
+            reach_words="a skipper pays what the slip says",
+            often=Often.SOMETIMES,
+            often_words="every tariff change since spring has produced a week of wrong slips",
+        ),
+    )
     board = live.board(project.slug)
     board.project = board.project.model_copy(update={"path": SHOWN_PATH})
     numbers = [c.number for col in board.columns for g in col.groups for c in g.cards]

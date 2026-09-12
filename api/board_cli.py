@@ -17,7 +17,7 @@ needle verdicts SLUG [--write]           # the verdicts the board's own facts se
 needle kinds SLUG                        # every live suggestion's kind and Fix: mark, as read
 needle watercooler SLUG [N "text"]       # read the watercooler, or say one line as #N's lane
 needle dial [on|off] [--lanes N]         # the owner's standing ruling on defects (plan 11)
-needle fixes SLUG|all                    # every fix lane the dial ran, and the rail against dial-on
+needle fixes SLUG|all                    # every fix lane the dial ran, and the defects at dial-on
 needle team SLUG [--json]                # which team earns its place, per kind of work (card #58)
 
 Rows are written to the store directly — the one writer — and the running
@@ -33,6 +33,7 @@ machine's file, the other already talking to the board by its address.
 import argparse
 import contextlib
 import json
+import re
 import sys
 import urllib.error
 import urllib.request
@@ -47,6 +48,7 @@ from board.brief import watercooler_text
 from board.dial import Filer
 from board.lane import has_row
 from board.team import team_words
+from board.triage import band_of, grade_words
 from board.verdicts import CLOSED, VerdictUnreadable, machine_verdict, parse_verdict, render_verdict
 from domain.audit import AuditKind
 from domain.call import HowKnown
@@ -58,7 +60,7 @@ from domain.lane import HANDS_ON, LaneState
 from domain.row import Row, RowKind
 from domain.signal import Finding
 from domain.team import Challenge, Tally
-from domain.triage import Direction, TriageResult
+from domain.triage import Breaks, Direction, Grade, Often, Reach, TriageResult
 from domain.verdict import EvidenceClass
 from infrastructure import clock
 from infrastructure.live import Live
@@ -218,15 +220,109 @@ def triage(
         direction=Direction(args.direction) if args.direction else None,
         title=args.title,
         failed=failed,
+        grade=_grade_of(args),
     )
     print(result.said)
     return 0
 
 
+def _grade_of(args: argparse.Namespace) -> Grade | None:
+    """The grade the reading typed (card #100, item 2), or None when it typed
+    none — the door says what a defect's reading has to carry. Each part is
+    the token and the reading's words for what in the document selected it;
+    `--breaks nothing "<why>"` alone says the document describes no failure."""
+    breaks = getattr(args, "breaks", None)
+    reaches = getattr(args, "reaches", None)
+    often = getattr(args, "often", None)
+    if breaks is None and reaches is None and often is None:
+        return None
+    if breaks is None:
+        raise DoorRefused('A grade says what breaks: --breaks <lies|loses|costs|looks> "<why>".')
+    try:
+        return Grade(
+            breaks=Breaks(breaks[0]),
+            breaks_words=breaks[1],
+            reach=Reach(reaches[0]) if reaches else None,
+            reach_words=reaches[1] if reaches else None,
+            often=Often(often[0]) if often else None,
+            often_words=often[1] if often else None,
+        )
+    except ValueError as refusal:
+        raise DoorRefused(f"The grade does not hold: {refusal}") from refusal
+
+
+def defects(
+    args: argparse.Namespace, live: Live, runtime: Runtime, loops: Loops, doors: Doors
+) -> int:
+    """The Defects column of one project or every project, in the order the
+    page shows it — gravest first, the unread last under their count — with
+    each card's grade, its routing and its age (card #100, item 3): what
+    the Loop reads. `--lies` keeps the defects graded as lying; `--on` keeps
+    the boards whose auto-fix is on; `--unplanned-over 7d` keeps the ones
+    graded longer ago than that and still unplanned, which in this column
+    is every card; `--count` prints how many instead of the list."""
+    slug = None if args.slug == "all" else args.slug
+    if slug is not None and slug not in live.projects:
+        print(f'no project "{slug}" is on the board', file=sys.stderr)
+        return 1
+    over = _days(args.unplanned_over) if args.unplanned_over else None
+    if args.unplanned_over and over is None:
+        print(f"--unplanned-over takes days, like 7d, not {args.unplanned_over!r}", file=sys.stderr)
+        return 1
+    loops.reconcile_now()
+    now = clock.now()
+    total = 0
+    for project_slug in live.projects:
+        if slug is not None and project_slug != slug:
+            continue
+        if args.on and not live.switched_on(project_slug):
+            continue
+        board = live.board(project_slug)
+        column = next(c for c in board.columns if c.definition.column == Column.DEFECTS)
+        kept = []
+        for group in column.groups:
+            for card in group.cards:
+                grade = card.grade
+                if args.lies and (grade is None or grade.breaks != Breaks.LIES):
+                    continue
+                if over is not None and (
+                    card.triage is None or grade is None or now - card.triage.at < over
+                ):
+                    continue
+                kept.append((group, card))
+        total += len(kept)
+        if args.count:
+            continue
+        print(f"{project_slug}: {column.count} in Defects — {column.line}")
+        shown_line = None
+        for group, card in kept:
+            if group.name != shown_line and group.name is not None:
+                print(f"  — {group.name} —")
+            shown_line = group.name
+            grade = card.grade
+            graded = (
+                f"{band_of(grade).value}; {grade_words(grade)}" if grade is not None else "unread"
+            )
+            routing = card.routing.state.value if card.routing is not None else "?"
+            age = (now.date() - card.age_date).days
+            print(f"  #{card.number:<4} {graded} · {routing} · {age}d  {card.title}")
+    if args.count:
+        print(total)
+    return 0
+
+
+_DAYS = re.compile(r"^(\d+)d$")
+
+
+def _days(text: str) -> timedelta | None:
+    found = _DAYS.match(text.strip())
+    return timedelta(days=int(found.group(1))) if found else None
+
+
 def decisions(
     args: argparse.Namespace, live: Live, runtime: Runtime, loops: Loops, doors: Doors
 ) -> int:
-    """Every decision a colleague took on the rail, in order, with its
+    """Every decision a colleague took on a defect, in order, with its
     source, its direction and its fate (plan 59, item 6): the sample the
     loop's cold audit reads, printed rather than tracked."""
     slug = None if args.slug == "all" else args.slug
@@ -238,7 +334,7 @@ def decisions(
     if args.first:
         rows = rows[: args.first]
     if not rows:
-        print("no decision has been taken on the rail yet")
+        print("no decision has been taken on a defect yet")
         return 0
     for line in rows:
         came = f" (out of {line.parent})" if line.parent else ""
@@ -257,7 +353,7 @@ def decisions(
         if line.direction is not None:
             counts[line.direction.value] = counts.get(line.direction.value, 0) + 1
     print(
-        f"{len(rows)} decisions, {len(taken)} taken off your rail as `now`"
+        f"{len(rows)} decisions, {len(taken)} taken off your defects as `now`"
         + (
             "; directions: " + ", ".join(f"{n} {d}" for d, n in sorted(counts.items()))
             if counts
@@ -855,21 +951,23 @@ def fixes(
     taken = [d for d in report.decisions if d.result == TriageResult.NOW]
     print(
         f"{len(report.decisions)} readings of a mark, {len(taken)} of them taking the decision "
-        "off your rail; `needle decisions` follows each to its fate"
+        "off your defects; `needle decisions` follows each to its fate"
     )
     for waiting in report.waiting:
-        print(f"rail  {waiting.project} #{waiting.card_number:<4} {waiting.title} — {waiting.why}")
-    at_on = {r.project: r for r in report.rail_at_first_on}
-    for rail in report.rail_now:
-        before = at_on.get(rail.project)
+        print(
+            f"defect  {waiting.project} #{waiting.card_number:<4} {waiting.title} — {waiting.why}"
+        )
+    at_on = {r.project: r for r in report.defects_at_first_on}
+    for count in report.defects_now:
+        before = at_on.get(count.project)
         split = ", ".join(
-            f"{filer.value} {rail.counts.get(filer, 0)}"
+            f"{filer.value} {count.counts.get(filer, 0)}"
             + (f" (was {before.counts.get(filer, 0)})" if before else "")
             for filer in Filer
-            if rail.counts.get(filer, 0) or (before and before.counts.get(filer, 0))
+            if count.counts.get(filer, 0) or (before and before.counts.get(filer, 0))
         )
         print(
-            f"rail {rail.project}: {rail.total}"
+            f"defects {count.project}: {count.total}"
             + (
                 f" (was {before.total} at its switch's first on)"
                 if before
@@ -1155,10 +1253,43 @@ def register(sub: "argparse._SubParsersAction[argparse.ArgumentParser]") -> None
         choices=[d.value for d in Direction],
         help="which way it moves the product; required with now",
     )
+    p_triage.add_argument(
+        "--reaches",
+        nargs=2,
+        metavar=("WHO", "WHY"),
+        help="who the defect reaches (client|money|you|session) and what in the document "
+        "says so; a defect's reading lands it",
+    )
+    p_triage.add_argument(
+        "--breaks",
+        nargs=2,
+        metavar=("WHAT", "WHY"),
+        help="what it breaks (lies|loses|costs|looks, or nothing when the document describes "
+        "no failure) and what in the document says so",
+    )
+    p_triage.add_argument(
+        "--often",
+        nargs=2,
+        metavar=("HOW", "WHY"),
+        help="how often it bites (every-time|sometimes|once-seen) and what says so",
+    )
     p_triage.set_defaults(board=True, run=_with_board(triage))
 
+    p_defects = sub.add_parser(
+        "defects", help="the Defects column in its order, with each card's grade, routing and age"
+    )
+    p_defects.add_argument("slug", help="a project's slug, or all")
+    p_defects.add_argument("--lies", action="store_true", help="only the defects graded as lying")
+    p_defects.add_argument("--on", action="store_true", help="only boards whose auto-fix is on")
+    p_defects.add_argument(
+        "--unplanned-over",
+        help="only defects graded longer ago than this and still unplanned, as 7d",
+    )
+    p_defects.add_argument("--count", action="store_true", help="print how many, not the list")
+    p_defects.set_defaults(board=True, run=_with_board(defects))
+
     p_decisions = sub.add_parser(
-        "decisions", help="every decision a colleague took on the rail, with source and fate"
+        "decisions", help="every decision a colleague took on a defect, with source and fate"
     )
     p_decisions.add_argument("slug", help="a project's slug, or all")
     p_decisions.add_argument("--first", type=int, help="only the first N, for the cold audit")
@@ -1259,7 +1390,8 @@ def register(sub: "argparse._SubParsersAction[argparse.ArgumentParser]") -> None
     p_dial.set_defaults(board=True, run=_with_board(dial))
 
     p_fixes = sub.add_parser(
-        "fixes", help="every fix lane the dial ran, and the rail now against each switch's first on"
+        "fixes",
+        help="every fix lane the dial ran, and the defects now against each switch's first on",
     )
     p_fixes.add_argument("slug", help="a project's slug, or all")
     p_fixes.add_argument(

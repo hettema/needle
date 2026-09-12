@@ -70,6 +70,47 @@ SOURCE = "docs/plans/2026-08-28-a-berth-is-never-let-twice.md"
 """A real document in the fixture project: what a reading resolves and
 fingerprints. Prose shaped like a path cannot produce `now` (plan 59)."""
 
+GRADE = [
+    "--reaches",
+    "session",
+    "the office's own log is what it touches",
+    "--breaks",
+    "costs",
+    "a step done by hand until it is fixed",
+    "--often",
+    "sometimes",
+    "it bites on the nights the log is read",
+]
+"""A grade every defect's reading lands with its result (card #100, item 2):
+the door refuses one without it. The mildest shape, so a test about one
+graver defect can put its own above these."""
+
+
+def grade(reaches: str, breaks: str, often: str) -> list[str]:
+    """A grade in three tokens, with words for each, for a test that orders."""
+    return [
+        "--reaches",
+        reaches,
+        f"the document says it reaches {reaches}",
+        "--breaks",
+        breaks,
+        f"the document says it {breaks}",
+        "--often",
+        often,
+        f"the document says {often}",
+    ]
+
+
+def acts(machine_floor: Floor) -> int:
+    """How many launches were a planning session or a Start — everything
+    but a reading. A reading opens whether or not any board is on (card
+    #100, item 4), so a test about what the switch holds counts the acts."""
+    return sum(
+        1
+        for launch in machine_floor.state()["launch_log"]
+        if not launch["argv"][launch["argv"].index("-n") + 1].startswith("triage-card-")
+    )
+
 
 def reading_for(machine_floor: Floor) -> int | None:
     """The card the last launch opened a reading of, when it opened one."""
@@ -103,12 +144,14 @@ def land_on_the_way(client: TestClient, number: int, slug: str = "proj") -> None
     argv = ["triage", slug, str(number)]
     if is_defect(client, number, slug):
         argv += ["his", "the record does not select between the two shapes this could take"]
+        argv += GRADE
     assert main(argv + ["--title", "passes"]) == 0
 
 
-READINGS_ON_THE_WAY = 60
+READINGS_ON_THE_WAY = 80
 """Every live plan and idea on the fixture is read cold too, so the way
-to one card is longer than the rail (card #74, item 3)."""
+to one card is longer than the column (card #74, item 3): a walk across
+two copies of the fixture is a tick and a landing per document."""
 
 
 def read_the_rail_until(
@@ -173,6 +216,7 @@ def verify(
     words: str = "the ledger's own rule selects this outcome",
     source: str | None = SOURCE,
     direction: str | None = "no direction",
+    graded: list[str] | None = None,
 ) -> dict:
     """The reading the dial opens before it plans anything (plan 59, item 3),
     and its result through the one verb. A `now` mark alone no longer moves
@@ -180,6 +224,7 @@ def verify(
     the defect the machine's."""
     opened = read_the_rail_until(client, machine_floor, number)
     argv = ["triage", "proj", str(number), result, words, "--title", "passes"]
+    argv += graded if graded is not None else GRADE
     if source:
         argv += ["--source", source]
     if direction:
@@ -275,7 +320,7 @@ def test_the_dial_is_off_until_turned_persists_and_is_audited_as_the_owners(
     reopened = Store(store.path)
     try:
         assert reopened.dial("proj").on is True and reopened.dial("proj").lanes == 2
-        assert reopened.rail_at_on(), "the rail was recorded at the first turn to on"
+        assert reopened.defects_at_on(), "the defects were recorded at the first turn to on"
     finally:
         reopened.close()
     off = turn(client, on=False)
@@ -319,7 +364,7 @@ def test_the_switch_is_one_per_board_and_the_number_is_the_machines(
     reopened = Store(store.path)
     try:
         assert reopened.dial("two").on is True and reopened.dial("proj").on is False
-        assert [r.project for r in reopened.rail_at_on()] == ["two"], (
+        assert [r.project for r in reopened.defects_at_on()] == ["two"], (
             "the rail baseline is the board's, recorded at its own first on"
         )
     finally:
@@ -339,7 +384,7 @@ def test_the_switch_is_one_per_board_and_the_number_is_the_machines(
     turn(client, on=True)
     assert board(client)["dial"]["others_on"] == ["two"]
     assert board(client, "two")["dial"]["others_on"] == ["proj"]
-    assert [r.project for r in store.rail_at_on()] == ["two", "proj"]
+    assert [r.project for r in store.defects_at_on()] == ["two", "proj"]
     # A board the store does not know, and a switch with no board, are refused.
     refused = client.post("/api/dial", json={"project": "nowhere", "on": True})
     assert refused.status_code == 409 and 'No project "nowhere"' in refused.json()["detail"]
@@ -399,6 +444,7 @@ def read_every_rail(client: TestClient, machine_floor: Floor, verified: dict[str
                 if number == verified.get(slug):
                     argv = ["triage", slug, str(number), "now", "the rule selects this outcome"]
                     argv += ["--title", "passes", "--source", SOURCE, "--direction", "no direction"]
+                    argv += GRADE
                     assert main(argv) == 0
                 else:
                     land_on_the_way(client, number, slug)
@@ -450,11 +496,12 @@ def test_the_beat_plans_a_defect_only_on_a_board_whose_switch_is_on(
     for _ in range(3):
         tick(client)
     assert [f.project for f in store.fix_lanes()] == ["two"]
-    # Both off: nothing is planned, however eligible the rail.
+    # Both off: nothing is planned, however eligible the column — though a
+    # reading may still open, since a reading enters nothing (card #100).
     turn(client, on=False, slug="two")
-    taken = len(machine_floor.state()["launch_log"])
+    taken = acts(machine_floor)
     tick(client)
-    assert len(machine_floor.state()["launch_log"]) == taken
+    assert acts(machine_floor) == taken
     assert [f.project for f in store.fix_lanes()] == ["two"]
     # B on: its verified defect is planned on the next beat.
     turn(client, on=True, slug="proj")
@@ -484,9 +531,9 @@ def test_the_beat_plans_a_defect_only_on_a_board_whose_switch_is_on(
     client.app.state.loops.live.rescan("proj")
     assert column_of(client, tide) == "Planned"
     turn(client, on=False, slug="proj")
-    taken = len(machine_floor.state()["launch_log"])
+    taken = acts(machine_floor)
     tick(client)
-    assert len(machine_floor.state()["launch_log"]) == taken, "no Start while the board is off"
+    assert acts(machine_floor) == taken, "no Start while the board is off"
     assert column_of(client, tide) == "Planned"
     lane = next(f for f in store.fix_lanes("proj") if f.card_number == tide)
     assert (lane.stage.value, lane.note) == ("planned", "this board's switch is off")
@@ -497,7 +544,7 @@ def test_the_beat_plans_a_defect_only_on_a_board_whose_switch_is_on(
     )
     turn(client, on=True, slug="proj")
     tick(client)
-    assert len(machine_floor.state()["launch_log"]) == taken + 1
+    assert acts(machine_floor) == taken + 1
     assert column_of(client, tide) == "Executing"
     capsys.readouterr()
     assert main(["fixes", "all", "--started-off", "--count"]) == 0
@@ -526,9 +573,10 @@ def test_with_the_dial_on_the_oldest_now_defect_is_planned_then_started_by_the_d
     reconcile(client)
     gate_log = number_of(client, "The gate log loses its last line")
 
-    # Off: nothing starts by itself, however eligible the rail is (acceptance 5).
+    # Off: nothing starts by itself, however eligible the column is (acceptance
+    # 5) — a reading may open, since a reading enters nothing (card #100, item 4).
     tick(client)
-    assert machine_floor.state()["launch_log"] == []
+    assert acts(machine_floor) == 0
     assert main(["fixes", "all"]) == 0
     assert "no fix lane yet" in capsys.readouterr().out
 
@@ -562,6 +610,7 @@ def test_with_the_dial_on_the_oldest_now_defect_is_planned_then_started_by_the_d
                 "no direction",
                 "--title",
                 "passes",
+                *GRADE,
             ]
         )
         == 0
@@ -668,21 +717,23 @@ def test_with_the_dial_on_the_oldest_now_defect_is_planned_then_started_by_the_d
     assert first["folded"] is True and first["reviewed"] is False
     assert first["stopped_to_ask"] is False and first["fold_reverted"] is False
     assert first["class_closer"] == "a boot check refuses a clock that disagrees with the office"
-    assert report["rail_now"][0]["project"] == "proj"
-    assert report["rail_at_first_on"][0]["total"] == 3, "the boat, the tide clock and the gate log"
+    assert report["defects_now"][0]["project"] == "proj"
+    assert report["defects_at_first_on"][0]["total"] == 4, (
+        "the boat, the tide clock, the slip and the gate log"
+    )
     assert main(["fixes", "proj"]) == 0
     out = capsys.readouterr().out
     assert f"proj #{tide}" in out and "folded; folded; no review record" in out
     assert "class: a boot check refuses" in out
     assert "2 fix lanes, 1 closed: 0 folded with a review record" in out
-    assert "rail proj:" in out and "(was 3 at its switch's first on)" in out
+    assert "defects proj:" in out and "(was 4 at its switch's first on)" in out
     assert "its board was on when planning began" in out
     assert main(["fixes", "all", "--started-off", "--count"]) == 0
     assert capsys.readouterr().out == "0\n"
     # Every defect still on the rail says why the dial leaves it there — and
     # the reason is now the reading's own sentence, not the mark's (plan 59).
     assert "a reading says it is yours" in out
-    assert "3 readings of a mark, 2 of them taking the decision off your rail" in out
+    assert "4 readings of a mark, 2 of them taking the decision off your defects" in out
     assert f"#{gate_log:<4} The gate log loses its last line — the dial is planning it now" in out
     assert [w["why"] for w in report["waiting"] if w["card_number"] == gate_log] == [
         "the dial is planning it now"
@@ -1031,9 +1082,9 @@ def test_his_and_unmarked_defects_are_never_started_and_a_question_leaves_the_ca
     )
     assert detail(client, tide)["summary"]["fix"]["mark"] == "his"
     assert detail(client, tide)["summary"]["routing"]["state"] == "triaged his"
-    read_so_far = len(machine_floor.state()["launch_log"])
+    read_so_far = acts(machine_floor)
     tick(client)
-    assert len(machine_floor.state()["launch_log"]) == read_so_far, "no plan for either"
+    assert acts(machine_floor) == read_so_far, "no plan for either"
 
     # A `now` defect whose planning session finds a decision that is his:
     # the ASK row on the card ends the dial's part, and it is not taken again.
@@ -1048,7 +1099,7 @@ def test_his_and_unmarked_defects_are_never_started_and_a_question_leaves_the_ca
     number = number_of(client, "The berth map hides the fuel dock")
     verify(client, machine_floor, number)
     tick(client)
-    assert len(machine_floor.state()["launch_log"]) == read_so_far + 2, "read, then planned"
+    assert acts(machine_floor) == read_so_far + 1, "read, then planned"
     assert (
         main(["row", "proj", str(number), "ASK", "should the dock be a berth or a landmark?"]) == 0
     )
@@ -1064,9 +1115,7 @@ def test_his_and_unmarked_defects_are_never_started_and_a_question_leaves_the_ca
     )
     assert detail(client, number)["summary"]["planning"] is None
     tick(client)
-    assert len(machine_floor.state()["launch_log"]) == read_so_far + 2, (
-        "asked: the owner's from here"
-    )
+    assert acts(machine_floor) == read_so_far + 1, "asked: the owner's from here"
     assert board(client)["dial"]["running"] == 0
 
 
@@ -1226,7 +1275,7 @@ def test_a_when_trigger_is_read_on_the_cadence_and_delivered_makes_the_defect_el
     waiting = detail(client, number)
     assert waiting["readings"][0]["delivered"] is False
     assert "does not exist" in waiting["readings"][0]["words"]
-    assert column_of(client, number) == "Backlog", "a trigger's reading moves nothing"
+    assert column_of(client, number) == "Defects", "a trigger's reading moves nothing"
     turn(client, on=True, lanes=1)
     # The reading verifies the `when` mark; the trigger still governs when.
     verify(
@@ -1253,7 +1302,7 @@ def test_a_when_trigger_is_read_on_the_cadence_and_delivered_makes_the_defect_el
     read_signals(client)
     fired = detail(client, number)
     assert fired["readings"][0]["delivered"] is True
-    assert column_of(client, number) == "Backlog"
+    assert column_of(client, number) == "Defects"
     tick(client)
     log = machine_floor.state()["launch_log"]
     assert len(log) == read_so_far + 1 and log[-1]["argv"][
@@ -1287,7 +1336,7 @@ def test_a_session_trigger_starts_a_reading_and_cannot_tell_asks_the_owner_witho
     words = "the mail log holds one slip since the fifth; a second would decide it"
     assert main(["reading", "proj", str(number), "cannot-tell", words]) == 0
     assert "the owner is asked with your words" in capsys.readouterr().out
-    assert column_of(client, number) == "Backlog"
+    assert column_of(client, number) == "Defects"
     reconcile(client)
     state = board(client)
     assert claim_count(state, "signal asking") == 1
@@ -1306,7 +1355,7 @@ def test_a_session_trigger_starts_a_reading_and_cannot_tell_asks_the_owner_witho
     answered = client.post(f"/api/projects/proj/cards/{number}/signal", json={"delivered": True})
     assert answered.status_code == 200, answered.text
     assert "the defect is eligible for the dial" in answered.json()["said"]
-    assert column_of(client, number) == "Backlog"
+    assert column_of(client, number) == "Defects"
     assert detail(client, number)["readings"][0]["actor"] == "owner"
     # A replacement WATCH row is not how a trigger is changed.
     assert (

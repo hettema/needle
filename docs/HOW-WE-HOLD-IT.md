@@ -47,7 +47,7 @@ that ceremony, and the ratchet keeps it honest.*
 *Traced by:* the `[verification]` findings in every review record — a claim with no source, a hedge shipped as a fact, a primitive built beside an existing one — which the review's boundary checks reads for by name and the loop on card #60 counts per carded close, read by the session at the tenth close after its fold against Hello Revenue's rate over the same window (`docs/plans/done/2026-09-05-every-session-of-any-make-follows-the-doctrine-at-least-as-well-as-hello-revenues-did.md`, its Loop); the one clause held is that every finding says its class, `tests/ratchets/test_every_finding_says_its_class.py`. The section is read back into a session verbatim on the word "backbrief" (`hooks/needle_hook.py`), which is delivery, not a hold: a session that has stopped checking reads like one that has not, and only the count says which.
 
 ## 9. Raise the standard, not just the output
-*Traced by:* the suggestions folder, where a learning about the way we work arrives marked `his`, read on the board's rail.
+*Traced by:* the suggestions folder, where a learning about the way we work arrives marked `his`, read in the board's Defects column.
 
 ## 10. The corpus is the way in
 *Traced by:* the board's own read of the corpus, which shows a plan or suggestion it cannot parse on its card; three clauses are held — a project needs a plans folder (`api/cli.py::add`), a suggestion names its kind and fix and a `now` or `his` names a reason (`tests/ratchets/test_every_suggestion_names_its_kind_and_fix.py`), and an unverified mark routes to nobody (`board/triage.py::routing_of`).

@@ -37,8 +37,9 @@ from datetime import datetime
 from pydantic import BaseModel
 
 from board.moves import GroupLayout
+from board.reconcile import home_of
 from domain.card import Place
-from domain.column import DEFECTS_RAIL, Column
+from domain.column import Column
 from domain.document import DocumentKind, SuggestionKind
 from domain.focus import (
     ArrangedColumn,
@@ -54,9 +55,9 @@ from domain.focus import (
 from domain.gate import Gate
 
 MOVABLE: frozenset[Column] = frozenset(
-    {Column.BACKLOG, Column.PLANNED, Column.UP_NEXT, Column.NOT_NOW}
+    {Column.DEFECTS, Column.BACKLOG, Column.PLANNED, Column.UP_NEXT, Column.NOT_NOW}
 )
-"""The four columns cards move between under the lens."""
+"""The five columns cards move between under the lens."""
 
 FROZEN: frozenset[Column] = frozenset({Column.EXECUTED, Column.DONE, Column.DECISION_MOMENT})
 """Never rearranged by class: two machine facts and the owner's own column."""
@@ -139,8 +140,7 @@ def _destination(judged: Judged) -> tuple[Column, str | None] | None:
             if judged.kind == DocumentKind.PLAN:
                 return (Column.UP_NEXT, None)
             if judged.kind == DocumentKind.SUGGESTION:
-                rail = judged.suggestion_kind == SuggestionKind.DEFECT
-                return (Column.BACKLOG, DEFECTS_RAIL if rail else None)
+                return (home_of(judged.suggestion_kind), None)
         return None
     if read.leverage == Leverage.DOES_NOT_ADDRESS and column == Column.UP_NEXT:
         return (Column.NOT_NOW, None)
@@ -224,13 +224,7 @@ def arrange(
             staying = [n for n in members if n in judged]
             unknown = [n for n in members if n not in judged]
             ordered = _ordered(column, staying + arrivals, judged, ranks)
-            groups.append(
-                ArrangedGroup(
-                    name=group.name,
-                    rail=column == Column.BACKLOG and group.name == DEFECTS_RAIL,
-                    numbers=ordered + unknown,
-                )
-            )
+            groups.append(ArrangedGroup(name=group.name, numbers=ordered + unknown))
         # An arrival into a group the column does not have lands in a new
         # unnamed group at the column's end, as the store would make one.
         homeless = [
@@ -242,7 +236,6 @@ def arrange(
             groups.append(
                 ArrangedGroup(
                     name=next(landing[n][1] for n in homeless),
-                    rail=column == Column.BACKLOG and landing[homeless[0]][1] == DEFECTS_RAIL,
                     numbers=_ordered(column, homeless, judged, ranks),
                 )
             )
@@ -290,11 +283,7 @@ def _as_is(layout: list[GroupLayout]) -> list[ArrangedColumn]:
     columns: list[ArrangedColumn] = []
     for column in Column:
         groups = [
-            ArrangedGroup(
-                name=g.name,
-                rail=column == Column.BACKLOG and g.name == DEFECTS_RAIL,
-                numbers=list(g.numbers),
-            )
+            ArrangedGroup(name=g.name, numbers=list(g.numbers))
             for g in layout
             if g.column == column
         ]

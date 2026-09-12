@@ -93,6 +93,11 @@ function isWide(): boolean {
   return typeof window.matchMedia === "function" && window.matchMedia(WIDE_SCREEN).matches;
 }
 
+/** Which columns start furled: on a laptop, every definition that says so (owner ruling 3; the definitions are the board's, so the page keeps no list of its own). */
+function startFurled(board: BoardState): Set<Column> {
+  return new Set<Column>(isWide() ? [] : board.columns.filter((c) => c.definition.furled_on_laptop).map((c) => c.definition.column));
+}
+
 const collision: CollisionDetection = (args) => {
   const within = pointerWithin(args);
   return within.length ? within : rectIntersection(args);
@@ -104,7 +109,10 @@ export function Board({ slug, store, projects, onSwitch }: { slug: string; store
   const [open, setOpenState] = useState<number | null>(() => cardFromHash());
   const [focused, setFocused] = useState<number | null>(null);
   const [lift, setLift] = useState<Lift | null>(null);
-  const [furled, setFurled] = useState<Set<Column>>(() => new Set<Column>(isWide() ? [] : ["Executed", "Done", "Not now"]));
+  // Null until the owner has furled or unfurled something: before that the
+  // definitions decide, once the board has arrived to carry them.
+  const [furledByHand, setFurled] = useState<Set<Column> | null>(null);
+  const furled = useMemo<Set<Column>>(() => furledByHand ?? (board ? startFurled(board) : new Set<Column>()), [furledByHand, board]);
   const [unfurledMore, setUnfurledMore] = useState<Set<Column>>(new Set());
   const [filter, setFilter] = useState<Filter | null>(null);
   const [reading, setReading] = useState<number | null>(null);
@@ -153,11 +161,9 @@ export function Board({ slug, store, projects, onSwitch }: { slug: string; store
     if (open === null || !board) return;
     const card = findCard(board, open);
     if (!card || !furled.has(card.place.column)) return;
-    setFurled((f) => {
-      const next = new Set(f);
-      next.delete(card.place.column);
-      return next;
-    });
+    const next = new Set(furled);
+    next.delete(card.place.column);
+    setFurled(next);
   }, [open, board, furled]);
 
   useEffect(() => {
@@ -533,13 +539,11 @@ export function Board({ slug, store, projects, onSwitch }: { slug: string; store
                 key={column.definition.column}
                 name={column.definition.column}
                 count={column.count}
-                onClick={() =>
-                  setFurled((f) => {
-                    const next = new Set(f);
-                    next.delete(column.definition.column);
-                    return next;
-                  })
-                }
+                onClick={() => {
+                  const next = new Set(furled);
+                  next.delete(column.definition.column);
+                  setFurled(next);
+                }}
               />
             ) : (
               <ColumnBlock
@@ -556,7 +560,7 @@ export function Board({ slug, store, projects, onSwitch }: { slug: string; store
                 selected={selected}
                 moves={moves}
                 onUnfurl={() => unfurlMore(column.definition.column)}
-                onFurl={() => setFurled((f) => new Set(f).add(column.definition.column))}
+                onFurl={() => setFurled(new Set(furled).add(column.definition.column))}
                 onOpen={setOpen}
                 onRetry={(n) => void store.retry(n)}
                 onFocus={setFocused}

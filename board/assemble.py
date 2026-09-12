@@ -26,7 +26,15 @@ from board.moves import GroupLayout
 from board.reconcile import carried_stems, corpus_path_of, ref
 from board.signals import is_due, past_due, read_or_decline
 from board.title import hold_sentence, title_hold
-from board.triage import Sources, routing_now, routing_of
+from board.triage import (
+    Sources,
+    current_grade,
+    grade_why,
+    grade_words,
+    order_key,
+    routing_now,
+    routing_of,
+)
 from board.verdicts import read_or_decline as read_verdict_or_decline
 from domain.audit import AuditEntry
 from domain.board import (
@@ -51,7 +59,7 @@ from domain.board import (
     TrunkState,
 )
 from domain.card import Actor, Card, CardOrigin
-from domain.column import COLUMN_DEFINITIONS, DEFECTS_RAIL, Column
+from domain.column import COLUMN_DEFINITIONS, Column
 from domain.corpus import CorpusIndex, CorpusSummary
 from domain.dial import Dial, DialState
 from domain.document import (
@@ -72,7 +80,7 @@ from domain.project import Project
 from domain.row import ROW_HALF, Row, RowHalf, RowKind
 from domain.signal import Reading, Signal, SignalKind, WindowlessSession
 from domain.team import Composition
-from domain.triage import Routed, Routing, TitleReading, Triage
+from domain.triage import Grade, Routed, Routing, TitleReading, Triage
 from domain.verdict import Verdict, VerdictLine
 from domain.watercooler import WatercoolerLine
 
@@ -211,10 +219,10 @@ def trigger_signal(document: Document | None) -> tuple[Signal | None, str | None
 
 
 def is_trigger_card(card: Card, document: Document | None) -> bool:
-    """A Backlog card behind a live suggestion whose `Fix: when` trigger the
+    """A Defects card behind a live suggestion whose `Fix: when` trigger the
     signal loop reads as it reads an Executed card's WATCH row."""
     return (
-        card.place.column == Column.BACKLOG
+        card.place.column == Column.DEFECTS
         and document is not None
         and not document.archived
         and document.kind == DocumentKind.SUGGESTION
@@ -231,7 +239,7 @@ def routing_for(
 ) -> Routed | None:
     """Where a defect routes, for the one card. None for anything that is
     not a live defect suggestion — a plan, an idea, an archived document —
-    because routing is a question only a defect on the rail asks. `sources`
+    because routing is a question only a defect in the column asks. `sources`
     is absent only where no reader can reach the project's files (a summary
     built for a test or a fixture); the row's source then reads as gone,
     which is the safe answer, never a looser one."""
@@ -309,9 +317,9 @@ def signal_asks_owner(
 def trigger_asks_owner(
     card: Card, trigger: Signal | None, last: Reading | None, now: datetime
 ) -> bool:
-    """A Backlog defect whose `Fix: when` trigger asks the owner (plan 11,
+    """A Defects card whose `Fix: when` trigger asks the owner (plan 11,
     item 5): a session read it and could not tell, or only he can read it."""
-    return card.place.column == Column.BACKLOG and asks_owner(trigger, last, now)
+    return card.place.column == Column.DEFECTS and asks_owner(trigger, last, now)
 
 
 def signal_overdue(card: Card, signal: Signal | None, last: Reading | None, now: datetime) -> bool:
@@ -345,9 +353,9 @@ def signal_wants_reading(
 def trigger_wants_reading(
     card: Card, trigger: Signal | None, last: Reading | None, now: datetime
 ) -> bool:
-    """A Backlog defect's `Fix: when` trigger, due for the same readers on
+    """A Defects card's `Fix: when` trigger, due for the same readers on
     the same cadence (plan 11, item 5)."""
-    return card.place.column == Column.BACKLOG and wants_reading(trigger, last, now)
+    return card.place.column == Column.DEFECTS and wants_reading(trigger, last, now)
 
 
 def _where(lane: Lane) -> str:
@@ -580,6 +588,7 @@ def state_of(
     routed: Routed | None = None,
     hold: str | None = None,
     defect: bool = False,
+    grade: Grade | None = None,
 ) -> CardState:
     """The one function that names a card's state (plan 27, item 2). The
     order is the rule's precedence: broken before yours, yours before live,
@@ -589,7 +598,8 @@ def state_of(
     plan (plan 11), `triaging` the reading verifying its mark and `routed`
     where it routes (plan 59); `hold` is why a cold reading could not place
     the card from its title, and `defect` whether a reading in flight is a
-    mark's or only a title's (card #74, item 3)."""
+    mark's or only a title's (card #74, item 3); `grade` how bad a defect
+    is, from the reading that stands for its document today (card #100)."""
     hands_on = lane is not None and lane.state in HANDS_ON
     if document_state == DocumentState.GONE:
         return _state(
@@ -793,6 +803,25 @@ def state_of(
                 then="its verdict lands on the card by itself",
             ),
         )
+    if document_state == DocumentState.SUGGESTION and grade is not None:
+        # The grade is the face's one word (card #100, item 2): what it
+        # breaks, with who it reaches and how often as the fact, and the
+        # reading's words for what in the document selected it as the why.
+        return _state(
+            grade.breaks.value,
+            Meaning.QUIET,
+            detail=say(
+                Meaning.QUIET,
+                f"a second reading graded it: it {grade_words(grade)}",
+                why=grade_why(grade),
+                then="Create plan writes one when you want it planned"
+                if doors.plan.offered
+                else None,
+            ),
+            door=_door(FaceDoorName.PLAN, doors.plan.label, doors.plan.why, primary=False)
+            if doors.plan.offered
+            else None,
+        )
     if document_state == DocumentState.SUGGESTION:
         return _state(
             "no plan yet",
@@ -980,6 +1009,7 @@ def summarize(
     trigger, _ = trigger_signal(document)
     hold = title_hold(title_reading, document)
     defect = document is not None and document.suggestion_kind == SuggestionKind.DEFECT
+    grade = current_grade(document, triage) if defect else None
     try:
         face = state_of(
             card,
@@ -999,6 +1029,7 @@ def summarize(
             routed=routed,
             hold=hold,
             defect=defect,
+            grade=grade,
         )
     except ValidationError as refusal:
         face = _refused_face(card, refusal)
@@ -1048,7 +1079,64 @@ def summarize(
         triage=triage,
         title_reading=title_reading,
         leverage=leverage,
+        grade=grade,
     )
+
+
+UNREAD_LINE = "nobody has read yet"
+"""The name of the Defects column's second group, the board's own: what
+the page shows over the defects no reading has graded (card #100, item 3)."""
+
+
+def defects_column(
+    groups: list[GroupView], cards: dict[int, Card], triages: dict[int, Triage]
+) -> tuple[list[GroupView], str]:
+    """The Defects column as the owner sees it (card #100, item 3): one
+    group in the board's order, gravest first, and under it a line with the
+    defects nobody has read yet, since a grade is what the order is made of
+    and an unread defect has none. The store's groups are read whole and
+    re-drawn; nothing here writes. The line under the column's name counts
+    what `routing_of` says of each card — how many are his, how many nobody
+    has read yet, how many wait on a signal, how many are fixing themselves —
+    and never the words."""
+    summaries = [summary for group in groups for summary in group.cards]
+    graded = [s for s in summaries if s.grade is not None]
+    unread = [s for s in summaries if s.grade is None]
+
+    def key(summary: CardSummary):
+        card = cards[summary.number]
+        return order_key(summary.grade, card.born_at, card.number)
+
+    graded.sort(key=key)
+    unread.sort(key=key)
+    drawn = [GroupView(name=None, cards=graded)]
+    if unread:
+        drawn.append(GroupView(name=f"{len(unread)} {UNREAD_LINE}", cards=unread, machine=True))
+    counts = {"yours": 0, "unread": 0, "waits": 0, "fixing": 0, "unsettled": 0}
+    for summary in summaries:
+        routed = summary.routing
+        triage = triages.get(summary.number)
+        if routed is None:
+            continue
+        if triage is None or routed.state == Routing.STALE:
+            counts["unread"] += 1
+        elif routed.state == Routing.TRIAGED_HIS:
+            counts["yours"] += 1
+        elif routed.state == Routing.TRIAGED_WHEN:
+            counts["waits"] += 1
+        elif routed.state == Routing.TRIAGED_NOW:
+            counts["fixing"] += 1
+        else:
+            counts["unsettled"] += 1
+    parts = [
+        f"{counts['yours']} yours",
+        f"{counts['unread']} {UNREAD_LINE}",
+        f"{counts['waits']} waiting on a signal",
+        f"{counts['fixing']} fixing themselves",
+    ]
+    if counts["unsettled"]:
+        parts.append(f"{counts['unsettled']} read and settled by nobody")
+    return drawn, " · ".join(parts)
 
 
 def claim_counts(meaning: Meaning, counts: dict[Claim, int]) -> list[ClaimCount]:
@@ -1173,21 +1261,21 @@ def assemble_board(
     columns: list[ColumnView] = []
     for definition in COLUMN_DEFINITIONS:
         groups = [
-            GroupView(
-                name=g.name,
-                cards=[summaries[n] for n in g.numbers],
-                rail=definition.column == Column.BACKLOG and g.name == DEFECTS_RAIL,
-            )
+            GroupView(name=g.name, cards=[summaries[n] for n in g.numbers])
             for g in layout
             if g.column == definition.column
         ]
         if not groups:
-            groups = [GroupView(name=None, cards=[], rail=False)]
+            groups = [GroupView(name=None, cards=[])]
+        line = None
+        if definition.column == Column.DEFECTS:
+            groups, line = defects_column(groups, by_number, triages)
         columns.append(
             ColumnView(
                 definition=definition,
                 groups=groups,
                 count=sum(len(g.cards) for g in groups),
+                line=line,
             )
         )
 

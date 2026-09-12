@@ -142,13 +142,14 @@ def test_a_write_from_another_process_is_heard_within_the_poll_and_the_servers_o
 def test_a_hand_move_against_the_documents_kind_is_refused_with_the_line_to_edit(
     store: Store, project: Project, corpus: Path
 ):
-    """Plan 06, item 2: the rail is a lens on the `Kind:` line, kept by the
-    corpus on every read; a drag that disagrees with the line is refused now
-    rather than undone later."""
+    """Plan 06, item 2: Defects and Backlog are a lens on the `Kind:` line,
+    kept by the corpus on every read; a drag that disagrees with the line is
+    refused now rather than undone later. And the Defects column's order is
+    the board's (card #100, ruling 4): a move inside it is refused too."""
     import pytest
 
     from domain.card import Place
-    from domain.column import DEFECTS_RAIL, Column
+    from domain.column import Column
     from infrastructure.store import StoreRefusal
 
     # The conftest suggestion is filed by a review, so it reads as a defect.
@@ -158,7 +159,7 @@ def test_a_hand_move_against_the_documents_kind_is_refused_with_the_line_to_edit
     live = Live(store)
     live.load()
     defect = next(c for c in store.cards("proj") if c.title == "The berth count is off by one")
-    assert defect.place.group == DEFECTS_RAIL
+    assert defect.place.column == Column.DEFECTS
     with pytest.raises(StoreRefusal, match="Kind: defect") as refused:
         live.move("proj", defect.number, Place(column=Column.BACKLOG, group=None, position=0))
     assert "docs/slice-suggestions/2026-09-04-a-found-defect.md" in str(refused.value)
@@ -168,11 +169,13 @@ def test_a_hand_move_against_the_documents_kind_is_refused_with_the_line_to_edit
         if c.link is not None
         and c.link.kind.value == "suggestion"
         and c.place.column == Column.BACKLOG
-        and c.place.group != DEFECTS_RAIL
     )
     with pytest.raises(StoreRefusal, match="Kind: idea"):
-        live.move("proj", idea.number, Place(column=Column.BACKLOG, group=DEFECTS_RAIL, position=0))
-    # Out of Backlog is the owner's move as ever, and back into Backlog lands below the rail.
+        live.move("proj", idea.number, Place(column=Column.DEFECTS, group=None, position=0))
+    # Inside Defects the order is the board's: nothing there is ranked by hand.
+    with pytest.raises(StoreRefusal, match="gravest first"):
+        live.move("proj", defect.number, Place(column=Column.DEFECTS, group=None, position=0))
+    # Out of Defects is the owner's move as ever, and back into Defects is allowed.
     live.move("proj", defect.number, Place(column=Column.UP_NEXT, group=None, position=0))
-    live.move("proj", defect.number, Place(column=Column.BACKLOG, group=DEFECTS_RAIL, position=0))
-    assert store.card("proj", defect.number).place.group == DEFECTS_RAIL  # type: ignore[union-attr]
+    live.move("proj", defect.number, Place(column=Column.DEFECTS, group=None, position=0))
+    assert store.card("proj", defect.number).place.column == Column.DEFECTS  # type: ignore[union-attr]

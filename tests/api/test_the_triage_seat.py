@@ -31,6 +31,7 @@ from domain.triage import TriageResult
 from infrastructure.store import Store
 from tests.api import test_doors as doors
 from tests.api.test_dial import (
+    GRADE,
     READINGS_ON_THE_WAY,
     SOURCE,
     land_on_the_way,
@@ -148,6 +149,7 @@ def test_a_reading_that_agrees_lets_the_dial_take_it_and_binds_itself_to_what_it
                 "automation increased",
                 "--title",
                 "passes",
+                *GRADE,
             ]
         )
         == 0
@@ -344,6 +346,7 @@ def test_the_verb_refuses_a_now_with_no_resolvable_source_and_a_now_with_no_dire
                 "docs/no-such-plan.md",
                 "--title",
                 "passes",
+                *GRADE,
             ]
         )
         == 1
@@ -361,6 +364,7 @@ def test_the_verb_refuses_a_now_with_no_resolvable_source_and_a_now_with_no_dire
                 SOURCE,
                 "--title",
                 "passes",
+                *GRADE,
             ]
         )
         == 1
@@ -677,7 +681,7 @@ def test_one_command_follows_a_split_decision_to_both_fates(
     assert "routes as: triaged now" in out, "the extracted half, verified on its own"
     assert "routes as: triaged his" in out, "the residual, still the owner's"
     assert "nothing has been built on it yet" in out
-    assert "taken off your rail as `now`" in out
+    assert "taken off your defects as `now`" in out
     assert "directions: 1 strictness raised" in out
 
     assert main(["decisions", "proj", "--first", "1"]) == 0

@@ -137,7 +137,7 @@ def test_the_reading_brief_files_by_the_rule_and_reads_a_trigger_as_a_trigger():
     card = Card(
         number=7,
         project="proj",
-        place=Place(column=Column.BACKLOG, group="Defects", position=0),
+        place=Place(column=Column.DEFECTS, group=None, position=0),
         title="The thing",
         gate=None,
         tags=[],
@@ -194,7 +194,7 @@ def test_the_planning_brief_carries_the_five_rules_and_the_one_exit_to_the_owner
     card = Card(
         number=7,
         project="proj",
-        place=Place(column=Column.BACKLOG, group="Defects", position=0),
+        place=Place(column=Column.DEFECTS, group=None, position=0),
         title="The thing",
         gate=None,
         tags=[],

@@ -916,21 +916,36 @@ describe("the board at a glance (plan 06)", () => {
     expect(await within(opened).findByRole("button", { name: "Create plan" })).toHaveAttribute("title", expect.stringContaining("plan-writing conversation"));
   });
 
-  it("pins the defects rail at the top of Backlog with its count, furled until asked", async () => {
+  it("gives the defects a column of their own before Backlog, furled on a laptop, gravest first with the unread under a line", async () => {
+    // Card #100: the defects are a column the owner opens and closes like the
+    // archive, whose head line says how many are his, unread, waiting and
+    // fixing themselves, and whose order is the board's — the graded first,
+    // gravest first, and the ones nobody has read yet under their own line.
     await renderBoard();
+    const furled = screen.getByRole("button", { name: "Defects — click to unfurl" });
+    expect(furled).toHaveTextContent("3");
+    expect(document.querySelector('[data-column="Defects"]')).toBeNull();
+    expect(screen.queryByText("#232")).not.toBeInTheDocument();
+    await userEvent.click(furled);
+    const defects = document.querySelector('[data-column="Defects"]') as HTMLElement;
+    expect(within(defects).getByRole("heading", { name: "Defects" })).toBeInTheDocument();
+    expect(defects.querySelector("[data-column-line]")).toHaveTextContent("0 yours · 2 nobody has read yet · 0 waiting on a signal · 1 fixing themselves");
+    const order = Array.from(defects.querySelectorAll("article[data-card]")).map((el) => Number(el.getAttribute("data-card")));
+    expect(order).toEqual([268, 232, 267]);
+    // The graded one carries its word; the line over the unread is the board's, not a group of his.
+    const graded = defects.querySelector('article[data-card="268"]') as HTMLElement;
+    expect(graded).toHaveTextContent("lies");
+    expect(graded).toHaveTextContent("Nothing for you: a second reading graded it: it shows something false as true, reaching a client or the public, sometimes.");
+    const line = defects.querySelector("[data-machine-group]") as HTMLElement;
+    expect(line).toHaveTextContent("2 nobody has read yet");
+    // Backlog holds ideas only, and the columns come before it.
     const backlog = document.querySelector('[data-column="Backlog"]') as HTMLElement;
-    const rail = within(backlog).getByRole("button", { name: /Defects/ });
-    expect(rail).toHaveAttribute("aria-expanded", "false");
-    expect(rail).toHaveTextContent("Defects2");
     expect(within(backlog).queryByText("#232")).not.toBeInTheDocument();
-    expect(backlog.querySelector(".stack")?.firstElementChild?.getAttribute("data-rail")).toBe("defects");
-    await userEvent.click(rail);
-    expect(rail).toHaveAttribute("aria-expanded", "true");
-    expect(within(backlog).getByText("#232")).toBeInTheDocument();
-    // A category is not a colour: the rail is a rail, and the counts of what is
-    // unplanned are a quiet fact behind the project pill, not a claim on him.
-    expect(rail.getAttribute("data-meaning")).toBeNull();
-    expect(document.querySelector(".facts")).toHaveTextContent("2 defects and 7 ideas unplanned");
+    expect(backlog.querySelector('.kind[data-fix]')).toBeNull();
+    expect(defects.compareDocumentPosition(backlog) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    // A category is not a colour: the counts of what is unplanned are a
+    // quiet fact behind the project pill, not a claim on him.
+    expect(document.querySelector(".facts")).toHaveTextContent("3 defects and 7 ideas unplanned");
   });
 
   it("shows what a card carries on both faces", async () => {
@@ -1077,8 +1092,7 @@ describe("defects fix themselves (plan 11)", () => {
     // one, which used to read as the machine's on the strength of the word
     // alone.
     await renderBoard();
-    const backlog = document.querySelector('[data-column="Backlog"]') as HTMLElement;
-    await userEvent.click(within(backlog).getByRole("button", { name: /Defects/ }));
+    await userEvent.click(screen.getByRole("button", { name: "Defects — click to unfurl" }));
     const tide = screen.getByText("The tide clock drifts a minute a day").closest("article") as HTMLElement;
     const marked = within(tide).getByText("defect · needs triage");
     expect(marked).toHaveAttribute("title", expect.stringContaining("Fix: now"));
@@ -1100,8 +1114,7 @@ describe("defects fix themselves (plan 11)", () => {
     d.summary.planning = { id: 1, project: PROJECT.slug, card_number: tide, work: "planning", session_id: "cccc0001-0000-4000-8000-000000000000", slot: "alpha", started_at: "2026-09-04T08:27:00+00:00", ended_at: null };
     api.getCard.mockResolvedValue(d);
     await renderBoard();
-    const backlog = document.querySelector('[data-column="Backlog"]') as HTMLElement;
-    await userEvent.click(within(backlog).getByRole("button", { name: /Defects/ }));
+    await userEvent.click(screen.getByRole("button", { name: "Defects — click to unfurl" }));
     await userEvent.click(screen.getByText("The tide clock drifts a minute a day"));
     const section = await screen.findByText("The dial");
     expect(section.closest(".sec")).toHaveTextContent("cccc0001 on alpha");
@@ -1398,7 +1411,7 @@ describe("the focus strip and the Leverage lens (card #87)", () => {
   it("shows the chosen focus on every lens, and the lens shows the board as the focus would arrange it without writing", async () => {
     await renderBoard();
     const strip = screen.getByRole("region", { name: "The focus" });
-    expect(strip).toHaveTextContent("Focus chosen · 5 of 20 cards assessed · 2 moves proposed");
+    expect(strip).toHaveTextContent("Focus chosen · 5 of 21 cards assessed · 2 moves proposed");
     expect(strip).toHaveTextContent("What matters now: Every season berth is paid before the boat arrives");
     expect(strip).toHaveTextContent("1 queued card helps remove this limit");
     expect(strip.dataset["meaning"]).toBe("quiet");

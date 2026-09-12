@@ -12,7 +12,7 @@ from board.leverage import Judged, arrange, wake_line
 from board.moves import GroupLayout
 from board.signals import parse_watch
 from domain.card import Place
-from domain.column import DEFECTS_RAIL, Column
+from domain.column import Column
 from domain.document import DocumentKind, SuggestionKind
 from domain.focus import CardLeverage, Decline, Leverage, LeverageState, Likelihood
 from domain.gate import Gate
@@ -162,13 +162,12 @@ def test_a_card_in_up_next_that_does_not_address_the_limit_goes_to_not_now_with_
     assert parse_watch(line).what == "WATCH: wake when the diagnosis is read again"
 
 
-def test_a_backlog_defect_that_helps_remove_the_limit_is_never_moved_into_up_next():
+def test_a_defect_that_helps_remove_the_limit_is_never_moved_into_up_next():
     judged = {
         1: _card(
             1,
-            Column.BACKLOG,
+            Column.DEFECTS,
             0,
-            group=DEFECTS_RAIL,
             kind=DocumentKind.SUGGESTION,
             suggestion_kind=SuggestionKind.DEFECT,
             gate=None,
@@ -176,9 +175,8 @@ def test_a_backlog_defect_that_helps_remove_the_limit_is_never_moved_into_up_nex
         ),
         2: _card(
             2,
-            Column.BACKLOG,
+            Column.DEFECTS,
             1,
-            group=DEFECTS_RAIL,
             kind=DocumentKind.SUGGESTION,
             suggestion_kind=SuggestionKind.DEFECT,
             gate=None,
@@ -188,12 +186,12 @@ def test_a_backlog_defect_that_helps_remove_the_limit_is_never_moved_into_up_nex
     }
     arranged = _arrange(judged)
     assert arranged.moves == []
-    assert _column(arranged, Column.BACKLOG) == [1, 2] and _column(arranged, Column.UP_NEXT) == [3]
-    rail = next(c for c in arranged.columns if c.column == Column.BACKLOG).groups[0]
-    assert rail.rail and rail.name == DEFECTS_RAIL
+    assert _column(arranged, Column.DEFECTS) == [1, 2] and _column(arranged, Column.UP_NEXT) == [3]
+    defects = next(c for c in arranged.columns if c.column == Column.DEFECTS).groups[0]
+    assert defects.name is None
 
 
-def test_a_parked_plan_that_helps_remove_the_limit_comes_forward_and_a_parked_defect_to_the_rail():
+def test_a_parked_plan_that_helps_remove_the_limit_comes_forward_and_a_parked_defect_to_defects():
     judged = {
         1: _card(1, Column.NOT_NOW, 0, leverage=_read(Leverage.HELPS_REMOVE, Likelihood.HIGH)),
         2: _card(
@@ -209,13 +207,13 @@ def test_a_parked_plan_that_helps_remove_the_limit_comes_forward_and_a_parked_de
     }
     arranged = _arrange(judged)
     assert _column(arranged, Column.UP_NEXT) == [1, 3]
-    backlog = next(c for c in arranged.columns if c.column == Column.BACKLOG)
-    assert backlog.groups == [
-        backlog.groups[0].__class__(name=DEFECTS_RAIL, rail=True, numbers=[2])
-    ], "a Backlog with no rail gets one for the defect that returns"
+    defects = next(c for c in arranged.columns if c.column == Column.DEFECTS)
+    assert defects.groups == [
+        defects.groups[0].__class__(name=None, numbers=[2])
+    ], "a Defects column with no group gets one for the defect that returns"
     assert {m.number: m.to_place.column for m in arranged.moves} == {
         1: Column.UP_NEXT,
-        2: Column.BACKLOG,
+        2: Column.DEFECTS,
     }
 
 

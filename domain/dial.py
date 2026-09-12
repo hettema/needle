@@ -38,8 +38,8 @@ class Dial(BaseModel):
     """When the owner last turned this board's switch; None while it has
     never been touched."""
     first_on_at: datetime | None
-    """When this board was first turned on: the moment its rail's size was
-    recorded for the loop (plan 11, item 6)."""
+    """When this board was first turned on: the moment its Defects column's
+    size was recorded for the loop (plan 11, item 6)."""
 
 
 class DialChange(BaseModel):
@@ -235,7 +235,7 @@ class DialState(BaseModel):
     planned card whose Start is closed is no process and is not counted."""
     triaging: int = 0
     """Triage readings open right now: live sessions against the same
-    number, so a rail of untriaged defects cannot open one session per card
+    number, so a column of unread defects cannot open one session per card
     (plan 59, item 3)."""
     held: int
     """Fix lanes at the planned stage whose Start door is closed — parked,
@@ -245,7 +245,7 @@ class DialState(BaseModel):
     """The machine is full, in the head's words with the numbers, when the
     memory floor stops the beat; None while there is headroom."""
     quiet: bool
-    """No lane has hands on any project: when the board's own rail may run
+    """No lane has hands on any project: when the board's own defects may run
     (plan 11, rulings — a fold on the board restarts the service under every
     running lane)."""
 
@@ -291,7 +291,7 @@ class FixLane(BaseModel):
 
 class Filer(StrEnum):
     """Who filed a defect, read from its `Found by:` line (plan 11, item 6):
-    the split that says whether the rail is fed by the path that drains it."""
+    the split that says whether the column is fed by the path that drains it."""
 
     FIX_LANE = "fix lane"
     FEATURE_LANE = "feature lane"
@@ -300,8 +300,8 @@ class Filer(StrEnum):
     UNKNOWN = "unknown"
 
 
-class RailCount(BaseModel):
-    """The defects rail of one project, by who filed each card."""
+class DefectsCount(BaseModel):
+    """The Defects column of one project, by who filed each card."""
 
     project: str
     counts: dict[Filer, int]
@@ -337,7 +337,7 @@ class FixReport(BaseModel):
 
 
 class Waiting(BaseModel):
-    """One defect on the rail the dial has not taken, and the fact that
+    """One defect in the column the dial has not taken, and the fact that
     holds it: what the owner reads when the dial is on and nothing starts."""
 
     project: str
@@ -349,17 +349,17 @@ class Waiting(BaseModel):
 
 class Fixes(BaseModel):
     """The loop counted (plan 11, item 6): every fix lane the dial started,
-    the rail now against the rail when the dial was first turned on, and
-    every defect still on the rail with why the dial leaves it there."""
+    the Defects column now against the column when the dial was first turned
+    on, and every defect still in it with why the dial leaves it there."""
 
     switches: list[Dial]
     """Each board's switch in the report's scope, with the machine's number."""
     lanes: list[FixReport]
-    rail_now: list[RailCount]
-    rail_at_first_on: list[RailCount]
+    defects_now: list[DefectsCount]
+    defects_at_first_on: list[DefectsCount]
     waiting: list[Waiting]
     decisions: list[Decision]
-    """Every decision a colleague took off the owner's rail, oldest first,
+    """Every decision a colleague took off the owner's defects, oldest first,
     with its source, its direction and its fate (plan 59, item 6): the
     sample the loop's cold audit reads."""
 

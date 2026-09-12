@@ -491,8 +491,7 @@ def lane_for(card: Card, facts: LaneFacts) -> Lane:
         # the lane stands as last read, and the card says how old that is.
         age = ago(facts.last_read[winner.machine], facts.now)
         sentence = (
-            f"{sentence} As {winner.machine} last answered, {age} ago; "
-            "it has not answered since."
+            f"{sentence} As {winner.machine} last answered, {age} ago; it has not answered since."
         )
 
     return Lane(
@@ -789,7 +788,7 @@ def exit_for(
 
 
 ARCHIVE_MOVES_FROM: frozenset[Column] = frozenset(
-    {Column.BACKLOG, Column.PLANNED, Column.UP_NEXT, Column.EXECUTING}
+    {Column.DEFECTS, Column.BACKLOG, Column.PLANNED, Column.UP_NEXT, Column.EXECUTING}
 )
 """The columns that call a card pending: an archived document there is
 shipped work the board is still calling pending (plan 06, item 1). Decision

@@ -1,14 +1,15 @@
 """What the dial may take next, what counts against its number, and who
-filed each defect on the rail (plan 11) — pure over domain values; the
-cadence that acts on these answers lives in `api/dial.py`.
+filed each defect in the Defects column (plan 11) — pure over domain values;
+the cadence that acts on these answers lives in `api/dial.py`.
 
 Eligibility is the document's mark plus the card's latest reading, and the
 board edits nothing: a defect marked `Fix: now`, or `Fix: when <signal>`
-whose trigger was last read as delivered, standing on its own on a Backlog
-rail, with no lane on it, no planning session open for it, no fix lane the
-dial already ran for it, and no question left on it for the owner. Oldest
-first across projects (the rulings): the rail is machine-kept and carries no
-owner rank, so age is the one fact every card has.
+whose trigger was last read as delivered, standing on its own in the
+Defects column, with no lane on it, no planning session open for it, no fix
+lane the dial already ran for it, and no question left on it for the owner.
+Gravest first across projects, then oldest (card #100, item 3): the column
+is machine-kept and carries no owner rank, so the reading's grade and the
+card's age are the facts every card has.
 """
 
 import re
@@ -19,10 +20,12 @@ from pydantic import BaseModel
 
 from board.lane import has_row
 from board.title import wants_title_reading
+from board.triage import GradeKey, order_key
 from domain.card import Card
 from domain.column import Column
 from domain.corpus import CorpusIndex
 from domain.dial import (
+    DefectsCount,
     Dial,
     DialChange,
     DialState,
@@ -30,7 +33,6 @@ from domain.dial import (
     FixLane,
     FixStage,
     Headroom,
-    RailCount,
     ScopeHeld,
     ScopeState,
 )
@@ -39,7 +41,7 @@ from domain.lane import HANDS_ON, Lane, LaneState
 from domain.row import RowKind
 from domain.session import Session
 from domain.signal import Reading
-from domain.triage import Routed, Routing, TitleReading
+from domain.triage import Grade, Routed, Routing, TitleReading
 
 LIVE_STAGES: frozenset[FixStage] = frozenset(
     {FixStage.PLANNING, FixStage.PLANNED, FixStage.STARTED}
@@ -119,12 +121,13 @@ def filed_by_the_card(number: int, found_by: str | None) -> bool:
     return re.search(_BY_THE_CARD.format(n=number), found_by.strip(), re.I) is not None
 
 
-def rail_defects(cards: list[Card], index: CorpusIndex) -> list[tuple[Card, Document]]:
-    """Every card standing on its own on the project's defects rail — a
-    Backlog card behind a live suggestion whose document says defect."""
+def column_defects(cards: list[Card], index: CorpusIndex) -> list[tuple[Card, Document]]:
+    """Every card standing on its own in the project's Defects column — a
+    card there behind a live suggestion whose document says defect, which
+    is what the corpus keeps the column to (card #100, item 1)."""
     found: list[tuple[Card, Document]] = []
     for card in cards:
-        if card.folded_into is not None or card.place.column != Column.BACKLOG:
+        if card.folded_into is not None or card.place.column != Column.DEFECTS:
             continue
         if card.link is None or card.link.kind != DocumentKind.SUGGESTION:
             continue
@@ -150,7 +153,7 @@ def unread_titles(
     """Every card standing on its own behind a live plan or idea whose
     title has not been read as it stands. Defects are not listed here: a
     defect's title is read by the same session as its mark, so it rides on
-    the mark's reading (`rail_defects`) and never opens a second one."""
+    the mark's reading (`column_defects`) and never opens a second one."""
     found: list[tuple[Card, Document]] = []
     for card in cards:
         if card.folded_into is not None or card.place.column not in TITLE_READ_COLUMNS:
@@ -167,25 +170,34 @@ def unread_titles(
     return found
 
 
-def rail_count(slug: str, cards: list[Card], index: CorpusIndex) -> RailCount:
-    """The rail's size, split by who filed each card (plan 11, item 6)."""
+def defects_count(slug: str, cards: list[Card], index: CorpusIndex) -> DefectsCount:
+    """The column's size, split by who filed each card (plan 11, item 6)."""
     counts: dict[Filer, int] = {}
-    for _, document in rail_defects(cards, index):
+    for _, document in column_defects(cards, index):
         filer = filer_of(document.found_by)
         counts[filer] = counts.get(filer, 0) + 1
-    return RailCount(project=slug, counts=counts, total=sum(counts.values()))
+    return DefectsCount(project=slug, counts=counts, total=sum(counts.values()))
 
 
 class Candidate(BaseModel):
-    """A defect the dial may take, with the age it is ranked by."""
+    """A defect the dial may take, or open a reading on, with what it is
+    ranked by: the grade its current reading landed and its age. A
+    candidate for a reading has no grade yet, so among those age alone
+    orders (card #100, item 3: the queue of readings stays oldest first)."""
 
     project: str
     card: Card
     document: Document
+    grade: Grade | None = None
 
     @property
     def age_key(self) -> tuple[datetime, int]:
         return (self.card.born_at, self.card.number)
+
+    @property
+    def order_key(self) -> GradeKey:
+        """Gravest first, then oldest: the one order the column shows."""
+        return order_key(self.grade, self.card.born_at, self.card.number)
 
 
 def why_not_eligible(

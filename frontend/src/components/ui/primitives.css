@@ -273,19 +273,6 @@ body { overflow: hidden; }
 .col-head .count { font-family: var(--mono); font-size: 11px; color: var(--ink-3); }
 .col-head .tools { margin-left: auto; display: flex; gap: 4px; align-items: center; }
 
-/* Defects are their own rail, not their own hue: a category is never a
- * colour (plan 27, the sheet). */
-.rail-group { display: flex; flex-direction: column; gap: 7px; }
-.rail-h {
-  display: flex; align-items: center; gap: 8px; width: 100%;
-  padding: 7px 10px; border-radius: var(--r-ctrl); cursor: pointer; text-align: left;
-  border: 1px solid var(--line); background: var(--surface-2); color: var(--ink-2);
-}
-.rail-h .rail-name { font-size: 10.5px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; }
-.rail-h .count { font-family: var(--mono); font-size: 11px; color: var(--ink); }
-.rail-h .rail-tw { margin-left: auto; font-family: var(--mono); font-size: 9.5px; letter-spacing: .05em; color: var(--ink-3); }
-.rail-h:focus-visible { outline: 2px solid var(--ink); outline-offset: 1px; }
-
 .tool {
   font-family: var(--mono); font-size: 9.5px; letter-spacing: .05em;
   color: var(--ink-3); border: 1px solid transparent; border-radius: var(--r-chip);
@@ -295,6 +282,10 @@ body { overflow: hidden; }
 .tool.on { color: var(--ink); border-color: var(--line); background: var(--surface); }
 .tool:focus-visible { outline: 2px solid var(--ink); outline-offset: 1px; }
 .col-note { padding: 7px 2px 9px; font-size: 11.5px; line-height: 1.45; color: var(--ink-3); margin: 0; }
+/* The board's own line under a column's name (Defects: its four counts): the
+ * same place as the note, in the machine's face, since it is a fact and not
+ * a definition (card 100, item 3). */
+.col-line { padding: 7px 2px 9px; font-family: var(--mono); font-size: 10.5px; line-height: 1.5; color: var(--ink-2); margin: 0; }
 
 .def {
   position: absolute; top: 100%; left: 0; width: min(268px, 100%); z-index: 40;
@@ -326,6 +317,9 @@ body { overflow: hidden; }
   margin: 0;
 }
 .group-h::after { content: ""; flex: 1; height: 1px; background: var(--line); }
+/* A group the board drew, not the owner: the line over the defects nobody has
+ * read yet, which sit under every graded one (card 100, item 3). */
+.group-h.machine { color: var(--ink-2); font-style: italic; text-transform: none; letter-spacing: .04em; }
 .stack > .group-h:first-child { padding-top: 0; }
 .group-body { display: flex; flex-direction: column; gap: 8px; min-height: 8px; }
 

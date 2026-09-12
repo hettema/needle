@@ -161,7 +161,6 @@ export function leverageColumns(board: BoardState): ColumnView[] {
     if (!arranged) return column;
     const groups: GroupView[] = arranged.groups.map((g) => ({
       name: g.name,
-      rail: g.rail,
       cards: g.numbers.map((n) => cards.get(n)).filter((c): c is CardSummary => c !== undefined),
     }));
     return { ...column, groups, count: groups.reduce((n, g) => n + g.cards.length, 0) };

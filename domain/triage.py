@@ -26,7 +26,7 @@ Two rules hold the whole thing, and both are in `routing_of`:
 from datetime import datetime
 from enum import StrEnum
 
-from pydantic import BaseModel
+from pydantic import BaseModel, model_validator
 
 from domain.card import Actor
 
@@ -67,6 +67,134 @@ class Direction(StrEnum):
     BOUND_USED = "a spend or risk bound used"
     NONE = "no direction"
     """It restored an invariant already written; the product moved nowhere."""
+
+
+class Reach(StrEnum):
+    """Who a defect reaches, from the second reading (card #100, ruling 2):
+    the outermost person or thing it touches. The doctrine's own cut — §1's
+    exposure past a bound is the reach — so a defect that only costs a
+    session and one that can spend a client's money never sort together."""
+
+    CLIENT = "client"
+    """A client or the public: someone outside sees or bears it."""
+    MONEY = "money"
+    """A spend, or a bound the owner authorised, is crossed."""
+    YOU = "you"
+    """A decision or a reading of the owner's."""
+    SESSION = "session"
+    """A colleague's work or time."""
+
+
+class Breaks(StrEnum):
+    """What a defect breaks, from the second reading (card #100, ruling 2),
+    gravest first. *Lies* outranks *loses* because a lie is silent and a
+    loss is loud (§5): a partial result reported whole is bad information,
+    and every decision built on it inherits the error (§6, §11)."""
+
+    LIES = "lies"
+    """Something shown as true is false, or work is reported done that is
+    not, and a decision is built on it."""
+    LOSES = "loses"
+    """Work, data or money that should land does not, or a card cannot move."""
+    COSTS = "costs"
+    """A retry, a wait, a step done by hand, or output worse or slower than
+    it should be; nothing false and nothing lost."""
+    LOOKS = "looks"
+    """True and readable, only ugly or clumsy."""
+    NOTHING = "nothing"
+    """The document describes no failure: it is an idea in a defect's
+    clothing, and the reading's words say so. Reach and how often are
+    empty on such a grade, since nothing bites."""
+
+
+class Often(StrEnum):
+    """How often a defect bites, from the second reading (card #100, ruling 2)."""
+
+    EVERY_TIME = "every-time"
+    """Each session, read, close or beat it touches."""
+    SOMETIMES = "sometimes"
+    ONCE_SEEN = "once-seen"
+
+
+REACH_WORDS: dict[Reach, str] = {
+    Reach.CLIENT: "a client or the public",
+    Reach.MONEY: "money",
+    Reach.YOU: "you",
+    Reach.SESSION: "a session",
+}
+"""The owner's phrase for each reach: what the face, the verb and the brief
+say. The value is the token a reading types; this is what he reads."""
+
+OFTEN_WORDS: dict[Often, str] = {
+    Often.EVERY_TIME: "every time",
+    Often.SOMETIMES: "sometimes",
+    Often.ONCE_SEEN: "once seen",
+}
+
+BREAKS_WORDS: dict[Breaks, str] = {
+    Breaks.LIES: "shows something false as true",
+    Breaks.LOSES: "loses work, data or money, or holds a card still",
+    Breaks.COSTS: "costs a retry, a wait or a step by hand",
+    Breaks.LOOKS: "only looks wrong",
+    Breaks.NOTHING: "describes no failure",
+}
+"""What each kind of break does, in a sentence the face can carry."""
+
+
+class Grade(BaseModel):
+    """How bad one defect is, as the second reading graded it from the
+    document alone (card #100, item 2): three parts in the owner's words,
+    each with the reading's words for what in the document selected it. A
+    grade is never a number — a number carries no reason a cold audit can
+    check — and never free text, which cannot be sorted. The band the
+    column is ordered by is computed from the parts
+    (`board/triage.py::band_of`) and never landed."""
+
+    breaks: Breaks
+    breaks_words: str
+    """What in the document says this is what breaks — or, on `nothing`,
+    why the document describes no failure."""
+    reach: Reach | None
+    reach_words: str | None
+    often: Often | None
+    often_words: str | None
+
+    @model_validator(mode="after")
+    def _whole(self) -> "Grade":
+        if not self.breaks_words.strip():
+            raise ValueError("a grade says what in the document selected what breaks")
+        if self.breaks == Breaks.NOTHING:
+            if self.reach is not None or self.often is not None:
+                raise ValueError("a grade of nothing names no reach and no how-often")
+            return self
+        missing = [
+            part
+            for part, value in (
+                ("reach", self.reach),
+                ("reach words", self.reach_words),
+                ("often", self.often),
+                ("often words", self.often_words),
+            )
+            if value is None or (isinstance(value, str) and not value.strip())
+        ]
+        if missing:
+            raise ValueError(f"a grade names all three parts with their words; missing {missing}")
+        return self
+
+
+class Band(StrEnum):
+    """The ladder the Defects column is ordered by (card #100, ruling 4):
+    computed from a grade's parts, never landed. The doctrine's two cuts in
+    the order it makes them — harm outside first, then false before lost."""
+
+    HARM_OUTSIDE = "harm outside"
+    """Something false or lost that reaches a client, the public or money."""
+    LIES = "lies"
+    LOSES = "loses"
+    COSTS = "costs"
+    LOOKS = "looks"
+    NOTHING = "nothing"
+    """Graded as describing no failure: last of the graded."""
 
 
 class Routing(StrEnum):
@@ -157,6 +285,10 @@ class Triage(BaseModel):
     """The suggestion text this result classified."""
     session_id: str | None
     """The triage session that landed it; None when the owner ruled by hand."""
+    grade: Grade | None = None
+    """How bad the defect is, from the same reading (card #100, item 2).
+    None on a reading landed before the scale existed; such a defect is
+    read again, since the column has no order for it."""
 
 
 class Fate(BaseModel):

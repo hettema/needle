@@ -53,7 +53,6 @@ export interface ArrangedColumn {
 
 export interface ArrangedGroup {
   name: string | null;
-  rail: boolean;
   numbers: number[];
 }
 

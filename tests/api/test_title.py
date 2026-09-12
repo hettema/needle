@@ -32,6 +32,7 @@ from infrastructure.live import sweep
 from infrastructure.store import Store
 from tests.api import test_doors as doors
 from tests.api.test_dial import (
+    GRADE,
     SOURCE,
     number_of,
     open_readings,
@@ -309,6 +310,7 @@ def test_a_defects_reading_lands_both_halves_and_the_title_changes_no_routing(
                 "dial and lane are the board's words",
                 "--failed",
                 "dial,lane",
+                *GRADE,
             ]
         )
         == 0

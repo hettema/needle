@@ -15,11 +15,26 @@ module exists to make impossible.
 import hashlib
 import re
 from collections.abc import Callable
+from datetime import datetime
 from pathlib import Path
 
 from domain.audit import AuditEntry
 from domain.document import Document, FixMark
-from domain.triage import Routed, Routing, Source, Triage, TriageResult
+from domain.triage import (
+    BREAKS_WORDS,
+    OFTEN_WORDS,
+    REACH_WORDS,
+    Band,
+    Breaks,
+    Grade,
+    Often,
+    Reach,
+    Routed,
+    Routing,
+    Source,
+    Triage,
+    TriageResult,
+)
 
 FINGERPRINT_LENGTH = 16
 """Enough of the digest to name a text; the whole thing is noise on a card."""
@@ -276,6 +291,92 @@ def routing_of(
     )
 
 
+# ── card #100: how bad it is, and the order that makes ─────────────────
+
+_OUTSIDE: frozenset[Reach] = frozenset({Reach.CLIENT, Reach.MONEY})
+"""The reaches past the owner's own door: a client, the public, money."""
+
+_FALSE_OR_LOST: frozenset[Breaks] = frozenset({Breaks.LIES, Breaks.LOSES})
+
+BAND_OF_BREAKS: dict[Breaks, Band] = {
+    Breaks.LIES: Band.LIES,
+    Breaks.LOSES: Band.LOSES,
+    Breaks.COSTS: Band.COSTS,
+    Breaks.LOOKS: Band.LOOKS,
+    Breaks.NOTHING: Band.NOTHING,
+}
+
+BANDS: list[Band] = list(Band)
+"""Gravest first: the order of the enum is the order of the column."""
+
+REACHES: list[Reach] = list(Reach)
+OFTENS: list[Often] = list(Often)
+
+
+def band_of(grade: Grade) -> Band:
+    """The band a grade falls in (card #100, ruling 4): anything false or
+    lost that reaches a client, the public or money first; then everything
+    false; then everything lost; then what costs; then what only looks
+    wrong. Computed here and nowhere else, never landed by the reading, so
+    a change to the ladder changes every column at once."""
+    if grade.breaks in _FALSE_OR_LOST and grade.reach in _OUTSIDE:
+        return Band.HARM_OUTSIDE
+    return BAND_OF_BREAKS[grade.breaks]
+
+
+def current_grade(document: Document | None, triage: Triage | None) -> Grade | None:
+    """The grade that stands for this document today, or None: a reading
+    binds its grade to the text it judged exactly as it binds its result,
+    so a changed document has no grade until it is read again — and a
+    reading landed before the scale existed has none to give."""
+    if document is None or triage is None or triage.grade is None:
+        return None
+    if triage.document_fingerprint != document.fingerprint:
+        return None
+    return triage.grade
+
+
+GradeKey = tuple[int, int, int, int, datetime, int]
+"""What the Defects column, the beat and `needle defects` all sort by: the
+band, who it reaches, how often, then oldest first; every unread defect
+after every graded one (`UNREAD_LAST`)."""
+
+
+def order_key(grade: Grade | None, born_at: datetime, number: int) -> GradeKey:
+    """The one order (card #100, item 3). Inside a band: who it reaches,
+    then how often, then age. A defect with no current grade sorts after
+    every graded one, because a grade is what the order is made of and an
+    unread defect has none — the head line says how many, so the owner
+    sees the reading is behind without an unjudged card sitting above the
+    judged."""
+    if grade is None:
+        return (1, 0, 0, 0, born_at, number)
+    reach = REACHES.index(grade.reach) if grade.reach is not None else len(REACHES)
+    often = OFTENS.index(grade.often) if grade.often is not None else len(OFTENS)
+    return (0, BANDS.index(band_of(grade)), reach, often, born_at, number)
+
+
+def grade_words(grade: Grade) -> str:
+    """The grade in one clause for the face and the verb: what it breaks,
+    who it reaches, how often — the parts in the owner's words (ruling 2),
+    never the band's name, which is the order and not the reason."""
+    what = BREAKS_WORDS[grade.breaks]
+    if grade.breaks == Breaks.NOTHING or grade.reach is None or grade.often is None:
+        return what
+    return f"{what}, reaching {REACH_WORDS[grade.reach]}, {OFTEN_WORDS[grade.often]}"
+
+
+def grade_why(grade: Grade) -> str:
+    """The reading's words for what in the document selected each part, in
+    one sentence the owner can check against the document."""
+    parts = [grade.breaks_words.strip().rstrip(".")]
+    if grade.reach_words:
+        parts.append(grade.reach_words.strip().rstrip("."))
+    if grade.often_words:
+        parts.append(grade.often_words.strip().rstrip("."))
+    return "; ".join(p for p in parts if p)
+
+
 def already_ruled(triage: Triage | None, answered: AuditEntry | None) -> str | None:
     """Why the owner is not asked again, or None when the question is still
     open for him. His `answered` row is durable and the corpus write that
@@ -342,7 +443,8 @@ def triaged_row(triage: Triage, source: Source | None) -> str:
         else ""
     )
     direction = f" — {triage.direction.value}" if triage.direction is not None else ""
-    return f"{triage.result.value}{where}{direction}: {triage.words} ({triage.decision})"
+    graded = f"; graded: {grade_words(triage.grade)}" if triage.grade is not None else ""
+    return f"{triage.result.value}{where}{direction}: {triage.words}{graded} ({triage.decision})"
 
 
 def split_row(other: str, half: str, decision: str) -> str:

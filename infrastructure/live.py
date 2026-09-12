@@ -39,15 +39,15 @@ from board.focus import (
 )
 from board.lane import nothing_read
 from board.leverage import Judged, arrange, wake_line
-from board.reconcile import Effects, reconcile
+from board.reconcile import SUGGESTION_HOMES, Effects, home_of, reconcile
 from board.triage import Sources
 from domain.audit import AuditKind
 from domain.board import BoardState, CardDetail, MachineState
 from domain.card import Actor, Card, CardOrigin, Place
-from domain.column import DEFECTS_RAIL, Column
+from domain.column import Column
 from domain.corpus import CorpusIndex
 from domain.dial import DialState, Headroom
-from domain.document import DocumentKind, SuggestionKind
+from domain.document import DocumentKind
 from domain.evidence import Evidence
 from domain.focus import (
     Arrangement,
@@ -530,7 +530,7 @@ class Live:
 
     def switched_on(self, slug: str) -> bool:
         """Whether a board's auto-fix switch is on, from the store (card #80):
-        what the beat reads before a board's rail and before a Start."""
+        what the beat reads before a board's defects and before a Start."""
         return self.store.dial(slug).on
 
     def start_offered(self, slug: str, number: int) -> bool | None:
@@ -602,20 +602,26 @@ class Live:
         evidence: Evidence | None = None,
     ) -> BoardState:
         live = self._live(slug)
-        self._refuse_a_move_against_the_rail(live, number, to)
+        self._refuse_a_move_against_the_document(live, number, to)
         self.store.move(
             live.project.slug, number, to, actor, self.now(), detail=detail, evidence=evidence
         )
         self.bump()
         return self.board(slug)
 
-    def _refuse_a_move_against_the_rail(self, live: LiveProject, number: int, to: Place) -> None:
-        """Backlog's defects rail is a lens on the document's `Kind:` line
-        (plan 06, item 2): the corpus puts a defect on it and an idea below
-        it on every read, so a hand move that disagrees with the line would
-        be undone at the next read. It is refused now instead, with the line
-        to edit named, so the board never fights the owner later in silence."""
-        if to.column != Column.BACKLOG:
+    def _refuse_a_move_against_the_document(
+        self, live: LiveProject, number: int, to: Place
+    ) -> None:
+        """Defects and Backlog are a lens on the document's `Kind:` line
+        (plan 06, item 2; a column of its own since card #100): the corpus
+        puts a defect in Defects and an idea in Backlog on every read, so a
+        hand move that disagrees with the line would be undone at the next
+        read. It is refused now instead, with the line to edit named, so
+        the board never fights the owner later in silence. And the Defects
+        column's order is the board's, gravest first (card #100, ruling 4):
+        a move inside it would be re-sorted at the next read, so it is
+        refused too."""
+        if to.column not in SUGGESTION_HOMES:
             return
         card = self.store.card(live.project.slug, number)
         if card is None or card.link is None or card.link.kind != DocumentKind.SUGGESTION:
@@ -623,15 +629,18 @@ class Live:
         document = live.index.find(card.link.kind, card.link.stem)
         if document is None or document.suggestion_kind is None:
             return
-        is_defect = document.suggestion_kind == SuggestionKind.DEFECT
-        if (to.group == DEFECTS_RAIL) == is_defect:
-            return
-        word = document.suggestion_kind.value
-        raise StoreRefusal(
-            f"#{number}'s document says Kind: {word}, so it reads "
-            + ("on the defects rail" if is_defect else "below the rail")
-            + f"; to move it, change the `**Kind:**` line in {document.path}."
-        )
+        home = home_of(document.suggestion_kind)
+        if to.column != home:
+            word = document.suggestion_kind.value
+            raise StoreRefusal(
+                f"#{number}'s document says Kind: {word}, so it reads in {home.value}; "
+                f"to move it, change the `**Kind:**` line in {document.path}."
+            )
+        if to.column == Column.DEFECTS and card.place.column == Column.DEFECTS:
+            raise StoreRefusal(
+                f"#{number} sits in Defects, whose order is the board's: gravest first, from "
+                "each defect's second reading. Nothing there is ranked by hand."
+            )
 
     def add_row(self, slug: str, number: int, row: Row, actor: Actor) -> Card:
         self._live(slug)

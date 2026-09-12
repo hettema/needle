@@ -387,20 +387,6 @@ export function ColumnTop({ children }: { children: ReactNode }) {
   return <div className="col-top">{children}</div>;
 }
 
-/** Backlog's defects rail: pinned at the column's top with its count, furled to that line by default so ideas are one scan and defects another (plan 06, item 2). */
-export function RailGroup({ count, open, onToggle, children }: { count: number; open: boolean; onToggle: () => void; children: ReactNode }) {
-  return (
-    <div className="rail-group" data-rail="defects">
-      <button type="button" className="rail-h" aria-expanded={open} onClick={onToggle} title={open ? "Furl the defects rail" : "Show the defects"}>
-        <span className="rail-name">Defects</span>
-        <span className="count">{count}</span>
-        <span className="rail-tw">{open ? "▾ furl" : "▸ show"}</span>
-      </button>
-      {open ? children : null}
-    </div>
-  );
-}
-
 export function ColumnHead({
   name,
   count,
@@ -424,6 +410,11 @@ export function ColumnHead({
 
 export function ColumnNote({ children }: { children: ReactNode }) {
   return <p className="col-note">{children}</p>;
+}
+
+/** The board's own line under a column's name — Defects: how many are yours, unread, waiting on a signal, fixing themselves (card 100, item 3). */
+export function ColumnLine({ children }: { children: ReactNode }) {
+  return <p className="col-line" data-column-line>{children}</p>;
 }
 
 export function Definition({
@@ -462,8 +453,8 @@ export function Stack({ children }: { children: ReactNode }) {
   return <div className="stack">{children}</div>;
 }
 
-export function GroupHead({ name }: { name: string }) {
-  return <h3 className="group-h">{name}</h3>;
+export function GroupHead({ name, machine = false }: { name: string; machine?: boolean }) {
+  return <h3 className={`group-h${machine ? " machine" : ""}`} {...(machine ? { "data-machine-group": "" } : {})}>{name}</h3>;
 }
 
 export function GroupBody({ children, nodeRef, label, id }: { children: ReactNode; nodeRef: Ref<HTMLDivElement>; label: string; id: string }) {
@@ -1039,7 +1030,7 @@ export function Passes({ review }: { review: Review }) {
         <div key={name} className="item filed" role="listitem">
           <span className="inum">filed</span>
           <span className="ibody">
-            <span className="itext">{name} — outside this change; a defect on the rail when the lane folds</span>
+            <span className="itext">{name} — outside this change; a defect in Defects when the lane folds</span>
           </span>
         </div>
       ))}

@@ -23,7 +23,7 @@ from domain.project import Project
 from domain.row import Row
 from domain.signal import Reading, Signal, SignalKind, WindowlessSession
 from domain.team import Composition
-from domain.triage import Routed, Source, TitleReading, Triage
+from domain.triage import Grade, Routed, Source, TitleReading, Triage
 from domain.verdict import Verdict, VerdictLine
 from domain.watercooler import WatercoolerLine
 
@@ -241,20 +241,32 @@ class CardSummary(BaseModel):
     """Where the card stands against the project's chosen focus (card #87,
     item 4): its class, its likelihood and the reading's sentence; None
     while the project has no chosen focus."""
+    grade: Grade | None = None
+    """How bad this defect is, from the reading that stands for its document
+    today (card #100, item 2); None on anything but a graded defect, and on
+    a defect whose document changed since it was graded."""
 
 
 class GroupView(BaseModel):
     name: str | None
     cards: list[CardSummary]
-    rail: bool
-    """Backlog's defects rail: pinned at the column's top, above the idea
-    groups, with its own count (plan 06, item 2)."""
+    machine: bool = False
+    """The board drew this group, not the owner: the Defects column's line
+    of defects nobody has read yet, which sits under every graded one
+    (card #100, item 3). Nothing is dropped into it — the column's order
+    is the board's — and it is not a group the store holds."""
 
 
 class ColumnView(BaseModel):
     definition: ColumnDefinition
     groups: list[GroupView]
     count: int
+    line: str | None = None
+    """The board's own line under the column's name, when it has one: on
+    Defects, how many are the owner's, how many nobody has read yet, how
+    many wait on a signal and how many are fixing themselves (card #100,
+    item 3), from `board/triage.py::routing_of` and never from the words.
+    None where the definition's note is the line."""
 
 
 class ClaimCount(BaseModel):

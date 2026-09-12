@@ -319,7 +319,6 @@ class ProposedMove(BaseModel):
 
 class ArrangedGroup(BaseModel):
     name: str | None
-    rail: bool
     numbers: list[int]
 
 

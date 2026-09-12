@@ -30,10 +30,11 @@ def numbers(board: dict, column: str) -> list[int]:
     return [card["number"] for g in col["groups"] for card in g["cards"]]
 
 
-def test_the_board_is_served_with_its_eight_columns(client: TestClient):
+def test_the_board_is_served_with_its_nine_columns(client: TestClient):
     assert [p["slug"] for p in client.get("/api/projects").json()] == ["proj"]
     board = client.get("/api/projects/proj/board").json()
     assert [c["definition"]["column"] for c in board["columns"]] == [
+        "Defects",
         "Backlog",
         "Planned",
         "Up next",

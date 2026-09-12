@@ -35,7 +35,7 @@ from board.parse import plan_stem_of
 from board.signals import GRAMMAR, read_or_decline, where_after, where_after_finding
 from board.team import Unexecutable, team_words
 from board.title import title_fingerprint
-from board.triage import routing_now, triaged_row
+from board.triage import grade_words, routing_now, triaged_row
 from domain.audit import AuditKind
 from domain.board import CardDetail
 from domain.call import HowKnown
@@ -62,9 +62,11 @@ from domain.signal import Finding, SessionWork, SignalKind
 from domain.slot import rung_words
 from domain.team import Route
 from domain.triage import (
+    Breaks,
     CorpusLane,
     CorpusLaneKind,
     Direction,
+    Grade,
     Routing,
     TitleVerdict,
     TriageResult,
@@ -929,6 +931,7 @@ class Doors:
         direction: Direction | None,
         title: str,
         failed: list[str],
+        grade: Grade | None = None,
     ) -> DoorResult:
         """A triage reading's result, in one act: the typed result validated
         against what it must name, the two fingerprints taken from the text
@@ -945,7 +948,11 @@ class Doors:
         and the title's verdict land together and the door refuses one
         without the other; on a plan or an idea the title's verdict is the
         whole result and a mark's result is refused, because there is no
-        mark to verify.
+        mark to verify. Since card #100 the same reading grades a defect
+        (item 2): `grade` is how bad it is in three parts with the reading's
+        words, and the door refuses a defect's result without one, as it
+        refuses one without the title's verdict — the column has no order
+        for an ungraded defect.
 
         Nothing here decides what the routing becomes: that is
         `board/triage.py::routing_of`, from this record and the document
@@ -972,6 +979,8 @@ class Doors:
                 "an idea lands the title's verdict alone: --title passes, or --title "
                 '"<what you could not place>" --failed <words>.'
             )
+        if not defect and grade is not None:
+            raise DoorRefused(f"#{number} is not a defect; a plan or an idea is not graded.")
         title = title.strip()
         if not title:
             raise DoorRefused(
@@ -1023,6 +1032,16 @@ class Doors:
             trigger, why = read_or_decline(words)
             if trigger is None:
                 raise DoorRefused(f"A `when` names a trigger the board can read: {why}")
+        # Last of the refusals: a reading that got the mark's result wrong
+        # hears about that first, since the grade rides on it.
+        if defect and grade is None:
+            raise DoorRefused(
+                f"#{number} is a defect: its reading grades it in the same command — "
+                '--reaches <client|money|you|session> "<what in the document says so>" '
+                '--breaks <lies|loses|costs|looks> "<what says so>" '
+                '--often <every-time|sometimes|once-seen> "<what says so>" — or, when the '
+                'document describes no failure, --breaks nothing "<why it is an idea>" alone.'
+            )
         now = clock.now()
         verdict = TitleVerdict.PLACEABLE if passes else TitleVerdict.UNPLACEABLE
         read = self.live.store.record_title_reading(
@@ -1074,6 +1093,7 @@ class Doors:
             source_fingerprint=resolved.fingerprint if resolved is not None else None,
             document_fingerprint=document.fingerprint,
             session_id=open_now.session_id,
+            grade=grade,
         )
         self.live.add_row(
             slug,
@@ -1085,11 +1105,18 @@ class Doors:
         self.live.bump()
         self.loops.reconcile_now()
         routed = routing_now(document, record, sources)
+        assert grade is not None
+        graded = (
+            "an idea in a defect's clothing"
+            if grade.breaks == Breaks.NOTHING
+            else f"it {grade_words(grade)}"
+        )
         return DoorResult(
             door="triage",
             said=(
                 f"#{number} read as {result.value}; it routes as {routed.state.value} "
-                f"(decision {record.decision}); its title read as {read.verdict.value}."
+                f"(decision {record.decision}); graded: {graded}; its title read as "
+                f"{read.verdict.value}."
             ),
         )
 

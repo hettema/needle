@@ -8,6 +8,12 @@ export type Filer = (typeof FILER_VALUES)[number];
 export const FIX_STAGE_VALUES = ["planning", "planned", "started", "folded", "asked", "ended"] as const;
 export type FixStage = (typeof FIX_STAGE_VALUES)[number];
 
+export interface DefectsCount {
+  project: string;
+  counts: Record<string, number>;
+  total: number;
+}
+
 export interface Dial {
   project: string;
   on: boolean;
@@ -65,8 +71,8 @@ export interface FixReport {
 export interface Fixes {
   switches: Dial[];
   lanes: FixReport[];
-  rail_now: RailCount[];
-  rail_at_first_on: RailCount[];
+  defects_now: DefectsCount[];
+  defects_at_first_on: DefectsCount[];
   waiting: Waiting[];
   decisions: Decision[];
 }
@@ -90,12 +96,6 @@ export interface Meminfo {
   swap_total: number;
   swap_free: number;
   total?: number;
-}
-
-export interface RailCount {
-  project: string;
-  counts: Record<string, number>;
-  total: number;
 }
 
 export interface ScopeHeld {

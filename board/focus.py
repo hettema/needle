@@ -552,7 +552,14 @@ def card_leverage(
 
 
 OPEN_COLUMNS: frozenset[Column] = frozenset(
-    {Column.BACKLOG, Column.PLANNED, Column.UP_NEXT, Column.EXECUTING, Column.DECISION_MOMENT}
+    {
+        Column.DEFECTS,
+        Column.BACKLOG,
+        Column.PLANNED,
+        Column.UP_NEXT,
+        Column.EXECUTING,
+        Column.DECISION_MOMENT,
+    }
 )
 """The columns whose cards are read against the focus: everything not yet
 shipped or parked. Executed and Done are read only when a recheck asks

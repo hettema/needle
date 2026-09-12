@@ -506,9 +506,13 @@ def triage_brief(
     the whole point of the seat; a second reader that inherits the first
     reader's reasons is not a second reader.
 
-    It asks one question. Not *is this a good fix* and not *what should we
-    do* — those are the plan's and the lane's. Only: does the record the
-    mark cites select this outcome?"""
+    It asks one question of the mark. Not *is this a good fix* and not
+    *what should we do* — those are the plan's and the lane's. Only: does
+    the record the mark cites select this outcome? And since card #100 a
+    second, of the document alone: how bad is it — who it reaches, what it
+    breaks, how often — on the owner's scale, with what in the document
+    selected each part, because the Defects column is ordered by that grade
+    and auto-fix takes the gravest first."""
     card = detail.card
     needle = needle_command()
     slug = card.project
@@ -545,26 +549,30 @@ def triage_brief(
         f"\n--- the document ({detail.summary.document_path}) ---\n{document_text}\n--- ends ---"
         f"\n\nThe source the mark relies on: {where}"
         f"\n\nThe rule, in the owner's words, ruled true on 2026-09-05:\n\n{THE_RULE}\n\n"
-        "Your one question: **does the source select this outcome?** Not whether the fix is "
+        "Your first question: **does the source select this outcome?** Not whether the fix is "
         "good, not what to build — those belong to the plan and the lane. Only whether the "
         "written record the mark leans on already settles who decides.\n\n"
+        + GRADE_QUESTION
+        + "\n\n"
         + title_half(detail, vocabulary, alone=False)
         + "\n\nEnd your turn with exactly one result, through the needle command line, never "
-        "by editing a file — the mark's result and the title's verdict in the same command, "
-        "since the two are one reading and the door refuses one without the other:\n"
+        "by editing a file — the mark's result, the grade and the title's verdict in the same "
+        "command, since the three are one reading and the door refuses one without the "
+        "others:\n"
         f'  {needle} triage {slug} {card.number} now "<the resolved source and the proposition '
         'in it that selects this outcome>" --source <path or #N> --direction <direction> '
-        "--title passes\n"
+        f"{GRADE_SHAPE} --title passes\n"
         f'  {needle} triage {slug} {card.number} his "<the alternatives, which owner-held '
         "outcome differs between them, and why no written ruling selects one — or the exact "
-        'exposure and the missing authorised bound>" --title "<what you could not place>" '
-        "--failed <words>\n"
+        f'exposure and the missing authorised bound>" {GRADE_SHAPE} --title "<what you could '
+        'not place>" --failed <words>\n'
         f'  {needle} triage {slug} {card.number} when "<trigger in the WATCH grammar: <what> — '
-        'session|url|file|command <target> by YYYY-MM-DD [every <N>h|<N>d]>"\n'
+        f'session|url|file|command <target> by YYYY-MM-DD [every <N>h|<N>d]>" {GRADE_SHAPE} '
+        "--title passes\n"
         f'  {needle} triage {slug} {card.number} split "<the two halves, each with its source>" '
-        "--source <path or #N>\n"
+        f"--source <path or #N> {GRADE_SHAPE} --title passes\n"
         f'  {needle} triage {slug} {card.number} cannot-tell "<the missing evidence and where '
-        'it should come from>"\n\n'
+        f'it should come from>" {GRADE_SHAPE} --title passes\n\n'
         "What each result has to hold:\n"
         "- `now` needs a source that resolved and a proposition in it that selects this "
         "outcome. An absent or unresolvable source cannot produce `now`, however obvious the "
@@ -581,9 +589,11 @@ def triage_brief(
         "does not route to the owner unless the missing thing is itself his decision, in "
         "which case the result is `his`.\n"
         "- A `--direction` is required with `now`, from this set, and says which way the "
-        "product moves if the machine acts: "
-        + ", ".join(f"`{d.value}`" for d in Direction)
-        + ".\n\n"
+        "product moves if the machine acts: " + ", ".join(f"`{d.value}`" for d in Direction) + ".\n"
+        "- The grade is required with every result, from the document alone: `--reaches`, "
+        "`--breaks` and `--often`, each with the token and then the words for what in the "
+        'document selected it — or `--breaks nothing "<why>"` alone when the document '
+        "describes no failure.\n\n"
         "Your result is a verification, not an authorisation. It can close the dial at once — "
         "a `his` or a `cannot-tell` on a document marked `now` stops the machine immediately — "
         "and it can never open it wider than the corpus: a `now` on a document the corpus does "
@@ -592,6 +602,41 @@ def triage_brief(
         "Your turn ends with the needle triage command and one plain sentence after it. Ask "
         "the owner nothing: nobody is reading this window."
     )
+
+
+GRADE_QUESTION = (
+    "Your second question, of the document alone: **how bad is it?** Three parts, each in the "
+    "owner's words, each with the words from the document that selected it. Grade from the "
+    "paragraph headed *The intent it breaks* when the document has one — it says what he "
+    "loses while the defect stands — and from the document whole when it does not.\n"
+    "- **Who it reaches** (`--reaches`): `client` — a client or the public sees or bears it; "
+    "`money` — a spend or a bound he authorised is crossed; `you` — a decision or a reading "
+    "of his; `session` — a colleague's work or time. Name the outermost.\n"
+    "- **What breaks** (`--breaks`): `lies` — something shown as true is false, or work is "
+    "reported done that is not, and a decision is built on it; `loses` — work, data or "
+    "money that should land does not, or a card cannot move; `costs` — a retry, a wait, a "
+    "step done by hand, or output worse or slower than it should be, nothing false and "
+    "nothing lost; `looks` — true and readable, only ugly or clumsy. A lie outranks a loss "
+    "because a lie is silent and a loss is loud. `nothing` — the document describes no "
+    "failure: it is an idea in a defect's clothing, and your words say so; then name no "
+    "reach and no how-often.\n"
+    "- **How often** (`--often`): `every-time` — each session, read, close or beat it "
+    "touches; `sometimes`; `once-seen`.\n"
+    "You grade how bad, never who fixes: the grade opens auto-fix no wider than the mark "
+    "and your first answer do. The column is ordered by it and auto-fix takes the gravest "
+    "verified defect first, so a defect graded as merely ugly that in fact makes the board "
+    "lie sits at the bottom while the lie stands: when in doubt between two parts, say "
+    "which words decided it."
+)
+"""The second question a defect's reading answers (card #100, item 2), in
+the owner's words (ruling 2): the scale is his, and a reading grades from
+the document and nothing else."""
+
+GRADE_SHAPE = (
+    '--reaches <client|money|you|session> "<what says so>" --breaks <lies|loses|costs|looks> '
+    '"<what says so>" --often <every-time|sometimes|once-seen> "<what says so>"'
+)
+"""How the grade is typed, on every result of a defect's reading."""
 
 
 def title_brief(

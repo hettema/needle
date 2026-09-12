@@ -43,11 +43,11 @@ from board.brief import (
 from board.dial import (
     LIVE_STAGES,
     Candidate,
+    column_defects,
+    defects_count,
     filed_against,
     held_lanes,
     is_quiet,
-    rail_count,
-    rail_defects,
     running,
     switch_was_on,
     unread_titles,
@@ -55,7 +55,7 @@ from board.dial import (
 )
 from board.lane import has_row, is_question
 from board.title import read_vocabulary
-from board.triage import already_ruled, source_ref_of, split_row
+from board.triage import already_ruled, current_grade, order_key, source_ref_of, split_row
 from domain.audit import AuditKind
 from domain.card import Actor, Card
 from domain.dial import Dial as DialSetting
@@ -193,15 +193,15 @@ class Dial:
     ) -> list[DialSetting]:
         """The owner's turn (plan 11, item 3), audited as his: one board's
         switch, the machine's number, or both. A board's first turn to on
-        records its rail as it stands, by who filed each card: the baseline
-        the loop reads that board's rail against (item 6; per board since
+        records its Defects column as it stands, by who filed each card: the baseline
+        the loop reads that board's column against (item 6; per board since
         card #80). Answers every board's switch."""
         store = self.live.store
         before = store.dial(project).first_on_at if project is not None else None
         after = store.turn_dial(project=project, on=on, lanes=lanes, actor=actor, at=clock.now())
         if project is not None and on and before is None:
             live = self.live.projects[project]
-            store.record_rail_at_on(rail_count(project, store.cards(project), live.index))
+            store.record_defects_at_on(defects_count(project, store.cards(project), live.index))
         self.live.bump()
         return after
 
@@ -211,9 +211,9 @@ class Dial:
         self._full()
         return self.live.dial_state(slug)
 
-    def _rail_now(self):
+    def _defects_now(self):
         return [
-            rail_count(slug, self.live.store.cards(slug), live.index)
+            defects_count(slug, self.live.store.cards(slug), live.index)
             for slug, live in self.live.projects.items()
         ]
 
@@ -223,8 +223,12 @@ class Dial:
         """Read the machine's memory against the floor; follow every fix
         lane the dial has open — a plan that landed to its Start, a lane
         that folded or ended to its end, a planning session that died to the
-        card — whether or not the dial is still on; then, with it on, room
-        under the number and room on the machine, take the next defect."""
+        card — whether or not the dial is still on; then, with room under
+        the number and room on the machine, take the next defect: plan one
+        on a board whose switch is on, or open a reading on any board (card
+        #100, item 4: a reading enters nothing, so it runs with every
+        switch off, which is how a board whose owner keeps auto-fix off
+        still gets its Defects column read and ordered)."""
         self.loops.headroom_now()
         # One read of the machine for the whole beat: the two halves that
         # follow judge the same sessions, and a beat costs one walk of the
@@ -237,8 +241,6 @@ class Dial:
         # enters execution *without* him; his own ruling is not that.
         self._corpus_lanes(by_id)
         switches = {setting.project: setting for setting in self.live.store.dials()}
-        if not any(setting.on for setting in switches.values()):
-            return
         self._take_next(switches)
 
     def _full(self) -> str | None:
@@ -258,22 +260,24 @@ class Dial:
 
     def _take_next(self, switches: dict[str, DialSetting]) -> None:
         """One act per beat: plan a defect a reading has verified, or open
-        the reading that would verify one. Verified defects go first — a rail
+        the reading that would verify one. Verified defects go first — a column
         of untriaged cards would otherwise fill the number with readings and
         never plan anything, which is the starvation the ceiling makes
         possible the moment a triage counts against it (plan 59, item 3).
         A defect is planned only on a board whose switch is on (card #80,
-        item 2); a reading enters nothing and opens on any board (ruling 3).
-        The number caps what runs across every board."""
+        item 2); a reading enters nothing and opens on any board, on or off
+        (ruling 3; card #100, item 4). The number caps what runs across
+        every board either way. Among the verified, the gravest goes first
+        and then the oldest (card #100, item 3); among the unread, the
+        oldest, since nothing unread has a grade."""
         store = self.live.store
         fix_lanes = store.fix_lanes()
         if self._full() is not None:
             return
         held = held_lanes(fix_lanes, self.live.start_offered, self.live.switched_on)
         triaging = self._triaging()
-        # Every switch carries the one number; the caller returned already
-        # when no board was on, so there is one to read it from.
-        lanes = next(iter(switches.values())).lanes
+        # The number is the machine's, one for every board (card #80).
+        lanes = store.fix_lanes_at_most()
         if running(fix_lanes, held, triaging=triaging) >= lanes:
             return
         lanes_by_project = {
@@ -288,8 +292,8 @@ class Dial:
             snapshot = live.snapshot
             if snapshot is None:
                 continue  # the machine has not been read for this project yet
-            # This board's switch, read before its rail: with it off, the
-            # rail below yields readings and never a candidate.
+            # This board's switch, read before its column: with it off, the
+            # column below yields readings and never a candidate.
             switched_on = slug in switches and switches[slug].on
             readings = store.last_readings(slug)
             planning = store.open_windowless_sessions(slug, SessionWork.PLANNING)
@@ -297,9 +301,10 @@ class Dial:
             triages = store.latest_triages(slug)
             sources = self.live.sources(slug)
             ran = self._ran(slug, fix_lanes, snapshot)
-            for card, document in rail_defects(store.cards(slug), live.index):
-                routed = routing_for(card, document, triages.get(card.number), sources)
-                assert routed is not None  # a rail defect always routes somewhere
+            for card, document in column_defects(store.cards(slug), live.index):
+                triage = triages.get(card.number)
+                routed = routing_for(card, document, triage, sources)
+                assert routed is not None  # a defect in the column always routes somewhere
                 why = why_not_eligible(
                     card,
                     document,
@@ -310,15 +315,20 @@ class Dial:
                     triage_open=card.number in open_triage,
                     ran_before=card.number in ran,
                 )
-                if why is None:
+                grade = current_grade(document, triage)
+                # A defect verified before the board graded defects is read
+                # again before it is taken: the column has no order for it.
+                if why is None and grade is not None:
                     if not switched_on:
                         continue  # the owner has not turned this board on
                     doors = snapshot.doors.get(card.number)
                     if doors is None or doors.placement is None:
                         continue  # nowhere to run: the card would say so on Start too
-                    candidates.append(Candidate(project=slug, card=card, document=document))
+                    candidates.append(
+                        Candidate(project=slug, card=card, document=document, grade=grade)
+                    )
                 elif self._wants_a_reading(
-                    slug, card, routed, snapshot, ran_before=card.number in ran
+                    slug, card, routed, snapshot, ran_before=card.number in ran, triage=triage
                 ):
                     # No placement check here: a reading is a windowless
                     # session in the project's own checkout, so the card's
@@ -332,7 +342,7 @@ class Dial:
             for card, document in unread_titles(store.cards(slug), live.index, titles):
                 if self._wants_a_title_reading(slug, card, snapshot):
                     unread.append(Candidate(project=slug, card=card, document=document))
-        for candidate in sorted(candidates, key=lambda c: c.age_key):
+        for candidate in sorted(candidates, key=lambda c: c.order_key):
             live = self.live.projects[candidate.project]
             if self._own_board(live) and not quiet:
                 continue  # a fold on the board restarts the service under every running lane
@@ -364,20 +374,32 @@ class Dial:
         )
 
     def _wants_a_reading(
-        self, slug: str, card: Card, routed, snapshot, *, ran_before: bool
+        self,
+        slug: str,
+        card: Card,
+        routed,
+        snapshot,
+        *,
+        ran_before: bool,
+        triage: Triage | None = None,
     ) -> bool:
         """Whether the board should open a reading on this defect now. Only
         the two states that mean *nobody has verified today's text*: a
         cannot-tell is not retried, because the evidence it named has to
         arrive first — and when it does, the document or the source moves and
-        the row goes stale, which is this same door.
+        the row goes stale, which is this same door. And a reading that
+        verified the mark but landed no grade — every reading from before
+        card #100 — is read again, since the column has no order for it.
 
         And only where a reading could still change what the machine does. A
         card with a lane on it, one carrying a question, or one the dial has
         already taken once is the owner's from here, so a session spent
         reading its mark is a session spent on an answer nothing will act
         on."""
-        if routed.state not in (Routing.NEEDS_TRIAGE, Routing.STALE):
+        ungraded = (
+            triage is not None and triage.grade is None and routed.state != Routing.CANNOT_TELL
+        )
+        if routed.state not in (Routing.NEEDS_TRIAGE, Routing.STALE) and not ungraded:
             return False
         lane = snapshot.lanes.get(card.number)
         if lane is not None and (lane.state != LaneState.NONE or lane.path is not None):
@@ -979,7 +1001,7 @@ class Dial:
         triages = store.latest_triages(slug)
         answers = store.answers(slug)
         sources = self.live.sources(slug)
-        for card, document in rail_defects(store.cards(slug), live.index):
+        for card, document in column_defects(store.cards(slug), live.index):
             triage = triages.get(card.number)
             if triage is None:
                 continue
@@ -1035,12 +1057,13 @@ class Dial:
     # ── the loop, counted (item 6) ─────────────────────────────────────
 
     def waiting(self, slug: str | None) -> list[Waiting]:
-        """Every defect on the rail the dial is not taking, with why, in the
-        order it would take them (review pass 2): a dial that is on with
-        nothing starting has to say which fact holds it — unmarked, his, a
-        trigger not yet fired, a lane on it, nowhere to run, the board's own
-        rail while a lane is live — or the fourteen-day guard in the plan's
-        WATCH row reads as the path not running when it is the rail."""
+        """Every defect in the column the dial is not taking, with why, in
+        the order it would take them (review pass 2; gravest first since
+        card #100): a dial that is on with nothing starting has to say which
+        fact holds it — unmarked, his, a trigger not yet fired, a lane on
+        it, nowhere to run, the board's own defects while a lane is live —
+        or the fourteen-day guard in the plan's WATCH row reads as the path
+        not running when it is the column."""
         store = self.live.store
         fix_lanes = store.fix_lanes()
         lanes_by_project = {
@@ -1048,7 +1071,7 @@ class Dial:
         }
         quiet = is_quiet(lanes_by_project)
         switches = {setting.project: setting.on for setting in store.dials()}
-        found: list[Waiting] = []
+        found: list[tuple[tuple, Waiting]] = []
         for project_slug, live in self.live.projects.items():
             if slug is not None and project_slug != slug:
                 continue
@@ -1059,8 +1082,9 @@ class Dial:
             triages = store.latest_triages(project_slug)
             sources = self.live.sources(project_slug)
             ran = self._ran(project_slug, fix_lanes, snapshot)
-            for card, document in rail_defects(store.cards(project_slug), live.index):
-                routed = routing_for(card, document, triages.get(card.number), sources)
+            for card, document in column_defects(store.cards(project_slug), live.index):
+                triage = triages.get(card.number)
+                routed = routing_for(card, document, triage, sources)
                 assert routed is not None
                 why = why_not_eligible(
                     card,
@@ -1072,7 +1096,10 @@ class Dial:
                     triage_open=card.number in triaging,
                     ran_before=card.number in ran,
                 )
-                if why is None:
+                grade = current_grade(document, triage)
+                if why is None and grade is None:
+                    why = "verified before the board graded defects; a reading grades it first"
+                elif why is None:
                     doors = snapshot.doors.get(card.number) if snapshot else None
                     if not switches.get(project_slug, False):
                         why = "this board's switch is off"
@@ -1083,22 +1110,26 @@ class Dial:
                     elif self._full() is not None:
                         why = self._full()
                     elif self._own_board(live) and not quiet:
-                        why = "the board's own rail waits until no lane is live anywhere"
+                        why = "the board's own defects wait until no lane is live anywhere"
                     else:
                         why = "eligible: the next beat takes it if the number allows"
+                key = order_key(grade, card.born_at, card.number)
                 found.append(
-                    Waiting(
-                        project=project_slug,
-                        card_number=card.number,
-                        title=card.title,
-                        born_at=card.born_at,
-                        why=why,
+                    (
+                        key,
+                        Waiting(
+                            project=project_slug,
+                            card_number=card.number,
+                            title=card.title,
+                            born_at=card.born_at,
+                            why=why,
+                        ),
                     )
                 )
-        return sorted(found, key=lambda w: (w.born_at, w.card_number))
+        return [waiting for _, waiting in sorted(found, key=lambda pair: pair[0])]
 
     def decisions(self, slug: str | None) -> list[Decision]:
-        """Every decision a colleague took on the owner's rail, oldest
+        """Every decision a colleague took off the owner's defects, oldest
         first, with the source it leaned on, the direction it moved the
         product and what became of it (plan 59, item 6).
 
@@ -1238,8 +1269,8 @@ class Dial:
         return Fixes(
             switches=[s for s in store.dials() if slug is None or s.project == slug],
             lanes=reports,
-            rail_now=self._rail_now(),
-            rail_at_first_on=store.rail_at_on(),
+            defects_now=self._defects_now(),
+            defects_at_first_on=store.defects_at_on(),
             waiting=self.waiting(slug),
             decisions=self.decisions(slug),
         )
