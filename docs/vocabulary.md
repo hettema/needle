@@ -28,8 +28,9 @@ the birth reading in `board/brief.py` name it by path.
 - **fold** — the fast-forward push that lands a lane's work on the trunk. Say
   "finished", "landed", "shipped".
 - **dial** — the owner's standing ruling that a verified defect enters
-  execution without him, and its number of lanes. Say "defects fix
-  themselves", "the auto-fix setting".
+  execution without him — a switch per board, and one number of lanes for
+  the machine. Say "defects fix themselves", "the auto-fix setting", "this
+  board's auto-fix".
 - **ring** — which of the three circles a review finding falls in. Say "inside
   the change", "next to it", "outside it".
 - **door** — an action a card offers or refuses (Start, Answer, Watch). Say

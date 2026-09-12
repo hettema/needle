@@ -5,8 +5,12 @@ INTENT.md: one move is his — he decides what enters execution. The dial is
 that decision made once instead of once per card: while it is on, the board
 plans and starts a defect whose finder marked it `Fix: now`, up to the
 number of fix lanes he set, and everything that follows is the ordinary
-path. The dial is one for the whole board because its limit is the machine's
-slots and its one trunk, not a project (plan 11, rulings).
+path. The switch is one per board and the number is one for the machine
+(card #80, ruling 1): which board's defects fix themselves is his ruling
+board by board, while the limit is the machine's slots and its one trunk,
+not a project (plan 11, rulings — kept for the number, overturned for the
+switch on 2026-09-07 and 2026-09-12: "if I auto fix HR it only fixes HR
+defects").
 """
 
 from collections.abc import Sequence
@@ -20,25 +24,36 @@ from domain.triage import Decision
 
 
 class Dial(BaseModel):
-    """The dial as the store holds it: on or off, and how many fix lanes may
-    run at once. Both survive a restart; every change is audited."""
+    """One board's switch as the store holds it, with the machine's number
+    beside it: whether this board's defects fix themselves, and how many
+    fix lanes may run at once across every board (card #80). Both survive a
+    restart; every change is audited."""
 
+    project: str
+    """The board whose switch this is, by slug."""
     on: bool
     lanes: int = Field(ge=0)
+    """The machine's number: the same through every board's `Dial`."""
     changed_at: datetime | None
-    """When the owner last turned it; None while it has never been touched."""
+    """When the owner last turned this board's switch; None while it has
+    never been touched."""
     first_on_at: datetime | None
-    """When it was first turned on: the moment the rail's size was recorded
-    for the loop (plan 11, item 6)."""
+    """When this board was first turned on: the moment its rail's size was
+    recorded for the loop (plan 11, item 6)."""
 
 
 class DialChange(BaseModel):
-    """One turn of the dial, as the record keeps it: who, when, and to what."""
+    """One turn, as the record keeps it: who, when, which board, and to
+    what. A turn of a board's switch names the board and its new setting;
+    a change of the machine's number names no board and no setting. The
+    rows from before the switch was per board (2026-09-05 to 2026-09-12)
+    name no board and carry a setting: they turned every board."""
 
     id: int
     at: datetime
     actor: Actor
-    on: bool
+    project: str | None
+    on: bool | None
     lanes: int
 
 
@@ -206,10 +221,14 @@ class Headroom(BaseModel):
 
 
 class DialState(BaseModel):
-    """The dial as the head shows it: its setting, and the fix lanes live
-    against the number right now."""
+    """The dial as one board's head shows it: that board's switch with the
+    machine's number, the fix lanes live against the number right now
+    across every board, and which other boards are on."""
 
     dial: Dial
+    others_on: list[str] = []
+    """The other boards whose switch is on, by slug, in the board's order:
+    the head's one quiet phrase (card #80, item 3). Empty when none is."""
     running: int
     """Fix lanes the dial has started that have not folded or ended, plus
     the planning sessions it has open: what counts against the number. A
@@ -311,6 +330,10 @@ class FixReport(BaseModel):
     class_closer: str | None
     """The plan's `Class:` line — what makes the class loud — or None when
     the plan carries none."""
+    switch_was_on: bool
+    """Its board's switch was on the moment its planning began, read from
+    the audit of turns (card #80): a lane this is False for began on a
+    board whose switch was off, which is what the Loop counts."""
 
 
 class Waiting(BaseModel):
@@ -329,7 +352,8 @@ class Fixes(BaseModel):
     the rail now against the rail when the dial was first turned on, and
     every defect still on the rail with why the dial leaves it there."""
 
-    dial: Dial
+    switches: list[Dial]
+    """Each board's switch in the report's scope, with the machine's number."""
     lanes: list[FixReport]
     rail_now: list[RailCount]
     rail_at_first_on: list[RailCount]

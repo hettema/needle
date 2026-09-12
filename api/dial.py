@@ -49,6 +49,7 @@ from board.dial import (
     rail_count,
     rail_defects,
     running,
+    switch_was_on,
     unread_titles,
     why_not_eligible,
 )
@@ -182,22 +183,33 @@ class Dial:
 
     # ── the owner turns it ─────────────────────────────────────────────
 
-    def turn(self, *, on: bool, lanes: int, actor: Actor = Actor.OWNER) -> DialState:
-        """The owner's turn of the dial (plan 11, item 3), audited as his.
-        The first turn to on records the rail as it stands, by who filed
-        each card: the baseline the loop reads the rail against (item 6)."""
-        before = self.live.store.dial()
-        after = self.live.store.turn_dial(on=on, lanes=lanes, actor=actor, at=clock.now())
-        if after.on and before.first_on_at is None:
-            self.live.store.record_rail_at_on(self._rail_now())
+    def turn(
+        self,
+        *,
+        project: str | None,
+        on: bool | None = None,
+        lanes: int | None = None,
+        actor: Actor = Actor.OWNER,
+    ) -> list[DialSetting]:
+        """The owner's turn (plan 11, item 3), audited as his: one board's
+        switch, the machine's number, or both. A board's first turn to on
+        records its rail as it stands, by who filed each card: the baseline
+        the loop reads that board's rail against (item 6; per board since
+        card #80). Answers every board's switch."""
+        store = self.live.store
+        before = store.dial(project).first_on_at if project is not None else None
+        after = store.turn_dial(project=project, on=on, lanes=lanes, actor=actor, at=clock.now())
+        if project is not None and on and before is None:
+            live = self.live.projects[project]
+            store.record_rail_at_on(rail_count(project, store.cards(project), live.index))
         self.live.bump()
-        return self.state()
+        return after
 
-    def state(self) -> DialState:
-        """The dial as the head shows it, with the machine read if this
-        board has not read it yet (the terminal's own process)."""
+    def state(self, slug: str) -> DialState:
+        """One board's dial as its head shows it, with the machine read if
+        this board has not read it yet (the terminal's own process)."""
         self._full()
-        return self.live.dial_state()
+        return self.live.dial_state(slug)
 
     def _rail_now(self):
         return [
@@ -224,10 +236,10 @@ class Dial:
         # whether or not the dial is on. The dial is his ruling about what
         # enters execution *without* him; his own ruling is not that.
         self._corpus_lanes(by_id)
-        setting = self.live.store.dial()
-        if not setting.on:
+        switches = {setting.project: setting for setting in self.live.store.dials()}
+        if not any(setting.on for setting in switches.values()):
             return
-        self._take_next(setting)
+        self._take_next(switches)
 
     def _full(self) -> str | None:
         """The head's sentence while the machine is under the floor; the
@@ -244,19 +256,25 @@ class Dial:
         # machine has room, which is when the beat takes nothing.
         return room.sentence if room.full else None
 
-    def _take_next(self, setting: DialSetting) -> None:
+    def _take_next(self, switches: dict[str, DialSetting]) -> None:
         """One act per beat: plan a defect a reading has verified, or open
         the reading that would verify one. Verified defects go first — a rail
         of untriaged cards would otherwise fill the number with readings and
         never plan anything, which is the starvation the ceiling makes
-        possible the moment a triage counts against it (plan 59, item 3)."""
+        possible the moment a triage counts against it (plan 59, item 3).
+        A defect is planned only on a board whose switch is on (card #80,
+        item 2); a reading enters nothing and opens on any board (ruling 3).
+        The number caps what runs across every board."""
         store = self.live.store
         fix_lanes = store.fix_lanes()
         if self._full() is not None:
             return
         held = held_lanes(fix_lanes, self.live.start_offered)
         triaging = self._triaging()
-        if running(fix_lanes, held, triaging=triaging) >= setting.lanes:
+        # Every switch carries the one number; the caller returned already
+        # when no board was on, so there is one to read it from.
+        lanes = next(iter(switches.values())).lanes
+        if running(fix_lanes, held, triaging=triaging) >= lanes:
             return
         lanes_by_project = {
             slug: live.snapshot.lanes
@@ -270,6 +288,9 @@ class Dial:
             snapshot = live.snapshot
             if snapshot is None:
                 continue  # the machine has not been read for this project yet
+            # This board's switch, read before its rail: with it off, the
+            # rail below yields readings and never a candidate.
+            switched_on = slug in switches and switches[slug].on
             readings = store.last_readings(slug)
             planning = store.open_windowless_sessions(slug, SessionWork.PLANNING)
             open_triage = store.open_windowless_sessions(slug, SessionWork.TRIAGE)
@@ -290,6 +311,8 @@ class Dial:
                     ran_before=card.number in ran,
                 )
                 if why is None:
+                    if not switched_on:
+                        continue  # the owner has not turned this board on
                     doors = snapshot.doors.get(card.number)
                     if doors is None or doors.placement is None:
                         continue  # nowhere to run: the card would say so on Start too
@@ -1017,6 +1040,7 @@ class Dial:
             s: live.snapshot.lanes for s, live in self.live.projects.items() if live.snapshot
         }
         quiet = is_quiet(lanes_by_project)
+        switches = {setting.project: setting.on for setting in store.dials()}
         found: list[Waiting] = []
         for project_slug, live in self.live.projects.items():
             if slug is not None and project_slug != slug:
@@ -1043,7 +1067,9 @@ class Dial:
                 )
                 if why is None:
                     doors = snapshot.doors.get(card.number) if snapshot else None
-                    if snapshot is None:
+                    if not switches.get(project_slug, False):
+                        why = "this board's switch is off"
+                    elif snapshot is None:
                         why = "the machine has not been read for this project yet"
                     elif doors is None or doors.placement is None:
                         why = f"nowhere to run: {doors.placement_note if doors else 'unread'}"
@@ -1165,6 +1191,7 @@ class Dial:
     def fixes(self, slug: str | None) -> Fixes:
         store = self.live.store
         reports: list[FixReport] = []
+        changes = store.dial_changes()
         for fix in store.fix_lanes(slug):
             live = self.live.projects.get(fix.project)
             card = store.card(fix.project, fix.card_number)
@@ -1194,10 +1221,11 @@ class Dial:
                     and record.folded_at is not None
                     and self.runtime.reverted(live.project.path, record.tip),
                     class_closer=_class_closer(document),
+                    switch_was_on=switch_was_on(changes, fix.project, fix.planning_started_at),
                 )
             )
         return Fixes(
-            dial=store.dial(),
+            switches=[s for s in store.dials() if slug is None or s.project == slug],
             lanes=reports,
             rail_now=self._rail_now(),
             rail_at_first_on=store.rail_at_on(),

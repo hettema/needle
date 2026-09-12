@@ -14,6 +14,7 @@ from board.dial import (
     rail_count,
     rail_defects,
     running,
+    switch_was_on,
     why_not_eligible,
 )
 from board.lane import lane_for
@@ -384,7 +385,8 @@ def test_the_memory_floor_is_read_against_available_memory_and_free_swap():
     assert unread_lanes.sentence == "the machine is full: what its lanes hold could not be read"
     assert MEMORY_FLOOR_BYTES == 5 * 1024**3, "the owner's 5 GB after #386's 4.7 GB kill"
     state = dial_state(
-        Dial(on=True, lanes=4, changed_at=NOW, first_on_at=NOW),
+        Dial(project="a", on=True, lanes=4, changed_at=NOW, first_on_at=NOW),
+        [],
         [fix(FixStage.PLANNED, n) for n in range(1, 5)],
         {},
         held=[fix(FixStage.PLANNED, n) for n in range(1, 5)],
@@ -399,8 +401,11 @@ def test_quiet_is_no_lane_with_hands_on_any_project():
     nothing = lane_for(card(2, "b"), facts(worktrees={}))
     assert is_quiet({"a": {2: nothing}, "b": {}})
     assert not is_quiet({"a": {2: nothing}, "b": {1: working}})
+    own = Dial(project="a", on=True, lanes=2, changed_at=NOW, first_on_at=NOW - timedelta(days=1))
+    other = Dial(project="b", on=True, lanes=2, changed_at=NOW, first_on_at=NOW)
     state = dial_state(
-        Dial(on=True, lanes=2, changed_at=NOW, first_on_at=NOW - timedelta(days=1)),
+        own,
+        [own, other],
         [],
         {"b": {1: working}},
         held=[],
@@ -408,6 +413,43 @@ def test_quiet_is_no_lane_with_hands_on_any_project():
     )
     assert (state.running, state.held, state.full) == (0, 0, None)
     assert (state.quiet, state.dial.lanes) == (False, 2)
+    # The head names the other boards that are on, never its own (card #80).
+    assert state.others_on == ["b"]
+    off = other.model_copy(update={"on": False})
+    assert dial_state(own, [own, off], [], {}, held=[], room=None).others_on == []
+
+
+def test_a_boards_switch_at_a_moment_is_read_from_the_audit_of_turns():
+    """Card #80, item 3: the last turn at or before the moment that turned
+    the board says; a turn from before the switch was per board (no
+    project) turned every board; a change of the number turns nothing; no
+    turn by then is off."""
+    from domain.card import Actor
+    from domain.dial import DialChange
+
+    def turned(n: int, at, project, on, lanes=1):
+        return DialChange(id=n, at=at, actor=Actor.OWNER, project=project, on=on, lanes=lanes)
+
+    t = NOW
+    changes = [
+        turned(1, t, None, True),  # the one dial, on for every board
+        turned(2, t + timedelta(hours=1), None, False),
+        turned(3, t + timedelta(hours=2), "a", True),
+        turned(4, t + timedelta(hours=3), None, None, lanes=4),  # the number alone
+        turned(5, t + timedelta(hours=4), "b", True),
+        turned(6, t + timedelta(hours=5), "a", False),
+    ]
+    assert not switch_was_on(changes, "a", t - timedelta(seconds=1))
+    assert switch_was_on(changes, "a", t) and switch_was_on(changes, "b", t)
+    assert not switch_was_on(changes, "b", t + timedelta(hours=1))
+    assert switch_was_on(changes, "a", t + timedelta(hours=2))
+    assert not switch_was_on(changes, "b", t + timedelta(hours=2))
+    assert switch_was_on(changes, "a", t + timedelta(hours=3, minutes=30)), (
+        "the number turns nothing"
+    )
+    assert switch_was_on(changes, "b", t + timedelta(hours=4))
+    assert not switch_was_on(changes, "a", t + timedelta(hours=5))
+    assert switch_was_on(changes, "b", t + timedelta(hours=9))
 
 
 def test_who_is_home_follows_ancestry_and_names_strangers(monkeypatch):

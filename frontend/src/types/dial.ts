@@ -9,6 +9,7 @@ export const FIX_STAGE_VALUES = ["planning", "planned", "started", "folded", "as
 export type FixStage = (typeof FIX_STAGE_VALUES)[number];
 
 export interface Dial {
+  project: string;
   on: boolean;
   lanes: number;
   changed_at: string | null;
@@ -19,12 +20,14 @@ export interface DialChange {
   id: number;
   at: string;
   actor: Actor;
-  on: boolean;
+  project: string | null;
+  on: boolean | null;
   lanes: number;
 }
 
 export interface DialState {
   dial: Dial;
+  others_on?: string[];
   running: number;
   triaging?: number;
   held: number;
@@ -56,10 +59,11 @@ export interface FixReport {
   defect_filed_against: boolean;
   fold_reverted: boolean;
   class_closer: string | null;
+  switch_was_on: boolean;
 }
 
 export interface Fixes {
-  dial: Dial;
+  switches: Dial[];
   lanes: FixReport[];
   rail_now: RailCount[];
   rail_at_first_on: RailCount[];

@@ -21,7 +21,7 @@ const api = vi.hoisted(() => ({
   openIdea: vi.fn<(slug: string, text: string) => Promise<DoorResult>>(),
   openPlan: vi.fn<(slug: string, numbers: number[]) => Promise<DoorResult>>(),
   acceptClass: vi.fn<(slug: string, evidenceClass: EvidenceClass) => Promise<VerdictsRuled>>(),
-  turnDial: vi.fn<(on: boolean, lanes: number) => Promise<DialState>>(),
+  turnDial: vi.fn<(slug: string, on: boolean, lanes: number) => Promise<DialState>>(),
   getFocus: vi.fn(),
   openFocus: vi.fn<(slug: string, text: string) => Promise<DoorResult>>(),
   proposeMoves: vi.fn<(slug: string) => Promise<DoorResult>>(),
@@ -1008,7 +1008,7 @@ describe("the board at a glance (plan 06)", () => {
 describe("defects fix themselves (plan 11)", () => {
   it("reads a night of held plans as held, not running, and says when the machine is full", async () => {
     const b = board();
-    b.dial = { dial: { on: true, lanes: 4, changed_at: "2026-09-05T08:00:00+00:00", first_on_at: "2026-09-05T08:00:00+00:00" }, running: 0, held: 4, full: "the machine is full: 2.0 GB available, 5 GB needed", quiet: true };
+    b.dial = { dial: { project: "harbourmaster", on: true, lanes: 4, changed_at: "2026-09-05T08:00:00+00:00", first_on_at: "2026-09-05T08:00:00+00:00" }, others_on: [], running: 0, held: 4, full: "the machine is full: 2.0 GB available, 5 GB needed", quiet: true };
     api.getBoard.mockResolvedValue(b);
     await renderBoard();
     const dial = screen.getByRole("group", { name: "Auto-fix" });
@@ -1027,12 +1027,13 @@ describe("defects fix themselves (plan 11)", () => {
     // A dial that is off, or on with nothing running, claims nothing.
     expect(count.dataset["meaning"]).toBeUndefined();
     const turned = board();
-    turned.dial = { dial: { on: true, lanes: 1, changed_at: "2026-09-05T08:00:00+00:00", first_on_at: "2026-09-05T08:00:00+00:00" }, running: 1, held: 0, full: null, quiet: false };
+    turned.dial = { dial: { project: "harbourmaster", on: true, lanes: 1, changed_at: "2026-09-05T08:00:00+00:00", first_on_at: "2026-09-05T08:00:00+00:00" }, others_on: [], running: 1, held: 0, full: null, quiet: false };
     api.turnDial.mockResolvedValue(turned.dial);
     api.getBoard.mockResolvedValue(turned);
     await userEvent.click(toggle);
-    await waitFor(() => expect(api.turnDial).toHaveBeenCalledWith(true, 1));
-    expect(await within(dial).findByText("auto-fix on, 1 fix lane at most")).toBeInTheDocument();
+    // The switch turned is this board's (card #80).
+    await waitFor(() => expect(api.turnDial).toHaveBeenCalledWith("harbourmaster", true, 1));
+    expect(await within(dial).findByText("auto-fix on here, 1 fix lane at most across every board")).toBeInTheDocument();
     await waitFor(() => expect(within(dial).getByRole("checkbox", { name: "Auto-fix defects" })).toBeChecked());
     // Something runs under the dial: the count is live, and only the count.
     expect(within(dial).getByText("1 of 1 live").dataset["meaning"]).toBe("live");
@@ -1045,7 +1046,27 @@ describe("defects fix themselves (plan 11)", () => {
     await userEvent.type(lanes, "3");
     expect(api.turnDial).toHaveBeenCalledTimes(1);
     fireEvent.blur(lanes);
-    await waitFor(() => expect(api.turnDial).toHaveBeenLastCalledWith(true, 3));
+    await waitFor(() => expect(api.turnDial).toHaveBeenLastCalledWith("harbourmaster", true, 3));
+  });
+
+  it("shows this board's own switch, off, and names the other board that is on (card #80)", async () => {
+    api.getProjects.mockResolvedValue([PROJECT, SECOND]);
+    const b = board();
+    b.dial = { dial: { project: "harbourmaster", on: false, lanes: 2, changed_at: null, first_on_at: null }, others_on: ["needle"], running: 1, held: 0, full: null, quiet: false };
+    api.getBoard.mockResolvedValue(b);
+    await renderBoard();
+    const dial = screen.getByRole("group", { name: "Auto-fix" });
+    expect(within(dial).getByRole("checkbox", { name: "Auto-fix defects" })).not.toBeChecked();
+    // The other board is named by its name, and the count is the machine's across both.
+    expect(within(dial).getByText("also on: Needle")).toBeInTheDocument();
+    expect(within(dial).getByText("1 of 2 live").dataset["meaning"]).toBe("live");
+    // Nothing on: the phrase is gone.
+    const quiet = board();
+    quiet.dial = { dial: { project: "harbourmaster", on: false, lanes: 2, changed_at: null, first_on_at: null }, others_on: [], running: 0, held: 0, full: null, quiet: true };
+    api.getBoard.mockResolvedValue(quiet);
+    api.turnDial.mockResolvedValue(quiet.dial);
+    await userEvent.click(within(dial).getByRole("checkbox", { name: "Auto-fix defects" }));
+    await waitFor(() => expect(within(dial).queryByText(/also on/)).not.toBeInTheDocument());
   });
 
   it("says where a defect routes beside its kind, and nobody's yet until a reading says otherwise", async () => {

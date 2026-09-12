@@ -109,7 +109,7 @@ CLAIM_WORDS: dict[Claim, tuple[str, str]] = {
 """Each claim's words, singular and plural: the head's breakdown (plan 27, item 1)."""
 
 NO_DIAL = DialState(
-    dial=Dial(on=False, lanes=1, changed_at=None, first_on_at=None),
+    dial=Dial(project="", on=False, lanes=1, changed_at=None, first_on_at=None),
     running=0,
     held=0,
     full=None,

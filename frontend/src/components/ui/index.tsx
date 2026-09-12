@@ -179,14 +179,17 @@ export function IdeaDoor({ onOpen, disabled, said }: { onOpen: (text: string) =>
 
 /**
  * The dial in the head (plan 11, item 3): the owner's standing ruling that
- * a defect its finder marked `Fix: now` enters execution without him — a
- * toggle, the number of fix lanes that may run at once, and the fix lanes
- * live against that number. One dial for the whole board, because its limit
- * is the machine's slots and its one trunk. The number lands on blur or
- * Enter, so a keystroke is not a turn; the count is the one part that can
- * carry a meaning, and only while something runs.
+ * a defect its finder marked `Fix: now` enters execution without him — this
+ * board's own switch, the number of fix lanes that may run at once, and the
+ * fix lanes live against that number. The switch is this board's (card #80):
+ * turning it fixes this board's defects and nothing else, and one quiet
+ * phrase names the other boards that are on. The number is the machine's,
+ * because its limit is the machine's slots and its one trunk, so it counts
+ * lanes across every board. The number lands on blur or Enter, so a
+ * keystroke is not a turn; the count is the one part that can carry a
+ * meaning, and only while something runs.
  */
-export function DialControl({ state, onTurn, disabled, said }: { state: DialState; onTurn: (on: boolean, lanes: number) => void; disabled: boolean; said: string | null }) {
+export function DialControl({ state, others, onTurn, disabled, said }: { state: DialState; others: string[]; onTurn: (on: boolean, lanes: number) => void; disabled: boolean; said: string | null }) {
   const { dial, running, held, full, quiet } = state;
   const [lanes, setLanes] = useState(String(dial.lanes));
   useEffect(() => {
@@ -205,7 +208,7 @@ export function DialControl({ state, onTurn, disabled, said }: { state: DialStat
       className="dial"
       role="group"
       aria-label="Auto-fix"
-      title="Auto-fix: while on, the board plans and starts a defect marked Fix: now on its own, up to this many fix lanes at once, and the lane then runs like every other lane. One dial for the whole board. The board's own defects run only while no lane is live anywhere."
+      title="Auto-fix: while on, the board plans and starts this board's defects marked Fix: now on its own, and the lane then runs like every other lane. The switch is this board's; the number of fix lanes at once is the machine's, across every board. The board's own defects run only while no lane is live anywhere."
       onSubmit={(e) => {
         e.preventDefault();
         commit();
@@ -215,6 +218,11 @@ export function DialControl({ state, onTurn, disabled, said }: { state: DialStat
         <input type="checkbox" checked={dial.on} disabled={disabled} onChange={(e) => onTurn(e.target.checked, dial.lanes)} aria-label="Auto-fix defects" />
         <span>auto-fix</span>
       </label>
+      {others.length > 0 ? (
+        <span className="dial-others" title="Other boards whose auto-fix is on: the number below is shared with them">
+          also on: {others.join(", ")}
+        </span>
+      ) : null}
       <input className="dial-lanes" type="number" inputMode="numeric" min={0} value={lanes} disabled={disabled} aria-label="Fix lanes at once" onChange={(e) => setLanes(e.target.value)} onBlur={commit} />
       <span className="dial-live" {...(running > 0 ? { "data-meaning": "live" as const } : {})} title={quiet ? "No lane has hands on any project: the board's own defects may run" : "A lane has hands on a project: the board's own defects wait"}>
         {running} of {dial.lanes} live

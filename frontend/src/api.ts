@@ -102,12 +102,12 @@ export function acceptClass(slug: string, evidenceClass: EvidenceClass): Promise
   });
 }
 
-/** The dial (plan 11, item 3): the owner's standing ruling that a defect marked `Fix: now` enters execution without him, and how many fix lanes may run at once — one for the whole board. */
-export function turnDial(on: boolean, lanes: number): Promise<DialState> {
+/** The dial (plan 11, item 3): the owner's standing ruling that a defect marked `Fix: now` enters execution without him — one board's switch, and the machine's number of fix lanes at once (card #80). Answers that board's head. */
+export function turnDial(slug: string, on: boolean, lanes: number): Promise<DialState> {
   return call<DialState>("/api/dial", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ on, lanes }),
+    body: JSON.stringify({ project: slug, on, lanes }),
   });
 }
 

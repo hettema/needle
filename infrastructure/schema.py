@@ -318,30 +318,43 @@ class WindowlessSessionRow(Base):
 
 
 class DialRow(Base):
-    """One row: the owner's standing ruling on defects (plan 11, item 3).
-    On or off and the number of fix lanes, kept here so a restart keeps his
-    setting; every turn is a row in `dial_changes`."""
+    """The owner's standing ruling on defects (plan 11, item 3), kept so a
+    restart keeps it. Row 1, with no project, is the machine's: it holds
+    the number of fix lanes and nothing else. Every other row is one
+    board's switch, keyed by slug (card #80): on or off, and when it was
+    turned. A board without a row is off. Every turn is a row in
+    `dial_changes`."""
 
     __tablename__ = "dial"
+    __table_args__ = (UniqueConstraint("project_slug", name="uq_dial_project"),)
 
-    id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    on: Mapped[bool] = mapped_column(Boolean)
-    lanes: Mapped[int] = mapped_column(Integer)
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    project_slug: Mapped[str | None] = mapped_column(String(80), nullable=True)
+    on: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
+    """The board's switch; NULL on the machine's row."""
+    lanes: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    """The machine's number; NULL on a board's row."""
     changed_at: Mapped[datetime | None] = mapped_column(UtcDateTime, nullable=True)
     first_on_at: Mapped[datetime | None] = mapped_column(UtcDateTime, nullable=True)
 
 
 class DialChangeRow(Base):
-    """One turn of the dial: who, when, to what. The audit table is per card
-    and the dial is about no card, so its record is its own."""
+    """One turn: who, when, which board, to what. A turn of a board's
+    switch carries the board and the setting; a change of the machine's
+    number carries neither (card #80); a row from before the switch was per
+    board carries a setting and no board, and turned every board. The audit
+    table is per card and the dial is about no card, so its record is its
+    own."""
 
     __tablename__ = "dial_changes"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     at: Mapped[datetime] = mapped_column(UtcDateTime)
     actor: Mapped[str] = mapped_column(String(20))
-    on: Mapped[bool] = mapped_column(Boolean)
+    project_slug: Mapped[str | None] = mapped_column(String(80), nullable=True)
+    on: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
     lanes: Mapped[int] = mapped_column(Integer)
+    """The machine's number after the turn, on every row."""
 
 
 class FixLaneRow(Base):
@@ -368,9 +381,9 @@ class FixLaneRow(Base):
 
 
 class RailAtOnRow(Base):
-    """The defects rail of each project at the moment the dial was first
-    turned on, by who filed each card (plan 11, item 6): the baseline the
-    thirty-lane look reads the rail against."""
+    """The defects rail of each project at the moment its switch was first
+    turned on, by who filed each card (plan 11, item 6; per board since card
+    #80): the baseline the thirty-lane look reads the rail against."""
 
     __tablename__ = "rail_at_on"
     __table_args__ = (UniqueConstraint("project_slug", "filer", name="uq_rail_at_on"),)

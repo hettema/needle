@@ -18,12 +18,16 @@ import pytest
 from fastapi.testclient import TestClient
 
 from api.cli import main
+from domain.card import Actor, CardOrigin
+from domain.project import Project
 from domain.signal import SessionWork
 from infrastructure import clock
-from infrastructure.store import Store
+from infrastructure.live import sweep
+from infrastructure.store import Store, StoreRefusal
 from tests.api import test_doors as doors
 from tests.api.attention import claim_count
 from tests.api.test_doors import CARD, archive_plan, column_of, detail, git, read_signals, reconcile
+from tests.conftest import NOW
 from tests.floor import Floor
 
 client = doors.client
@@ -34,8 +38,8 @@ TIDE = "The tide clock drifts a minute a day"
 TIDE_PATH = "docs/slice-suggestions/2026-09-04-the-tide-clock-drifts-a-minute-a-day.md"
 
 
-def board(client: TestClient) -> dict:
-    return client.get("/api/projects/proj/board").json()
+def board(client: TestClient, slug: str = "proj") -> dict:
+    return client.get(f"/api/projects/{slug}/board").json()
 
 
 def number_of(client: TestClient, title: str) -> int:
@@ -51,8 +55,12 @@ def tick(client: TestClient) -> None:
     client.portal.call(client.app.state.dial.tick)
 
 
-def turn(client: TestClient, *, on: bool, lanes: int) -> dict:
-    response = client.post("/api/dial", json={"on": on, "lanes": lanes})
+def turn(
+    client: TestClient, *, on: bool | None = None, lanes: int | None = None, slug: str = "proj"
+) -> dict:
+    """Turn one board's switch, the machine's number, or both, from that
+    board's page (card #80); answers that board's head."""
+    response = client.post("/api/dial", json={"project": slug, "on": on, "lanes": lanes})
     assert response.status_code == 200, response.text
     return response.json()
 
@@ -234,7 +242,14 @@ def test_the_dial_is_off_until_turned_persists_and_is_audited_as_the_owners(
 ):
     state = board(client)["dial"]
     assert state == {
-        "dial": {"on": False, "lanes": 1, "changed_at": None, "first_on_at": None},
+        "dial": {
+            "project": "proj",
+            "on": False,
+            "lanes": 1,
+            "changed_at": None,
+            "first_on_at": None,
+        },
+        "others_on": [],
         "running": 0,
         "triaging": 0,
         "held": 0,
@@ -246,20 +261,190 @@ def test_the_dial_is_off_until_turned_persists_and_is_audited_as_the_owners(
     assert turned["dial"]["changed_at"] is not None
     assert turned["dial"]["first_on_at"] == turned["dial"]["changed_at"]
     assert board(client)["dial"]["dial"]["lanes"] == 2
+    # Two rows for one act: the number's, naming no board, and the switch's,
+    # naming the board it turned (card #80, item 1).
     changes = store.dial_changes()
-    assert [(c.actor.value, c.on, c.lanes) for c in changes] == [("owner", True, 2)]
+    assert [(c.actor.value, c.project, c.on, c.lanes) for c in changes] == [
+        ("owner", None, None, 2),
+        ("owner", "proj", True, 2),
+    ]
     # A turn that changes nothing writes nothing; a restart keeps the setting.
     turn(client, on=True, lanes=2)
-    assert len(store.dial_changes()) == 1
+    assert len(store.dial_changes()) == 2
     reopened = Store(store.path)
     try:
-        assert reopened.dial().on is True and reopened.dial().lanes == 2
+        assert reopened.dial("proj").on is True and reopened.dial("proj").lanes == 2
         assert reopened.rail_at_on(), "the rail was recorded at the first turn to on"
     finally:
         reopened.close()
-    off = turn(client, on=False, lanes=2)
+    off = turn(client, on=False)
     assert off["dial"]["on"] is False and off["dial"]["first_on_at"] is not None
-    assert [(c.on, c.lanes) for c in store.dial_changes()] == [(True, 2), (False, 2)]
+    assert off["dial"]["lanes"] == 2, "the number is the machine's and a switch leaves it"
+    assert [(c.project, c.on, c.lanes) for c in store.dial_changes()] == [
+        (None, None, 2),
+        ("proj", True, 2),
+        ("proj", False, 2),
+    ]
+
+
+def second_board(client: TestClient, store: Store, repo: Path, tmp_path: Path) -> Path:
+    """A second project on the board, a bare copy of the fixture one."""
+    second = tmp_path / "second"
+    shutil.copytree(repo, second, ignore=shutil.ignore_patterns(".git"))
+    git(second, "init", "-q", "-b", "develop")
+    git(second, "add", ".")
+    git(second, "commit", "-q", "-m", "founding")
+    project = Project(slug="two", name="Second", path=str(second), registered_at=NOW)
+    store.add_project(project)
+    sweep(store, project, origin=CardOrigin.FOUNDING, at=NOW)
+    client.app.state.loops.live.load()
+    reconcile(client)
+    return second
+
+
+def test_the_switch_is_one_per_board_and_the_number_is_the_machines(
+    client: TestClient, store: Store, repo: Path, tmp_path: Path, capsys
+):
+    """Card #80, item 1: turning one board on leaves the other off through
+    a restart; the number read through either board is the same and one
+    turn changes it for both; each head names the other boards that are
+    on; a board the store does not know is refused by name."""
+    second_board(client, store, repo, tmp_path)
+    turn(client, on=True, slug="two")
+    assert board(client, "two")["dial"]["dial"]["on"] is True
+    assert board(client)["dial"]["dial"]["on"] is False
+    assert board(client)["dial"]["others_on"] == ["two"]
+    assert board(client, "two")["dial"]["others_on"] == []
+    reopened = Store(store.path)
+    try:
+        assert reopened.dial("two").on is True and reopened.dial("proj").on is False
+        assert [r.project for r in reopened.rail_at_on()] == ["two"], (
+            "the rail baseline is the board's, recorded at its own first on"
+        )
+    finally:
+        reopened.close()
+    # The number: one for the machine, read the same through either board.
+    turn(client, lanes=3)
+    assert board(client)["dial"]["dial"]["lanes"] == 3
+    assert board(client, "two")["dial"]["dial"]["lanes"] == 3
+    turn(client, lanes=2, slug="two")
+    assert board(client)["dial"]["dial"]["lanes"] == 2
+    assert [(c.project, c.on, c.lanes) for c in store.dial_changes()] == [
+        ("two", True, 1),
+        (None, None, 3),
+        (None, None, 2),
+    ]
+    # Both on: each head names the other.
+    turn(client, on=True)
+    assert board(client)["dial"]["others_on"] == ["two"]
+    assert board(client, "two")["dial"]["others_on"] == ["proj"]
+    assert [r.project for r in store.rail_at_on()] == ["two", "proj"]
+    # A board the store does not know, and a switch with no board, are refused.
+    refused = client.post("/api/dial", json={"project": "nowhere", "on": True})
+    assert refused.status_code == 409 and 'No project "nowhere"' in refused.json()["detail"]
+    with pytest.raises(StoreRefusal, match="name the board"):
+        store.turn_dial(project=None, on=True, actor=Actor.OWNER, at=clock.now())
+    # The terminal does the same, audited as the owner's, and prints a line
+    # per board (item 3).
+    assert main(["dial", "two", "off"]) == 0
+    out = capsys.readouterr().out
+    assert out.startswith("two: auto-fix off; changed ")
+    assert main(["dial"]) == 0
+    out = capsys.readouterr().out.splitlines()
+    assert out[0].startswith("proj: auto-fix on; changed ")
+    assert out[1].startswith("two: auto-fix off; changed ")
+    assert out[2].startswith("2 fix lanes at most across every board; 0 live now")
+    assert store.dial_changes()[-1].actor is Actor.OWNER
+    assert main(["dial", "on"]) == 1
+    assert "needle dial <slug> on" in capsys.readouterr().err
+
+
+def read_every_rail(client: TestClient, machine_floor: Floor, verified: dict[str, int]) -> None:
+    """Read every board's rail through the beat, landing `now` on the one
+    card named per board and `his` with a passing title elsewhere, until
+    nothing is open and the beat opens nothing."""
+    for _ in range(2 * READINGS_ON_THE_WAY):
+        opened = False
+        for other in client.get("/api/projects").json():
+            slug = other["slug"]
+            for number in list(open_readings(client, slug)):
+                opened = True
+                if number == verified.get(slug):
+                    argv = ["triage", slug, str(number), "now", "the rule selects this outcome"]
+                    argv += ["--title", "passes", "--source", SOURCE, "--direction", "no direction"]
+                    assert main(argv) == 0
+                else:
+                    land_on_the_way(client, number, slug)
+        if opened:
+            reconcile(client)
+        before = len(machine_floor.state()["launch_log"])
+        tick(client)
+        if len(machine_floor.state()["launch_log"]) == before and not opened:
+            return
+    raise AssertionError("the rails were never read through")
+
+
+def test_the_beat_plans_a_defect_only_on_a_board_whose_switch_is_on(
+    client: TestClient, machine_floor: Floor, store: Store, repo: Path, tmp_path: Path, capsys
+):
+    """Card #80, item 2 — the class-closer: with A on and B off and B
+    holding the oldest verified `now` defect, the beat plans A's defect and
+    nothing on B, while a reading opens on B's unread defects as before
+    (ruling 3); with both off nothing is planned; with both on, the next
+    verified defect is planned wherever it is. A fix lane whose planning
+    began on a board whose switch was off is the class made loud, and
+    `needle fixes all --started-off --count` counts exactly that."""
+    second_board(client, store, repo, tmp_path)
+    tide = number_of(client, TIDE)
+    tide_two = next(
+        card["number"]
+        for column in board(client, "two")["columns"]
+        for group in column["groups"]
+        for card in group["cards"]
+        if card["title"] == TIDE
+    )
+    turn(client, on=True, slug="two", lanes=2)
+    # Only "two" is on. Readings run on both boards regardless — B's rail is
+    # read through, its tide verified `now` — and the one planning session
+    # the beat opens is on A.
+    read_every_rail(client, machine_floor, {"proj": tide, "two": tide_two})
+    assert [(f.project, f.card_number, f.stage.value) for f in store.fix_lanes()] == [
+        ("two", tide_two, "planning")
+    ]
+    # B's tide was verified `now` through a reading the beat opened on B
+    # while B was off: the seat is never gated by the switch.
+    assert store.latest_triages("proj")[tide].result.value == "now"
+    waiting = {
+        w["card_number"]: w["why"] for w in client.get("/api/fixes?slug=proj").json()["waiting"]
+    }
+    assert waiting[tide] == "this board's switch is off"
+    # Room under the number, B's verified defect the oldest thing on any rail:
+    # still nothing on B, beat after beat.
+    for _ in range(3):
+        tick(client)
+    assert [f.project for f in store.fix_lanes()] == ["two"]
+    # Both off: nothing is planned, however eligible the rail.
+    turn(client, on=False, slug="two")
+    taken = len(machine_floor.state()["launch_log"])
+    tick(client)
+    assert len(machine_floor.state()["launch_log"]) == taken
+    assert [f.project for f in store.fix_lanes()] == ["two"]
+    # B on: its verified defect is planned on the next beat.
+    turn(client, on=True, slug="proj")
+    tick(client)
+    assert [(f.project, f.card_number) for f in store.fix_lanes()] == [
+        ("two", tide_two),
+        ("proj", tide),
+    ]
+    # Every lane began on a board that was on at that moment: the Loop's count.
+    capsys.readouterr()
+    assert main(["fixes", "all", "--started-off", "--count"]) == 0
+    assert capsys.readouterr().out == "0\n"
+    report = client.get("/api/fixes").json()
+    assert [(lane["project"], lane["switch_was_on"]) for lane in report["lanes"]] == [
+        ("two", True),
+        ("proj", True),
+    ]
 
 
 # ── items 4 and 6: the path from the rail to a running lane ────────────
@@ -415,9 +600,11 @@ def test_with_the_dial_on_the_oldest_now_defect_is_planned_then_started_by_the_d
 
     # The loop, counted (item 6).
     report = client.get("/api/fixes").json()
-    assert report["dial"]["on"] is True
+    assert [(s["project"], s["on"]) for s in report["switches"]] == [("proj", True)]
     first = report["lanes"][0]
     assert first["card_number"] == tide and first["stage"] == "folded"
+    assert first["switch_was_on"] is True, "planned while its board was on (card #80)"
+    assert all(lane["switch_was_on"] for lane in report["lanes"])
     assert first["folded"] is True and first["reviewed"] is False
     assert first["stopped_to_ask"] is False and first["fold_reverted"] is False
     assert first["class_closer"] == "a boot check refuses a clock that disagrees with the office"
@@ -428,7 +615,10 @@ def test_with_the_dial_on_the_oldest_now_defect_is_planned_then_started_by_the_d
     assert f"proj #{tide}" in out and "folded; folded; no review record" in out
     assert "class: a boot check refuses" in out
     assert "2 fix lanes, 1 closed: 0 folded with a review record" in out
-    assert "rail proj:" in out and "(was 3 at dial-on)" in out
+    assert "rail proj:" in out and "(was 3 at its switch's first on)" in out
+    assert "its board was on when planning began" in out
+    assert main(["fixes", "all", "--started-off", "--count"]) == 0
+    assert capsys.readouterr().out == "0\n"
     # Every defect still on the rail says why the dial leaves it there — and
     # the reason is now the reading's own sentence, not the mark's (plan 59).
     assert "a reading says it is yours" in out
@@ -513,7 +703,9 @@ def test_a_held_plan_does_not_count_and_the_memory_floor_stops_the_beat(
     state = board(client)["dial"]
     assert (state["running"], state["held"], state["full"]) == (1, 1, None)
     assert main(["dial"]) == 0
-    assert "1 fix lane at most; 1 live now, 1 held; the machine is" in capsys.readouterr().out
+    assert "1 fix lane at most across every board; 1 live now, 1 held; the machine is" in (
+        capsys.readouterr().out
+    )
 
     # The machine runs short: the beat opens nothing, even with the number
     # allowing it, and the head reads the two numbers.
@@ -534,7 +726,7 @@ def test_a_held_plan_does_not_count_and_the_memory_floor_stops_the_beat(
     # what bounds plans written ahead of a full machine.
     assert main(["dial"]) == 0
     out = capsys.readouterr().out
-    assert "3 fix lanes at most; 2 live now; the machine is not quiet" in out
+    assert "3 fix lanes at most across every board; 2 live now; the machine is not quiet" in out
     assert f"; {full}" in out
     # Free swap short counts the same, on a machine that has swap.
     machine_floor.set_memory(available_gb=16.0, swap_free_gb=1.0)
@@ -550,13 +742,19 @@ def test_a_held_plan_does_not_count_and_the_memory_floor_stops_the_beat(
     assert column_of(client, tide) == "Executing"
     assert len(machine_floor.state()["launch_log"]) == taken + 1
     started_row = next(h for h in detail(client, tide)["history"] if h["kind"] == "started")
-    assert "started by the dial; #241's session is editing engine/metering.py" in (
-        started_row["detail"]
+    assert (
+        "started by the dial; #241's session is editing engine/metering.py"
+        in (started_row["detail"])
     )
     assert "SHARED GROUND" in machine_floor.state()["launch_log"][-1]["argv"][-1]
     # The number the owner set is what he set, through all of it.
-    assert store.dial().lanes == 3
-    assert [(c.on, c.lanes) for c in store.dial_changes()] == [(True, 1), (True, 3)]
+    assert store.dial("proj").lanes == 3
+    # One lane was the number already, so the first turn wrote the switch's
+    # row alone; the raise to three is the number's own row.
+    assert [(c.project, c.on, c.lanes) for c in store.dial_changes()] == [
+        ("proj", True, 1),
+        (None, None, 3),
+    ]
 
 
 @pytest.mark.parametrize("worktree_gone", [False, True])
@@ -1075,12 +1273,21 @@ def test_needle_dial_reads_and_turns_the_dial_from_the_terminal(
     client: TestClient, store: Store, capsys
 ):
     assert main(["dial"]) == 0
-    assert capsys.readouterr().out.startswith("auto-fix off, 1 fix lane at most; 0 live now")
-    assert main(["dial", "on", "--lanes", "2"]) == 0
-    out = capsys.readouterr().out
-    assert out.startswith("auto-fix on, 2 fix lanes at most; 0 live now; the machine is quiet")
-    assert "first turned on" in out
-    assert [(c.actor.value, c.on, c.lanes) for c in store.dial_changes()] == [("owner", True, 2)]
+    out = capsys.readouterr().out.splitlines()
+    assert out == [
+        "proj: auto-fix off",
+        "1 fix lane at most across every board; 0 live now; the machine is quiet",
+    ]
+    assert main(["dial", "proj", "on", "--lanes", "2"]) == 0
+    out = capsys.readouterr().out.splitlines()
+    assert out[0].startswith("proj: auto-fix on; changed ") and "first turned on" in out[0]
+    assert out[1].startswith(
+        "2 fix lanes at most across every board; 0 live now; the machine is quiet"
+    )
+    assert [(c.actor.value, c.project, c.on, c.lanes) for c in store.dial_changes()] == [
+        ("owner", None, None, 2),
+        ("owner", "proj", True, 2),
+    ]
     assert main(["dial", "--lanes", "0"]) == 0
-    assert capsys.readouterr().out.startswith("auto-fix on, 0 fix lanes at most")
+    assert "0 fix lanes at most across every board" in capsys.readouterr().out
     assert board(client)["dial"]["dial"]["lanes"] == 0

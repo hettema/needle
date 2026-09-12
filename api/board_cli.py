@@ -678,27 +678,47 @@ def kinds(
 
 
 def dial(args: argparse.Namespace, live: Live, runtime: Runtime, loops: Loops, doors: Doors) -> int:
-    """The owner's dial from his terminal (plan 11, item 3): read it, or
-    turn it. The running board hears the store change within a second."""
+    """The owner's dial from his terminal (plan 11, item 3): read every
+    board's switch, or turn one board's switch or the machine's number
+    (card #80). The running board hears the store change within a second."""
+    if args.slug in ("on", "off") and args.setting is None:
+        print(f"a switch is one board's: needle dial <slug> {args.slug}", file=sys.stderr)
+        return 1
+    if args.setting is not None and args.slug is None:
+        print(f"a switch is one board's: needle dial <slug> {args.setting}", file=sys.stderr)
+        return 1
+    if args.slug is not None and args.slug not in live.projects:
+        print(f'no project "{args.slug}" is on the board', file=sys.stderr)
+        return 1
     control = Dial(live, runtime, loops, doors)
     loops.reconcile_now()
-    if args.setting is None and args.lanes is None:
-        state = control.state()
-    else:
-        current = live.store.dial()
-        on = current.on if args.setting is None else args.setting == "on"
-        lanes = current.lanes if args.lanes is None else args.lanes
-        state = control.turn(on=on, lanes=lanes)
-    setting = state.dial
+    if args.setting is not None or args.lanes is not None:
+        control.turn(
+            project=args.slug,
+            on=None if args.setting is None else args.setting == "on",
+            lanes=args.lanes,
+        )
+    switches = live.store.dials()
+    shown = [s for s in switches if args.slug is None or s.project == args.slug]
+    for setting in shown:
+        print(
+            f"{setting.project}: auto-fix {'on' if setting.on else 'off'}"
+            + (f"; changed {setting.changed_at.isoformat()}" if setting.changed_at else "")
+            + (
+                f"; first turned on {setting.first_on_at.isoformat()}"
+                if setting.first_on_at
+                else ""
+            )
+        )
+    state = control.state(shown[0].project if shown else next(iter(live.projects)))
+    lanes = state.dial.lanes
     print(
-        f"auto-fix {'on' if setting.on else 'off'}, {setting.lanes} fix lane"
-        f"{'' if setting.lanes == 1 else 's'} at most; {state.running} live now"
+        f"{lanes} fix lane{'' if lanes == 1 else 's'} at most across every board; "
+        f"{state.running} live now"
         + (f", {state.held} held" if state.held else "")
         + "; the machine is "
         f"{'quiet' if state.quiet else 'not quiet (a lane has hands on a project)'}"
         + (f"; {state.full}" if state.full else "")
-        + (f"; changed {setting.changed_at.isoformat()}" if setting.changed_at else "")
-        + (f"; first turned on {setting.first_on_at.isoformat()}" if setting.first_on_at else "")
     )
     return 0
 
@@ -776,13 +796,29 @@ def fixes(
         return 1
     loops.reconcile_now()
     report = Dial(live, runtime, loops, doors).fixes(slug)
-    setting = report.dial
-    print(
-        f"dial: {'on' if setting.on else 'off'}, {setting.lanes} at most"
-        + (f", first on {setting.first_on_at.isoformat()}" if setting.first_on_at else ", never on")
-    )
+    if args.started_off:
+        # The Loop's count (card #80): every fix lane whose planning began
+        # on a board whose switch was off at that moment.
+        started_off = [lane for lane in report.lanes if not lane.switch_was_on]
+        if args.count:
+            print(len(started_off))
+            return 0
+        report = report.model_copy(update={"lanes": started_off})
+    for setting in report.switches:
+        print(
+            f"{setting.project}: auto-fix {'on' if setting.on else 'off'}"
+            + (
+                f", first on {setting.first_on_at.isoformat()}"
+                if setting.first_on_at
+                else ", never on"
+            )
+        )
+    lanes = report.switches[0].lanes if report.switches else 1
+    print(f"{lanes} fix lane{'' if lanes == 1 else 's'} at most across every board")
     if not report.lanes:
-        print("no fix lane yet")
+        print(
+            "no fix lane began on a board that was off" if args.started_off else "no fix lane yet"
+        )
     for lane in report.lanes:
         facts = [
             lane.stage.value,
@@ -794,6 +830,9 @@ def fixes(
             else "no defect filed against it",
             "fold reverted" if lane.fold_reverted else "fold stands",
             f"class: {lane.class_closer}" if lane.class_closer else "no Class: line",
+            "its board was on when planning began"
+            if lane.switch_was_on
+            else "its board was OFF when planning began",
         ]
         print(f"{lane.project} #{lane.card_number:<4} {lane.title}")
         print("      " + "; ".join(facts))
@@ -825,7 +864,11 @@ def fixes(
         )
         print(
             f"rail {rail.project}: {rail.total}"
-            + (f" (was {before.total} at dial-on)" if before else " (the dial has never been on)")
+            + (
+                f" (was {before.total} at its switch's first on)"
+                if before
+                else " (its switch has never been on)"
+            )
             + (f" — {split}" if split else "")
         )
     return 0
@@ -1198,16 +1241,29 @@ def register(sub: "argparse._SubParsersAction[argparse.ArgumentParser]") -> None
     p_water.set_defaults(board=True, run=_with_board(watercooler))
 
     p_dial = sub.add_parser(
-        "dial", help="the dial: read it, or turn auto-fix on or off and set the number of fix lanes"
+        "dial",
+        help="the dial: read every board's switch, turn one board's auto-fix on or off, "
+        "or set the machine's number of fix lanes",
     )
+    p_dial.add_argument("slug", nargs="?", help="the board whose switch to read or turn")
     p_dial.add_argument("setting", nargs="?", choices=["on", "off"])
-    p_dial.add_argument("--lanes", type=int, help="how many fix lanes may run at once")
+    p_dial.add_argument(
+        "--lanes", type=int, help="how many fix lanes may run at once, across every board"
+    )
     p_dial.set_defaults(board=True, run=_with_board(dial))
 
     p_fixes = sub.add_parser(
-        "fixes", help="every fix lane the dial ran, and the rail now against dial-on"
+        "fixes", help="every fix lane the dial ran, and the rail now against each switch's first on"
     )
     p_fixes.add_argument("slug", help="a project's slug, or all")
+    p_fixes.add_argument(
+        "--started-off",
+        action="store_true",
+        help="only the fix lanes whose planning began on a board whose switch was off",
+    )
+    p_fixes.add_argument(
+        "--count", action="store_true", help="with --started-off: print how many, nothing else"
+    )
     p_fixes.set_defaults(board=True, run=_with_board(fixes))
     p_team = sub.add_parser("team", help="which team earns its place, per kind of work (card #58)")
     p_team.add_argument("slug", help="a project's slug")

@@ -24,6 +24,7 @@ from domain.column import Column
 from domain.corpus import CorpusIndex
 from domain.dial import (
     Dial,
+    DialChange,
     DialState,
     Filer,
     FixLane,
@@ -312,8 +313,25 @@ def who_is_home(held: Sequence[ScopeHeld], sessions: Sequence[Session]) -> list[
     return states
 
 
+def switch_was_on(changes: Sequence[DialChange], slug: str, moment: datetime) -> bool:
+    """Whether a board's switch was on at a moment, from the audit of turns
+    (card #80, item 3): the last turn at or before the moment that turned
+    this board — by name, or a turn from before the switch was per board,
+    which turned every board — says. No turn by then is off, which is how
+    every board is born. A change of the number alone turns nothing."""
+    state = False
+    for change in changes:
+        if change.at > moment:
+            break
+        if change.on is None or change.project not in (None, slug):
+            continue
+        state = change.on
+    return state
+
+
 def dial_state(
     dial: Dial,
+    switches: Sequence[Dial],
     fix_lanes: list[FixLane],
     lanes_by_project: dict[str, dict[int, Lane]],
     *,
@@ -321,8 +339,11 @@ def dial_state(
     room: Headroom | None,
     triaging: int = 0,
 ) -> DialState:
+    """One board's head: its own switch, the other boards that are on, and
+    the count against the machine's number across every board."""
     return DialState(
         dial=dial,
+        others_on=[s.project for s in switches if s.on and s.project != dial.project],
         running=running(fix_lanes, held, triaging=triaging),
         triaging=triaging,
         held=len(held),

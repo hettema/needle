@@ -371,8 +371,9 @@ class BoardState(BaseModel):
     trunk: TrunkState
     machine: MachineState
     dial: DialState
-    """The owner's standing ruling on defects, one for the whole board, with
-    the fix lanes live against its number (plan 11, item 3)."""
+    """The owner's standing ruling on defects: this board's own switch, the
+    machine's one number, and the fix lanes live against it across every
+    board (plan 11, item 3; per board since card #80)."""
     columns: list[ColumnView]
     documents_without_card: list[DocumentRef]
     asks: list[OwnerAsk]

@@ -343,7 +343,7 @@ class Live:
             triage_sessions=self.store.open_windowless_sessions(slug, SessionWork.TRIAGE),
             triages=self.store.latest_triages(slug),
             sources=self.sources(slug),
-            dial=self.dial_state(),
+            dial=self.dial_state(slug),
             title_readings=self.store.latest_title_readings(slug),
             focus=focus,
             leverage=leverage,
@@ -499,11 +499,13 @@ class Live:
             arrangement = arrangement.model_copy(update={"why": unavailable_why(strip)})
         return strip, leverages, arrangement
 
-    def dial_state(self) -> DialState:
-        """The dial with the fix lanes live against its number, the planned
-        cards it holds without counting, the memory floor's word, and
-        whether the machine is quiet, from every project's last read (plan
-        11; the plan "as many lanes as the machine can hold", item 3)."""
+    def dial_state(self, slug: str) -> DialState:
+        """One board's switch with the fix lanes live against the machine's
+        number across every board, the planned cards it holds without
+        counting, the memory floor's word, whether the machine is quiet,
+        and which other boards are on, from every project's last read (plan
+        11; the plan "as many lanes as the machine can hold", item 3; per
+        board since card #80)."""
         lanes = {
             slug: live.snapshot.lanes
             for slug, live in self.projects.items()
@@ -514,8 +516,10 @@ class Live:
             len(self.store.open_windowless_sessions(slug, SessionWork.TRIAGE))
             for slug in self.projects
         )
+        switches = self.store.dials()
         return dial_state(
-            self.store.dial(),
+            next((s for s in switches if s.project == slug), self.store.dial(slug)),
+            switches,
             fix_lanes,
             lanes,
             held=held_lanes(fix_lanes, self.start_offered),

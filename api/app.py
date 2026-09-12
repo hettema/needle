@@ -69,9 +69,14 @@ class PlanBody(BaseModel):
 
 
 class DialBody(BaseModel):
-    on: bool
-    lanes: int
-    """How many fix lanes may run at once, across the whole board (plan 11, item 3)."""
+    project: str
+    """The board whose page the turn came from: its switch is the one `on`
+    turns, and its head is what the answer shows (card #80)."""
+    on: bool | None = None
+    """This board's switch; None leaves it as it is."""
+    lanes: int | None = None
+    """How many fix lanes may run at once, across every board (plan 11,
+    item 3): the machine's one number; None leaves it as it is."""
 
 
 class FocusBody(BaseModel):
@@ -334,11 +339,19 @@ def create_app(store: Store | None = None, *, dist: Path | None = FRONTEND_DIST)
 
     @app.post("/api/dial", response_model=DialState)
     async def turn_dial(body: DialBody, request: Request) -> DialState:
-        """The owner turns the dial (plan 11, item 3): one for the whole
-        board, audited as his, under the loops' lock like a door."""
+        """The owner turns the dial (plan 11, item 3): one board's switch
+        and the machine's number (card #80), audited as his, under the
+        loops' lock like a door. Answers that board's head."""
         loops: Loops = request.app.state.loops
         dial: Dial = request.app.state.dial
-        return await loops.door("dial", lambda: dial.turn(on=body.on, lanes=body.lanes))
+        if body.project not in dial.live.projects:
+            raise StoreRefusal(f'No project "{body.project}" is on the board.')
+
+        def turn() -> DialState:
+            dial.turn(project=body.project, on=body.on, lanes=body.lanes)
+            return dial.state(body.project)
+
+        return await loops.door("dial", turn)
 
     @app.get("/api/fixes", response_model=Fixes)
     async def fixes(request: Request, slug: str | None = None) -> Fixes:

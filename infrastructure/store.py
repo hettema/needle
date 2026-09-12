@@ -1495,54 +1495,114 @@ class Store:
 
     # ── the dial (plan 11) ─────────────────────────────────────────────
 
-    def dial(self) -> Dial:
+    def dial(self, slug: str) -> Dial:
+        """One board's switch with the machine's number beside it (card
+        #80). A board with no row is off; a machine with no row holds one
+        lane."""
         with self._session() as session:
-            row = session.get(DialRow, 1)
-            if row is None:
-                return Dial(on=False, lanes=1, changed_at=None, first_on_at=None)
-            return _dial(row)
+            machine = session.get(DialRow, 1)
+            lanes = 1 if machine is None or machine.lanes is None else machine.lanes
+            row = session.scalar(select(DialRow).where(DialRow.project_slug == slug))
+            return _dial(slug, row, lanes)
 
-    def turn_dial(self, *, on: bool, lanes: int, actor: Actor, at: datetime) -> Dial:
-        """The owner turns the dial: the setting, and one row of its record.
-        A turn that changes nothing writes nothing. The first turn to on
-        stamps `first_on_at`, the moment the rail is measured against."""
-        if lanes < 0:
+    def dials(self) -> list[Dial]:
+        """Every registered board's switch, in the board's order, each with
+        the machine's number: what the beat reads before any rail, what
+        `needle dial` prints, and where a head reads which other boards are
+        on (card #80)."""
+        with self._session() as session:
+            machine = session.get(DialRow, 1)
+            lanes = 1 if machine is None or machine.lanes is None else machine.lanes
+            rows = {
+                row.project_slug: row
+                for row in session.scalars(select(DialRow).where(DialRow.project_slug.is_not(None)))
+            }
+            slugs = session.scalars(select(ProjectRow.slug).order_by(ProjectRow.registered_at))
+            return [_dial(slug, rows.get(slug), lanes) for slug in slugs]
+
+    def turn_dial(
+        self,
+        *,
+        project: str | None,
+        on: bool | None = None,
+        lanes: int | None = None,
+        actor: Actor,
+        at: datetime,
+    ) -> list[Dial]:
+        """The owner turns it: one board's switch, the machine's number, or
+        both in one act, each audited on its own row when it changed; a turn
+        that changes nothing writes nothing. A switch needs its board, and a
+        board the store does not know is refused by name. The first turn of
+        a board to on stamps that board's `first_on_at`, the moment its rail
+        is measured against."""
+        if lanes is not None and lanes < 0:
             raise StoreRefusal("The dial's number of fix lanes cannot be below zero.")
+        if on is not None and project is None:
+            raise StoreRefusal("A switch is one board's: name the board to turn it on or off.")
         with self._session() as session, session.begin():
-            row = session.get(DialRow, 1)
-            if row is None:
-                row = DialRow(id=1, on=False, lanes=1, changed_at=None, first_on_at=None)
-                session.add(row)
-            if row.on == on and row.lanes == lanes:
-                return _dial(row)
-            row.on = on
-            row.lanes = lanes
-            row.changed_at = at
-            if on and row.first_on_at is None:
-                row.first_on_at = at
-            session.add(DialChangeRow(at=at, actor=actor.value, on=on, lanes=lanes))
+            machine = session.get(DialRow, 1)
+            if machine is None:
+                machine = DialRow(id=1, project_slug=None, on=None, lanes=1)
+                session.add(machine)
+            if machine.lanes is None:
+                machine.lanes = 1
+            if lanes is not None and lanes != machine.lanes:
+                machine.lanes = lanes
+                machine.changed_at = at
+                session.add(
+                    DialChangeRow(at=at, actor=actor.value, project_slug=None, on=None, lanes=lanes)
+                )
+            if on is not None:
+                assert project is not None
+                if session.get(ProjectRow, project) is None:
+                    raise StoreRefusal(f'No project "{project}" is on the board.')
+                row = session.scalar(select(DialRow).where(DialRow.project_slug == project))
+                if row is None:
+                    row = DialRow(project_slug=project, on=False, lanes=None)
+                    session.add(row)
+                if row.on != on:
+                    row.on = on
+                    row.changed_at = at
+                    if on and row.first_on_at is None:
+                        row.first_on_at = at
+                    session.add(
+                        DialChangeRow(
+                            at=at,
+                            actor=actor.value,
+                            project_slug=project,
+                            on=on,
+                            lanes=machine.lanes,
+                        )
+                    )
             session.flush()
-            return _dial(row)
+        return self.dials()
 
     def dial_changes(self) -> list[DialChange]:
         with self._session() as session:
             rows = session.scalars(select(DialChangeRow).order_by(DialChangeRow.id))
             return [
-                DialChange(id=r.id, at=r.at, actor=Actor(r.actor), on=r.on, lanes=r.lanes)
+                DialChange(
+                    id=r.id,
+                    at=r.at,
+                    actor=Actor(r.actor),
+                    project=r.project_slug,
+                    on=r.on,
+                    lanes=r.lanes,
+                )
                 for r in rows
             ]
 
-    def record_rail_at_on(self, counts: list[RailCount]) -> bool:
-        """The rail as it stood when the dial was first turned on, once: a
-        second call writes nothing and answers False."""
+    def record_rail_at_on(self, rail: RailCount) -> bool:
+        """One board's rail as it stood when its switch was first turned on,
+        once: a second call for the same board writes nothing and answers
+        False. The rows plan 11 recorded for every board at the one dial's
+        first on (2026-09-05) stand as each of those boards' baseline."""
         with self._session() as session, session.begin():
-            if session.scalar(select(RailAtOnRow)) is not None:
+            recorded = select(RailAtOnRow).where(RailAtOnRow.project_slug == rail.project)
+            if session.scalar(recorded) is not None:
                 return False
-            for rail in counts:
-                for filer, count in rail.counts.items():
-                    session.add(
-                        RailAtOnRow(project_slug=rail.project, filer=filer.value, count=count)
-                    )
+            for filer, count in rail.counts.items():
+                session.add(RailAtOnRow(project_slug=rail.project, filer=filer.value, count=count))
             return True
 
     def rail_at_on(self) -> list[RailCount]:
@@ -3024,8 +3084,18 @@ def _windowless_session(row: WindowlessSessionRow) -> WindowlessSession:
     )
 
 
-def _dial(row: DialRow) -> Dial:
-    return Dial(on=row.on, lanes=row.lanes, changed_at=row.changed_at, first_on_at=row.first_on_at)
+def _dial(slug: str, row: DialRow | None, lanes: int) -> Dial:
+    """A board's switch from its row, or off when it has none, with the
+    machine's number beside it."""
+    if row is None:
+        return Dial(project=slug, on=False, lanes=lanes, changed_at=None, first_on_at=None)
+    return Dial(
+        project=slug,
+        on=bool(row.on),
+        lanes=lanes,
+        changed_at=row.changed_at,
+        first_on_at=row.first_on_at,
+    )
 
 
 def _fix_lane(row: FixLaneRow) -> FixLane:
