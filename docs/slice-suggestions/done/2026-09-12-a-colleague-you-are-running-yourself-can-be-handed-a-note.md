@@ -1,6 +1,6 @@
 # A colleague you are running yourself can be handed a note
 
-**Carried by:** docs/plans/2026-09-13-colleagues-ask-each-other-for-help-without-disturbing-each-others-work.md
+**Carried by:** docs/plans/done/2026-09-13-colleagues-ask-each-other-for-help-without-disturbing-each-others-work.md
 
 **Kind:** defect
 **Fix:** now — `docs/HOW-WE-WORK.md` §12 is the written intent ("a session that needs a colleague's judgment, or is asked for one, calls a colleague of either make warm through Needle's `call`"), the fix stays inside the call verb's ring beside the refusal it softens, and it removes the class — every interactive colleague of either make, bound to a card or not — rather than tonight's one Codex thread

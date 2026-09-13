@@ -1,6 +1,6 @@
 # A finished card stays finished when its old session is asked to read someone else's work
 
-**Carried by:** docs/plans/2026-09-13-colleagues-ask-each-other-for-help-without-disturbing-each-others-work.md
+**Carried by:** docs/plans/done/2026-09-13-colleagues-ask-each-other-for-help-without-disturbing-each-others-work.md
 
 **Kind:** defect
 **Fix:** now — `docs/HOW-WE-WORK.md` §11 says a column is either the owner's ruling or a machine fact with its evidence, and Executing's evidence is hands on *the work*; a session woken to read another card's change is not hands on this card's work, so the read that moves the card is wrong wherever it is made, and correcting that one read ends the class rather than this card's instance
