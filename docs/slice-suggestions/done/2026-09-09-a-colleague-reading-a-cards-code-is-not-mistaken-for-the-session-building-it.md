@@ -1,5 +1,7 @@
 # A colleague reading a card's code is not mistaken for the session building it
 
+**Carried by:** docs/plans/2026-09-13-colleagues-ask-each-other-for-help-without-disturbing-each-others-work.md
+
 **Kind:** defect
 **Fix:** now — the intent is written (`docs/INTENT.md`: the board shows what runs, truly; plan 57's ruling that a Codex worker is a row of the same list, read from its rollouts and checked in /proc; HOW-WE-WORK §11, a red word is a machine fact with named evidence); the fix stays inside the seam that names a card's session from the sessions whose directory is its lane (`board/lane.py::lane_for`, the winner among rows in the worktree), and it removes the class — every reader of either make that is run inside a lane's copy of the code, a review pass or a search, and not this one card.
 **Found by:** the owner, 2026-09-09 16:26, from Needle's board: card #107 read "session died — the session on it ended 2 min ago with nothing landed … the cause is not established", with a Resume door that failed ("01a0868c is a Codex session: it runs on no subscription slot and has no wall to move away from"), while the lane's own session (hrme 89b15944, interactive) was building it
