@@ -419,6 +419,19 @@ class Dial:
         ungraded = triage is not None and triage.grade is None
         if routed.state not in (Routing.NEEDS_TRIAGE, Routing.STALE) and not ungraded:
             return False
+        if routed.state == Routing.NEEDS_TRIAGE and triage is not None and not ungraded:
+            # A graded reading already stands on this exact text — `routing_of`
+            # would have said STALE otherwise — and it left the card at needs
+            # triage: a `now` the corpus does not mark `now`, a `when` against
+            # another mark, a split. Every one of those waits on a commit
+            # rewriting the document, which no reading can write, so reading
+            # again lands the same answer and leaves the card exactly where it
+            # is — and the card, being the oldest unread, takes the seat again
+            # the next beat and forever (card #138: 803 readings of two Hello
+            # Revenue cards in 23 hours, while 140 defects and every parked
+            # card waited behind them). The commit moves the document, the row
+            # goes STALE, and the door above opens again.
+            return False
         if triage_open:
             return False
         lane = snapshot.lanes.get(card.number)

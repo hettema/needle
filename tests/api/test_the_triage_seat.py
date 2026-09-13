@@ -218,6 +218,41 @@ def test_a_reading_is_stricter_at_once_and_a_looser_one_authorises_nothing(
     assert routing(client, defect)["state"] == "triaged now"
 
 
+def test_a_card_whose_reading_cannot_move_it_is_never_read_again(
+    client: TestClient, machine_floor: Floor, repo: Path, store: Store, defect: int, capsys
+):
+    """The loop card #138 was written for. A reading lands `now` on a
+    document the corpus marks `his`: the row routes to nobody until a commit
+    rewrites the mark, and no reading can write that commit. The seat reads
+    one card a beat and takes the oldest unread first, so before this guard
+    the same card took every beat forever — 803 readings of two Hello
+    Revenue cards in 23 hours, while 140 defects and every parked card
+    waited behind them."""
+    edit(repo, PATH, "**Fix:** now `", "**Fix:** his `")
+    client.app.state.loops.live.rescan("proj")
+    reconcile(client)
+    verify(client, machine_floor, defect)
+    capsys.readouterr()
+    where = routing(client, defect)
+    assert where["state"] == "needs triage"
+    assert "never routes more freely than the corpus" in where["why"]
+
+    for _ in range(3):
+        before = len(machine_floor.state()["launch_log"])
+        tick(client)
+        opened = reading_or_nothing(machine_floor, before)
+        assert opened is None or reading_for(machine_floor) != defect, (
+            "a reading that cannot change the card's routing is never opened again"
+        )
+
+    # The commit the row waits on moves the document, and the door opens.
+    edit(repo, PATH, "**Fix:** his `", "**Fix:** now `")
+    client.app.state.loops.live.rescan("proj")
+    reconcile(client)
+    assert routing(client, defect)["state"] == "stale", "the text it judged has changed"
+    read_the_rail_until(client, machine_floor, defect)
+
+
 def reading_or_nothing(machine_floor: Floor, before: int) -> dict | None:
     log = machine_floor.state()["launch_log"]
     return log[-1] if len(log) > before else None
