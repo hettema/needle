@@ -1,6 +1,6 @@
 # Work that starts without you never goes live without you
 
-**Carried by:** docs/plans/2026-09-13-work-that-starts-without-you-never-goes-live-without-you.md
+**Carried by:** docs/plans/done/2026-09-13-work-that-starts-without-you-never-goes-live-without-you.md
 **Found by:** the owner, from the board's Idea door on 2026-09-12 (conversation 943300ef), asking whether he could turn Hello Revenue's auto-fix on and go to bed
 **Kind:** defect
 **Fix:** now — the intent is written (HOW-WE-WORK §1: a decision is his when acting would create external exposure beyond a bound he has already authorised, and Hello Revenue's close already names a change to stored data as the case that goes back to him), the fix stays inside its ring (the brief `board/brief.py` writes for a session the board starts, and what the board carries to his desk), and it removes the class — every project whose close reaches outside its own repository, judged by a check on the change rather than by an unattended session at three in the morning — not the one path.
