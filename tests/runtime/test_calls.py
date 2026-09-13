@@ -463,3 +463,34 @@ def test_the_one_reader_takes_the_answer_field_and_falls_back_to_the_first_line_
         '{"answer": "x", "how_known": "checked", "sources": [], "extra": 1}', encoding="utf-8"
     )
     assert calls.read_answer(call.answer).answer is None, "the shape is closed"
+
+
+def test_a_note_that_no_board_here_can_carry_is_refused_at_the_door(
+    machine_floor: Floor, runtime: Runtime, repo: Path, monkeypatch: pytest.MonkeyPatch
+):
+    """Card #137, item 4, found live on 2026-09-13 minutes after it shipped:
+    a note is carried by the board's word, and the board reads its own
+    records on its own machine. `needle call` runs where it is typed, so a
+    note handed from any other machine lands in a store the board never
+    sees — call 127's row was in the rented machine's store while the board
+    on the laptop held nothing past 93, and the address every rented
+    session's hook uses is a tunnel to that board. Recorded and silently
+    lost is the one outcome item 4 forbids; the caller learns at the door."""
+    from domain.machine import BoardMachine
+
+    working = colleague(runtime, repo, machine_floor, {"then": "work"})
+    assert (
+        runtime.call(working, brief="a question", name=working.name, answer="/srv/d/a.md").verdict
+        == LaunchVerdict.HANDED
+    ), "with the board here, the note is handed over"
+
+    monkeypatch.setattr(
+        machine,
+        "board_elsewhere",
+        lambda: BoardMachine(name="the-board-machine", host="board", command="needle"),
+    )
+    refused = runtime.call(working, brief="a question", name=working.name, answer="/srv/d/a.md")
+    assert refused.verdict == LaunchVerdict.DEAD
+    assert "cannot be carried" in (refused.reason or ""), refused.reason
+    assert "the-board-machine" in (refused.reason or "")
+    assert runtime.store.calls() == [], "no row written and nothing half-sent"

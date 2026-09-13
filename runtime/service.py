@@ -1402,7 +1402,34 @@ class Runtime:
                 "be called from here yet",
                 None,
             )
-        return launch.call(self.store, session, brief=brief, name=name, answer=answer)
+        asked = launch.call(self.store, session, brief=brief, name=name, answer=answer)
+        if asked.verdict is LaunchVerdict.HANDED:
+            # A note is carried by the board's word, and the board reads its
+            # own store on its own machine. `needle call` is a runtime verb
+            # and runs where it is typed, so a note handed anywhere but the
+            # board's machine lands in a store the board never sees.
+            # Verified live 2026-09-13, minutes after this shipped: handed
+            # from the rented machine, call 127's row sat in that machine's
+            # store while the board on the laptop held nothing past 93, and
+            # the address every rented session's hook uses is a tunnel to
+            # that board — so the note could not have arrived however long
+            # it stood. Recorded and silently lost is the one outcome item 4
+            # forbids, so it is refused at the door by name, as a colleague
+            # on another machine already is. The capability itself waits for
+            # a call that travels (card #83, item 4), filed beside this.
+            elsewhere = machine.board_elsewhere()
+            if elsewhere is not None:
+                return launch.dead(
+                    name,
+                    [],
+                    f"{session.short_id} cannot be resumed, and a note handed from "
+                    f"{self.here().name} cannot be carried: the board serves from "
+                    f"{elsewhere.name} and reads its own records, so a note written here never "
+                    f"reaches it. Hand it from {elsewhere.name}, or wait for the colleague's "
+                    "turn to end and call it warm",
+                    None,
+                )
+        return asked
 
     def ask(
         self,
