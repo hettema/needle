@@ -1118,7 +1118,7 @@ def test_a_live_guest_is_named_on_the_face_and_claimed_as_nothing():
     )
 
     assert lane.guests == [reader.short_id]
-    assert "A colleague is reading in its copy of the code" in lane.sentence
+    assert "In its copy of the code, on other work: " in lane.sentence
     assert lane.away is None, "not this card's session, so nothing of its own is lent"
     assert should_enter_executing(closed_card(), lane, closed_history()) is None
 

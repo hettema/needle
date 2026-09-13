@@ -456,3 +456,24 @@ def test_a_note_standing_is_never_read_as_a_colleague_that_finished_without_it(
     assert "has not been picked up" in said
     store = client.app.state.loops.live.store
     assert store.call(1).ended_at is None, "a standing note never ends the call"
+
+
+def test_a_note_reaches_its_colleague_even_where_the_board_holds_no_such_lane(
+    client: TestClient, machine_floor: Floor, repo: Path, capsys
+):
+    """The independent read of 2026-09-13, finding 2: the lane word returned
+    early when this pass's snapshot held no such lane, and took the
+    session's own address down with it — the note was swallowed, unstamped
+    and undelivered, while the caller had already been told it was handed
+    over. The session address answers by itself."""
+    terminal_id = "eeee0003-0000-4000-8000-000000000000"
+    nowhere = str(repo / ".claude" / "worktrees" / "card-4242-a-card-that-is-gone")
+    machine_floor.write_process("beta", terminal_id, os.getpid(), kind="cli", cwd=nowhere)
+    note = a_note(machine_floor)
+    assert main(["call", "eeee0003", str(note)]) == 0
+    capsys.readouterr()
+
+    said = word(client, nowhere, session=terminal_id)
+    assert len(said) == 1 and said[0].startswith("A colleague calls you with a question")
+    store = client.app.state.loops.live.store
+    assert store.call(1).picked_up_at is not None and store.notes_standing() == []

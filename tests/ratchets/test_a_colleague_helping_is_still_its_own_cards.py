@@ -15,8 +15,10 @@ Executing with nobody working on it, and the owner, looking at his board,
 asked whether the card was finished at all (card #135). The same thing
 happened again to card #82 on 2026-09-13, while this was being built.
 Both readings are the same mistake, and this refuses it: while a record
-names a colleague — the card it was started on, or an open call it is
-answering — the directory does not get to say.
+names a colleague — the card it was started on, or a call that took it
+away — the directory does not get to say. And the record has to be read
+for what it says: a call that handed a note took nothing away, and reading
+one as an absence tells the same lie in the other direction.
 
 **Asking a colleague for help never resumes or stops it.** The note exists
 because the two colleagues that most need reaching are the two that must
@@ -137,7 +139,9 @@ def facts(**changes) -> LaneFacts:
     return LaneFacts(**base)
 
 
-def an_open_call(session_id: str = VISITOR) -> Call:
+def an_open_call(session_id: str = VISITOR, *, handed: bool = False) -> Call:
+    """`handed` is a note handed over rather than a colleague resumed — the
+    call that takes nothing away."""
     return Call(
         id=1,
         session_id=session_id,
@@ -148,6 +152,8 @@ def an_open_call(session_id: str = VISITOR) -> Call:
         brief="A colleague calls you with a question.",
         caller=f"{PROJECT}/.claude/worktrees/card-9-elsewhere",
         called_at=NOW - timedelta(minutes=20),
+        handed_at=(NOW - timedelta(minutes=20)) if handed else None,
+        picked_up_at=None,
         moved=None,
         ended_at=None,
         words=None,
@@ -158,7 +164,7 @@ def an_open_call(session_id: str = VISITOR) -> Call:
     ("what", "records"),
     [
         (
-            "a colleague answering another card's call, sitting in this card's worktree",
+            "a colleague another card's call took away, sitting in this card's worktree",
             {"calls": [an_open_call()]},
         ),
         (
@@ -187,6 +193,24 @@ def test_a_card_is_never_claimed_by_whoever_is_sitting_in_its_copy_of_the_code(
     )
     assert told_by_the_record.died is None, (
         "nor is it this card's death when it ends (card #108, 2026-09-09)"
+    )
+
+
+def test_a_note_handed_to_a_colleague_moves_nothing_about_the_card_it_is_working_on():
+    """The other half of the same intent, and the one the first arm can
+    quietly invert: a note takes nothing away. The colleague reads it as
+    one more sentence in the turn it is already having, on its own card, in
+    its own worktree — so the card it is working on goes on saying so. A
+    reading that called a handed note an absence would report a card that
+    is being worked on as a card nobody is working on, which is the lie of
+    cards #135 and #82 the other way round (2026-09-13)."""
+    working = lane_for(a_card(), facts(calls=[an_open_call(handed=True)]))
+    untouched = lane_for(a_card(), facts())
+
+    assert working.state == untouched.state == LaneState.WORKING
+    assert working.session is not None and working.away is None and working.guests == []
+    assert working.sentence == untouched.sentence, (
+        "nothing on the helper's own card moved because it was handed a note"
     )
 
 

@@ -734,7 +734,19 @@ class Loops:
         words it reads, and the row stamped so each is said once (card #137,
         item 5). The words are the call's own brief: a colleague handed a
         note is told exactly what a colleague resumed with one is told, so
-        there is one form of asking however it arrives."""
+        there is one form of asking however it arrives.
+
+        The stamp goes on before the words leave, which is a choice and not
+        an accident: the hook that carries them has half a second and
+        swallows every failure, so a read cut off after this point loses
+        that note for good — it goes off the head and the caller's wait
+        reads "picked up, no answer yet" for ever. Said once and possibly
+        lost beats said twice, because a note reads as an instruction and a
+        colleague that acts on the same question twice is worse than one
+        that never sees it; the caller has the answer file either way and
+        can ask again. The honest cost of the choice, written down rather
+        than discovered (the independent read of 2026-09-13, hypothesis
+        1)."""
         said: list[str] = []
         now = clock.now()
         for call in self.live.store.notes_standing():
@@ -762,7 +774,15 @@ class Loops:
         now = clock.now()
         snapshot = live.snapshot
         if snapshot is None or number not in snapshot.lanes:
-            return Word(project=slug, card_number=number, sentences=[], read_at=now)
+            # The lane's own word needs the loop's read of it; a note handed
+            # to the session does not, and must not be dropped because this
+            # pass's snapshot holds no such lane — the board just started,
+            # or the directory looks like a lane whose card is gone. The
+            # session's own address answers by itself (the independent read
+            # of 2026-09-13, finding 2: the early return silently swallowed
+            # the note while the caller had been told it was handed over).
+            said = self.notes_handed_to(session_id) if session_id is not None else []
+            return Word(project=slug, card_number=number, sentences=said, read_at=now)
         store = self.live.store
         lane = snapshot.lanes[number]
         record = store.lane(slug, number)

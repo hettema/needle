@@ -1409,7 +1409,12 @@ class Store:
     def pick_up_call(self, call_id: int, at: datetime) -> None:
         """The colleague took the note up as its next word (card #137, item
         5). Stamped once: the stamp is what says the note was said, so the
-        delivery never repeats and the head stops showing it as standing."""
+        delivery never repeats and the head stops showing it as standing.
+
+        Written before the words reach the colleague, so a delivery cut off
+        after this stamps a note nobody read — said once and possibly lost,
+        against said twice. `api/loops.py::notes_handed_to` holds the
+        reasoning."""
         with self._session() as session, session.begin():
             row = session.get(CallRow, call_id)
             if row is not None and row.picked_up_at is None:

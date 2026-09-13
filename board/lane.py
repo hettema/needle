@@ -204,7 +204,7 @@ def elsewhere(session: Session, name: str, facts: LaneFacts) -> str | None:
 
     The board used to read a live session in a lane's directory as work on
     that lane, full stop. Two of its own records say otherwise and were
-    never asked. An open call names a colleague that is answering somebody
+    never asked. A call that *resumed* a colleague took it away to somebody
     else's question — it is where it is because that is where it lives, not
     because that card is moving (card #135, 2026-09-12: a finished card was
     dragged back into Executing the moment its old session was called to
@@ -213,9 +213,20 @@ def elsewhere(session: Session, name: str, facts: LaneFacts) -> str | None:
     read as the lane's own session and, when it ended, as the lane's death
     (card #108, 2026-09-09). A session no record names at all is this
     card's, as it has always been: the directory decides when nothing
-    truer does."""
+    truer does.
+
+    A call that handed its colleague a note took nothing away: the note
+    path resumes nothing and stops nothing, and the colleague reads the
+    note as one more sentence in the turn it is already having, on its own
+    card, in its own worktree. Reading a handed note as an absence would
+    have made this card's own headline flow — a note to a lane that is
+    mid-turn — report a card that is being worked on as a card nobody is
+    working on, which is the same lie the other way round (the independent
+    read of 2026-09-13, finding 1). So the discriminator is `handed_at`,
+    not whether the call is open: picked up or not, a note leaves the
+    colleague where it is."""
     for call in facts.calls:
-        if call.session_id == session.session_id:
+        if call.session_id == session.session_id and call.handed_at is None:
             return f"is answering a call from {_caller_words(call.caller, facts.project_path)}"
     started = facts.started_on.get(session.session_id)
     if started is not None and started != name:
@@ -459,9 +470,18 @@ def lane_for(card: Card, facts: LaneFacts) -> Lane:
     elif away is not None:
         # Nothing is working on this card, and nothing died either: its own
         # session is off answering someone else's question and will come
-        # back. The board says that instead of reading an ending into it.
+        # back. The board says that instead of reading an ending into it —
+        # keeping what the work already landed, which is a fact about the
+        # card and not about where its session is sitting.
         state = LaneState.ENDED
-        sentence = say(Meaning.QUIET, f"nothing is working on it: {away}")
+        landed = (
+            "its work landed on the shared branch and "
+            if folded
+            else "its close landed and "
+            if close_landed(card)
+            else ""
+        )
+        sentence = say(Meaning.QUIET, f"{landed}nothing is working on it: {away}", then=parked)
     elif winner is not None or record is not None or events or on_disk:
         state = LaneState.ENDED
         session_id = winner.session_id if winner is not None else None
@@ -542,8 +562,10 @@ def lane_for(card: Card, facts: LaneFacts) -> Lane:
 
     if guests:
         # A visitor is named and claimed as nothing: not this card's work,
-        # not this card's death (card #108).
-        visiting = f"A colleague is reading in its copy of the code ({', '.join(guests)})."
+        # not this card's death (card #108). "On other work" covers both
+        # kinds — a colleague started on another card, and this card's own
+        # session away on a call while another of its sessions works.
+        visiting = f"In its copy of the code, on other work: {', '.join(guests)}."
         sentence = f"{sentence} {visiting}" if sentence else say(Meaning.QUIET, visiting[:-1])
     if discussing:
         talk = f"In discussion with you ({', '.join(discussing)})."
@@ -839,10 +861,20 @@ def exit_for(
         )
     if lane.away is not None:
         # Its own session is lending itself to another card's question: the
-        # lane has not ended, so nothing below — none of which is about a
-        # close — may be concluded from it. A card wrongly opened while it
-        # was away still goes back above, because a close that landed is a
-        # fact about the card and not about the lane's ending (card #135).
+        # lane has a live session and has not ended, so nothing below — all
+        # of which reads an ending — may be concluded from it. A card
+        # wrongly opened while it was away still goes back above, because a
+        # close that landed is a fact about the card and not about the
+        # lane's ending (card #135).
+        #
+        # This holds a folded-but-unwritten-up lane in Executing rather
+        # than parking it on the owner under "no session wrote it up"
+        # (the independent read of 2026-09-13, hypothesis 2). That is
+        # deliberate: the session that will write it up is alive and comes
+        # back, so the sentence would be true only by accident, and the
+        # hold lifts by itself the moment the call ends. The close is the
+        # one fact above this line because a close that landed is finished
+        # work whoever is sitting where.
         return None
     if folded:
         return Exit(
