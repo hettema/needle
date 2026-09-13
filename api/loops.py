@@ -60,6 +60,7 @@ from board.lane import (
     STARTABLE_COLUMNS,
     LaneFacts,
     after_archive,
+    ago,
     card_of_cwd,
     close_is_current,
     close_landed,
@@ -693,23 +694,65 @@ class Loops:
         while self._pass_task is not None and not self._pass_task.done():
             await asyncio.shield(self._pass_task)
 
-    async def word(self, cwd: str, wrote: str | None = None) -> Word | None:
-        """What the board has not yet told the lane at `cwd` (plan 10, item
-        1), and the mark moved so it is told once; None when the directory
-        is no lane of a registered project. Reads the loop's last read and
-        the store, never git. `wrote` is the file the tool call just wrote,
-        when the hook says so: a note the lane wrote on the machine's
-        watercooler is stamped as heard, so it never hears its own."""
-        project = project_of_cwd(cwd, self.live.projects)
-        if project is None:
-            return None
-        number = card_of_cwd(cwd, project.project.path)
-        if number is None:
-            return None
-        async with self._word_lock:
-            return await asyncio.to_thread(self.word_now, project, number, wrote)
+    async def word(
+        self, cwd: str, wrote: str | None = None, session_id: str | None = None
+    ) -> Word | None:
+        """What the board has not yet told the session asking (plan 10, item
+        1; card #137, item 5), and the marks moved so it is told once; None
+        when there is nothing to say.
 
-    def word_now(self, live: LiveProject, number: int, wrote: str | None = None) -> Word:
+        Two addresses, one word. The working directory names a lane, which
+        hears its drift and its project's watercooler; the session id names
+        a colleague, which hears the notes handed to it. A colleague working
+        on no card has only the second, and before this card it had neither
+        — which is why a note written for it stood for ever. Reads the
+        loop's last read and the store, never git. `wrote` is the file the
+        tool call just wrote, when the hook says so: a note the lane wrote
+        on the machine's watercooler is stamped as heard, so it never hears
+        its own."""
+        project = project_of_cwd(cwd, self.live.projects)
+        number = card_of_cwd(cwd, project.project.path) if project is not None else None
+        async with self._word_lock:
+            if project is not None and number is not None:
+                return await asyncio.to_thread(
+                    self.word_now, project, number, wrote, session_id
+                )
+            if session_id is None:
+                return None
+            said = await asyncio.to_thread(self.notes_handed_to, session_id)
+            if not said:
+                return None
+            return Word(
+                project=project.project.slug if project is not None else "",
+                card_number=None,
+                sentences=said,
+                read_at=clock.now(),
+            )
+
+    def notes_handed_to(self, session_id: str) -> list[str]:
+        """The notes handed to this colleague and not yet picked up, as the
+        words it reads, and the row stamped so each is said once (card #137,
+        item 5). The words are the call's own brief: a colleague handed a
+        note is told exactly what a colleague resumed with one is told, so
+        there is one form of asking however it arrives."""
+        said: list[str] = []
+        now = clock.now()
+        for call in self.live.store.notes_standing():
+            if call.session_id != session_id:
+                continue
+            said.append(call.brief)
+            self.live.store.pick_up_call(call.id, now)
+        if said:
+            self.live.bump()
+        return said
+
+    def word_now(
+        self,
+        live: LiveProject,
+        number: int,
+        wrote: str | None = None,
+        session_id: str | None = None,
+    ) -> Word:
         """The word for one lane, and its mark moved. Before the loop's
         first read the board knows no lane's drift and says nothing rather
         than guess. The mark is written by this server's own store, so the
@@ -747,6 +790,10 @@ class Loops:
             if moved:
                 store.stamp_notes(slug, number, moved)
                 word = word.model_copy(update={"sentences": [*word.sentences, *said]})
+        if session_id is not None:
+            handed = self.notes_handed_to(session_id)
+            if handed:
+                word = word.model_copy(update={"sentences": [*word.sentences, *handed]})
         # Only a word that said something changed what the card shows; a
         # mark that moved silently (the baseline, the lane's own lines
         # going by) would otherwise turn every open page over for a line
@@ -932,6 +979,7 @@ class Loops:
                 missing=self.runtime.machine_is_reachable(),
                 roles=self.runtime.roles(),
                 machines=self._rooms,
+                notes=self._notes_standing(),
             )
         )
         here = next((r for r in self._rooms if r.here), None)
@@ -1053,6 +1101,29 @@ class Loops:
             log.info("%s (%s names no card on any board)", said, unit)
             return
         self.live.note(owner[0], owner[1], AuditKind.STOPPED, Actor.MACHINE, said)
+
+    def _notes_standing(self) -> list[str]:
+        """The notes handed over and not yet picked up, as the head says
+        them (card #137, item 5): who sent it, to whom and when. The board
+        keeps the beat's own word — it neither delivers nor chases; the
+        colleague's next act picks the note up and the line goes."""
+        said: list[str] = []
+        for call in self.live.store.notes_standing():
+            if call.handed_at is None:
+                continue
+            sender = self._who_called(call.caller)
+            said.append(
+                f"a note from {sender} is waiting for {call.name}, handed over "
+                f"{ago(call.handed_at, clock.now())} ago"
+            )
+        return said
+
+    def _who_called(self, caller: str) -> str:
+        """Who made a call, as the head says it: the card whose lane the
+        caller's directory is, else the directory itself."""
+        project = project_of_cwd(caller, self.live.projects)
+        number = card_of_cwd(caller, project.project.path) if project is not None else None
+        return f"#{number}" if number is not None else caller
 
     def _room_of(self, machine_name: str) -> Headroom:
         """The room of the machine a session runs on, read fresh (card #83):
@@ -1290,6 +1361,8 @@ class Loops:
         return LaneFacts(
             project_path=path,
             sessions=sessions,
+            started_on=store.started_on([s.session_id for s in sessions]),
+            calls=store.calls(open_only=True),
             events=store.hook_events(slug),
             discussions=store.discussions(slug),
             records=records,

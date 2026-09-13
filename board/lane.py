@@ -19,6 +19,7 @@ from board.collision import drift
 from board.sequencing import holding, where
 from board.title import hold_sentence
 from domain.audit import AuditEntry, AuditKind
+from domain.call import Call
 from domain.card import Actor, Card
 from domain.column import Column
 from domain.document import DocumentKind
@@ -88,6 +89,13 @@ class LaneFacts(BaseModel):
     """Each machine whose reading is not this pass's, with when it last
     answered (card #123): a lane on one says so on its card, so an old
     reading is never mistaken for a live one."""
+    started_on: dict[str, str] = {}
+    """The card each session was started on, by session id, from the board's
+    own record (card #115). A session absent here has no record that says,
+    and the directory decides — which is what every reader did before this."""
+    calls: list[Call] = []
+    """The calls still open: one names a colleague that is answering somebody
+    else's question, wherever it happens to be sitting (card #135)."""
 
 
 def card_of_cwd(cwd: str, project_path: str) -> int | None:
@@ -182,6 +190,39 @@ def _sessions_in(path: str, name: str, facts: LaneFacts, discussing: set[str]) -
     ]
 
 
+def _caller_words(caller: str, project_path: str) -> str:
+    """Who made a call, as a card says it: the card number when the caller
+    was a lane of this project, else the directory it was made from."""
+    number = card_of_cwd(caller, project_path)
+    return f"#{number}" if number is not None else caller
+
+
+def elsewhere(session: Session, name: str, facts: LaneFacts) -> str | None:
+    """Why a session sitting in this card's copy of the code is not hands on
+    this card's work — a clause the caller puts after its short id — or
+    None when it is hands on it.
+
+    The board used to read a live session in a lane's directory as work on
+    that lane, full stop. Two of its own records say otherwise and were
+    never asked. An open call names a colleague that is answering somebody
+    else's question — it is where it is because that is where it lives, not
+    because that card is moving (card #135, 2026-09-12: a finished card was
+    dragged back into Executing the moment its old session was called to
+    read another card's change). And the slot record names the card a
+    colleague was started on — a reader run inside a lane's worktree was
+    read as the lane's own session and, when it ended, as the lane's death
+    (card #108, 2026-09-09). A session no record names at all is this
+    card's, as it has always been: the directory decides when nothing
+    truer does."""
+    for call in facts.calls:
+        if call.session_id == session.session_id:
+            return f"is answering a call from {_caller_words(call.caller, facts.project_path)}"
+    started = facts.started_on.get(session.session_id)
+    if started is not None and started != name:
+        return f"was started on {started}"
+    return None
+
+
 def _winner(sessions: list[Session]) -> Session | None:
     live = [s for s in sessions if s.pid is not None]
     if live:
@@ -244,8 +285,21 @@ def lane_for(card: Card, facts: LaneFacts) -> Lane:
         name, path = record.name, record.path
     on_disk = path in facts.worktrees
     discussion_ids = {d.session_id for d in facts.discussions}
-    here = _sessions_in(path, name, facts, discussion_ids)
+    in_the_lane = _sessions_in(path, name, facts, discussion_ids)
+    absent = {s.session_id: elsewhere(s, name, facts) for s in in_the_lane}
+    here = [s for s in in_the_lane if absent[s.session_id] is None]
     winner = _winner(here)
+    visitors = [s for s in in_the_lane if absent[s.session_id] is not None and s.pid is not None]
+    # Its own session, lent out while nothing of its own is working: the
+    # card has not ended and no work is happening on it. A card that has a
+    # live session of its own as well is working, whatever it also lends.
+    lent = (
+        next((s for s in visitors if facts.started_on.get(s.session_id) == name), None)
+        if winner is None or winner.pid is None
+        else None
+    )
+    away = f"{lent.short_id} {absent[lent.session_id]}" if lent is not None else None
+    guests = [s.short_id for s in visitors if s is not lent]
     events = [e for e in facts.events if e.card_number == card.number]
     words = _last_words(events, winner)
     said = words.message if words else None
@@ -402,6 +456,12 @@ def lane_for(card: Card, facts: LaneFacts) -> Lane:
             sentence = _stopped(
                 ago(said_at or winner.updated_at, facts.now), where, first_line(said), moved
             )
+    elif away is not None:
+        # Nothing is working on this card, and nothing died either: its own
+        # session is off answering someone else's question and will come
+        # back. The board says that instead of reading an ending into it.
+        state = LaneState.ENDED
+        sentence = say(Meaning.QUIET, f"nothing is working on it: {away}")
     elif winner is not None or record is not None or events or on_disk:
         state = LaneState.ENDED
         session_id = winner.session_id if winner is not None else None
@@ -480,6 +540,11 @@ def lane_for(card: Card, facts: LaneFacts) -> Lane:
         state = LaneState.NONE
         sentence = ""
 
+    if guests:
+        # A visitor is named and claimed as nothing: not this card's work,
+        # not this card's death (card #108).
+        visiting = f"A colleague is reading in its copy of the code ({', '.join(guests)})."
+        sentence = f"{sentence} {visiting}" if sentence else say(Meaning.QUIET, visiting[:-1])
     if discussing:
         talk = f"In discussion with you ({', '.join(discussing)})."
         # A discussion beside a lane is one more clause of its sentence; on
@@ -504,6 +569,8 @@ def lane_for(card: Card, facts: LaneFacts) -> Lane:
         question=question,
         said=said,
         said_at=said_at,
+        away=away,
+        guests=guests,
         discussing=discussing,
         window_open=window_open,
         hands_on_since=since if state in HANDS_ON else None,
@@ -618,7 +685,13 @@ def owner_moved_out_after(history: list[AuditEntry], since: datetime | None) -> 
 
 
 def should_enter_executing(card: Card, lane: Lane, history: list[AuditEntry]) -> str | None:
-    """The one sentence that moves a card into Executing, or None to leave it."""
+    """The one sentence that moves a card into Executing, or None to leave
+    it. A lane whose own session is away answering a call has no hands on
+    it (card #135): its state already says so, and this says so too, since
+    the column a card sits in is a machine fact and the fact here is that
+    nobody is working."""
+    if lane.away is not None:
+        return None
     if lane.state not in HANDS_ON or card.place.column == Column.EXECUTING:
         return None
     since = lane.hands_on_since
@@ -764,6 +837,13 @@ def exit_for(
             reason="the close landed, but the WATCH row names no signal the board can read",
             evidence=Evidence.LANE_ENDED,
         )
+    if lane.away is not None:
+        # Its own session is lending itself to another card's question: the
+        # lane has not ended, so nothing below — none of which is about a
+        # close — may be concluded from it. A card wrongly opened while it
+        # was away still goes back above, because a close that landed is a
+        # fact about the card and not about the lane's ending (card #135).
+        return None
     if folded:
         return Exit(
             column=Column.DECISION_MOMENT,

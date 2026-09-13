@@ -51,7 +51,7 @@ from pydantic import BaseModel
 
 from board.dial import who_is_home
 from domain.board import Beat
-from domain.call import Answer, CallOutcome, CallVerdict
+from domain.call import Answer, Call, CallOutcome, CallVerdict
 from domain.dial import ScopePids, ScopeState, ScopeStop
 from domain.ending import Ended, Sighting
 from domain.gate import Gate
@@ -970,7 +970,8 @@ def call(runtime: Runtime, args: argparse.Namespace) -> int:
     # otherwise have landed its answer before the call it answers.
     called_at = clock.now()
     launch = runtime.call(who, brief=brief, name=name, answer=answer)
-    if launch.verdict != LaunchVerdict.ALIVE or launch.session is None:
+    handed = launch.verdict == LaunchVerdict.HANDED
+    if (launch.verdict != LaunchVerdict.ALIVE and not handed) or launch.session is None:
         _emit(args, launch, describe_launch(launch))
         return 1
     record = runtime.store.record_call(
@@ -982,7 +983,21 @@ def call(runtime: Runtime, args: argparse.Namespace) -> int:
         brief=brief,
         caller=os.getcwd(),
         at=called_at,
+        handed_at=called_at if handed else None,
     )
+    if handed:
+        # Nothing was resumed and nothing stopped: the colleague picks the
+        # note up as its next word, which may be a while if it is idle at
+        # its prompt — so the wait says handed over rather than silence,
+        # and the board's head shows the note standing (card #137).
+        text = (
+            f"call {record.id}: the note is handed to {launch.session.short_id} — "
+            f"{launch.reason}\n"
+            f"  it reads {note}; the answer lands in {answer}\n"
+            f"  wait for it: needle wait {record.id}"
+        )
+        _emit(args, record, text)
+        return 0
     placement = launch.placement
     where = rung_words(placement.model, placement.slot) if placement else launch.session.slot
     forked = f" (resumed from {short})" if launch.session.session_id != session_id else ""
@@ -1060,6 +1075,27 @@ def _wait_text(verdict: CallVerdict) -> str:
     return f"{verdict.outcome.value}: {verdict.words}"
 
 
+def _standing(record: Call, doing: str | None) -> str:
+    """Where the call stands when nothing has landed (card #137, item 5). A
+    note handed over says whether it has been picked up, because "still at
+    work" would be a guess about a colleague that may not have read it yet
+    — and a caller left with silence is the failure the note was built to
+    avoid."""
+    if record.handed_at is not None and record.picked_up_at is None:
+        return (
+            f"the note was handed to {record.name} at "
+            f"{record.handed_at.isoformat(timespec='seconds')} and has not been picked up; "
+            "it arrives as that colleague's next word"
+        )
+    if record.handed_at is not None:
+        return (
+            f"{record.name} picked the note up at "
+            f"{record.picked_up_at.isoformat(timespec='seconds') if record.picked_up_at else '—'}"
+            + (f" and is at work ({doing})" if doing else " and has not answered yet")
+        )
+    return f"{record.name} is still at work" + (f" ({doing})" if doing else "")
+
+
 def wait(runtime: Runtime, args: argparse.Namespace) -> int:
     """Wait on one call until its answer lands or changes, the colleague is
     blocked, moved or ends without it, or the ceiling passes — and say
@@ -1114,8 +1150,7 @@ def wait(runtime: Runtime, args: argparse.Namespace) -> int:
             doing = doing_sentence(session, clock.now()) if session is not None else None
             verdict = CallVerdict(
                 outcome=CallOutcome.NOTHING,
-                words=f"nothing in {args.ceiling:.0f} s; {record.name} is still at work"
-                + (f" ({doing})" if doing else ""),
+                words=f"nothing in {args.ceiling:.0f} s; " + _standing(record, doing),
                 session_id=record.session_id,
                 slot=record.slot,
             )

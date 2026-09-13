@@ -58,7 +58,14 @@ def judge(
     the rescue's reason when a live fork of the called session exists;
     `tool_error` the last tool error the colleague's own log holds, so a
     turn that ended on one is reported as that error and never as a
-    colleague that merely finished without its note (card #110, item 5)."""
+    colleague that merely finished without its note (card #110, item 5).
+
+    A note handed over and not yet picked up is waiting, not finished: the
+    colleague was never resumed, so a turn it never started cannot have
+    ended without the note, and its being idle at its prompt is exactly the
+    state the note waits through (card #137, item 5). A colleague whose
+    process is gone is another matter — nothing will carry the note to it
+    now — and that ending still stands."""
     landed = answer_landed(call)
     if landed is not None:
         read = read_answer(call.answer)
@@ -93,6 +100,7 @@ def judge(
     if (
         tool_error
         and not why_ended
+        and not standing(call)
         and (session is None or session.pid is None or session.state in _TURN_OVER)
     ):
         return CallVerdict(
@@ -131,6 +139,8 @@ def judge(
             slot=call.slot,
         )
     if session.state in (SessionState.DONE, SessionState.IDLE):
+        if standing(call):
+            return None
         return CallVerdict(
             outcome=CallOutcome.ENDED,
             words=f"{session.short_id} finished its turn without its note ({call.answer})",
@@ -138,6 +148,11 @@ def judge(
             slot=call.slot,
         )
     return None
+
+
+def standing(call: Call) -> bool:
+    """A note handed over that nobody has picked up yet (card #137)."""
+    return call.handed_at is not None and call.picked_up_at is None
 
 
 @dataclass

@@ -181,6 +181,7 @@ export interface MachineState {
   roles?: string[] | null;
   machines?: MachineRoom[];
   beat?: Beat | null;
+  notes?: string[];
 }
 
 export interface OwnerAsk {

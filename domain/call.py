@@ -49,6 +49,15 @@ class Call(BaseModel):
     """The working directory the call was made from: a lane's worktree when a
     lane called, so the lane hears the answer as its word."""
     called_at: datetime
+    handed_at: datetime | None = None
+    """When the note was handed over instead of the colleague resumed (card
+    #137): a colleague in a terminal of the owner's own, or one mid-turn, is
+    never resumed beside itself, so the note waits for its next word. None
+    for a call that resumed its colleague warm."""
+    picked_up_at: datetime | None = None
+    """When the colleague took the note up, as its next word. None while it
+    is still standing, which is what the head and the wait both say rather
+    than answering with silence."""
     moved: str | None
     """The runtime's words when the colleague was moved after the call."""
     ended_at: datetime | None

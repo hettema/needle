@@ -3,7 +3,7 @@ import type { Gate } from "./gate";
 import type { Session } from "./session";
 import type { Placement, Rung } from "./slot";
 
-export const LAUNCH_VERDICT_VALUES = ["alive", "dead", "unconfirmed"] as const;
+export const LAUNCH_VERDICT_VALUES = ["alive", "dead", "unconfirmed", "handed"] as const;
 export type LaunchVerdict = (typeof LAUNCH_VERDICT_VALUES)[number];
 
 export interface Attempt {

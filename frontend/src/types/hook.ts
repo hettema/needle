@@ -41,7 +41,7 @@ export interface HookPosted {
 
 export interface Word {
   project: string;
-  card_number: number;
+  card_number: number | null;
   sentences: string[];
   read_at: string;
 }

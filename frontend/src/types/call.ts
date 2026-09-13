@@ -22,6 +22,8 @@ export interface Call {
   brief: string;
   caller: string;
   called_at: string;
+  handed_at?: string | null;
+  picked_up_at?: string | null;
   moved: string | null;
   ended_at: string | null;
   words: string | null;

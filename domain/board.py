@@ -391,6 +391,13 @@ class MachineState(BaseModel):
     the wrong machine is loud. Empty until the loop has read them."""
     beat: Beat | None = None
     """The last pass's times (card #123, item 4); None until one ran."""
+    notes: list[str] = []
+    """Every note one colleague handed another and nobody has picked up
+    yet, one sentence each: who sent it, to whom, and when (card #137,
+    item 5). A note waits for its colleague's next word, which may be a
+    long time when that colleague sits idle at its prompt, so the head
+    shows it standing rather than letting it be lost. Empty when none
+    stands, which is the ordinary state."""
 
 
 class BoardState(BaseModel):

@@ -123,6 +123,15 @@ class SessionSlot(BaseModel):
     session_id: str
     slot: str
     card: str
+    """What the session was last recorded for: the card at a Start, the
+    call's name when it was called away. Overwritten by every later write,
+    which is why it cannot say what started it — `started_on` does."""
+    started_on: str | None = None
+    """The card this session was started on, kept whatever it is called
+    into later (card #115): the runtime writes it once and never over it,
+    so the board's picture of whose colleague this is does not move when
+    someone asks it for help. None for a record written before 2026-09-13,
+    and for a colleague nobody started on a card — never guessed at."""
     scope: str
     recorded_at: datetime
     machine: str = ""

@@ -49,6 +49,11 @@ class LaunchVerdict(StrEnum):
     """The registry recorded a death, with its reason, or the process went away."""
     UNCONFIRMED = "unconfirmed"
     """Neither by the deadline; the caller says so rather than claiming either."""
+    HANDED = "handed"
+    """Nothing was launched: the colleague could not be resumed — it runs in
+    a terminal of the owner's own, or is mid-turn — and the note was handed
+    to it instead, to be picked up as its next word (card #137). The session
+    is the colleague's own row, untouched."""
 
 
 class Attempt(BaseModel):

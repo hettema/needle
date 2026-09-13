@@ -11,8 +11,17 @@ from domain.window import WindowKind
 AT = datetime(2026, 9, 4, 10, 0, tzinfo=UTC)
 
 
-def _slot(session_id: str, slot: str, card: str, scope: str) -> SessionSlot:
-    return SessionSlot(session_id=session_id, slot=slot, card=card, scope=scope, recorded_at=AT)
+def _slot(
+    session_id: str, slot: str, card: str, scope: str, started_on: str | None = None
+) -> SessionSlot:
+    return SessionSlot(
+        session_id=session_id,
+        slot=slot,
+        card=card,
+        started_on=started_on,
+        scope=scope,
+        recorded_at=AT,
+    )
 
 
 def test_a_session_slot_is_written_once_and_updated_in_place(store):
@@ -23,6 +32,32 @@ def test_a_session_slot_is_written_once_and_updated_in_place(store):
     assert record is not None and record.slot == "beta"
     assert [r.session_id for r in store.session_slots()] == ["s1"], "the same session is one row"
     assert store.session_slot("unknown") is None
+
+
+def test_the_card_a_session_was_started_on_is_written_once_and_never_over(store):
+    """Card #115: a warm call rewrote the one row that said which card a
+    session was started on with the call's own name, so an hour later the
+    board could not tell a lane's author from a reader in its directory."""
+    store.record_session_slot(_slot("s9", "alpha", "card-1", "u", started_on="card-1"))
+    store.record_session_slot(_slot("s9", "alpha", "call-abc", "call-abc.scope", "call-abc"))
+
+    record = store.session_slot("s9")
+    assert record is not None
+    assert record.card == "call-abc", "what it runs as now moves"
+    assert record.started_on == "card-1", "what started it does not"
+    assert store.started_on(["s9"]) == {"s9": "card-1"}
+
+
+def test_a_record_written_before_the_field_existed_names_no_card_and_is_never_guessed_at(store):
+    store.record_session_slot(_slot("s10", "alpha", "card-2", "u"))
+    assert store.session_slot("s10").started_on is None
+    assert store.started_on(["s10"]) == {}, "absent, so the reader falls back to the directory"
+    assert store.started_on([]) == {}
+
+    # A later write that does bring one fills the empty field: a session
+    # rescoped or moved after this landed says what started it from then on.
+    store.record_session_slot(_slot("s10", "alpha", "card-2", "u", started_on="card-2"))
+    assert store.started_on(["s10"]) == {"s10": "card-2"}
 
 
 def test_clearing_rescues_leaves_the_slot_record_standing(store):

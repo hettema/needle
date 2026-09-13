@@ -73,7 +73,13 @@ class Word(BaseModel):
     lane's HeardMark."""
 
     project: str
-    card_number: int
+    """The project the lane belongs to; empty for a word to a colleague
+    working on no card, which belongs to none."""
+    card_number: int | None
+    """The card whose lane hears it; None for a word carrying only the
+    notes handed to a colleague, which may be on no card at all (card
+    #137, item 4) — a colleague with no address is exactly the colleague
+    nobody could reach."""
     sentences: list[str]
     read_at: datetime
     """When the loop last read the lane the drift comes from: the same

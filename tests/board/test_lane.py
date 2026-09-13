@@ -16,6 +16,7 @@ from board.lane import (
 )
 from board.signals import parse_watch
 from domain.audit import AuditEntry, AuditKind
+from domain.call import Call
 from domain.card import Actor, Card, CardOrigin, DocumentLink, Place
 from domain.column import Column
 from domain.ending import Cause, Death
@@ -134,6 +135,44 @@ def facts(**changes) -> LaneFacts:
     )
     base.update(changes)
     return LaneFacts(**base)
+
+
+def a_call(session_id: str, caller: str, *, ended: bool = False) -> Call:
+    """One call to a colleague, as the store answers it."""
+    return Call(
+        id=1,
+        session_id=session_id,
+        slot="alpha",
+        name="colleague",
+        note="/home/dennis/.cache/needle/notes/n.md",
+        answer="/home/dennis/.cache/needle/notes/from-x-re-n.md",
+        brief="A colleague calls you with a question.",
+        caller=caller,
+        called_at=NOW - timedelta(minutes=10),
+        moved=None,
+        ended_at=NOW if ended else None,
+        words=None,
+    )
+
+
+def lane_record(**changes) -> LaneRecord:
+    base = dict(
+        project="proj",
+        card_number=7,
+        name="card-7-the-thing",
+        path=LANE,
+        branch="card-7-the-thing",
+        birth="aaa",
+        tip="bbb",
+        first_seen=NOW - timedelta(days=2),
+        last_seen=NOW,
+        gone_at=None,
+        folded_at=NOW - timedelta(hours=6),
+        trunk_synced_at=NOW - timedelta(hours=6),
+        main_synced_at=None,
+    )
+    base.update(changes)
+    return LaneRecord(**base)
 
 
 def moved(
@@ -914,3 +953,194 @@ def test_a_plan_conversation_for_several_cards_is_one_line_on_the_rail():
         )
     ]
     assert [c.what for c in conversations_alive([session()], idea)] == ["Idea"]
+
+
+# ── whose colleague is in the lane (card #137, items 2 and 3) ──────────
+
+
+CLOSED = [
+    Row(kind=RowKind.DELIVERED, text="the work", at=NOW - timedelta(days=1)),
+]
+"""A card whose close landed: the plan archived and DELIVERED written."""
+
+
+def closed_card(column: Column = Column.EXECUTED) -> Card:
+    return card(column=column, rows=CLOSED, archived=True)
+
+
+def closed_history(entered_again_at: datetime | None = None) -> list[AuditEntry]:
+    entries = [
+        moved(Column.UP_NEXT, Column.EXECUTING, Actor.MACHINE, NOW - timedelta(days=2), id=1),
+        row_written(RowKind.DELIVERED, NOW - timedelta(days=1), id=2),
+        moved(Column.EXECUTING, Column.EXECUTED, Actor.SESSION, NOW - timedelta(days=1), id=3),
+    ]
+    if entered_again_at is not None:
+        entries.append(
+            moved(Column.EXECUTED, Column.EXECUTING, Actor.MACHINE, entered_again_at, id=4)
+        )
+    return list(reversed(entries))
+
+
+def test_a_colleague_answering_another_cards_call_is_not_hands_on_its_own_card():
+    """Card #135, 2026-09-12: card #123's close had landed and its session
+    was stopped; card #80's lane called that session back to read its
+    change, and the board read a live session in #123's worktree as work on
+    #123 and dragged the finished card into Executing with nobody on it."""
+    helping = session()
+    lane = lane_for(
+        closed_card(),
+        facts(
+            sessions=[helping],
+            records=[lane_record()],
+            started_on={helping.session_id: "card-7-the-thing"},
+            calls=[a_call(helping.session_id, "/srv/harbour/.claude/worktrees/card-9-elsewhere")],
+        ),
+    )
+
+    assert lane.state == LaneState.ENDED and lane.session is None
+    assert lane.away is not None and "answering a call from #9" in lane.away
+    assert "nothing is working on it" in lane.sentence
+    assert lane.died is None and lane.cause is None, "a colleague lent out is no death"
+    assert should_enter_executing(closed_card(), lane, closed_history()) is None
+
+
+def test_the_same_card_restarted_on_its_own_work_enters_as_it_always_did():
+    own = session(session_id="bbbb0002-0000-4000-8000-000000000000")
+    lane = lane_for(
+        closed_card(),
+        facts(
+            sessions=[own],
+            records=[lane_record()],
+            started_on={own.session_id: "card-7-the-thing"},
+            calls=[],
+        ),
+    )
+
+    assert lane.state == LaneState.WORKING and lane.session is not None
+    assert lane.away is None
+    assert should_enter_executing(closed_card(), lane, closed_history()) is not None
+
+
+def test_a_card_wrongly_opened_goes_back_where_its_close_put_it_with_nobody_touching_it():
+    """Card #135's second half: the exit read the close against the entry
+    that should never have happened, so a shipped card fell to Decision
+    moment under "no session wrote it up", which was false."""
+    helping = session()
+    record = lane_record()
+    lane = lane_for(
+        closed_card(column=Column.EXECUTING),
+        facts(
+            sessions=[helping],
+            records=[record],
+            started_on={helping.session_id: "card-7-the-thing"},
+            calls=[a_call(helping.session_id, "/srv/harbour/.claude/worktrees/card-9-elsewhere")],
+        ),
+    )
+    signal = parse_watch("WATCH: it holds — command `needle lanes proj` by 2026-10-13")
+
+    leaving = exit_for(
+        closed_card(column=Column.EXECUTING),
+        lane,
+        closed_history(NOW - timedelta(minutes=20)),
+        folded=True,
+        signal=signal,
+        since=record.first_seen,
+    )
+
+    assert leaving is not None and leaving.column == Column.EXECUTED
+    assert "the close landed" in leaving.reason
+
+
+def test_a_lane_whose_own_session_is_lent_out_is_not_read_as_a_lane_that_ended():
+    """The card is genuinely under way and its session was called away for
+    a moment: nothing is concluded from its silence, so it keeps its place
+    and is not swept out of Executing as a lane that died."""
+    helping = session()
+    record = lane_record(folded_at=None, trunk_synced_at=None)
+    lane = lane_for(
+        card(column=Column.EXECUTING),
+        facts(
+            sessions=[helping],
+            records=[record],
+            started_on={helping.session_id: "card-7-the-thing"},
+            calls=[a_call(helping.session_id, "/srv/harbour/.claude/worktrees/card-9-elsewhere")],
+        ),
+    )
+
+    assert lane.away is not None
+    assert (
+        exit_for(
+            card(column=Column.EXECUTING),
+            lane,
+            [],
+            folded=False,
+            signal=None,
+            since=record.first_seen,
+        )
+        is None
+    )
+
+
+def test_a_reader_started_on_another_card_is_a_guest_and_neither_the_work_nor_the_death():
+    """Card #108, 2026-09-09: a Codex review pass run with `--cd` set to the
+    lane's worktree ended a minute after it started, and the card turned red
+    with "session died" while the lane's own session was building all along."""
+    building = session(session_id="bbbb0003-0000-4000-8000-000000000000")
+    reader = session(
+        session_id="cccc0004-0000-4000-8000-000000000000", pid=None, state=SessionState.ENDED
+    )
+    lane = lane_for(
+        card(column=Column.EXECUTING),
+        facts(
+            sessions=[building, reader],
+            records=[lane_record(folded_at=None, trunk_synced_at=None)],
+            started_on={
+                building.session_id: "card-7-the-thing",
+                reader.session_id: "card-9-elsewhere",
+            },
+        ),
+    )
+
+    assert lane.state == LaneState.WORKING, "the card's own colleague speaks for it"
+    assert lane.session is not None and lane.session.session_id == building.session_id
+    assert lane.died is None and lane.guests == []
+
+
+def test_a_live_guest_is_named_on_the_face_and_claimed_as_nothing():
+    reader = session(session_id="cccc0005-0000-4000-8000-000000000000")
+    lane = lane_for(
+        closed_card(),
+        facts(
+            sessions=[reader],
+            records=[lane_record()],
+            started_on={reader.session_id: "card-9-elsewhere"},
+        ),
+    )
+
+    assert lane.guests == [reader.short_id]
+    assert "A colleague is reading in its copy of the code" in lane.sentence
+    assert lane.away is None, "not this card's session, so nothing of its own is lent"
+    assert should_enter_executing(closed_card(), lane, closed_history()) is None
+
+
+def test_a_session_no_record_names_is_still_the_lane_by_its_directory():
+    """The fallback the plan keeps: a record written before 2026-09-13, or a
+    colleague nobody started through the board, is read as it always was."""
+    unknown = session()
+    lane = lane_for(card(), facts(sessions=[unknown], records=[lane_record()]))
+    assert lane.state == LaneState.WORKING and lane.session is not None
+    assert lane.away is None and lane.guests == []
+
+
+def test_a_call_that_ended_gives_the_colleague_back_to_its_own_card():
+    helping = session()
+    lane = lane_for(
+        card(column=Column.EXECUTING),
+        facts(
+            sessions=[helping],
+            records=[lane_record(folded_at=None, trunk_synced_at=None)],
+            started_on={helping.session_id: "card-7-the-thing"},
+            calls=[],
+        ),
+    )
+    assert lane.away is None and lane.state == LaneState.WORKING

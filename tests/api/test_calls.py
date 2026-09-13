@@ -30,10 +30,14 @@ repo = doors.repo
 quick = doors.quick
 
 
-def word(client: TestClient, cwd: str, wrote: str | None = None) -> list[str]:
+def word(
+    client: TestClient, cwd: str, wrote: str | None = None, session: str | None = None
+) -> list[str]:
     params = {"cwd": cwd}
     if wrote:
         params["wrote"] = wrote
+    if session:
+        params["session"] = session
     response = client.get("/api/word", params=params)
     assert response.status_code == 200, response.text
     return response.json()["sentences"]
@@ -350,3 +354,105 @@ def test_a_codex_worker_that_ends_with_nothing_is_reported_before_the_ceiling(
     assert "not running:" in said and "no session found" in said
     store = client.app.state.loops.live.store
     assert len(store.calls()) == 1, "a launch that failed recorded no second call"
+
+
+# ── items 4 and 5: the note a colleague picks up as its next word ──────
+
+
+def test_a_note_reaches_a_colleague_on_no_card_and_stands_until_it_is_picked_up(
+    client: TestClient, machine_floor: Floor, repo: Path, capsys
+):
+    """Card #137, items 4 and 5. Until 2026-09-13 a colleague running in a
+    terminal the owner opened himself was refused by name, and the only
+    other way to reach one wanted a project and a card number — so a
+    colleague working on no card had no address at all, and the
+    coordination the owner ordered on card #83 never happened."""
+    terminal_id = "eeee0001-0000-4000-8000-000000000000"
+    machine_floor.write_process("beta", terminal_id, os.getpid(), kind="cli", cwd=str(repo))
+    note = a_note(machine_floor)
+    answer = machine_floor.discussion / "from-terminal-re-topic.md"
+
+    assert (
+        main(["call", "eeee0001", str(note), "--objective", "Say which.", "--answer", str(answer)])
+        == 0
+    )
+    said = capsys.readouterr().out
+    assert "the note is handed to eeee0001" in said, said
+    assert "terminal of its own" in said and "wait for it: needle wait 1" in said
+    assert machine_floor.state()["launch_log"] == [], "nothing was launched for a note"
+    assert machine_floor.state()["stops"] == [], "and nothing was stopped"
+
+    store = client.app.state.loops.live.store
+    handed = store.call(1)
+    assert handed is not None and handed.handed_at is not None and handed.picked_up_at is None
+    assert [c.id for c in store.notes_standing()] == [1]
+
+    # It stands where the owner sees it, and the wait says so rather than
+    # answering with silence.
+    reconcile(client)
+    head = client.app.state.loops.live.machine.notes
+    assert len(head) == 1 and "is waiting for" in head[0], head
+
+    assert main(["wait", "1", "--ceiling", "1"]) == 1
+    waited = capsys.readouterr().out
+    assert "the note was handed to" in waited and "has not been picked up" in waited
+
+    # Its next act picks it up: the brief arrives as the session's word, in
+    # a directory that is no lane of any project.
+    elsewhere = str(repo)
+    reached = word(client, elsewhere, session=terminal_id)
+    assert len(reached) == 1 and reached[0].startswith(
+        f"A colleague calls you with a question. Read {note} first"
+    )
+    assert f"write your reply to {answer}" in reached[0]
+
+    again = client.get("/api/word", params={"cwd": elsewhere, "session": terminal_id})
+    assert again.status_code == 404, "said once, never twice — and no lane to say anything else"
+    picked = store.call(1)
+    assert picked is not None and picked.picked_up_at is not None
+    assert store.notes_standing() == []
+
+    assert main(["wait", "1", "--ceiling", "1"]) == 1
+    waited = capsys.readouterr().out
+    assert "picked the note up at" in waited, waited
+
+
+def test_a_lane_hears_a_note_handed_to_it_beside_its_own_word(
+    client: TestClient, machine_floor: Floor, repo: Path, capsys
+):
+    """One word, two addresses: the lane's drift and watercooler by its
+    directory, the notes handed to it by its own session id. The lane is
+    mid-turn, which is exactly when a call is not resumed."""
+    start(client)
+    reconcile(client)
+    lane = lane_path(repo)
+    busy_id = "dddd0001-0000-4000-8000-000000000000"
+    machine_floor.write_job("beta", "dddd0001", session_id=busy_id, cwd=lane, worktree=lane)
+    machine_floor.write_process("beta", busy_id, os.getpid(), kind="bg", status="busy", cwd=lane)
+    note = a_note(machine_floor)
+
+    assert main(["call", "dddd0001", str(note)]) == 0
+    assert "the note is handed to" in capsys.readouterr().out
+
+    said = word(client, lane, session=busy_id)
+    assert any("A colleague calls you with a question" in s for s in said)
+    assert word(client, lane, session=busy_id) == []
+
+
+def test_a_note_standing_is_never_read_as_a_colleague_that_finished_without_it(
+    client: TestClient, machine_floor: Floor, repo: Path, capsys
+):
+    """An idle colleague has not finished a turn it never started: the wait
+    keeps waiting on a standing note rather than ending the call."""
+    terminal_id = "eeee0002-0000-4000-8000-000000000000"
+    machine_floor.write_process("beta", terminal_id, os.getpid(), kind="cli", cwd=str(repo))
+    note = a_note(machine_floor)
+    assert main(["call", "eeee0002", str(note)]) == 0
+    capsys.readouterr()
+
+    assert main(["wait", "1", "--ceiling", "1"]) == 1
+    said = capsys.readouterr().out
+    assert said.startswith("nothing: "), said
+    assert "has not been picked up" in said
+    store = client.app.state.loops.live.store
+    assert store.call(1).ended_at is None, "a standing note never ends the call"

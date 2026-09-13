@@ -315,11 +315,13 @@ def rescope(store: Store, session: Session, card: str) -> Scoped:
     slot = Slot(name=session.slot, config_dir=session.config_dir)
     scoped = scope_session(slot, Path(session.config_dir), session.pid, card)
     if scoped.asked or scoped.verified:
+        held = store.session_slot(session.session_id)
         store.record_session_slot(
             SessionSlot(
                 session_id=session.session_id,
                 slot=session.slot,
                 card=card,
+                started_on=held.started_on if held is not None else None,
                 scope=scoped.unit,
                 recorded_at=clock.now(),
             )
@@ -397,11 +399,17 @@ def _settle(
     card: str,
     attempts: list[Attempt],
     rescued_from: tuple[Rung, str] | None = None,
+    started_on: str | None = None,
 ) -> Launch:
     """Record where the verified session runs and, when it is the far end of
     a move, the rescue that brought it here. A resume forks the session id
     (verified live 2026-09-04), so the ledger is written under the id that
-    lives and `Runtime.rescues` of the dead id answers nothing."""
+    lives and `Runtime.rescues` of the dead id answers nothing.
+
+    `started_on` is the card that started this colleague, carried to the
+    fork by whoever moved it (card #115): `card` says what it runs as now,
+    which a call rewrites, and only this says whose colleague it is. None
+    when nothing started it on a card, and never inferred from `card`."""
     assert verified.pid is not None and verified.session_id is not None
     if rescued_from is not None:
         from_rung, reason = rescued_from
@@ -412,6 +420,7 @@ def _settle(
             session_id=verified.session_id,
             slot=placement.slot,
             card=card,
+            started_on=started_on,
             scope=scoped.unit,
             recorded_at=clock.now(),
         )
@@ -543,7 +552,9 @@ def _walk(
             )
         )
         if verified.verdict == LaunchVerdict.ALIVE:
-            return _settle(store, placement, short, verified, card, attempts, rescued_from)
+            return _settle(
+                store, placement, short, verified, card, attempts, rescued_from, started_on=card
+            )
         if verified.verdict == LaunchVerdict.DEAD and verified.handoff is not None:
             wall = verified.handoff
             _stop_probe(placement, short, verified.pid)
@@ -748,56 +759,111 @@ def move(
             f"{size / 1048576:.1f} MB, above the {RESUME_SIZE_LIMIT // 1048576} MB resume limit"
         )
     from_rung = Rung(slot=session.slot, model=session.model)
-    launch = _settle(store, to, short, verified, card, attempts, (from_rung, reason))
+    # The fork is the same colleague: what started it travels with it, and
+    # a record written before the field existed carries nothing rather than
+    # a guess at which card it was (card #115).
+    held = store.session_slot(session.session_id)
+    launch = _settle(
+        store,
+        to,
+        short,
+        verified,
+        card,
+        attempts,
+        (from_rung, reason),
+        started_on=held.started_on if held is not None else None,
+    )
     if wall is not None:
         handoffs.remove(wall)
     return launch
 
 
+def handed(session: Session, name: str, words: str) -> Launch:
+    """Nothing launched: the note is with the colleague, to be picked up as
+    its next word (card #137, item 4). The session is its own row, exactly
+    as it was read — this path starts nothing, stops nothing and resumes
+    nothing, which is the whole point of it."""
+    return Launch(
+        card=name,
+        verdict=LaunchVerdict.HANDED,
+        session=session,
+        placement=None,
+        scope=None,
+        attempts=[],
+        reason=words,
+    )
+
+
 def call(store: Store, session: Session, *, brief: str, name: str, answer: str) -> Launch:
-    """Resume a colleague's session with a caller's brief (plan 17, item 1):
-    the Answer door's shape, bound to no card. A session in a terminal of
-    its own is refused, not resumed beside itself; one mid-turn is refused
-    too, since the stop that precedes a resume would end the turn it is on,
-    and a lane hears the note as its word instead. A call whose brief is
-    empty is refused before anything runs: the by-hand form of 2026-09-05
-    started a session whose prompt never arrived, and that is the refusal
-    the CLI printed ("Provide a prompt"), made ours. The same refusals hold
-    for a colleague of the other make (plan 57, item 1); past them a Codex
-    row is resumed as a worker of its own kind, with `answer` as the file
-    Codex writes its last message to."""
+    """Ask a colleague for help (plan 17, item 1; card #137, item 4): resume
+    it warm with the caller's brief where it can be resumed, and hand it the
+    note where it cannot.
+
+    Two colleagues are never resumed. One in a terminal of its own is not
+    put beside itself — the terminal is the owner's, and a second copy of
+    that conversation is exactly the disturbance this is named after. One
+    mid-turn is not stopped, because the stop a resume begins with would end
+    the turn it is on. Both used to be refused by name, which left the
+    coordination the owner ordered on card #83 with a Codex thread of his
+    own undone; both are handed the note instead, and it waits for the
+    colleague's next word rather than interrupting it.
+
+    A call whose brief is empty is refused before anything runs: the by-hand
+    form of 2026-09-05 started a session whose prompt never arrived, and
+    that is the refusal the CLI printed ("Provide a prompt"), made ours. A
+    colleague of the other make is refused where it cannot be resumed: the
+    word that carries a note is Claude's hook, and this machine runs no
+    Codex hook to carry one. Past all that a Codex row is resumed as a
+    worker of its own kind, with `answer` as the file Codex writes its last
+    message to."""
     if not brief.strip():
         return dead(name, [], "an empty brief calls nobody; provide a note or an objective", None)
-    if (
-        session.slot == codex.SLOT
-        and session.kind == SessionKind.INTERACTIVE
-        and session.recorded != codex.TERMINAL_SOURCE
-    ):
-        return dead(
-            name,
-            [],
-            f"{session.short_id} is a Codex session of source {session.recorded!r}, which this "
-            f"runtime does not know as a worker; only an `exec` rollout is called",
-            None,
-        )
+    if session.slot == codex.SLOT:
+        # Every refusal the other make gets says the same second thing: the
+        # word that carries a note is the Claude hook, and this machine
+        # runs no Codex hook, so there is no note to hand where there is no
+        # resume either.
+        if session.kind == SessionKind.INTERACTIVE and session.recorded != codex.TERMINAL_SOURCE:
+            return dead(
+                name,
+                [],
+                f"{session.short_id} is a Codex session of source {session.recorded!r}, which "
+                "this runtime does not know as a worker; only an `exec` rollout is called, and "
+                "the other make runs no hook here to carry a note into a turn",
+                None,
+            )
+        if session.kind == SessionKind.INTERACTIVE:
+            return dead(
+                name,
+                [],
+                f"{session.short_id} runs in a terminal of its own; it is not resumed beside "
+                "itself, and the other make runs no hook here to carry a note into a turn",
+                None,
+            )
+        if session.pid is not None and session.state == SessionState.WORKING:
+            return dead(
+                name,
+                [],
+                f"{session.short_id} is working on its turn; a resume would end it, and the "
+                "other make runs no hook here to carry a note into a turn — call again when "
+                "its turn is done",
+                None,
+            )
+        return call_codex(store, session, brief=brief, name=name, answer=answer)
     if session.kind == SessionKind.INTERACTIVE:
-        return dead(
+        return handed(
+            session,
             name,
-            [],
-            f"{session.short_id} runs in a terminal of its own; it is not resumed beside "
-            "itself — write the note and it hears it as its word if it is a lane",
-            None,
+            f"{session.short_id} runs in a terminal of its own and is not resumed beside "
+            "itself; the note is handed to it and it picks it up as its next word",
         )
     if session.pid is not None and session.state == SessionState.WORKING:
-        return dead(
+        return handed(
+            session,
             name,
-            [],
-            f"{session.short_id} is working on its turn; a resume would end it — "
-            "call again when its turn is done, or a lane hears the note as its word",
-            None,
+            f"{session.short_id} is working on its turn and is not interrupted; the note is "
+            "handed to it and it picks it up on its next act",
         )
-    if session.slot == codex.SLOT:
-        return call_codex(store, session, brief=brief, name=name, answer=answer)
     return move(store, session, to=None, card=name, prompt=brief, spent=False)
 
 
@@ -903,6 +969,7 @@ def codex_lane(store: Store, placement: Placement, request: Start) -> Launch:
             session_id=session.session_id,
             slot=codex.SLOT,
             card=name,
+            started_on=name,
             scope=unit,
             recorded_at=clock.now(),
         )
@@ -977,6 +1044,10 @@ def call_codex(store: Store, session: Session, *, brief: str, name: str, answer:
     one it is a death with the log's last words. A verified worker is put
     in a scope named for the call, so the one list shows it as a unit of
     its own and its death has a journal."""
+    # A Codex resume keeps the rollout's own id, so this rewrites the row
+    # the worker already has: what started it is carried, never re-derived
+    # from the call's name, which is what overwrote it before card #115.
+    held = store.session_slot(session.session_id)
     log = codex.log_path(answer)
     schema = codex.schema_path(answer)
     try:
@@ -1043,6 +1114,7 @@ def call_codex(store: Store, session: Session, *, brief: str, name: str, answer:
             session_id=session.session_id,
             slot=codex.SLOT,
             card=name,
+            started_on=held.started_on if held is not None else None,
             scope=unit,
             recorded_at=clock.now(),
         )
@@ -1166,6 +1238,7 @@ def ask_codex(
             session_id=session.session_id,
             slot=codex.SLOT,
             card=name,
+            started_on=None,
             scope=unit,
             recorded_at=clock.now(),
         )
@@ -1275,4 +1348,16 @@ def resume_transcript(store: Store, session_id: str, cwd: str, *, brief: str, na
             attempts=attempts,
             reason=verified.reason,
         )
-    return _settle(store, placement, short, verified, name, attempts)
+    # A colleague resumed from a transcript no registry holds any more was
+    # started by nobody the board watched: what started it travels from its
+    # old row when one exists, and is nothing when none does.
+    held = store.session_slot(session_id)
+    return _settle(
+        store,
+        placement,
+        short,
+        verified,
+        name,
+        attempts,
+        started_on=held.started_on if held is not None else None,
+    )

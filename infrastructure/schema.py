@@ -121,6 +121,11 @@ class SessionSlotRow(Base):
     session_id: Mapped[str] = mapped_column(String(36), primary_key=True)
     slot: Mapped[str] = mapped_column(String(40))
     card: Mapped[str] = mapped_column(Text)
+    started_on: Mapped[str | None] = mapped_column(Text, nullable=True)
+    """The card this session was started on, written once and never over
+    (card #115). NULL for a row written before 2026-09-13 and for a session
+    nobody started on a card; a reader falls back to the directory then,
+    and never guesses."""
     scope: Mapped[str] = mapped_column(Text)
     recorded_at: Mapped[datetime] = mapped_column(UtcDateTime)
     machine: Mapped[str] = mapped_column(String(40), server_default="")
@@ -449,6 +454,10 @@ class CallRow(Base):
     brief: Mapped[str] = mapped_column(Text)
     caller: Mapped[str] = mapped_column(Text)
     called_at: Mapped[datetime] = mapped_column(UtcDateTime)
+    handed_at: Mapped[datetime | None] = mapped_column(UtcDateTime, nullable=True)
+    """When the note was handed over instead of the colleague resumed (card #137)."""
+    picked_up_at: Mapped[datetime | None] = mapped_column(UtcDateTime, nullable=True)
+    """When the colleague took the note up as its next word; NULL while it stands."""
     moved: Mapped[str | None] = mapped_column(Text, nullable=True)
     ended_at: Mapped[datetime | None] = mapped_column(UtcDateTime, nullable=True)
     words: Mapped[str | None] = mapped_column(Text, nullable=True)

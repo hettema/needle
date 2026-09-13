@@ -12,6 +12,7 @@ import re
 import sqlite3
 import threading
 import uuid
+from collections.abc import Iterable
 from datetime import UTC, date, datetime, timedelta
 from pathlib import Path
 
@@ -1307,7 +1308,11 @@ class Store:
         brief: str,
         caller: str,
         at: datetime,
+        handed_at: datetime | None = None,
     ) -> Call:
+        """One call, recorded. `handed_at` is set when the colleague was
+        handed the note instead of resumed (card #137): the same row either
+        way, so a waiter, the loop and the close read one kind of record."""
         with self._session() as session, session.begin():
             row = CallRow(
                 session_id=session_id,
@@ -1318,6 +1323,8 @@ class Store:
                 brief=brief,
                 caller=caller,
                 called_at=at,
+                handed_at=handed_at,
+                picked_up_at=None,
                 moved=None,
                 ended_at=None,
                 words=None,
@@ -1398,6 +1405,31 @@ class Store:
                 row.session_id = session_id
                 row.slot = slot
                 row.moved = words
+
+    def pick_up_call(self, call_id: int, at: datetime) -> None:
+        """The colleague took the note up as its next word (card #137, item
+        5). Stamped once: the stamp is what says the note was said, so the
+        delivery never repeats and the head stops showing it as standing."""
+        with self._session() as session, session.begin():
+            row = session.get(CallRow, call_id)
+            if row is not None and row.picked_up_at is None:
+                row.picked_up_at = at
+
+    def notes_standing(self) -> list[Call]:
+        """Every note handed over and not yet picked up, oldest first: what
+        the head shows the owner and the wait tells the caller, so a note
+        nobody picked up is visible rather than lost."""
+        with self._session() as session:
+            query = (
+                select(CallRow)
+                .where(
+                    CallRow.handed_at.is_not(None),
+                    CallRow.picked_up_at.is_(None),
+                    CallRow.ended_at.is_(None),
+                )
+                .order_by(CallRow.handed_at)
+            )
+            return [_call(r) for r in session.scalars(query)]
 
     def end_call(self, call_id: int, at: datetime, words: str) -> None:
         with self._session() as session, session.begin():
@@ -1906,7 +1938,17 @@ class Store:
     # rescues never touches its slot (plan 02, item 3).
 
     def record_session_slot(self, record: SessionSlot) -> None:
-        """Where a session runs, written only by the thing that started or moved it."""
+        """Where a session runs, written only by the thing that started or
+        moved it.
+
+        `started_on` is the one field a later write never touches once it
+        stands (card #115): every other field says where the session runs
+        *now*, and a warm call rewrote them all, which left the board
+        unable to say whose colleague a session was an hour after someone
+        borrowed it. A resume forks the session id, so a row's `started_on`
+        never legitimately changes — the caller carries it to the fork
+        instead. A row that has none keeps none unless this write brings
+        one: nothing backfills a record written before 2026-09-13."""
         with self._session() as session, session.begin():
             row = session.get(SessionSlotRow, record.session_id)
             if row is None:
@@ -1915,6 +1957,7 @@ class Store:
                         session_id=record.session_id,
                         slot=record.slot,
                         card=record.card,
+                        started_on=record.started_on,
                         scope=record.scope,
                         recorded_at=record.recorded_at,
                         machine=record.machine,
@@ -1923,10 +1966,27 @@ class Store:
             else:
                 row.slot = record.slot
                 row.card = record.card
+                if row.started_on is None:
+                    row.started_on = record.started_on
                 row.scope = record.scope
                 row.recorded_at = record.recorded_at
                 if record.machine:
                     row.machine = record.machine
+
+    def started_on(self, session_ids: Iterable[str]) -> dict[str, str]:
+        """The card each named session was started on, for the rows that
+        say (card #137, item 1): what the board reads to tell a card's own
+        colleague from a visitor in its copy of the code. A session with no
+        row, or a row written before the field existed, is absent — the
+        reader falls back to the directory rather than guess."""
+        ids = list(session_ids)
+        if not ids:
+            return {}
+        with self._session() as session:
+            rows = session.scalars(
+                select(SessionSlotRow).where(SessionSlotRow.session_id.in_(ids))
+            )
+            return {r.session_id: r.started_on for r in rows if r.started_on}
 
     def session_slot(self, session_id: str) -> SessionSlot | None:
         with self._session() as session:
@@ -2915,6 +2975,7 @@ def _session_slot(row: SessionSlotRow) -> SessionSlot:
         session_id=row.session_id,
         slot=row.slot,
         card=row.card,
+        started_on=row.started_on,
         scope=row.scope,
         recorded_at=row.recorded_at,
         machine=row.machine or "",
@@ -3086,6 +3147,8 @@ def _call(row: CallRow) -> Call:
         brief=row.brief,
         caller=row.caller,
         called_at=row.called_at,
+        handed_at=row.handed_at,
+        picked_up_at=row.picked_up_at,
         moved=row.moved,
         ended_at=row.ended_at,
         words=row.words,

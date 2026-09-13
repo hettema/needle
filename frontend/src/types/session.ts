@@ -48,6 +48,7 @@ export interface SessionSlot {
   session_id: string;
   slot: string;
   card: string;
+  started_on?: string | null;
   scope: string;
   recorded_at: string;
   machine?: string;

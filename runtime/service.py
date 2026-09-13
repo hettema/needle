@@ -287,11 +287,18 @@ class Runtime:
     def _remote(self, m: Machine) -> Remote:
         return Remote(m)
 
-    def _stamped(self, m: Machine, launch_: Launch, card: str) -> Launch:
+    def _stamped(
+        self, m: Machine, launch_: Launch, card: str, *, started_on: str | None = None
+    ) -> Launch:
         """The launch as the board records it: its placement and session
         carry the machine's name, and the board's own store holds where
         the session runs — a launch on another machine wrote that into
-        that machine's ledger, not here."""
+        that machine's ledger, not here.
+
+        `started_on` is the card that started this colleague (card #115),
+        used only when this board holds no row for the session yet — a
+        launch on another machine. A row that already says is never
+        rewritten, here or in the store."""
         placement = (
             launch_.placement.model_copy(update={"machine": m.name})
             if launch_.placement is not None
@@ -309,6 +316,7 @@ class Runtime:
                     session_id=session.session_id,
                     slot=record.slot if record else session.slot,
                     card=record.card if record else card,
+                    started_on=record.started_on if record else started_on,
                     scope=record.scope if record else (launch_.scope or ""),
                     recorded_at=clock.now(),
                     machine=m.name,
@@ -321,13 +329,20 @@ class Runtime:
         """A move or resume on this machine, as the board records it: the
         launch stamped, and the session it replaced put into the standing
         observation with no process, so a door's apply says the old one
-        ended without reading the machine again (card #123)."""
-        stamped = self._stamped(m, launch_, card)
+        ended without reading the machine again (card #123). The fork is
+        the same colleague, so what started it travels with it."""
+        stamped = self._stamped(m, launch_, card, started_on=self._started_on(old))
         if stamped.session is not None and stamped.session.session_id != old.session_id:
             # Ended, and its handoff acted on: an answer asked before the
             # comeback must not park the lane again on that wall (#123).
             self._put_acted(m, old.model_copy(update={"pid": None, "wall": None}))
         return stamped
+
+    def _started_on(self, session: Session) -> str | None:
+        """The card a session was started on, from the board's own record;
+        None when no row says, which is never guessed at (card #115)."""
+        record = self.store.session_slot(session.session_id)
+        return record.started_on if record is not None else None
 
     def next_sequence(self) -> int:
         """The next number in the one count of questions and acts."""
@@ -1017,7 +1032,9 @@ class Runtime:
             full = self._full_here()
             if full is not None:
                 return launch.dead(request.card, [], full, None)
-            return self._stamped(chosen, launch.start(self.store, request), request.card)
+            return self._stamped(
+                chosen, launch.start(self.store, request), request.card, started_on=request.card
+            )
         return self._started_elsewhere(chosen, request)
 
     def _full_here(self) -> str | None:
@@ -1034,7 +1051,9 @@ class Runtime:
         never came is unconfirmed, not dead: the launch may have landed
         there, and the next read of that machine's sessions shows it."""
         try:
-            return self._stamped(chosen, self._remote(chosen).start(request), request.card)
+            return self._stamped(
+                chosen, self._remote(chosen).start(request), request.card, started_on=request.card
+            )
         except (RemoteTimeout, machine.Unreachable) as lost:
             # A deadline passed or the connection dropped: either way what
             # landed there is unknown until its sessions are read again.
@@ -1063,7 +1082,9 @@ class Runtime:
             full = self._full_here()
             if full is not None:
                 return launch.dead(request.card, [], full, None)
-            return self._stamped(chosen, launch.windowless(self.store, request), request.card)
+            return self._stamped(
+                chosen, launch.windowless(self.store, request), request.card, started_on=request.card
+            )
         return self._started_elsewhere(chosen, request)
 
     def move(self, ref: str, to_slot: str | None, *, reason: str | None = None) -> Launch:
@@ -1112,7 +1133,7 @@ class Runtime:
             done = act()
         except _UNREACHABLE as error:
             return launch.dead(session.name, [], f"{on.name} could not move it: {error}", None)
-        stamped = self._stamped(on, done, card)
+        stamped = self._stamped(on, done, card, started_on=self._started_on(session))
         if stamped.session is not None and stamped.session.session_id != session.session_id:
             # The session moved from has ended there (card #123): the card
             # says so at once, not a pass later.
@@ -1813,6 +1834,7 @@ class Runtime:
                     session_id=session.session_id,
                     slot=session.slot,
                     card=card,
+                    started_on=self._started_on(session),
                     scope=done.unit,
                     recorded_at=clock.now(),
                     machine=on.name,

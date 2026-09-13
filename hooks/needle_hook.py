@@ -203,7 +203,9 @@ def drain(queue: Path, lock) -> None:
 def word_target(payload: dict) -> tuple[str, int, str] | None:
     """Host, port and path for the word's read, or None when this payload
     asks for none: not a PostToolUse, a subagent's, or no working directory
-    to name a lane by."""
+    to name a lane by. The session's own id goes with it when the payload
+    carries one, so a note handed to a colleague reaches it wherever it
+    works (card #137)."""
     from urllib.parse import urlencode, urlsplit
 
     if payload.get("hook_event_name") != WORD_EVENT or payload.get("agent_id"):
@@ -215,6 +217,12 @@ def word_target(payload: dict) -> tuple[str, int, str] | None:
     if not url.hostname:
         return None
     query = {"cwd": cwd}
+    session_id = payload.get("session_id")
+    if isinstance(session_id, str) and session_id:
+        # The session's own address, beside the lane's: a colleague working
+        # on no card has no lane to be told anything by, and a note handed
+        # to it reaches it by this and nothing else (card #137, item 4).
+        query["session"] = session_id
     wrote = written(payload)
     if wrote:
         query["wrote"] = wrote

@@ -191,6 +191,17 @@ class Lane(BaseModel):
     said_at: datetime | None
     discussing: list[str]
     """Short ids of live discussion sessions about this card."""
+    away: str | None = None
+    """Why this card's own session is not working on it, when it is alive
+    and somewhere else: it was called to help another card and picks its
+    own work up again after (card #137). None while nothing is lent. A lane
+    that is away has no hands on it and has not ended: the board neither
+    opens the card nor concludes anything from its silence."""
+    guests: list[str] = []
+    """Short ids of live colleagues sitting in this lane's copy of the code
+    that the board's records say belong to other work — a reader called into
+    it, a colleague started on another card. Named on the face and claimed
+    as nothing: not this card's work, not this card's death (card #108)."""
     window_open: bool
     hands_on_since: datetime | None
     died: str | None

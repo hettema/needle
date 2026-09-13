@@ -152,12 +152,17 @@ def test_a_call_resumes_a_colleague_whose_turn_is_done_with_the_brief_and_nothin
     assert len(alive) == 1, "never resumed beside itself"
 
 
-def test_a_call_refuses_a_terminal_a_turn_in_flight_and_an_empty_brief(
+def test_a_call_hands_the_note_where_it_cannot_resume_and_refuses_an_empty_brief(
     machine_floor: Floor, runtime: Runtime, repo: Path
 ):
+    """Card #137, item 4. A colleague mid-turn and one in a terminal of the
+    owner's own were both refused by name until 2026-09-13, which left the
+    coordination he ordered on card #83 undone. Both are handed the note
+    now; neither is resumed, stopped or typed into."""
     working = colleague(runtime, repo, machine_floor, {"then": "work"})
-    refused = runtime.call(working, brief="a question", name=working.name, answer="/srv/d/a.md")
-    assert refused.verdict == LaunchVerdict.DEAD and "working on its turn" in (refused.reason or "")
+    handed = runtime.call(working, brief="a question", name=working.name, answer="/srv/d/a.md")
+    assert handed.verdict == LaunchVerdict.HANDED and handed.session is not None
+    assert "working on its turn" in (handed.reason or "")
 
     empty = runtime.call(working, brief="   ", name=working.name, answer="/srv/d/a.md")
     assert empty.verdict == LaunchVerdict.DEAD and "empty brief" in (empty.reason or "")
@@ -166,9 +171,31 @@ def test_a_call_refuses_a_terminal_a_turn_in_flight_and_an_empty_brief(
     machine_floor.write_process("beta", terminal_id, os.getpid(), kind="cli", cwd="/srv/p")
     terminal = runtime.colleague("eeee0001")
     assert isinstance(terminal, Session) and terminal.kind == SessionKind.INTERACTIVE
-    no = runtime.call(terminal, brief="a question", name=terminal.name, answer="/srv/d/a.md")
-    assert no.verdict == LaunchVerdict.DEAD and "terminal of its own" in (no.reason or "")
-    assert len(machine_floor.state()["launch_log"]) == 1, "no second process for any refusal"
+    note = runtime.call(terminal, brief="a question", name=terminal.name, answer="/srv/d/a.md")
+    assert note.verdict == LaunchVerdict.HANDED and note.session is not None
+    assert "terminal of its own" in (note.reason or "")
+    assert note.session.session_id == terminal_id, "the colleague's own row, untouched"
+
+    assert len(machine_floor.state()["launch_log"]) == 1, (
+        "nothing was launched: the one entry is the colleague's own start"
+    )
+    assert machine_floor.state()["stops"] == [], "and nothing was stopped"
+
+
+def test_a_colleague_of_the_other_make_that_cannot_be_resumed_is_refused_by_name(
+    machine_floor: Floor, runtime: Runtime
+):
+    """Card #137, item 4: the word that carries a note is the Claude hook,
+    and this machine runs no Codex hook, so a Codex colleague that cannot be
+    resumed is refused at the door in a sentence naming the make — never
+    handed a note nothing would carry."""
+    from runtime import codex
+
+    worker = session(slot=codex.SLOT, state=SessionState.WORKING, pid=4242)
+    refused = runtime.call(worker, brief="a question", name=worker.name, answer="/srv/d/a.md")
+    assert refused.verdict == LaunchVerdict.DEAD
+    assert "no hook here to carry a note" in (refused.reason or ""), refused.reason
+    assert machine_floor.state()["launch_log"] == [], "nothing half-sent"
 
 
 def test_a_colleague_no_registry_holds_is_resumed_from_its_transcript_by_id(

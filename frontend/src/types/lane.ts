@@ -88,6 +88,8 @@ export interface Lane {
   said: string | null;
   said_at: string | null;
   discussing: string[];
+  away?: string | null;
+  guests?: string[];
   window_open: boolean;
   hands_on_since: string | null;
   died: string | null;

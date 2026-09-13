@@ -450,6 +450,16 @@ export function Board({ slug, store, projects, onSwitch }: { slug: string; store
                   ))}
                 </Fact>
               ) : null}
+              {(board.machine.notes ?? []).length ? (
+                <Fact>
+                  {(board.machine.notes ?? []).map((n, i) => (
+                    <span key={n}>
+                      {i ? " · " : ""}
+                      {n}
+                    </span>
+                  ))}
+                </Fact>
+              ) : null}
               {board.machine.beat ? (
                 <Fact {...(board.machine.beat.lock_seconds >= 1 || (board.machine.beat.door_wait ?? 0) + (board.machine.beat.door_seconds ?? 0) >= 1 ? { meaning: "broken" as const } : {})}>
                   {beatWords(board.machine.beat)}
