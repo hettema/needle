@@ -49,6 +49,7 @@ from domain.machine import (
     choose_machine,
 )
 from domain.notice import Notice, Told
+from domain.release import Release
 from domain.session import Session, SessionKind, SessionSlot
 from domain.signal import Signal
 from domain.slot import Handoff, Limits, Placement, Rung, Slot, Where
@@ -1720,7 +1721,29 @@ class Runtime:
                 found.append((m, _unlevelled(str(error))))
         return found
 
-    def fold(self, worktree: str, *, promote_main: bool) -> git.Folded:
+    def release(self, checkout: str, *, ahead: str | None = None) -> Release:
+        """What promoting the stable branch from this checkout would carry,
+        read where the checkout is (card #139, item 1): the board's own
+        projects here, a lane on the rented machine over the wire, the same
+        door the fold already goes through. A machine that did not answer
+        says so — `read` False with its words — rather than answering an
+        empty range, which a refusal would read as nothing to hold."""
+        on = self.lane_machine(checkout)
+        if not self.is_here(on):
+            try:
+                return self._remote(on).release(checkout, ahead=ahead)
+            except _UNREACHABLE as error:
+                return Release(
+                    files=[],
+                    commits=0,
+                    read=False,
+                    note=f"{on.name} holds the checkout and did not answer ({error})",
+                )
+        return git.release(checkout, ahead=ahead, fetch_first=True)
+
+    def fold(
+        self, worktree: str, *, promote_main: bool, hold: str | None = None, why: str | None = None
+    ) -> git.Folded:
         """The lane's branch pushed to the trunk from the machine that holds
         the lane: a fold asked of the board runs its git where the worktree
         is (card #83, item 3). A reply that never came is not a push that
@@ -1730,7 +1753,9 @@ class Runtime:
         on = self.lane_machine(worktree)
         if not self.is_here(on):
             try:
-                return self._remote(on).push(worktree, promote_main=promote_main)
+                return self._remote(on).push(
+                    worktree, promote_main=promote_main, hold=hold, why=why
+                )
             except _UNREACHABLE as error:
                 return git.Folded(
                     pushed=False,
@@ -1742,7 +1767,7 @@ class Runtime:
                     tip=None,
                     main_pushed=None,
                 )
-        return git.fold(worktree, promote_main=promote_main)
+        return git.fold(worktree, promote_main=promote_main, hold=hold, why=why)
 
     def read_signal(self, signal: Signal, project_path: str) -> tuple[bool | None, str]:
         return signals.read(signal, project_path)

@@ -20,6 +20,7 @@ from enum import StrEnum
 from pydantic import BaseModel, Field
 
 from domain.card import Actor
+from domain.release import Held, Undoable
 from domain.triage import Decision
 
 
@@ -40,6 +41,12 @@ class Dial(BaseModel):
     first_on_at: datetime | None
     """When this board was first turned on: the moment its Defects column's
     size was recorded for the loop (plan 11, item 6)."""
+    undoable: Undoable | None = None
+    """What this board says cannot be taken back, recorded at the turn that
+    bounds it (card #139, item 2). None is undeclared — a board turned on
+    before the declaration existed, which releases everything as it always
+    did; an `Undoable` with no paths is the owner having said there is
+    nothing, which is the same release and a different fact."""
 
 
 class DialChange(BaseModel):
@@ -55,6 +62,11 @@ class DialChange(BaseModel):
     project: str | None
     on: bool | None
     lanes: int
+    declared: str | None = None
+    """What the turn said cannot be undone there, in one line, when the turn
+    said anything (card #139, item 2): the paths and the standing hold file,
+    or "nothing". None on every turn that declared nothing new, and on every
+    row written before the declaration existed."""
 
 
 class Meminfo(BaseModel):
@@ -248,6 +260,11 @@ class DialState(BaseModel):
     """No lane has hands on any project: when the board's own defects may run
     (plan 11, rulings — a fold on the board restarts the service under every
     running lane)."""
+    release: Held | None = None
+    """This board's release, when one is waiting on the owner (card #139):
+    work the board started is on the shared branch and the stable branch
+    stands where it was. None while nothing waits, which is every board
+    that declares nothing."""
 
 
 class FixStage(StrEnum):

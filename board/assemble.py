@@ -80,6 +80,7 @@ from domain.lane import HANDS_ON, Doors, Lane, LaneSnapshot, LaneState, StartSta
 from domain.meaning import Meaning, opening_of, say
 from domain.neighbour import Beside
 from domain.project import Project
+from domain.release import Held
 from domain.row import ROW_HALF, Row, RowHalf, RowKind
 from domain.signal import Reading, Signal, SignalKind, WindowlessSession
 from domain.team import Composition
@@ -122,6 +123,11 @@ CLAIM_WORDS: dict[Claim, tuple[str, str]] = {
     ),
     Claim.HOLD_UNREAD: ("hold the board cannot place", "holds the board cannot place"),
     Claim.DECISION_BEING_READ: ("decision being read", "decisions being read"),
+    Claim.RELEASE_YOURS: ("release waiting on you", "releases waiting on you"),
+    Claim.RELEASE_UNHELD: (
+        "release with nothing holding the closes behind it",
+        "releases with nothing holding the closes behind them",
+    ),
 }
 """Each claim's words, singular and plural: the head's breakdown (plan 27, item 1)."""
 
@@ -472,6 +478,37 @@ def _state(
     )
 
 
+def _release_state(release: Held) -> CardState:
+    """A card whose work landed and whose release is the owner's (card #139,
+    item 5). One sentence, the same one the session was refused with and the
+    same one the card's WAITS row carries — never a second wording of the
+    same fact.
+
+    Amber when a hold stands and a fold wrote it down: the work is done and
+    the only act left is his. Red when it does not — nobody said the release
+    was left for him, or the thing that keeps the work behind it finishing
+    is not there — because that state quietly turns one waiting card into
+    every card behind it half-finished."""
+    if release.claimed and release.hold_stands:
+        return _state(
+            "yours to release",
+            Meaning.YOURS,
+            detail=say(Meaning.YOURS, release.sentence),
+            hint="open to see what is waiting",
+        )
+    return _state(
+        "release unheld",
+        Meaning.BROKEN,
+        detail=say(
+            Meaning.BROKEN,
+            release.sentence,
+            then="nothing said this release was left for you, or what keeps the work behind it "
+            "finishing is not there; open it before the work behind it stalls",
+        ),
+        hint="open to see what is waiting",
+    )
+
+
 def _loop_state(
     card: Card,
     signal: Signal | None,
@@ -601,6 +638,7 @@ def state_of(
     decision: Triage | None = None,
     doubt: str | None = None,
     parked_by_owner: bool = False,
+    release: Held | None = None,
 ) -> CardState:
     """The one function that names a card's state (plan 27, item 2). The
     order is the rule's precedence: broken before yours, yours before live,
@@ -704,6 +742,13 @@ def state_of(
             if doors.watch.offered
             else None,
         )
+    if release is not None:
+        # After every lane state and before the shipped loop: while the
+        # session is still tidying up, the card reads as working; from the
+        # moment its hands are off — closed or not — the one thing left on
+        # it is his. A close still moves it where a folded card goes; this
+        # only says what it is waiting for once it is there.
+        return _release_state(release)
     if card.place.column in SHIPPED:
         return _loop_state(card, signal, signal_note, last, reading, now)
     if hold is not None:
@@ -943,6 +988,7 @@ def claims_of(
     defect: bool = False,
     beside: Beside | None = None,
     unplaced: bool = False,
+    release: Held | None = None,
 ) -> list[Claim]:
     """Every claim the card makes on the owner's eye, in the head's order.
     A card can carry several; the head counts each. `placement` is the
@@ -991,6 +1037,10 @@ def claims_of(
         claims.append(Claim.BESIDE_UNNAMED)
     if unplaced and card.place.column not in SHIPPED:
         claims.append(Claim.HOLD_UNREAD)
+    if release is not None:
+        claims.append(
+            Claim.RELEASE_YOURS if release.claimed and release.hold_stands else Claim.RELEASE_UNHELD
+        )
     return claims
 
 
@@ -1044,6 +1094,7 @@ def summarize(
     beside: Beside | None = None,
     decision: Triage | None = None,
     history: list[AuditEntry] | None = None,
+    release: Held | None = None,
 ) -> CardSummary:
     """`doors` is the card's doors as the loop last read them; before its
     first read they are the closed doors of `nothing_read`. The state line and
@@ -1103,6 +1154,7 @@ def summarize(
             decision=decision,
             doubt=doubt,
             parked_by_owner=owner_parked(placement),
+            release=release,
         )
     except ValidationError as refusal:
         face = _refused_face(card, refusal)
@@ -1139,6 +1191,7 @@ def summarize(
             defect=defect,
             beside=beside if card.folded_into is None else None,
             unplaced=doors.readiness.state == StartState.HOLD_UNREAD,
+            release=release,
         ),
         folded=folded or [],
         is_new=is_new(card, now),
@@ -1291,6 +1344,7 @@ def assemble_board(
     beside: dict[int, Beside] | None = None,
     decisions: dict[int, Triage] | None = None,
     histories: dict[int, list[AuditEntry]] | None = None,
+    release: Held | None = None,
 ) -> BoardState:
     """`snapshot`, `readings`, `trunk` and `machine` are what the loop has
     read; before its first read they are absent and the board says so.
@@ -1344,6 +1398,7 @@ def assemble_board(
             beside=beside.get(n),
             decision=decisions.get(n),
             history=histories.get(n),
+            release=release if release is not None and n in release.cards else None,
         )
         for n, c in by_number.items()
     }
@@ -1495,6 +1550,7 @@ def assemble_detail(
     team: Composition | None = None,
     beside: Beside | None = None,
     decision: Triage | None = None,
+    release: Held | None = None,
 ) -> CardDetail:
     """`readings` newest first; `read` is whether the loop has read the
     machine; `folded` the cards folded under this one; `reading` the
@@ -1528,6 +1584,7 @@ def assemble_detail(
             beside=beside,
             decision=decision,
             history=history,
+            release=release,
         ),
         brief=brief,
         record=record,

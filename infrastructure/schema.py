@@ -264,6 +264,10 @@ class LaneRow(Base):
     main_synced_at: Mapped[datetime | None] = mapped_column(UtcDateTime, nullable=True)
     machine: Mapped[str] = mapped_column(String(40), server_default="")
     """The machine the worktree is on (card #83)."""
+    release_held_at: Mapped[datetime | None] = mapped_column(UtcDateTime, nullable=True)
+    """When this lane's fold was refused the promotion of the stable branch
+    (card #139, item 3): the one fact that says which card's release is the
+    one waiting, so the board never has to guess which fold left it."""
 
 
 class HeardRow(Base):
@@ -341,6 +345,16 @@ class DialRow(Base):
     """The machine's number; NULL on a board's row."""
     changed_at: Mapped[datetime | None] = mapped_column(UtcDateTime, nullable=True)
     first_on_at: Mapped[datetime | None] = mapped_column(UtcDateTime, nullable=True)
+    cannot_undo: Mapped[str | None] = mapped_column(Text, nullable=True)
+    """What this board says cannot be taken back, one path per line, recorded
+    at the turn that bounds it (card #139, item 2). NULL is undeclared; an
+    empty string is the owner having declared that nothing here is."""
+    hold_file: Mapped[str | None] = mapped_column(String(400), nullable=True)
+    """Where this project's standing hold on releasing is written, relative
+    to its root; NULL when it has no such lever."""
+    declared_at: Mapped[datetime | None] = mapped_column(UtcDateTime, nullable=True)
+    """When the declaration was last made. NULL with the switch on is a board
+    turned on before the declaration existed: undeclared, not empty."""
 
 
 class DialChangeRow(Base):
@@ -360,6 +374,11 @@ class DialChangeRow(Base):
     on: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
     lanes: Mapped[int] = mapped_column(Integer)
     """The machine's number after the turn, on every row."""
+    declared: Mapped[str | None] = mapped_column(Text, nullable=True)
+    """What the turn said cannot be undone there, in one readable line, when
+    the turn said anything new (card #139, item 2): the standing ruling and
+    the declaration it bounds are audited together, so the owner can see
+    which turn widened or narrowed what waits for him."""
 
 
 class FixLaneRow(Base):

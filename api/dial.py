@@ -56,6 +56,7 @@ from board.dial import (
 )
 from board.lane import has_row, is_question
 from board.parked import parked_at, wants_parked_reading
+from board.release import carried, sentence, under
 from board.title import read_vocabulary
 from board.triage import already_ruled, current_grade, order_key, source_ref_of, split_row
 from domain.audit import AuditKind
@@ -70,6 +71,7 @@ from domain.gate import Gate
 from domain.hook import HookKind
 from domain.lane import LaneState
 from domain.launch import LaunchVerdict, WindowlessStart
+from domain.release import Held
 from domain.row import Row, RowKind
 from domain.session import SessionState
 from domain.signal import SessionWork
@@ -194,16 +196,28 @@ class Dial:
         project: str | None,
         on: bool | None = None,
         lanes: int | None = None,
+        cannot_undo: list[str] | None = None,
+        hold: str | None = None,
         actor: Actor = Actor.OWNER,
     ) -> list[DialSetting]:
         """The owner's turn (plan 11, item 3), audited as his: one board's
         switch, the machine's number, or both. A board's first turn to on
         records its Defects column as it stands, by who filed each card: the baseline
         the loop reads that board's column against (item 6; per board since
-        card #80). Answers every board's switch."""
+        card #80), and what that board says cannot be taken back, which is
+        the release this ruling would otherwise decide for him (card #139,
+        item 2). Answers every board's switch."""
         store = self.live.store
         before = store.dial(project).first_on_at if project is not None else None
-        after = store.turn_dial(project=project, on=on, lanes=lanes, actor=actor, at=clock.now())
+        after = store.turn_dial(
+            project=project,
+            on=on,
+            lanes=lanes,
+            cannot_undo=cannot_undo,
+            hold=hold,
+            actor=actor,
+            at=clock.now(),
+        )
         if project is not None and on and before is None:
             live = self.live.projects[project]
             store.record_defects_at_on(defects_count(project, store.cards(project), live.index))
@@ -245,8 +259,79 @@ class Dial:
         # whether or not the dial is on. The dial is his ruling about what
         # enters execution *without* him; his own ruling is not that.
         self._corpus_lanes(by_id)
+        self._read_releases()
         switches = {setting.project: setting for setting in self.live.store.dials()}
         self._take_next(switches)
+
+    # ── the release the owner still owns (card #139) ───────────────────
+
+    def _read_releases(self) -> None:
+        """What each board's release would carry, once a beat. A board that
+        has declared nothing is not read at all, so a board that names no
+        irreversible surface pays nothing and behaves exactly as it did
+        before this card. A board that has declared pays one range read, and
+        the hold that read puts on the next card of the same shape lifts by
+        itself on the beat after the owner promotes — never by anyone
+        remembering to clear it (item 4's done means).
+
+        An unreadable range holds nothing here. The strict half of this card
+        is the fold's own refusal, which is about one act and errs toward
+        waiting; this half only bounds what the owner wakes to, and a board
+        whose git hiccuped must not stop planning work — the outcome he
+        rejected on evidence was the switch that ships nothing."""
+        for slug, live in self.live.projects.items():
+            self.live.set_release(slug, self._release_of(slug, live))
+
+    def _release_of(self, slug: str, live: LiveProject) -> Held | None:
+        declared = self.live.store.dial(slug).undoable
+        if declared is None or not declared.paths:
+            return None
+        found = self.runtime.release(live.project.path)
+        if not found.read:
+            return None
+        carries = carried(found.files, declared.paths)
+        if not carries:
+            return None
+        files = under(found.files, carries)
+        stands = bool(declared.hold) and (Path(live.project.path) / declared.hold).is_file()
+        cards, claimed = self._release_cards(slug)
+        return Held(
+            project=slug,
+            carries=carries,
+            files=files,
+            commits=found.commits,
+            hold=declared.hold,
+            hold_stands=stands,
+            cards=cards,
+            claimed=claimed,
+            sentence=sentence(slug, files=files, hold=declared.hold, hold_stands=stands),
+            read_at=clock.now(),
+        )
+
+    def _release_cards(self, slug: str) -> tuple[list[int], bool]:
+        """Which cards are answerable for a waiting release, newest first,
+        and whether a fold actually said so.
+
+        Normally one card's fold recorded it. When none did — a session
+        killed between its fold and its hold — the release is still waiting
+        and must not go unclaimed, so the board reads it back from the facts
+        it kept anyway: the lanes it started itself that folded and never
+        released. That card then says the release is unheld and unclaimed,
+        which is the one thing it must never be quiet about (item 5)."""
+        store = self.live.store
+        records = store.lanes(slug)
+        held = [r for r in records if r.release_held_at is not None and r.main_synced_at is None]
+        if held:
+            held.sort(key=lambda r: r.release_held_at or clock.EPOCH, reverse=True)
+            return [r.card_number for r in held], True
+        started = {fix.card_number for fix in store.fix_lanes(slug)}
+        left = [
+            r
+            for r in records
+            if r.card_number in started and r.folded_at is not None and r.main_synced_at is None
+        ]
+        left.sort(key=lambda r: r.folded_at or clock.EPOCH, reverse=True)
+        return [r.card_number for r in left[:1]], False
 
     def _full(self) -> str | None:
         """The head's sentence while the machine is under the floor; the
@@ -279,7 +364,9 @@ class Dial:
         fix_lanes = store.fix_lanes()
         if self._full() is not None:
             return
-        held = held_lanes(fix_lanes, self.live.start_offered, self.live.switched_on)
+        held = held_lanes(
+            fix_lanes, self.live.start_offered, self.live.switched_on, self.live.held_by_release
+        )
         triaging = self._triaging()
         # The number is the machine's, one for every board (card #80).
         lanes = store.fix_lanes_at_most()
@@ -838,6 +925,13 @@ class Dial:
         # turns it back on.
         if not self.live.switched_on(slug):
             why = "this board's switch is off"
+        elif (waits := self.live.held_by_release(slug, card.number)) is not None:
+            # A second change of the same irreversible shape does not pile
+            # onto the first (card #139, item 4): the owner wakes to one
+            # thing to read and promote, not a batch he cannot take apart.
+            # The card is not refused and it is not his — it starts by
+            # itself on the beat after he promotes.
+            why = waits
         else:
             detail = self.live.detail(slug, card.number)
             why = self._full() if detail.doors.start.offered else detail.doors.start.why
@@ -1207,6 +1301,10 @@ class Dial:
                     doors = snapshot.doors.get(card.number) if snapshot else None
                     if not switches.get(project_slug, False):
                         why = "this board's switch is off"
+                    elif (
+                        waits := self.live.held_by_release(project_slug, card.number)
+                    ) is not None:
+                        why = waits
                     elif snapshot is None:
                         why = "the machine has not been read for this project yet"
                     elif doors is None or doors.placement is None:

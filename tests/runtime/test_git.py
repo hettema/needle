@@ -161,3 +161,89 @@ def test_a_checkout_ahead_of_origin_with_a_conflict_is_left_and_named(repos: tup
     assert levelled.level is False and "rebase conflicts" in (levelled.note or "")
     assert git.head(checkout) == before and git.tracked_changes(checkout) == []
     assert sh(origin, "rev-parse", "develop") != before
+
+
+# ── what a release would carry (card #139, item 1) ─────────────────────
+
+
+def test_a_release_reads_the_range_between_the_stable_and_the_shared_branch(
+    repos: tuple[Path, Path],
+):
+    """Level, ahead, and the same question asked of a lane's own HEAD. The
+    verb decides nothing; it answers what a promotion would carry."""
+    _, checkout = repos
+    level = git.release(checkout)
+    assert level.read and level.files == [] and level.commits == 0 and level.note is None
+
+    path = lane(checkout, "card-9-lane")
+    (path / "alembic").mkdir()
+    (path / "alembic" / "210_rewrite.py").write_text("UPDATE campaigns\n")
+    (path / "notes.md").write_text("two\n")
+    sh(path, "add", "-A")
+    sh(path, "commit", "-q", "-m", "two")
+    # Before the fold, the lane asks what its own promotion would carry.
+    mine = git.release(path, ahead="HEAD")
+    assert mine.read and mine.commits == 1
+    assert sorted(mine.files) == ["alembic/210_rewrite.py", "notes.md"]
+
+    assert git.fold(path, promote_main=False).pushed
+    git.fetch(checkout)
+    ahead = git.release(checkout)
+    assert ahead.read and ahead.commits == 1
+    assert sorted(ahead.files) == ["alembic/210_rewrite.py", "notes.md"]
+    assert sorted(ahead.files) == sorted(
+        line for line in sh(checkout, "diff", "--name-only", "origin/main...origin/develop").split()
+    )
+
+
+def test_a_checkout_with_no_stable_branch_says_so_rather_than_answering_empty(tmp_path: Path):
+    """"Nothing to carry" and "nothing could be seen" are the two sides the
+    refusal must tell apart; a project with no stable branch is the second."""
+    origin = tmp_path / "origin.git"
+    origin.mkdir()
+    sh(origin, "init", "--bare", "-b", "develop")
+    checkout = tmp_path / "checkout"
+    sh(tmp_path, "clone", "-q", str(origin), str(checkout))
+    sh(checkout, "checkout", "-q", "-b", "develop")
+    (checkout / "README.md").write_text("one\n")
+    sh(checkout, "add", "README.md")
+    sh(checkout, "commit", "-q", "-m", "one")
+    sh(checkout, "push", "-q", "origin", "develop")
+    sh(checkout, "fetch", "-q", "origin")
+    found = git.release(checkout)
+    assert not found.read and found.files == [] and "origin/main" in (found.note or "")
+
+
+def test_a_checkout_that_cannot_be_read_at_all_is_not_a_missing_stable_branch(tmp_path: Path):
+    """The two unreadable cases say different things: a reader told "there is
+    no origin/main here" about a directory that does not exist would go
+    looking for a branch (the four-state run for item 1, 2026-09-13)."""
+    nowhere = git.release(tmp_path / "nowhere")
+    assert not nowhere.read and "is not a checkout this machine can read" in (nowhere.note or "")
+
+
+def test_a_fold_that_holds_the_release_carries_the_hold_in_the_same_push(
+    repos: tuple[Path, Path],
+):
+    """One push carries the work and the standing hold that keeps the work
+    finishing behind it from stalling (item 3); a hold already standing is
+    left exactly as it is, because the owner is about to read its reason."""
+    _, checkout = repos
+    path = lane(checkout, "card-9-lane")
+    (path / "notes.md").write_text("two\n")
+    sh(path, "add", "notes.md")
+    sh(path, "commit", "-q", "-m", "two")
+    folded = git.fold(path, promote_main=False, hold="docs/board/HOLD.md", why="a reason")
+    assert folded.pushed and folded.held == "docs/board/HOLD.md"
+    assert (path / "docs" / "board" / "HOLD.md").read_text().endswith("a reason\n")
+    assert git.tracked_changes(path) == []
+
+    second = lane(checkout, "card-10-lane")
+    sh(second, "merge", "-q", "--ff-only", "origin/develop")
+    assert (second / "docs" / "board" / "HOLD.md").read_text().endswith("a reason\n")
+    (second / "more.md").write_text("three\n")
+    sh(second, "add", "more.md")
+    sh(second, "commit", "-q", "-m", "three")
+    again = git.fold(second, promote_main=False, hold="docs/board/HOLD.md", why="another reason")
+    assert again.pushed and again.held is None
+    assert (second / "docs" / "board" / "HOLD.md").read_text().endswith("a reason\n")

@@ -126,6 +126,7 @@ export interface LaneRecord {
   trunk_synced_at: string | null;
   main_synced_at: string | null;
   machine?: string;
+  release_held_at?: string | null;
 }
 
 export interface LaneSnapshot {

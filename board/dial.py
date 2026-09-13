@@ -38,6 +38,7 @@ from domain.dial import (
 )
 from domain.document import Document, DocumentKind, FixMark, SuggestionKind
 from domain.lane import HANDS_ON, Lane, LaneState
+from domain.release import Held
 from domain.row import RowKind
 from domain.session import Session
 from domain.signal import Reading
@@ -254,14 +255,17 @@ def held_lanes(
     fix_lanes: list[FixLane],
     start_offered: Callable[[str, int], bool | None],
     switched_on: Callable[[str], bool],
+    held_by_release: Callable[[str, int], str | None] | None = None,
 ) -> list[FixLane]:
     """The fix lanes at the planned stage the dial cannot start — the Start
     door closed (parked, waiting on a Sequencing card, nowhere to run, or
-    not read yet), or the board's switch off since the plan was written
-    (card #80). Such a card is no process: on the dial's first night four
-    of them held four slots while fourteen eligible defects waited.
-    `start_offered` answers from the loop's last read; None (unread) is
-    closed. `switched_on` answers from the store."""
+    not read yet), the board's switch off since the plan was written (card
+    #80), or a release already waiting on this board that this card's plan
+    would pile onto (card #139, item 4). Such a card is no process: on the
+    dial's first night four of them held four slots while fourteen eligible
+    defects waited. `start_offered` answers from the loop's last read; None
+    (unread) is closed. `switched_on` and `held_by_release` answer from the
+    board's own state."""
     return [
         lane
         for lane in fix_lanes
@@ -269,6 +273,10 @@ def held_lanes(
         and (
             start_offered(lane.project, lane.card_number) is not True
             or not switched_on(lane.project)
+            or (
+                held_by_release is not None
+                and held_by_release(lane.project, lane.card_number) is not None
+            )
         )
     ]
 
@@ -366,9 +374,11 @@ def dial_state(
     held: list[FixLane],
     room: Headroom | None,
     triaging: int = 0,
+    release: Held | None = None,
 ) -> DialState:
-    """One board's head: its own switch, the other boards that are on, and
-    the count against the machine's number across every board."""
+    """One board's head: its own switch, the other boards that are on, the
+    count against the machine's number across every board, and the release
+    waiting on the owner when one is (card #139)."""
     return DialState(
         dial=dial,
         others_on=[s.project for s in switches if s.on and s.project != dial.project],
@@ -377,4 +387,5 @@ def dial_state(
         held=len(held),
         full=room.sentence if room is not None and room.full else None,
         quiet=is_quiet(lanes_by_project),
+        release=release,
     )

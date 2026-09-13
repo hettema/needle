@@ -516,9 +516,26 @@ def push(runtime: Runtime, args: argparse.Namespace) -> int:
     board asks it over the wire when the lane is not on its own machine
     (card #83, item 3). Exit 1 with the value when nothing was pushed."""
     worktree = str(Path(args.worktree).expanduser().resolve())
-    folded = runtime.fold(worktree, promote_main=args.main)
+    folded = runtime.fold(worktree, promote_main=args.main, hold=args.hold, why=args.why)
     _emit(args, folded, folded.words)
     return 0 if folded.pushed else 1
+
+
+def release(runtime: Runtime, args: argparse.Namespace) -> int:
+    """What promoting the stable branch from a checkout on this machine
+    would carry (card #139, item 1): the board asks it over the wire when
+    the checkout is not on its own machine. It decides nothing. Exit 1 when
+    the range could not be read, so an unreadable answer is never taken for
+    an empty one."""
+    checkout = str(Path(args.checkout).expanduser().resolve())
+    found = runtime.release(checkout, ahead=args.ahead)
+    _emit(
+        args,
+        found,
+        found.note
+        or f"{found.commits} commit(s), {len(found.files)} file(s) a promotion would carry",
+    )
+    return 0 if found.read else 1
 
 
 def level(runtime: Runtime, args: argparse.Namespace) -> int:
@@ -1293,6 +1310,15 @@ def register(sub: "argparse._SubParsersAction[argparse.ArgumentParser]") -> None
     p_push = parser("push", "the git half of a fold, on the machine that holds the lane", push)
     p_push.add_argument("--worktree", required=True, help="the lane's worktree")
     p_push.add_argument("--main", action="store_true", help="promote main from the same commit")
+    p_push.add_argument("--hold", help="the project's standing hold file, written before the push")
+    p_push.add_argument("--why", help="the one sentence the hold file carries")
+    p_release = parser(
+        "release", "what promoting the stable branch from a checkout here would carry", release
+    )
+    p_release.add_argument("--checkout", required=True, help="the project checkout or lane")
+    p_release.add_argument(
+        "--ahead", help="the ref the promotion would carry; origin/develop when omitted"
+    )
     p_level = parser("level", "this machine's clone of a project, level with the trunk", level)
     p_level.add_argument("repo")
     p_board = sub.add_parser("board", help="which machine the board serves from")

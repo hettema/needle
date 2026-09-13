@@ -151,6 +151,8 @@ body { overflow: hidden; }
 .dial-live[data-meaning] { color: var(--meaning); }
 .dial-held { white-space: nowrap; color: var(--ink-3); }
 .dial-full { white-space: nowrap; color: var(--meaning); }
+.dial-declared { white-space: nowrap; color: var(--ink-3); }
+.dial-release { color: var(--meaning); max-width: 420px; }
 .dial .said { font-size: 11px; color: var(--ink-2); max-width: 260px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 /* ── the batched question ──────────────────────────────────────────── */

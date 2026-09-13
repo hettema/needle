@@ -91,6 +91,18 @@ class Claim(StrEnum):
     """A plan whose Sequencing line means a hold the board cannot place —
     a bare plan number, `plan N`, a project no board holds — so the hold
     silently never held (card #69, item 4)."""
+    RELEASE_YOURS = "release yours"
+    """A card whose work is folded and whose release the board would not
+    make without him (card #139): everything it did is on the shared
+    branch, the stable branch stands where it was, and what is waiting is
+    something that project says cannot be taken back. His move, and the
+    only one left on the card."""
+    RELEASE_UNHELD = "release unheld"
+    """A release waiting on a board with nothing holding the closes behind
+    it: either no card says the release is his — a session that died
+    between its fold and its hold — or the project's standing hold file is
+    not there. Left alone it turns one waiting card into every card behind
+    it half-closed, which is why it reads as broken rather than as his."""
 
 
 CLAIM_MEANING: dict[Claim, Meaning] = {
@@ -116,6 +128,8 @@ CLAIM_MEANING: dict[Claim, Meaning] = {
     Claim.BESIDE_UNNAMED: Meaning.BROKEN,
     Claim.HOLD_UNREAD: Meaning.BROKEN,
     Claim.DECISION_BEING_READ: Meaning.LIVE,
+    Claim.RELEASE_YOURS: Meaning.YOURS,
+    Claim.RELEASE_UNHELD: Meaning.BROKEN,
 }
 """Which of the three head words each claim counts under; the two other
 meanings never claim anyone."""

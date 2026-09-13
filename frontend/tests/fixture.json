@@ -61,14 +61,16 @@
         "on": false,
         "lanes": 1,
         "changed_at": null,
-        "first_on_at": null
+        "first_on_at": null,
+        "undoable": null
       },
       "others_on": [],
       "running": 0,
       "triaging": 0,
       "held": 0,
       "full": null,
-      "quiet": true
+      "quiet": true,
+      "release": null
     },
     "columns": [
       {

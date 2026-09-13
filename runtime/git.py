@@ -14,6 +14,7 @@ from pathlib import Path
 
 from pydantic import BaseModel
 
+from domain.release import Release
 from runtime import machine
 
 TRUNK = "develop"
@@ -436,18 +437,126 @@ def _rebase_ahead(repo: str | Path, behind: int, main_updated: bool, error: GitF
 # ── the fold ───────────────────────────────────────────────────────────
 
 
+def release(
+    checkout: str | Path, *, ahead: str | None = None, fetch_first: bool = False
+) -> Release:
+    """What promoting the stable branch from this checkout would carry: the
+    files and the commit count of the range between `origin/main` and
+    `ahead` — `origin/develop` by default, and the lane's own `HEAD` when a
+    fold asks what its promotion would carry (card #139, item 1).
+
+    It decides nothing; it answers. A range it could not read is `read`
+    False with the reason, never an empty answer: "nothing to carry" and
+    "nothing could be seen" are the two sides the refusal in the fold verb
+    must tell apart, and a checkout with no stable branch is the second.
+    The three-dot form is the merge base's, so the answer is what `ahead`
+    adds and not what the stable branch has moved on without — the same
+    shape `changed_files` reads a lane's own work with."""
+    if fetch_first:
+        why = fetch(checkout)
+        if why is not None:
+            return Release(files=[], commits=0, read=False, note=f"could not fetch: {why}")
+    inside = _try(checkout, "rev-parse", "--is-inside-work-tree")
+    if inside is None or inside.strip() != "true":
+        # Said apart from the next answer on purpose: "this checkout cannot
+        # be read at all" and "this project has no stable branch" are two
+        # different facts, and a refusal that showed one wording for both
+        # would send a reader looking for a branch in a directory that is
+        # not there (the four-state run for item 1, 2026-09-13).
+        return Release(
+            files=[],
+            commits=0,
+            read=False,
+            note=f"{checkout} is not a checkout this machine can read",
+        )
+    stable = f"{REMOTE}/{STABLE}"
+    if head_of(checkout, stable) is None:
+        return Release(
+            files=[],
+            commits=0,
+            read=False,
+            note=f"there is no {stable} here, so what a promotion would carry cannot be read",
+        )
+    tip = ahead or f"{REMOTE}/{TRUNK}"
+    if head_of(checkout, tip) is None:
+        return Release(files=[], commits=0, read=False, note=f"there is no {tip} here")
+    diff = _try(checkout, "diff", "--name-only", f"{stable}...{tip}")
+    if diff is None:
+        return Release(files=[], commits=0, read=False, note=f"git could not read {stable}...{tip}")
+    counted = _try(checkout, "rev-list", "--count", f"{stable}..{tip}")
+    return Release(
+        files=[line.strip() for line in diff.splitlines() if line.strip()],
+        commits=int(counted.strip()) if counted and counted.strip().isdigit() else 0,
+        read=True,
+        note=None,
+    )
+
+
 class Folded(BaseModel):
     pushed: bool
     words: str
     tip: str | None
     main_pushed: bool | None
     """None when main was not asked for."""
+    held: str | None = None
+    """The standing hold file this fold wrote into the lane before pushing,
+    so the closes queued behind a held release do not meet their own
+    archive refusal (card #139, item 3); None when none was asked for or
+    one already stood, and git's own words when it could not be written."""
 
 
-def fold(worktree: str | Path, *, promote_main: bool) -> Folded:
+HOLD_HEAD = "# The release is held"
+
+
+def _write_hold(worktree: str | Path, hold: str, why: str) -> tuple[str | None, str | None]:
+    """Write the project's standing hold file into the lane and commit it,
+    so the fold carries it to the shared branch and every close behind it
+    reads it there. Answers (what was written, what went wrong).
+
+    A file that already stands is left exactly as it is: the first held
+    release wrote it, the owner's deletion is what lifts it, and a second
+    lane rewriting it would erase the reason he is about to read."""
+    path = Path(worktree) / hold
+    if path.exists():
+        return None, None
+    try:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(f"{HOLD_HEAD}\n\n{why}\n", encoding="utf-8")
+    except OSError as error:
+        return None, str(error)
+    try:
+        _git(worktree, "add", "--", hold)
+        _git(
+            worktree,
+            "commit",
+            "--no-verify",
+            "-m",
+            f"chore(release): hold the release — {hold}",
+            "-m",
+            why,
+        )
+    except GitFailed as error:
+        return None, str(error)
+    return hold, None
+
+
+def fold(
+    worktree: str | Path, *, promote_main: bool, hold: str | None = None, why: str | None = None
+) -> Folded:
     """Push the lane's HEAD to origin/develop by fast-forward, proved by
     origin/develop equalling HEAD after a fetch; with `promote_main`, push
-    the same commit to origin/main afterwards."""
+    the same commit to origin/main afterwards.
+
+    With `hold`, the project's standing hold file is written and committed
+    into the lane first, so one push carries both the work and the hold
+    that keeps the closes behind it archiving (card #139, item 3). The
+    write is never combined with `promote_main`: a held release is one that
+    is not promoting."""
+    written: str | None = None
+    if hold and why and not promote_main:
+        written, refused = _write_hold(worktree, hold, why)
+        if refused is not None:
+            written = refused
     dirty = tracked_changes(worktree)
     if dirty:
         return Folded(
@@ -458,14 +567,27 @@ def fold(worktree: str | Path, *, promote_main: bool) -> Folded:
             ),
             tip=head(worktree),
             main_pushed=None,
+            held=written,
         )
     tip = head(worktree)
     if tip is None:
-        return Folded(pushed=False, words="no HEAD to push", tip=None, main_pushed=None)
+        return Folded(
+            pushed=False,
+            words="no HEAD to push",
+            tip=None,
+            main_pushed=None,
+            held=written,
+        )
     try:
         _git(worktree, "push", REMOTE, f"HEAD:{TRUNK}", timeout=FETCH_SECONDS)
     except GitFailed as error:
-        return Folded(pushed=False, words=str(error), tip=tip, main_pushed=None)
+        return Folded(
+            pushed=False,
+            words=str(error),
+            tip=tip,
+            main_pushed=None,
+            held=written,
+        )
     why = fetch(worktree)
     if why is not None:
         return Folded(
@@ -473,6 +595,7 @@ def fold(worktree: str | Path, *, promote_main: bool) -> Folded:
             words=f"pushed, but could not fetch to prove it: {why}",
             tip=tip,
             main_pushed=None,
+            held=written,
         )
     landed = head_of(worktree, f"{REMOTE}/{TRUNK}")
     if landed != tip:
@@ -481,10 +604,15 @@ def fold(worktree: str | Path, *, promote_main: bool) -> Folded:
             words=f"pushed, but {REMOTE}/{TRUNK} reads {landed} and HEAD is {tip}",
             tip=tip,
             main_pushed=None,
+            held=written,
         )
     if not promote_main:
         return Folded(
-            pushed=True, words=f"{REMOTE}/{TRUNK} is {tip[:10]}", tip=tip, main_pushed=None
+            pushed=True,
+            words=f"{REMOTE}/{TRUNK} is {tip[:10]}",
+            tip=tip,
+            main_pushed=None,
+            held=written,
         )
     try:
         _git(worktree, "push", REMOTE, f"HEAD:{STABLE}", timeout=FETCH_SECONDS)
@@ -494,10 +622,12 @@ def fold(worktree: str | Path, *, promote_main: bool) -> Folded:
             words=f"{REMOTE}/{TRUNK} is {tip[:10]}; main not promoted: {error}",
             tip=tip,
             main_pushed=False,
+            held=written,
         )
     return Folded(
         pushed=True,
         words=f"{REMOTE}/{TRUNK} and {REMOTE}/{STABLE} are {tip[:10]}",
         tip=tip,
         main_pushed=True,
+        held=written,
     )

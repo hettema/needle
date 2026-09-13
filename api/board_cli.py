@@ -16,7 +16,7 @@ needle lanes SLUG                        # every card's lane, as the board reads
 needle verdicts SLUG [--write]           # the verdicts the board's own facts settle (plan 05)
 needle kinds SLUG                        # every live suggestion's kind and Fix: mark, as read
 needle watercooler SLUG [N "text"]       # read the watercooler, or say one line as #N's lane
-needle dial [on|off] [--lanes N]         # the owner's standing ruling on defects (plan 11)
+needle dial SLUG [on|off] [--lanes N] [--cannot-undo PATH] [--hold PATH]
 needle fixes SLUG|all                    # every fix lane the dial ran, and the defects at dial-on
 needle team SLUG [--json]                # which team earns its place, per kind of work (card #58)
 
@@ -40,6 +40,7 @@ import urllib.request
 from collections.abc import Callable
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
+from typing import NamedTuple
 
 from api.dial import Dial
 from api.doors import REPO_ROOT, SKILLS, DoorFailed, DoorRefused, Doors
@@ -47,6 +48,7 @@ from api.loops import Loops, project_of_cwd
 from board.brief import watercooler_text
 from board.dial import Filer
 from board.lane import has_row
+from board.release import carried, sentence, under
 from board.team import team_words
 from board.triage import band_of, grade_words
 from board.verdicts import CLOSED, VerdictUnreadable, machine_verdict, parse_verdict, render_verdict
@@ -54,6 +56,7 @@ from domain.audit import AuditKind
 from domain.call import HowKnown
 from domain.card import Actor
 from domain.column import Column
+from domain.dial import Dial as DialSetting
 from domain.document import DocumentKind, SuggestionKind
 from domain.focus import FocusState, FocusStrip, FocusVerdict, Leverage, Likelihood, RecheckOutcome
 from domain.lane import HANDS_ON, LaneState
@@ -407,7 +410,14 @@ def fold(args: argparse.Namespace, live: Live, runtime: Runtime, loops: Loops, d
     over = _folds_over(live, slug, number, runtime.edits(worktree)) if number is not None else []
     for other, files in over:
         print(f"this fold lands over #{other}'s edits in {', '.join(files)}")
-    folded = runtime.fold(worktree, promote_main=args.main)
+    refusal = _release_refused(live, runtime, project, number, worktree) if args.main else None
+    promote = args.main and refusal is None
+    folded = runtime.fold(
+        worktree,
+        promote_main=promote,
+        hold=refusal.hold if refusal else None,
+        why=refusal.sentence if refusal else None,
+    )
     if not folded.pushed:
         print(f"not folded: {folded.words}", file=sys.stderr)
         return 1
@@ -446,6 +456,8 @@ def fold(args: argparse.Namespace, live: Live, runtime: Runtime, loops: Loops, d
         print(f"trunk synced: {project.project.path} is level with origin/develop")
     else:
         print(f"trunk not synced: {state.note}", file=sys.stderr)
+    if refusal is not None:
+        return _hold_the_release(live, slug, number, refusal, folded, now)
     if args.main:
         if folded.main_pushed:
             print("main promoted: origin/main is the same commit")
@@ -463,6 +475,88 @@ def fold(args: argparse.Namespace, live: Live, runtime: Runtime, loops: Loops, d
         else:
             print("main not promoted: see above", file=sys.stderr)
             return 1
+    return 0
+
+
+class _Refusal(NamedTuple):
+    sentence: str
+    hold: str | None
+
+
+def _release_refused(
+    live: Live, runtime: Runtime, project, number: int | None, worktree: str
+) -> _Refusal | None:
+    """Whether this promotion of the stable branch is the owner's rather
+    than this session's (card #139, item 3), and the one sentence saying so.
+
+    Three facts, all read before anything is pushed. The board started this
+    lane: the owner's standing ruling admitted the *work*, and it was never
+    a ruling about what reaches the people who pay him. The board declared
+    something: a board that declares nothing releases exactly as it did
+    before this card. And the range this promotion would carry holds one of
+    those paths — the range, whoever put it there, never this session's own
+    change, which is the leak `tests/ratchets/
+    test_a_release_is_decided_on_the_range.py` exists to refuse.
+
+    A session the owner started himself is not touched, on any board."""
+    slug = project.project.slug
+    if number is None:
+        return None
+    declared = live.store.dial(slug).undoable
+    if declared is None or not declared.paths:
+        return None
+    if not any(fix.card_number == number for fix in live.store.fix_lanes(slug)):
+        return None  # the owner started this lane himself; the release is his either way
+    found = runtime.release(worktree, ahead="HEAD")
+    if not found.read:
+        return _Refusal(
+            sentence(
+                slug,
+                files=[],
+                hold=declared.hold,
+                hold_stands=True,
+                unreadable=found.note,
+            ),
+            declared.hold,
+        )
+    carries = carried(found.files, declared.paths)
+    if not carries:
+        return None
+    return _Refusal(
+        sentence(
+            slug,
+            files=under(found.files, carries),
+            hold=declared.hold,
+            hold_stands=True,
+        ),
+        declared.hold,
+    )
+
+
+def _hold_the_release(
+    live: Live, slug: str, number: int | None, refusal: _Refusal, folded, now: datetime
+) -> int:
+    """The release left where it was, said once and written where the owner
+    and the next cold session both read it (items 3 and 5).
+
+    The fold itself succeeded: the work is on the shared branch and the
+    session closes as any other session does. So this answers 0 — a lane
+    that folded is not a lane that failed, and a session told it failed
+    would try again, or worse, reach for the promotion by hand."""
+    said = refusal.sentence
+    print(f"main not promoted: {said}")
+    if refusal.hold and folded.held == refusal.hold:
+        print(f"the release is held: {refusal.hold} is on the shared branch with this fold")
+    elif refusal.hold and folded.held:
+        print(f"the hold could not be written: {folded.held}", file=sys.stderr)
+    if number is None:
+        return 0
+    record = live.store.lane(slug, number)
+    if record is not None and record.release_held_at is None:
+        live.store.record_lane(record.model_copy(update={"release_held_at": now}))
+    live.add_row(slug, number, Row(kind=RowKind.WAITS, text=said), Actor.SESSION)
+    live.note(slug, number, AuditKind.SYNCED, Actor.MACHINE, f"Release held: {said}")
+    live.say(slug, number, Actor.MACHINE, f"#{number}: {said}")
     return 0
 
 
@@ -814,11 +908,17 @@ def dial(args: argparse.Namespace, live: Live, runtime: Runtime, loops: Loops, d
     control = Dial(live, runtime, loops, doors)
     loops.reconcile_now()
     if args.setting is not None or args.lanes is not None:
-        control.turn(
-            project=args.slug,
-            on=None if args.setting is None else args.setting == "on",
-            lanes=args.lanes,
-        )
+        try:
+            control.turn(
+                project=args.slug,
+                on=None if args.setting is None else args.setting == "on",
+                lanes=args.lanes,
+                cannot_undo=_cannot_undo(args.cannot_undo),
+                hold=args.hold,
+            )
+        except StoreRefusal as refusal:
+            print(str(refusal), file=sys.stderr)
+            return 1
     switches = live.store.dials()
     shown = [s for s in switches if args.slug is None or s.project == args.slug]
     for setting in shown:
@@ -831,6 +931,11 @@ def dial(args: argparse.Namespace, live: Live, runtime: Runtime, loops: Loops, d
                 else ""
             )
         )
+        if setting.on:
+            print(f"      {_declaration_line(setting)}")
+            held = live.release_held(setting.project)
+            if held is not None:
+                print(f"      {held.sentence}")
     lanes = live.store.fix_lanes_at_most()
     if not shown:
         print(f"no project is on the board; {lanes} fix lane{'' if lanes == 1 else 's'} at most")
@@ -845,6 +950,41 @@ def dial(args: argparse.Namespace, live: Live, runtime: Runtime, loops: Loops, d
         + (f"; {state.full}" if state.full else "")
     )
     return 0
+
+
+NOTHING = "nothing"
+"""The word that clears a board's declaration, the same word `needle triage
+--breaks nothing` already means by it: one grammar for "I looked and there
+is none", so a reader never has to learn a second."""
+
+
+def _cannot_undo(named: list[str] | None) -> list[str] | None:
+    """What the turn declares, from the flags: None when the turn said
+    nothing (the board keeps what it has), an empty list when it said
+    `nothing` (everything there releases)."""
+    if named is None:
+        return None
+    return [] if [n.strip().lower() for n in named] == [NOTHING] else named
+
+
+def _declaration_line(setting: DialSetting) -> str:
+    """What this board says cannot be taken back, in the owner's words —
+    and, for a board turned on before anyone asked, that nobody has said
+    (card #139, item 2). Undeclared and "nothing declared" release the same
+    things and are not the same fact, so they never share a wording."""
+    undoable = setting.undoable
+    if undoable is None:
+        return (
+            "cannot be undone: nobody has said — this board was turned on before the question "
+            "existed, and everything here releases"
+        )
+    if not undoable.paths:
+        return "cannot be undone: nothing — everything here releases"
+    return (
+        "cannot be undone: "
+        + ", ".join(undoable.paths)
+        + (f"; held by {undoable.hold}" if undoable.hold else "; no standing hold named")
+    )
 
 
 def _tally_line(tally: Tally) -> str:
@@ -1416,6 +1556,18 @@ def register(sub: "argparse._SubParsersAction[argparse.ArgumentParser]") -> None
     )
     p_dial.add_argument("slug", nargs="?", help="the board whose switch to read or turn")
     p_dial.add_argument("setting", nargs="?", choices=["on", "off"])
+    p_dial.add_argument(
+        "--cannot-undo",
+        action="append",
+        metavar="PATH",
+        help="a path in this project whose change cannot be taken back, declared as the switch "
+        f"goes on; repeatable, and `--cannot-undo {NOTHING}` says there is none",
+    )
+    p_dial.add_argument(
+        "--hold",
+        metavar="PATH",
+        help="where this project's standing hold on releasing is written, relative to its root",
+    )
     p_dial.add_argument(
         "--lanes", type=int, help="how many fix lanes may run at once, across every board"
     )

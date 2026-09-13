@@ -60,6 +60,7 @@ from domain.lane import Discussion, LaneRecord
 from domain.launch import Rescue
 from domain.machine import HighWater, Machine, Timing
 from domain.project import Project
+from domain.release import Undoable
 from domain.row import Row, RowKind
 from domain.session import SessionSlot
 from domain.signal import Reading, SessionWork, WindowlessSession
@@ -1046,6 +1047,7 @@ class Store:
             row.folded_at = record.folded_at
             row.trunk_synced_at = record.trunk_synced_at
             row.main_synced_at = record.main_synced_at
+            row.release_held_at = record.release_held_at
 
     def lanes(self, slug: str) -> list[LaneRecord]:
         with self._session() as session:
@@ -1561,6 +1563,8 @@ class Store:
         project: str | None,
         on: bool | None = None,
         lanes: int | None = None,
+        cannot_undo: list[str] | None = None,
+        hold: str | None = None,
         actor: Actor,
         at: datetime,
     ) -> list[Dial]:
@@ -1569,11 +1573,23 @@ class Store:
         that changes nothing writes nothing. A switch needs its board, and a
         board the store does not know is refused by name. The first turn of
         a board to on stamps that board's `first_on_at`, the moment its rail
-        is measured against."""
+        is measured against.
+
+        A turn to on also records what that board says cannot be taken back
+        (card #139, item 2), because that is the ruling this one bounds. A
+        turn to on naming nothing on a board that has declared before keeps
+        the declaration it has: the owner re-confirming the switch must not
+        silently widen what ships while he sleeps — clearing it is
+        `cannot_undo=[]`, which the verb spells `--cannot-undo nothing`."""
         if lanes is not None and lanes < 0:
             raise StoreRefusal("The dial's number of fix lanes cannot be below zero.")
         if on is not None and project is None:
             raise StoreRefusal("A switch is one board's: name the board to turn it on or off.")
+        if (cannot_undo is not None or hold is not None) and not on:
+            raise StoreRefusal(
+                "What cannot be undone is declared at the turn that bounds it: name it with "
+                "the board's switch going on."
+            )
         with self._session() as session, session.begin():
             machine = session.get(DialRow, 1)
             if machine is None:
@@ -1597,11 +1613,14 @@ class Store:
                 if row is None:
                     row = DialRow(project_slug=project, on=False, lanes=None)
                     session.add(row)
-                if row.on != on:
+                declared = self._declare(row, on=on, cannot_undo=cannot_undo, hold=hold, at=at)
+                turned = row.on != on
+                if turned:
                     row.on = on
                     row.changed_at = at
                     if on and row.first_on_at is None:
                         row.first_on_at = at
+                if turned or declared is not None:
                     session.add(
                         DialChangeRow(
                             at=at,
@@ -1609,10 +1628,49 @@ class Store:
                             project_slug=project,
                             on=on,
                             lanes=machine.lanes,
+                            declared=declared,
                         )
                     )
             session.flush()
         return self.dials()
+
+    @staticmethod
+    def _declare(
+        row: DialRow,
+        *,
+        on: bool,
+        cannot_undo: list[str] | None,
+        hold: str | None,
+        at: datetime,
+    ) -> str | None:
+        """Write what a turn to on says cannot be undone there, and answer
+        the audit's one line — None when this turn said nothing new.
+
+        A board is declared from its first turn to on after this shipped,
+        even when the owner named nothing: that is him saying there is
+        nothing, and it is what lets the head tell it apart from a board
+        turned on before anyone asked. A later turn naming nothing leaves
+        the declaration standing, so re-confirming a switch never widens
+        what ships unattended."""
+        if not on:
+            return None
+        declared_before = row.declared_at is not None
+        if cannot_undo is None and hold is None and declared_before:
+            return None
+        if cannot_undo is not None:
+            paths = [p.strip().strip("/") for p in cannot_undo if p.strip().strip("/")]
+        elif declared_before:
+            paths = [ln.strip() for ln in (row.cannot_undo or "").splitlines() if ln.strip()]
+        else:
+            paths = []
+        text = "\n".join(paths)
+        keeps = hold if hold is not None else row.hold_file
+        if declared_before and (row.cannot_undo or "") == text and row.hold_file == keeps:
+            return None  # the same thing said again writes nothing
+        row.cannot_undo = text
+        row.hold_file = keeps
+        row.declared_at = at
+        return (", ".join(paths) if paths else "nothing") + (f"; hold {keeps}" if keeps else "")
 
     def dial_changes(self) -> list[DialChange]:
         with self._session() as session:
@@ -1625,6 +1683,7 @@ class Store:
                     project=r.project_slug,
                     on=r.on,
                     lanes=r.lanes,
+                    declared=r.declared,
                 )
                 for r in rows
             ]
@@ -3127,6 +3186,7 @@ def _lane_record(row: LaneRow) -> LaneRecord:
         trunk_synced_at=row.trunk_synced_at,
         main_synced_at=row.main_synced_at,
         machine=row.machine or "",
+        release_held_at=row.release_held_at,
     )
 
 
@@ -3184,7 +3244,7 @@ def _windowless_session(row: WindowlessSessionRow) -> WindowlessSession:
 
 def _dial(slug: str, row: DialRow | None, lanes: int) -> Dial:
     """A board's switch from its row, or off when it has none, with the
-    machine's number beside it."""
+    machine's number beside it and what it says cannot be undone."""
     if row is None:
         return Dial(project=slug, on=False, lanes=lanes, changed_at=None, first_on_at=None)
     return Dial(
@@ -3193,6 +3253,21 @@ def _dial(slug: str, row: DialRow | None, lanes: int) -> Dial:
         lanes=lanes,
         changed_at=row.changed_at,
         first_on_at=row.first_on_at,
+        undoable=_undoable(row),
+    )
+
+
+def _undoable(row: DialRow) -> Undoable | None:
+    """What a board declared, or None when it never has (card #139, item 2).
+    The moment is the discriminator, never the paths: a board that declared
+    nothing and a board turned on before the declaration existed release
+    the same things and are not the same fact, and the head says which."""
+    if row.declared_at is None:
+        return None
+    return Undoable(
+        paths=[line.strip() for line in (row.cannot_undo or "").splitlines() if line.strip()],
+        hold=row.hold_file,
+        declared_at=row.declared_at,
     )
 
 

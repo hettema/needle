@@ -191,7 +191,18 @@ export function IdeaDoor({ onOpen, disabled, said }: { onOpen: (text: string) =>
  * meaning, and only while something runs.
  */
 export function DialControl({ state, others, onTurn, disabled, said }: { state: DialState; others: string[]; onTurn: (on: boolean, lanes: number) => void; disabled: boolean; said: string | null }) {
-  const { dial, running, held, full, quiet } = state;
+  const { dial, running, held, full, quiet, release } = state;
+  // What this board says cannot be taken back, in his own words (card #139,
+  // item 2). A board turned on before the question existed says nobody has
+  // said, which releases everything and is not the same fact as a board
+  // that declared there is nothing.
+  const declaration = !dial.on
+    ? null
+    : dial.undoable === null || dial.undoable === undefined
+      ? "cannot be undone: nobody has said"
+      : dial.undoable.paths.length === 0
+        ? "cannot be undone: nothing"
+        : `cannot be undone: ${dial.undoable.paths.join(", ")}`;
   const [lanes, setLanes] = useState(String(dial.lanes));
   useEffect(() => {
     setLanes(String(dial.lanes));
@@ -236,6 +247,16 @@ export function DialControl({ state, others, onTurn, disabled, said }: { state: 
       {full ? (
         <span className="dial-full" data-meaning="broken" title="The memory floor, read on every pass: while available memory or free swap is under it, or a lane holds as much as it, the dial opens nothing and no lane is stopped. The floor is the board's; the number stays yours">
           {full}
+        </span>
+      ) : null}
+      {declaration ? (
+        <span className="dial-declared" title="What this board says cannot be taken back, recorded when you turned auto-fix on. A release that would carry one of these waits for you; a board that names nothing releases everything, exactly as before.">
+          {declaration}
+        </span>
+      ) : null}
+      {release ? (
+        <span className="dial-release" data-meaning={release.claimed && release.hold_stands ? "yours" : "broken"} title="A release this board would not make without you: the work is on the shared branch and the stable branch is where it was.">
+          {release.sentence}
         </span>
       ) : null}
       {said ? <span className="said">{said}</span> : null}

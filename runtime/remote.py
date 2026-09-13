@@ -28,6 +28,7 @@ from domain.lane import Checkouts, Edited, LaneDocs, LaneTip
 from domain.launch import Launch, Rescoped, Start, Stopped, WindowlessStart
 from domain.machine import Ask, Machine, Observation
 from domain.notice import Notice, Said, Told
+from domain.release import Release
 from domain.session import LaneTokens, Session, TranscriptSize
 from domain.slot import Expired, Limits, LimitsRead, Rung, Where
 from runtime import git, machine
@@ -265,11 +266,25 @@ class Remote:
             argv.append("--windowless")
         return self._ask(argv, Launch, timeout=START_SECONDS)
 
-    def push(self, worktree: str, *, promote_main: bool) -> git.Folded:
+    def push(
+        self, worktree: str, *, promote_main: bool, hold: str | None = None, why: str | None = None
+    ) -> git.Folded:
         """The lane's fold, run where the lane is: its branch pushed to the
-        trunk from the checkout that holds it (card #83, item 3)."""
+        trunk from the checkout that holds it (card #83, item 3). With a
+        hold, the project's standing hold file is written and committed
+        there first, so one push carries the work and the hold together
+        (card #139, item 3)."""
         argv = ["push", "--worktree", worktree, *(["--main"] if promote_main else [])]
+        if hold and why:
+            argv += ["--hold", hold, "--why", why]
         return self._ask(argv, git.Folded, timeout=START_SECONDS)
+
+    def release(self, checkout: str, *, ahead: str | None = None) -> Release:
+        """What promoting the stable branch from a checkout on that machine
+        would carry (card #139, item 1): the same range read, asked of the
+        machine that holds the checkout."""
+        argv = ["release", "--checkout", checkout, *(["--ahead", ahead] if ahead else [])]
+        return self._ask(argv, Release, timeout=VERB_SECONDS)
 
     def level(self, repo: str) -> git.Levelled:
         """That machine's clone of a project brought level with the trunk:

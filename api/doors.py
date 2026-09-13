@@ -267,6 +267,40 @@ class Doors:
 
     # ── Start ──────────────────────────────────────────────────────────
 
+    def _release_note(self, slug: str, number: int, needle: str) -> str:
+        """What a lane the board started is told about the promotion before
+        it reaches for one (card #139).
+
+        The refusal is a mechanism and stands whatever the session does, so
+        this is not what holds the rule — it is what stops a session losing
+        an hour to a refusal it does not understand, and what tells it the
+        one wrong move: promoting the stable branch to get past an archive
+        that refuses because the stable branch is behind. That is exactly
+        the leak this card closed. A board that has declared nothing is told
+        nothing, because nothing is different for it."""
+        declared = self.live.store.dial(slug).undoable
+        if declared is None or not declared.paths:
+            return ""
+        if not any(fix.card_number == number for fix in self.live.store.fix_lanes(slug)):
+            return ""
+        holds = ", ".join(declared.paths)
+        hold = declared.hold
+        return (
+            f"\n\nThis lane is one the board started, and {slug} says a change under {holds} "
+            "cannot be taken back. So a promotion of the stable branch from here is refused, "
+            "having moved nothing: your work folds to the shared branch as always, the card "
+            "says the release is the owner's, and you close normally. If an archive or a gate "
+            "refuses because the stable branch is behind, catch up with the shared work and "
+            "run it again"
+            + (
+                f" — {hold} is on the shared branch and is what makes that gate stand aside"
+                if hold
+                else ""
+            )
+            + f". Never promote the stable branch by hand to get past it; `{needle} fold` "
+            "without `--main` is the whole of your fold."
+        )
+
     def brief_for_lane(self, detail: CardDetail, slug: str, team: Route | None = None) -> str:
         """The lane's brief. `team` is the team this Start assigns (card
         #58) — the card's own once it has one, so a restart carries the
@@ -321,7 +355,8 @@ class Doors:
             f"{project.path}/.claude/worktrees/; you are in it. Work and commit there. The fold "
             "is a fast-forward push to origin/develop from this worktree, never a local merge: "
             f"`{needle} fold` (add `--main` at a slice close to promote main)."
-            "\n\nWrite back to the card's rows through the `needle` command line, never by "
+            + self._release_note(slug, card.number, needle)
+            + "\n\nWrite back to the card's rows through the `needle` command line, never by "
             "editing the board's own files, so the owner and the next session read the same "
             "true state:"
             f"\n  {needle} card {slug} {card.number}            # this brief"

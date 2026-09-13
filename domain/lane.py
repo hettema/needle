@@ -74,6 +74,13 @@ class LaneRecord(BaseModel):
     """The machine the worktree is on (card #83): where its edits, its
     tip and its documents are read. Empty for a record older than the
     board knowing of more than one, which is this machine's."""
+    release_held_at: datetime | None = None
+    """When this lane's fold was refused the promotion of the stable branch
+    because the release would have carried a path the board says cannot be
+    undone (card #139, item 3). The work landed on the shared branch; the
+    release is the owner's. Cleared when he promotes, which `main_synced_at`
+    then records, so the two together say whether a held release is still
+    waiting or has gone."""
 
 
 class Checkouts(BaseModel):

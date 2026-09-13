@@ -5,7 +5,6 @@ import os
 
 from domain.gate import Gate
 from domain.session import SessionKind, SessionState
-from domain.slot import Handoff
 from runtime.service import Runtime
 from tests.floor import Floor
 

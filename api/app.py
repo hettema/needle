@@ -77,6 +77,12 @@ class DialBody(BaseModel):
     lanes: int | None = None
     """How many fix lanes may run at once, across every board (plan 11,
     item 3): the machine's one number; None leaves it as it is."""
+    cannot_undo: list[str] | None = None
+    """What this board says cannot be taken back, declared as its switch
+    goes on (card #139, item 2): None says nothing and leaves the
+    declaration it has, an empty list says there is none."""
+    hold: str | None = None
+    """Where this project's standing hold on releasing is written."""
 
 
 class FocusBody(BaseModel):
@@ -348,7 +354,13 @@ def create_app(store: Store | None = None, *, dist: Path | None = FRONTEND_DIST)
             raise StoreRefusal(f'No project "{body.project}" is on the board.')
 
         def turn() -> DialState:
-            dial.turn(project=body.project, on=body.on, lanes=body.lanes)
+            dial.turn(
+                project=body.project,
+                on=body.on,
+                lanes=body.lanes,
+                cannot_undo=body.cannot_undo,
+                hold=body.hold,
+            )
             return dial.state(body.project)
 
         return await loops.door("dial", turn)

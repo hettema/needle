@@ -28,6 +28,7 @@ from board.assemble import (
     folded_under,
     watch_signal,
 )
+from board.collision import footprint
 from board.dial import dial_state, held_lanes
 from board.focus import (
     READ_COLUMNS,
@@ -42,6 +43,7 @@ from board.lane import nothing_read
 from board.leverage import Judged, arrange, wake_line
 from board.parked import commitments_of
 from board.reconcile import SUGGESTION_HOMES, Effects, home_of, reconcile
+from board.release import carried
 from board.triage import Sources
 from domain.audit import AuditEntry, AuditKind
 from domain.board import BoardState, CardDetail, MachineState
@@ -64,6 +66,7 @@ from domain.lane import Doors, Lane, LaneSnapshot
 from domain.neighbour import Beside
 from domain.notice import Shown
 from domain.project import Project
+from domain.release import Held
 from domain.row import Row
 from domain.signal import SessionWork, SignalKind
 from domain.triage import Commitment, Ground
@@ -120,6 +123,12 @@ class LiveProject:
         """The neighbours reading of the last read, with the key it was read
         under (the index and the cards' identities), so a board read and an
         open card read the same reading (card #69)."""
+        self.release: Held | None = None
+        """This board's release when one waits on the owner, as the beat last
+        read it (card #139). Read only for a board that has declared
+        something, so a board that declares nothing pays nothing, and
+        re-read each beat so the hold lifts by itself the moment he
+        promotes — never by anyone remembering to clear it."""
 
 
 class Live:
@@ -378,6 +387,7 @@ class Live:
             focus=focus,
             leverage=leverage,
             leverages=leverages,
+            release=self.release_held(slug),
         )
 
     def focus_of(self, slug: str) -> tuple[FocusStrip, dict[int, CardLeverage], Arrangement]:
@@ -553,15 +563,78 @@ class Live:
             switches,
             fix_lanes,
             lanes,
-            held=held_lanes(fix_lanes, self.start_offered, on.__contains__),
+            held=held_lanes(fix_lanes, self.start_offered, on.__contains__, self.held_by_release),
             room=self.headroom,
             triaging=triaging,
+            release=self.release_held(slug),
         )
 
     def switched_on(self, slug: str) -> bool:
         """Whether a board's auto-fix switch is on, from the store (card #80):
         what the beat reads before a board's defects and before a Start."""
         return self.store.dial(slug).on
+
+    def release_held(self, slug: str) -> Held | None:
+        """This board's release when one is waiting on the owner, as the
+        beat last read it (card #139). None while nothing waits, which is
+        every board that declares nothing."""
+        live = self.projects.get(slug)
+        return live.release if live is not None else None
+
+    def held_by_release(self, slug: str, number: int) -> str | None:
+        """Why the beat leaves a planned card where it is while this board's
+        release waits, or None when nothing holds it (card #139, item 4).
+
+        The match is against the board's whole declaration, not only what
+        the waiting release happens to carry: the point is that the owner
+        wakes to one thing of that shape to read and promote, not a batch
+        he cannot take apart. Such a card is not refused and it is not his
+        — it starts by itself on the beat after he promotes."""
+        held = self.release_held(slug)
+        if held is None:
+            return None
+        declared = self.store.dial(slug).undoable
+        card = self.store.card(slug, number)
+        if declared is None or card is None:
+            return None
+        names = carried(sorted(self.plan_footprint(slug, card)), declared.paths)
+        if not names:
+            return None
+        return (
+            f"a release is already waiting on this board and this card's plan names "
+            f"{', '.join(names)}; it starts by itself once that release is promoted"
+        )
+
+    def set_release(self, slug: str, held: Held | None) -> None:
+        live = self.projects.get(slug)
+        if live is None:
+            return
+        before = live.release
+        live.release = held
+        if (before.sentence if before else None) != (held.sentence if held else None):
+            self.bump()
+
+    def plan_footprint(self, slug: str, card: Card) -> set[str]:
+        """The files the card's live plan names in backticks and that exist —
+        the plan's ground, read the one way the board reads it
+        (`board/collision.py::footprint` over `board/parse.py::named_paths_of`).
+
+        One reader, so the collision check before a Start, the neighbours
+        read and the release hold all mean the same thing by "the files
+        this plan names"; a second parse here would be a second answer to
+        the same question (card #139, item 4)."""
+        live = self.projects.get(slug)
+        if live is None or card.link is None:
+            return set()
+        document = live.index.find(card.link.kind, card.link.stem)
+        if document is None or document.archived:
+            return set()
+        root = Path(live.project.path)
+        try:
+            text = (root / document.path).read_text(encoding="utf-8", errors="replace")
+        except OSError:
+            return set()
+        return footprint(text, lambda path: (root / path).is_file())
 
     def start_offered(self, slug: str, number: int) -> bool | None:
         """Whether a card's Start door is open, from the loop's last read of
@@ -646,6 +719,7 @@ class Live:
             leverage=self.focus_of(slug)[1].get(number),
             team=self.store.composition(slug, number),
             beside=self.beside(slug).get(number),
+            release=(held if (held := self.release_held(slug)) and number in held.cards else None),
         )
 
     def lane_and_doors(self, slug: str, card: Card) -> tuple[Lane | None, Doors]:
