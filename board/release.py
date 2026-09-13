@@ -27,6 +27,8 @@ the declaration from the board's switch, and everything decided about them
 is here.
 """
 
+import re
+
 CARRIED_SHOWN = 3
 """How many of the waiting files the sentence names before it says "and N
 more": the owner reads the sentence to know which release is waiting, not
@@ -68,6 +70,36 @@ def under(files: list[str], declared: list[str]) -> list[str]:
     ]
 
 
+def names(text: str, declared: list[str]) -> list[str]:
+    """Which declared paths a document names anywhere in its text.
+
+    A different question from "what is this document's ground", and it needs
+    a different reader. The ground reader (`board/parse.py::named_paths_of`
+    narrowed by `board/collision.py::footprint`) answers with files that
+    exist and whose spelling ends in an extension, because what it is for is
+    telling two lanes they are about to edit the same file. Neither holds
+    here, and both silently: a plan that adds a change to stored data names
+    the *folder* — which has no extension, so that reader returns nothing —
+    or names a file that does not exist yet, which that reader drops. Card
+    #139's own item 4 read through it and, on the one project this card was
+    written for, would never have held anything (the independent read of
+    2026-09-13, finding 1).
+
+    So this asks the narrow question it actually needs: does this text name
+    this declared thing. The needle is known and short, so the match is on
+    the path itself, at a path boundary — `alembic/versions` is named by
+    ``alembic/versions`` and by ``alembic/versions/0026_x.py``, and is not
+    named by ``alembic/versions_old/x.py`` or ``old/alembic/versions``."""
+    found: list[str] = []
+    for path in declared:
+        want = _normalise(path)
+        if not want:
+            continue
+        if re.search(rf"(?<![\w./-]){re.escape(want)}(?![\w.-])", text):
+            found.append(path)
+    return found
+
+
 def _listed(files: list[str]) -> str:
     shown = ", ".join(files[:CARRIED_SHOWN])
     more = len(files) - CARRIED_SHOWN
@@ -81,6 +113,7 @@ def sentence(
     hold: str | None,
     hold_stands: bool,
     unreadable: str | None = None,
+    unclaimed: bool = False,
 ) -> str:
     """The work, the waiting, whose move — written once and shown
     everywhere: the refusal on the folding session's screen, the WAITS row
@@ -107,7 +140,13 @@ def sentence(
             f"{project} names nothing that holds the work finishing behind it, so some of it "
             "may stall"
         )
+    whose = (
+        "nothing on this board says which work left it for you, so read what is waiting before "
+        "you promote"
+        if unclaimed
+        else "promoting it is yours"
+    )
     return (
         "the work is on the shared branch and the stable branch is where it was, because "
-        f"{waiting}; promoting it is yours, and {behind}."
+        f"{waiting}; {whose}, and {behind}."
     )

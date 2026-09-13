@@ -10,9 +10,10 @@ make says which make it is.
 
 from datetime import date
 
-from board.lane import driver, where_of, why_this_driver
 from domain.session import Session, SessionKind, SessionState
 from domain.slot import Make, Placement, Tier, rung_words
+from board.lane import driver, where_of, why_this_driver
+
 from tests.board.test_lane import card, doors
 
 
@@ -106,6 +107,7 @@ def _no_lane():
     """A card nobody has touched: no session, and no copy of the code on
     disk, which is what leaves Start open."""
     from board.lane import lane_for
+
     from tests.board.test_lane import facts
 
     return lane_for(card(), facts(worktrees={}))

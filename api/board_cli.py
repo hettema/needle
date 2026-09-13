@@ -416,7 +416,17 @@ def fold(args: argparse.Namespace, live: Live, runtime: Runtime, loops: Loops, d
         worktree,
         promote_main=promote,
         hold=refusal.hold if refusal else None,
-        why=refusal.sentence if refusal else None,
+        why=(
+            sentence(
+                slug,
+                files=refusal.files,
+                hold=refusal.hold,
+                hold_stands=True,
+                unreadable=refusal.unreadable,
+            )
+            if refusal
+            else None
+        ),
     )
     if not folded.pushed:
         print(f"not folded: {folded.words}", file=sys.stderr)
@@ -457,7 +467,7 @@ def fold(args: argparse.Namespace, live: Live, runtime: Runtime, loops: Loops, d
     else:
         print(f"trunk not synced: {state.note}", file=sys.stderr)
     if refusal is not None:
-        return _hold_the_release(live, slug, number, refusal, folded, now)
+        return _hold_the_release(live, slug, number, refusal, folded, now, worktree)
     if args.main:
         if folded.main_pushed:
             print("main promoted: origin/main is the same commit")
@@ -479,8 +489,18 @@ def fold(args: argparse.Namespace, live: Live, runtime: Runtime, loops: Loops, d
 
 
 class _Refusal(NamedTuple):
-    sentence: str
+    """Why this promotion is the owner's, in facts rather than in a sentence.
+
+    The sentence is composed once, after the fold, from what actually
+    happened — whether the standing hold is really there. Composing it
+    beforehand wrote "it keeps the work behind it from stalling" onto the
+    card at the moment the hold could not be written, which is the opposite
+    of the truth and the one sentence a cold reader acts on (the independent
+    read of 2026-09-13, finding 3)."""
+
+    files: list[str]
     hold: str | None
+    unreadable: str | None
 
 
 def _release_refused(
@@ -509,46 +529,48 @@ def _release_refused(
         return None  # the owner started this lane himself; the release is his either way
     found = runtime.release(worktree, ahead="HEAD")
     if not found.read:
-        return _Refusal(
-            sentence(
-                slug,
-                files=[],
-                hold=declared.hold,
-                hold_stands=True,
-                unreadable=found.note,
-            ),
-            declared.hold,
-        )
+        return _Refusal(files=[], hold=declared.hold, unreadable=found.note)
     carries = carried(found.files, declared.paths)
     if not carries:
         return None
-    return _Refusal(
-        sentence(
-            slug,
-            files=under(found.files, carries),
-            hold=declared.hold,
-            hold_stands=True,
-        ),
-        declared.hold,
-    )
+    return _Refusal(files=under(found.files, carries), hold=declared.hold, unreadable=None)
 
 
 def _hold_the_release(
-    live: Live, slug: str, number: int | None, refusal: _Refusal, folded, now: datetime
+    live: Live,
+    slug: str,
+    number: int | None,
+    refusal: _Refusal,
+    folded,
+    now: datetime,
+    worktree: str,
 ) -> int:
     """The release left where it was, said once and written where the owner
     and the next cold session both read it (items 3 and 5).
+
+    The sentence is composed here and nowhere earlier, because only here is
+    it known whether the project's standing hold actually stands: the file
+    is asked for on disk rather than assumed from having tried to write it.
 
     The fold itself succeeded: the work is on the shared branch and the
     session closes as any other session does. So this answers 0 — a lane
     that folded is not a lane that failed, and a session told it failed
     would try again, or worse, reach for the promotion by hand."""
-    said = refusal.sentence
+    stands = bool(refusal.hold) and (Path(worktree) / (refusal.hold or "")).is_file()
+    said = sentence(
+        slug,
+        files=refusal.files,
+        hold=refusal.hold,
+        hold_stands=stands,
+        unreadable=refusal.unreadable,
+    )
     print(f"main not promoted: {said}")
     if refusal.hold and folded.held == refusal.hold:
         print(f"the release is held: {refusal.hold} is on the shared branch with this fold")
     elif refusal.hold and folded.held:
         print(f"the hold could not be written: {folded.held}", file=sys.stderr)
+    elif refusal.hold and stands:
+        print(f"the release is held: {refusal.hold} was already there")
     if number is None:
         return 0
     record = live.store.lane(slug, number)
@@ -1103,6 +1125,8 @@ def fixes(
         ]
         print(f"{lane.project} #{lane.card_number:<4} {lane.title}")
         print("      " + "; ".join(facts))
+        if lane.note:
+            print(f"      {lane.note}")
     closed = [lane for lane in report.lanes if lane.stage.value in ("folded", "ended", "asked")]
     green = sum(1 for done in closed if done.folded and done.reviewed)
     asked = sum(1 for done in closed if done.stopped_to_ask)

@@ -9,6 +9,7 @@ is an ancestor of the trunk and has moved from its birth, never bare
 ancestry (a zero-commit branch is an ancestor from birth).
 """
 
+import contextlib
 import re
 from pathlib import Path
 
@@ -555,6 +556,15 @@ def _write_hold(worktree: str | Path, hold: str, why: str) -> tuple[str | None, 
             why,
         )
     except GitFailed as error:
+        # An add that took and a commit that did not leaves the file staged,
+        # and the fold's own dirty check then refuses every later fold of
+        # this lane while `_write_hold` declines to retry a file that is
+        # already there — the lane wedged for good, with nothing holding the
+        # work finishing behind the release either (the independent read of
+        # 2026-09-13, finding 4). Put the lane back as it was instead.
+        _try(worktree, "reset", "--quiet", "--", hold)
+        with contextlib.suppress(OSError):
+            place.unlink(missing_ok=True)
         return None, str(error)
     return hold, None
 

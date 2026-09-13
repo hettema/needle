@@ -70,6 +70,7 @@ export interface FixReport {
   fold_reverted: boolean;
   class_closer: string | null;
   switch_was_on: boolean;
+  note?: string | null;
 }
 
 export interface Fixes {

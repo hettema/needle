@@ -72,3 +72,57 @@ def test_a_long_list_names_the_first_few_and_counts_the_rest():
         hold_stands=False,
     )
     assert "alembic/versions/0.py" in said and "and 3 more" in said
+
+
+# ── what a plan names (card #139, item 4) ──────────────────────────────
+
+PLAN = """# A plan
+
+**Terrain:** `alembic/versions/0026_the_next_one.py` and the code beside it.
+
+It adds a migration under `alembic/versions`, and touches `api/main.py`.
+"""
+
+
+def test_a_plan_names_a_declared_folder_and_a_file_that_does_not_exist_yet():
+    """The two shapes a plan that changes stored data actually has, and the
+    two the board's ground reader cannot see (the independent read of
+    2026-09-13, finding 1): the folder has no extension, and the file it
+    adds does not exist until the lane writes it."""
+    from board.release import names
+
+    assert names(PLAN, ["alembic/versions"]) == ["alembic/versions"]
+    assert names("it adds `alembic/versions/0026_x.py`", ["alembic/versions"]) == [
+        "alembic/versions"
+    ]
+    assert names("`alembic/versions`", ["alembic/versions"]) == ["alembic/versions"]
+
+
+def test_a_plan_beside_the_declared_path_does_not_name_it():
+    from board.release import names
+
+    assert names("it touches `alembic/versions_old/9.py`", ["alembic/versions"]) == []
+    assert names("it touches `old/alembic/versions/9.py`", ["alembic/versions"]) == []
+    assert names("it touches `api/main.py`", ["alembic/versions"]) == []
+    assert names(PLAN, ["office/pricing.py"]) == []
+
+
+def test_a_declared_file_is_named_exactly():
+    from board.release import names
+
+    assert names("`office/pricing.py` changes", ["office/pricing.py"]) == ["office/pricing.py"]
+    assert names("`office/pricing.py.bak`", ["office/pricing.py"]) == []
+
+
+def test_the_sentence_says_when_nothing_says_which_work_left_it():
+    """A release that waits with no card claiming it is the board's own fact
+    and no card's (the independent read of 2026-09-13, finding 2)."""
+    said = sentence(
+        "hellorevenue",
+        files=["alembic/versions/210.py"],
+        hold="HOLD.md",
+        hold_stands=True,
+        unclaimed=True,
+    )
+    assert "nothing on this board says which work left it for you" in said
+    assert "promoting it is yours" not in said

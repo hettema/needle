@@ -61,7 +61,7 @@ def _live_documents() -> list[tuple[Path, str]]:
 
 def test_the_vocabulary_carries_at_least_the_words_the_intent_named():
     words = {w.word for w in read_vocabulary()}
-    assert words >= NAMED_IN_THE_INTENT, sorted(NAMED_IN_THE_INTENT - words)
+    assert NAMED_IN_THE_INTENT <= words, sorted(NAMED_IN_THE_INTENT - words)
     assert VOCABULARY_PATH.name == "vocabulary.md"
 
 

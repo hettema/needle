@@ -11,124 +11,95 @@ change and then let the very next ordinary fix — a typo, a copy change,
 anything — promote it to get past a refusal it did not cause. One in five
 migrations that reach that branch rewrite or delete live rows on the
 container's next boot, and the suite has never seen those rows. The narrow
-read is not a weaker version of this rule; it is the defect with a check
-in front of it.
+read is not a weaker version of this rule; it is the defect with a check in
+front of it.
 
-This test feeds the decision the two inputs and pins which one it uses. It
-fails the moment the read narrows to the session's own change, whatever the
-code around it looks like — no function name, no call, no procedure is
-named here, so a better mechanism is free to arrive as long as the wider
-read is what decides.
+*What this holds, and how.* It drives the real fold, on real git, in the
+state where the two readings disagree: the session folding here changed one
+ordinary file and nothing else, so a decision made on its own change would
+promote, and the promotion must not happen. It also asserts the disagreement
+itself, so a later reader can see which of the two readings is load-bearing
+without running anything.
+
+An earlier version of this file built both inputs by hand and asserted they
+differed, touching none of the code that decides — so narrowing the
+production read would have left it green while its own docstring claimed the
+opposite. That was caught by the independent read of 2026-09-13 (finding 5)
+and is why this one goes through the verb. No function, call or procedure is
+named in the assertions: a better mechanism may replace today's as long as
+the wider read is what decides.
 """
 
-import subprocess
 from pathlib import Path
 
 import pytest
+from fastapi.testclient import TestClient
 
+from api.cli import main
 from board.release import carried
 from runtime import git
+from tests.api import test_doors as doors
+from tests.api.test_a_release_waits_for_the_owner import (
+    CANNOT_UNDO,
+    SLUG,
+    code,
+    declare,
+    lane_for,
+    touch,
+)
+from tests.api.test_dial import number_of
 
-DECLARED = ["alembic/versions"]
+client = doors.client
+repo = doors.repo
+quick = doors.quick
+code = code
 
-
-def sh(cwd: Path, *args: str) -> str:
-    done = subprocess.run(
-        ["git", *args],
-        cwd=cwd,
-        capture_output=True,
-        text=True,
-        check=True,
-        env={
-            "PATH": "/usr/bin:/bin",
-            "GIT_AUTHOR_NAME": "t",
-            "GIT_AUTHOR_EMAIL": "t@t",
-            "GIT_COMMITTER_NAME": "t",
-            "GIT_COMMITTER_EMAIL": "t@t",
-            "HOME": str(cwd),
-        },
-    )
-    return done.stdout.strip()
+PRICING = "The pricing rule, judged against a real season"
+TIDES = "The tide table is the harbour's own"
 
 
-@pytest.fixture
-def someone_elses_schema_change(tmp_path: Path) -> tuple[Path, Path]:
-    """The night as it actually goes: one session's change to stored data is
-    already on the shared branch and not on the stable one, and a second
-    session — the ordinary fix — is about to fold something else entirely.
-
-    Answers (the second session's own checkout, its worktree)."""
-    origin = tmp_path / "origin.git"
-    origin.mkdir()
-    sh(origin, "init", "--bare", "-b", "develop")
-    checkout = tmp_path / "checkout"
-    sh(tmp_path, "clone", "-q", str(origin), str(checkout))
-    sh(checkout, "checkout", "-q", "-b", "develop")
-    (checkout / "README.md").write_text("one\n")
-    sh(checkout, "add", "README.md")
-    sh(checkout, "commit", "-q", "-m", "one")
-    sh(checkout, "push", "-q", "origin", "develop", "develop:main")
-
-    # The first session's schema change lands on the shared branch.
-    versions = checkout / "alembic" / "versions"
-    versions.mkdir(parents=True)
-    (versions / "210_rewrite.py").write_text("op.execute('UPDATE campaigns SET strategy = …')\n")
-    sh(checkout, "add", "-A")
-    sh(checkout, "commit", "-q", "-m", "the first session's schema change")
-    sh(checkout, "push", "-q", "origin", "develop")
-    sh(checkout, "fetch", "-q", "origin")
-
-    # The second session — an ordinary fix — touches nothing of that shape.
-    lane = checkout / ".claude" / "worktrees" / "card-9-an-ordinary-fix"
-    sh(checkout, "worktree", "add", "-q", "-b", "card-9-an-ordinary-fix", str(lane))
-    (lane / "README.md").write_text("one, spelled right\n")
-    sh(lane, "add", "README.md")
-    sh(lane, "commit", "-q", "-m", "an ordinary fix")
-    return checkout, lane
-
-
-def test_the_ordinary_fix_is_refused_the_release_the_first_session_left(
-    someone_elses_schema_change: tuple[Path, Path],
+def test_an_ordinary_fix_does_not_promote_the_change_to_stored_data_beside_it(
+    client: TestClient, code: Path, capsys: pytest.CaptureFixture[str]
 ):
-    checkout, lane = someone_elses_schema_change
+    declare(client, CANNOT_UNDO)
+    stable = doors.git(code, "rev-parse", "origin/main")
 
-    # Fed the session's own change, the decision sees nothing to wait for.
-    its_own = sorted(git.lane_files(lane, birth=None, tip=None))
-    assert its_own == ["README.md"]
-    assert carried(its_own, DECLARED) == []
+    # One session the board started leaves a change to stored data on the
+    # shared branch. However it got there is not this test's subject.
+    first = lane_for(client, code, number_of(client, PRICING), "the-pricing-rule")
+    touch(first, CANNOT_UNDO, "RATE = 2\n")
+    doors.git(first, "push", "-q", "origin", "HEAD:develop")
+    doors.git(code, "fetch", "-q", "origin")
 
-    # Fed the range the promotion would carry, it sees the waiting change —
-    # put there by someone else, which is the whole point.
-    would_carry = git.release(lane, ahead="HEAD")
+    # The ordinary fix that follows changed one file, and not that one.
+    second = lane_for(client, code, number_of(client, TIDES), "the-tide-table")
+    doors.git(second, "merge", "-q", "--ff-only", "origin/develop")
+    touch(second, "README.md", "spelled right\n")
+
+    its_own = sorted(git.lane_files(second, birth=None, tip=None))
+    assert CANNOT_UNDO not in its_own
+    assert carried(its_own, [CANNOT_UNDO]) == []  # a narrow read sees nothing to wait for
+
+    would_carry = git.release(second, ahead="HEAD")
     assert would_carry.read
-    assert carried(would_carry.files, DECLARED) == ["alembic/versions"]
+    assert carried(would_carry.files, [CANNOT_UNDO]) == [CANNOT_UNDO]  # the range does
 
-    # The two disagree, and the wider one is what the rule is decided on.
-    assert carried(its_own, DECLARED) != carried(would_carry.files, DECLARED)
+    # The verb, for real. The stable branch must not have moved.
+    assert main(["fold", "--worktree", str(second), "--main"]) == 0
+    said = capsys.readouterr().out
+    assert "main not promoted" in said
+    assert doors.git(code, "rev-parse", "origin/main") == stable
 
 
-def test_a_release_that_carries_nothing_declared_is_not_held(tmp_path: Path):
+def test_a_night_that_carries_nothing_of_that_shape_still_ships(
+    client: TestClient, code: Path, capsys: pytest.CaptureFixture[str]
+):
     """The other direction, which is the outcome the owner rejected on
     evidence: a rule that holds every release stops the switch shipping
-    anything. An ordinary night carries no declared path and waits for
-    nobody."""
-    origin = tmp_path / "origin.git"
-    origin.mkdir()
-    sh(origin, "init", "--bare", "-b", "develop")
-    checkout = tmp_path / "checkout"
-    sh(tmp_path, "clone", "-q", str(origin), str(checkout))
-    sh(checkout, "checkout", "-q", "-b", "develop")
-    (checkout / "README.md").write_text("one\n")
-    sh(checkout, "add", "README.md")
-    sh(checkout, "commit", "-q", "-m", "one")
-    sh(checkout, "push", "-q", "origin", "develop", "develop:main")
-    sh(checkout, "fetch", "-q", "origin")
-    lane = checkout / ".claude" / "worktrees" / "card-9-an-ordinary-fix"
-    sh(checkout, "worktree", "add", "-q", "-b", "card-9-an-ordinary-fix", str(lane))
-    (lane / "README.md").write_text("one, spelled right\n")
-    sh(lane, "add", "README.md")
-    sh(lane, "commit", "-q", "-m", "an ordinary fix")
-
-    would_carry = git.release(lane, ahead="HEAD")
-    assert would_carry.read and would_carry.files == ["README.md"]
-    assert carried(would_carry.files, DECLARED) == []
+    anything at all."""
+    declare(client, CANNOT_UNDO)
+    lane = lane_for(client, code, number_of(client, TIDES), "the-tide-table")
+    touch(lane, "README.md", "spelled right\n")
+    assert main(["fold", "--worktree", str(lane), "--main"]) == 0
+    assert "main promoted" in capsys.readouterr().out
+    assert doors.git(code, "rev-parse", "origin/main") == doors.git(lane, "rev-parse", "HEAD")

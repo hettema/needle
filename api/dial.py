@@ -294,7 +294,7 @@ class Dial:
             return None
         files = under(found.files, carries)
         stands = bool(declared.hold) and (Path(live.project.path) / declared.hold).is_file()
-        cards, claimed = self._release_cards(slug)
+        cards = self._release_cards(slug)
         return Held(
             project=slug,
             carries=carries,
@@ -303,35 +303,38 @@ class Dial:
             hold=declared.hold,
             hold_stands=stands,
             cards=cards,
-            claimed=claimed,
-            sentence=sentence(slug, files=files, hold=declared.hold, hold_stands=stands),
+            claimed=bool(cards),
+            sentence=sentence(
+                slug,
+                files=files,
+                hold=declared.hold,
+                hold_stands=stands,
+                unclaimed=not cards,
+            ),
             read_at=clock.now(),
         )
 
-    def _release_cards(self, slug: str) -> tuple[list[int], bool]:
-        """Which cards are answerable for a waiting release, newest first,
-        and whether a fold actually said so.
+    def _release_cards(self, slug: str) -> list[int]:
+        """The cards whose own fold was refused the promotion and whose
+        release has not gone since, newest first — nothing else.
 
-        Normally one card's fold recorded it. When none did — a session
-        killed between its fold and its hold — the release is still waiting
-        and must not go unclaimed, so the board reads it back from the facts
-        it kept anyway: the lanes it started itself that folded and never
-        released. That card then says the release is unheld and unclaimed,
-        which is the one thing it must never be quiet about (item 5)."""
-        store = self.live.store
-        records = store.lanes(slug)
-        held = [r for r in records if r.release_held_at is not None and r.main_synced_at is None]
-        if held:
-            held.sort(key=lambda r: r.release_held_at or clock.EPOCH, reverse=True)
-            return [r.card_number for r in held], True
-        started = {fix.card_number for fix in store.fix_lanes(slug)}
-        left = [
+        This guessed once. When no fold had recorded a hold, it named the
+        board-started lane that had folded most recently, so that a release
+        the owner still had to make was never waiting unclaimed. The cold
+        read of 2026-09-13 (finding 2) showed what that costs: on a board
+        where the owner's own hand puts a change to stored data on the shared
+        branch, the ordinary state between that and his next promotion made
+        the board paint an unrelated card red and tell him something had
+        broken on it. A card that changed nothing of that shape must never be
+        named for a release. An unclaimed release is now the *board's* fact —
+        it is on the head, in the release's own sentence — and no card's."""
+        held = [
             r
-            for r in records
-            if r.card_number in started and r.folded_at is not None and r.main_synced_at is None
+            for r in self.live.store.lanes(slug)
+            if r.release_held_at is not None and r.main_synced_at is None
         ]
-        left.sort(key=lambda r: r.folded_at or clock.EPOCH, reverse=True)
-        return [r.card_number for r in left[:1]], False
+        held.sort(key=lambda r: r.release_held_at or clock.EPOCH, reverse=True)
+        return [r.card_number for r in held]
 
     def _full(self) -> str | None:
         """The head's sentence while the machine is under the floor; the
@@ -1301,10 +1304,6 @@ class Dial:
                     doors = snapshot.doors.get(card.number) if snapshot else None
                     if not switches.get(project_slug, False):
                         why = "this board's switch is off"
-                    elif (
-                        waits := self.live.held_by_release(project_slug, card.number)
-                    ) is not None:
-                        why = waits
                     elif snapshot is None:
                         why = "the machine has not been read for this project yet"
                     elif doors is None or doors.placement is None:
@@ -1533,6 +1532,7 @@ class Dial:
                     and record.folded_at is not None
                     and self.runtime.reverted(live.project.path, record.tip),
                     class_closer=_class_closer(document),
+                    note=fix.note,
                     switch_was_on=switch_was_on(changes, fix.project, fix.planning_started_at)
                     and (
                         fix.started_at is None

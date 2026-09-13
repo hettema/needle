@@ -19,8 +19,8 @@ from domain.audit import AuditEntry, AuditKind
 from domain.call import Call
 from domain.card import Actor, Card, CardOrigin, DocumentLink, Place
 from domain.column import Column
-from domain.document import DocumentKind
 from domain.ending import Cause, Death
+from domain.document import DocumentKind
 from domain.gate import Gate
 from domain.hook import HookEvent, HookKind
 from domain.lane import CollisionVerdict, Discussion, LaneRecord, LaneState, StartState, Wait

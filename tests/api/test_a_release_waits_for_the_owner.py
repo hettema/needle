@@ -248,7 +248,9 @@ def test_the_card_says_the_work_landed_and_the_release_is_his(
     touch(path, CANNOT_UNDO, "RATE = 2\n")
     assert fold(path) == 0
     refusal = next(
-        line for line in capsys.readouterr().out.splitlines() if line.startswith("main not promoted")
+        line
+        for line in capsys.readouterr().out.splitlines()
+        if line.startswith("main not promoted")
     )
     said = refusal[len("main not promoted: ") :]
 
@@ -263,17 +265,23 @@ def test_the_card_says_the_work_landed_and_the_release_is_his(
     assert "release yours" in shown["claims"]
 
 
-def test_a_session_that_died_before_its_hold_leaves_the_card_saying_so(
+def test_a_release_nothing_claims_is_the_boards_own_fact_and_no_cards(
     client: TestClient, code: Path
 ):
-    """The push landed and nothing wrote it down. The release still waits,
-    and the card must say it is unheld and unclaimed rather than read as
-    done."""
+    """The push landed and nothing wrote it down. The release still waits and
+    the head must say so — but no card may be named for it.
+
+    This named one once: the board-started lane that had folded most
+    recently. The independent read of 2026-09-13 (finding 2) showed the cost
+    — a card that changed nothing of that shape read red and told the owner
+    something had broken on it — and on a board where he lands a change to
+    stored data by hand, that is the ordinary state between then and his next
+    promotion."""
     declare(client, CANNOT_UNDO)
     number = a_card(client)
     path = lane_for(client, code, number, "the-pricing-rule")
     touch(path, CANNOT_UNDO, "RATE = 2\n")
-    git(path, "push", "-q", "origin", "HEAD:develop")  # the fold, and then nothing
+    git(path, "push", "-q", "origin", "HEAD:develop")  # the push, and then nothing
     git(code, "fetch", "-q", "origin")
     store = client.app.state.live.store
     record = store.lane(SLUG, number)
@@ -283,10 +291,42 @@ def test_a_session_that_died_before_its_hold_leaves_the_card_saying_so(
     )
 
     tick(client)
+    held = client.app.state.live.release_held(SLUG)
+    assert held is not None and held.cards == [] and held.claimed is False
+    assert "nothing on this board says which work left it for you" in held.sentence
     shown = _summary(board(client, SLUG), number)
-    assert shown["state"]["meaning"] == "broken"
-    assert "release unheld" in shown["claims"]
-    assert "promoting it is yours" in shown["state"]["detail"]
+    assert "release unheld" not in shown["claims"] and "release yours" not in shown["claims"]
+
+
+def test_a_card_that_changed_nothing_of_that_shape_is_never_named_for_a_release(
+    client: TestClient, code: Path
+):
+    """The demonstration from the independent read, kept: a lane the board
+    started folds ordinary work, then a change to stored data reaches the
+    shared branch some other way. That card must stay exactly as it was."""
+    declare(client, CANNOT_UNDO)
+    tides = number_of(client, TIDES)
+    lane = lane_for(client, code, tides, "the-tide-table")
+    touch(lane, "README.md", "spelled right\n")
+    git(lane, "push", "-q", "origin", "HEAD:develop")
+    store = client.app.state.live.store
+    record = store.lane(SLUG, tides)
+    assert record is not None
+    store.record_lane(
+        record.model_copy(update={"folded_at": NOW, "tip": git(lane, "rev-parse", "HEAD")})
+    )
+    # The owner's own hand puts the irreversible change on the shared branch.
+    git(code, "fetch", "-q", "origin")
+    git(code, "merge", "-q", "--ff-only", "origin/develop")
+    touch(code, CANNOT_UNDO, "RATE = 3\n")
+    git(code, "push", "-q", "origin", "develop")
+    git(code, "fetch", "-q", "origin")
+
+    tick(client)
+    assert client.app.state.live.release_held(SLUG) is not None
+    shown = _summary(board(client, SLUG), tides)
+    assert shown["state"]["meaning"] != "broken"
+    assert "release unheld" not in shown["claims"] and "release yours" not in shown["claims"]
 
 
 # ── item 4: a second one does not pile onto the first ──────────────────
@@ -308,12 +348,51 @@ def test_a_planned_card_of_the_same_shape_waits_and_one_beside_it_does_not(
     held = live.release_held(SLUG)
     assert held is not None and held.carries == [CANNOT_UNDO] and held.claimed
 
-    # The pricing plan names the declared file; the storm plan does not.
+    # The pricing plan names the declared file; the gate-code plan does not.
     pricing = number_of(client, PRICING)
     waits = live.held_by_release(SLUG, pricing)
     assert waits is not None and "starts by itself" in waits and CANNOT_UNDO in waits
     beside = number_of(client, "A gate code arrives before the boat does")
     assert live.held_by_release(SLUG, beside) is None
+
+
+def test_a_card_is_held_by_a_declared_folder_and_a_file_that_does_not_exist_yet(
+    client: TestClient, code: Path, capsys: pytest.CaptureFixture[str]
+):
+    """The shape Hello Revenue will actually declare. Item 4 read this
+    through the board's ground reader at first, which sees neither a folder
+    (it has no extension) nor a file that is not written yet — so on the one
+    project this card was written for it would have held nothing at all (the
+    independent read of 2026-09-13, finding 1)."""
+    folder = "alembic/versions"
+    plan = Path(code) / "docs" / "plans" / "2026-09-13-the-tide-table-keeps-its-own-numbers.md"
+    plan.write_text(
+        "# The tide table keeps its own numbers\n\n"
+        "**Status:** PENDING\n"
+        "**Effort gate:** low — one number.\n\n"
+        "## Terrain\n\n"
+        f"It adds `{folder}/0026_the_tides_keep_their_numbers.py` under `{folder}`.\n\n"
+        "## Items\n\n"
+        "1. **The numbers stay.**\n   *Done means:* they stay.\n",
+        encoding="utf-8",
+    )
+    git(code, "add", "-A")
+    git(code, "commit", "-q", "-m", "a plan that changes stored data")
+    reconcile(client)
+    mine = number_of(client, "The tide table keeps its own numbers")
+
+    declare(client, folder)
+    holder = number_of(client, PRICING)
+    lane = lane_for(client, code, holder, "the-pricing-rule")
+    touch(lane, f"{folder}/0025_the_first_one.py", "op.execute('UPDATE x')\n")
+    assert fold(lane) == 0
+    capsys.readouterr()
+    tick(client)
+
+    live = client.app.state.live
+    assert live.release_held(SLUG) is not None
+    waits = live.held_by_release(SLUG, mine)
+    assert waits is not None and folder in waits and "starts by itself" in waits
 
 
 def test_the_hold_lifts_by_itself_when_the_owner_promotes(
@@ -340,3 +419,52 @@ def _summary(face: dict, number: int) -> dict:
                 if card["number"] == number:
                     return card
     raise AssertionError(f"no card #{number} on the board")
+
+
+def test_a_range_the_board_cannot_read_leaves_the_release_to_the_owner(
+    client: TestClient, code: Path, capsys: pytest.CaptureFixture[str], monkeypatch
+):
+    """A declared board whose range cannot be read fails closed: it is one
+    act, it errs toward waiting, and the sentence says what could not be
+    read rather than naming a file. Named in the plan's supported inputs and
+    untested until the independent read of 2026-09-13 asked for it."""
+    from domain.release import Release
+    from runtime.service import Runtime
+
+    declare(client, CANNOT_UNDO)
+    stable = git(code, "rev-parse", "origin/main")
+    path = lane_for(client, code, a_card(client), "the-pricing-rule")
+    touch(path, "README.md", "spelled right\n")  # nothing declared in range
+    monkeypatch.setattr(
+        Runtime,
+        "release",
+        lambda self, checkout, ahead=None: Release(
+            files=[], commits=0, read=False, note="the machine did not answer"
+        ),
+    )
+    assert fold(path) == 0
+    said = capsys.readouterr().out
+    assert "could not be read" in said and "the machine did not answer" in said
+    assert git(code, "rev-parse", "origin/main") == stable
+
+
+def test_the_card_never_says_a_hold_stands_that_does_not(
+    client: TestClient, code: Path, capsys: pytest.CaptureFixture[str]
+):
+    """The sentence is composed from what happened, not from having tried:
+    a hold that could not be written used to be written onto the card as
+    keeping the work behind it from stalling (the independent read of
+    2026-09-13, finding 3)."""
+    declare(client, CANNOT_UNDO, hold="../../escaped.md")
+    number = a_card(client)
+    path = lane_for(client, code, number, "the-pricing-rule")
+    touch(path, CANNOT_UNDO, "RATE = 2\n")
+    assert fold(path) == 0
+    said = capsys.readouterr().out
+    assert "is not there, so the work finishing behind it will stall" in said
+
+    card = client.get(f"/api/projects/{SLUG}/cards/{number}").json()
+    waits = [row["text"] for row in card["card"]["rows"] if row["kind"] == "WAITS"]
+    assert len(waits) == 1
+    assert "is not there" in waits[0]
+    assert "keeps the work finishing behind it from stalling" not in waits[0]

@@ -1047,7 +1047,16 @@ class Store:
             row.folded_at = record.folded_at
             row.trunk_synced_at = record.trunk_synced_at
             row.main_synced_at = record.main_synced_at
-            row.release_held_at = record.release_held_at
+            # Set once, never cleared by a later writer. Every other field
+            # here is written by the loop from a record it read at the top of
+            # its pass; this one is written by the folding session's own
+            # process, so a pass straddling a fold would write back the None
+            # it had read and turn a properly held release into a card saying
+            # nothing holds it (the independent read of 2026-09-13, finding
+            # 6). Nothing ever needs to clear it: a release that has gone is
+            # said by `main_synced_at`, which is what every reader pairs it
+            # with.
+            row.release_held_at = record.release_held_at or row.release_held_at
 
     def lanes(self, slug: str) -> list[LaneRecord]:
         with self._session() as session:

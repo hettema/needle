@@ -1,16 +1,57 @@
 # Review — work that starts without you never goes live without you (#139)
 
 **Plan:** docs/plans/done/2026-09-13-work-that-starts-without-you-never-goes-live-without-you.md
-**Reviewer:** PENDING
-**Diff range:** e007dfb..284d7fd
-**Findings:** PENDING
-**Verification:** PENDING
-**Completion:** PENDING
+**Reviewer:** session 5d33a7ea, a cold Claude session of this lane's own make with no share of its context, called through `needle call 2b241cbd` (call 124) on the note at `/home/dennis/.claude-accounts/armana/jobs/610676e4/tmp/review-note.md`; its answer is at `/home/dennis/.claude-accounts/armana/jobs/610676e4/tmp/from-2b241cbd-re-review-note.md`. It read the whole diff file by file and ran the four test files the change adds (37 passed at the time), plus three scratch tests of its own to demonstrate findings 2, 3 and 4.
+**Diff range:** e007dfb..284d7fd reviewed; repaired through 045f205 and the commits after it, final revision named under Verification.
+**Findings:** 8 — 3 found by this lane re-reading its own change before the independent read, 5 by the independent read (4 demonstrated, 1 an unverified hypothesis). All 8 were inside the change; none was filed outside it. No finding was rejected.
+**Verification:** each repair has a test that fails without it; the ratchet was proved to catch the narrowing it exists to refuse by narrowing the production read and watching it fail; the full suite ran green on the final revision. Evidence below.
+**Completion:** every verified finding is repaired inside the change, with its own test. The plan's six items hold, item by item, with the `**Met:**` lines in the plan naming what shows each. One thing is recorded as not done rather than hidden: the revision was not frozen while the independent read ran — see *A failure of this review's own process*.
 
 ## Dispositions
 
-PENDING
+1. [feature] `runtime/git.py::release` — a checkout that does not exist answered with the same words as a project with no stable branch ("there is no origin/main here"), so a reader would go looking for a branch in a directory that is not there, and the refusal in the fold verb could not tell the two apart. Found by this lane's `execution` hand-out for item 1, running the verb in four states. FIXED in 284d7fd: the verb asks whether the path is a checkout at all before asking for a branch. Verified by `tests/runtime/test_git.py::test_a_checkout_that_cannot_be_read_at_all_is_not_a_missing_stable_branch`.
+
+2. [feature] `runtime/git.py::fold` — the standing hold was written and committed before the tree was proved clean and before the push, so a fold that could not fast-forward left the hold commit stranded in the lane. It would then ride the *next* fold, and if the owner had promoted in between, the shared branch would carry a standing hold no release asked for — a project's archive gate standing aside silently and for good. Found by this lane re-reading its own change. FIXED in 045f205: the hold is written after the tree is proved clean and the commit is taken back when the push fails. Verified by `tests/runtime/test_git.py::test_a_fold_that_could_not_push_leaves_no_hold_commit_behind`.
+
+3. [boundary] `runtime/git.py::_write_hold` — the hold path came from the owner's declaration unchecked, so a path climbing out of the project would have had a fold write outside the repository it is folding. Found by this lane. FIXED in 045f205 (`_inside`). Verified by `tests/runtime/test_git.py::test_a_hold_path_that_leaves_the_project_is_refused`.
+
+4. [feature] `infrastructure/live.py::held_by_release` via the board's ground reader — **item 4's hold would silently never have held on the one project this card was written for.** The ground reader (`board/parse.py::NAMED_PATH` narrowed by `board/collision.py::footprint`) requires a file extension and keeps only files that exist, and a plan that adds a change to stored data names either the *folder* (no extension — returns nothing) or a file that does not exist yet (dropped). Both demonstrated by the reader, and confirmed here before repairing: `named_paths_of("`infrastructure/migrations/versions`") == []` and `footprint("`…/0026_x.py`", exists=False) == set()`. The card's own test passed only because the test project declares an existing file that a plan names in backticks. FIXED: `board/release.py::names` asks the narrow question item 4 actually needs — does this text name this declared thing — at a path boundary, and `Live.plan_footprint` became `Live.plan_text`. Verified by `tests/board/test_release.py` (the four `names` tests, including the sibling `alembic/versions_old/` that must not match) and by `tests/api/test_a_release_waits_for_the_owner.py::test_a_card_is_held_by_a_declared_folder_and_a_file_that_does_not_exist_yet`, which drives the real shape end to end.
+   *Note the pattern:* item 4's own `**Met:**` line already records one correction of exactly this kind — the plan said a `**Terrain:**` head line was parsed and nothing parses one. The reader it moved to had a different blind spot in the same place. Two readings of "what does this plan name", two silent failures; the plan's item 4 is now met through a third that is written down and tested.
+
+5. [feature] `api/dial.py::_release_cards` with `board/assemble.py::_release_state` — when no fold had recorded a hold, the fallback named the board-started lane that had folded most recently, so a card that changed nothing of that shape read red and told the owner something had broken on it. Demonstrated by the reader end to end (card 263, the tide-table card, face "broken", claim "release unheld"), and on a board where the owner's own hand puts a change to stored data on the shared branch this is the ordinary state between then and his next promotion. FIXED: the fallback is gone; only a lane whose own fold was refused is ever named. An unclaimed release is now the *board's* fact — it is in the release's own sentence on the head and on `needle dial` — and no card's. Verified by `tests/api/test_a_release_waits_for_the_owner.py::test_a_release_nothing_claims_is_the_boards_own_fact_and_no_cards` and `::test_a_card_that_changed_nothing_of_that_shape_is_never_named_for_a_release`, which reproduces the reader's own demonstration.
+
+6. [feature] `api/board_cli.py::_release_refused` — the refusal's sentence was composed before the push with `hold_stands=True` assumed, so when the hold could not be written the WAITS row on the card said the hold "keeps the work finishing behind it from stalling" while the card's face, which recomputes it live, said the opposite. Demonstrated by the reader. FIXED: `_Refusal` carries facts rather than a sentence, and the sentence is composed once in `_hold_the_release` from the hold file asked for on disk after the fold. Verified by `tests/api/test_a_release_waits_for_the_owner.py::test_the_card_never_says_a_hold_stands_that_does_not`.
+
+7. [feature] `runtime/git.py::_write_hold` — an `add` that succeeded and a `commit` that failed left the hold file staged, and nothing took it back: the fold's own dirty check then refused every later fold of that lane while the hold write declined to retry a file already there. The lane wedged for good, and the release waited with nothing holding the work behind it. Demonstrated by the reader with the failure an unattended machine actually has (no git identity). FIXED: a failed commit unstages and removes the file. Verified by `tests/runtime/test_git.py::test_a_hold_the_commit_refused_leaves_the_lane_able_to_fold_again`, which uses that same failure.
+
+8. [verification] `tests/ratchets/test_a_release_is_decided_on_the_range.py` — the ratchet imported only the pure match and built both inputs itself, touching none of the code that decides, so narrowing the production read back to the session's own change would have left it green while its docstring claimed the opposite. The boundary was in fact held by an ordinary test. FIXED: the ratchet now drives the real fold verb on real git in the state where the two readings disagree. Verified by proof rather than by assertion — the production read was narrowed to `runtime.edits(worktree)`, the ratchet failed (`main promoted` where it must not), and the narrowing was reverted and the ratchet went green again. Evidence below.
+
+9. [feature, unverified hypothesis] `infrastructure/store.py::record_lane` — `release_held_at` is written from the folding session's own process while the served board's loop writes the whole row each pass from records read at the top of that pass, so a pass straddling a fold could write back `None` and flip a properly held release to a card saying nothing holds it. The reader did not reproduce it and said so. FIXED anyway, because the repair is one line and the failure would be silent: the field is set once and never cleared by a later writer, which is correct because a release that has gone is said by `main_synced_at`, the field every reader pairs it with.
 
 ## Verification evidence
 
-PENDING
+**The repairs, each with a test that fails without it.** Run on the final revision:
+`uv run pytest tests/api/test_a_release_waits_for_the_owner.py tests/board/test_release.py tests/ratchets/test_a_release_is_decided_on_the_range.py tests/runtime/test_git.py tests/api/test_dial.py` — green (19 + 12 + 2 + 14 in the four files the card adds or extends).
+
+**Finding 4, confirmed before repairing** (this lane, not taken on the reader's word):
+```
+named_paths_of('the plan names `infrastructure/migrations/versions` here')  -> []
+footprint('it adds `infrastructure/migrations/versions/0026_x.py`', exists=False) -> set()
+```
+
+**Finding 8, the ratchet proved to catch what it exists to catch.** `api/board_cli.py::_release_refused` was temporarily narrowed to decide on `runtime.edits(worktree)` instead of the range. The ratchet failed:
+```
+E  AssertionError: assert 'main not promoted' in '… folded: origin/develop and origin/main are ce4eff8852 … main promoted: origin/main is the same commit'
+FAILED tests/ratchets/test_a_release_is_decided_on_the_range.py::test_an_ordinary_fix_does_not_promote_the_change_to_stored_data_beside_it
+```
+The narrowing was reverted and the ratchet went green. The earlier version of this file stayed green under the same narrowing, which is the finding.
+
+**Item 1, run by hand in four states** (`execution` hand-out, against a scratch repository, each answer read against `git diff --name-only origin/main...origin/develop` and `git rev-list --count` run beside it): level → read, no files, 0 commits; three ahead → read, exactly those three commits' two distinct files, 3 commits, matching the hand-run git exactly; a path that is not a checkout → unread with its own words; no stable branch → unread naming the missing branch. The first and last shared one wording at the time, which is finding 1.
+
+**Scope.** The change is its own footprint and nothing else: an earlier `ruff` sweep over the whole repository had reformatted 23 test files unrelated to this card, and all 23 were reverted to the trunk's version before the fold — 18 uncommitted, and 5 that had landed in 284d7fd restored to their e007dfb state. `git diff --name-only e007dfb -- tests/` now lists only the five files this card writes or extends.
+
+**Full suite:** recorded at the fold on the final revision; see the card's DELIVERED row and the fold's own output.
+
+## A failure of this review's own process
+
+HOW-WE-WORK §13 says the revision is frozen while it is read. It was not. This lane committed 045f205 and made further edits to `api/board_cli.py`, `api/dial.py` and `domain/dial.py` while the independent read was in progress, and the reader opened its answer by saying so: "The tree is not frozen … somebody is editing while you read." It handled it correctly — it reviewed 284d7fd as asked and checked that every finding still stood against a line present in the working tree — so no finding is in doubt. But the freeze is not a formality: a reader that had quoted a line number moved by an edit would have produced a finding nobody could resolve, and the cost of waiting was a few minutes. Recorded here rather than tidied away, because the next session reads this record and not this lane's intentions.

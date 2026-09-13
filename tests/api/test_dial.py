@@ -316,6 +316,7 @@ def test_the_dial_is_off_until_turned_persists_and_is_audited_as_the_owners(
             "lanes": 1,
             "changed_at": None,
             "first_on_at": None,
+            "undoable": None,
         },
         "others_on": [],
         "running": 0,
@@ -323,6 +324,7 @@ def test_the_dial_is_off_until_turned_persists_and_is_audited_as_the_owners(
         "held": 0,
         "full": None,
         "quiet": True,
+        "release": None,
     }
     turned = turn(client, on=True, lanes=2)
     assert turned["dial"]["on"] is True and turned["dial"]["lanes"] == 2
@@ -420,8 +422,11 @@ def test_the_switch_is_one_per_board_and_the_number_is_the_machines(
     assert main(["dial"]) == 0
     out = capsys.readouterr().out.splitlines()
     assert out[0].startswith("proj: auto-fix on; changed ")
-    assert out[1].startswith("two: auto-fix off; changed ")
-    assert out[2].startswith("2 fix lanes at most across every board; 0 live now")
+    # An on board says what cannot be taken back there under its own line
+    # (card #139, item 2); an off board says nothing.
+    assert out[1] == "      cannot be undone: nothing — everything here releases"
+    assert out[2].startswith("two: auto-fix off; changed ")
+    assert out[3].startswith("2 fix lanes at most across every board; 0 live now")
     assert store.dial_changes()[-1].actor is Actor.OWNER
     assert main(["dial", "on"]) == 1
     assert "needle dial <slug> on" in capsys.readouterr().err
@@ -1411,7 +1416,10 @@ def test_needle_dial_reads_and_turns_the_dial_from_the_terminal(
     assert main(["dial", "proj", "on", "--lanes", "2"]) == 0
     out = capsys.readouterr().out.splitlines()
     assert out[0].startswith("proj: auto-fix on; changed ") and "first turned on" in out[0]
-    assert out[1].startswith(
+    # A board turned on now says what cannot be taken back there, and this
+    # one was turned on naming nothing (card #139, item 2).
+    assert out[1] == "      cannot be undone: nothing — everything here releases"
+    assert out[2].startswith(
         "2 fix lanes at most across every board; 0 live now; the machine is quiet"
     )
     assert [(c.actor.value, c.project, c.on, c.lanes) for c in store.dial_changes()] == [

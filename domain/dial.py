@@ -351,6 +351,11 @@ class FixReport(BaseModel):
     """Its board's switch was on the moment its planning began, read from
     the audit of turns (card #80): a lane this is False for began on a
     board whose switch was off, which is what the Loop counts."""
+    note: str | None = None
+    """Why this one stands where it does, in the board's own sentence: what a
+    planned card is waiting on, or how a lane ended. Without it a card held
+    back — by a switch, by another card, by a release waiting on the owner —
+    is a number on the head and nothing he can act on (card #139, item 4)."""
 
 
 class Waiting(BaseModel):

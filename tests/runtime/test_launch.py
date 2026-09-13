@@ -359,6 +359,7 @@ def test_short_ids_are_read_from_what_the_cli_prints():
 
 
 def test_the_launch_argv_carries_the_model_the_rule_named():
+    from domain.slot import Placement
 
     placement = Placement(make=Make.CLAUDE, slot="beta", model="opus", config_dir="/x", why="")
     argv = launch.argv_for(

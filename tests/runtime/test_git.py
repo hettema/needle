@@ -197,7 +197,7 @@ def test_a_release_reads_the_range_between_the_stable_and_the_shared_branch(
 
 
 def test_a_checkout_with_no_stable_branch_says_so_rather_than_answering_empty(tmp_path: Path):
-    """"Nothing to carry" and "nothing could be seen" are the two sides the
+    """ "Nothing to carry" and "nothing could be seen" are the two sides the
     refusal must tell apart; a project with no stable branch is the second."""
     origin = tmp_path / "origin.git"
     origin.mkdir()
@@ -284,3 +284,23 @@ def test_a_hold_path_that_leaves_the_project_is_refused(repos: tuple[Path, Path]
     folded = git.fold(path, promote_main=False, hold="../../escaped.md", why="a reason")
     assert folded.pushed and "not a place inside this project" in (folded.held or "")
     assert not (Path(checkout).parent / "escaped.md").exists()
+
+
+def test_a_hold_the_commit_refused_leaves_the_lane_able_to_fold_again(repos: tuple[Path, Path]):
+    """An add that took and a commit that did not would otherwise leave the
+    file staged: the fold's own dirty check then refuses every later fold of
+    the lane, and the hold write will not retry a file already there — the
+    lane wedged for good (the independent read of 2026-09-13, finding 4)."""
+    _, checkout = repos
+    path = lane(checkout, "card-9-lane")
+    (path / "notes.md").write_text("two\n")
+    sh(path, "add", "notes.md")
+    sh(path, "commit", "-q", "-m", "two")
+    # The way an unattended machine fails a commit: no identity to sign it.
+    sh(path, "config", "user.name", "")
+    sh(path, "config", "user.email", "")
+    folded = git.fold(path, promote_main=False, hold="docs/board/HOLD.md", why="a reason")
+    assert folded.pushed  # the work still lands
+    assert folded.held and "docs/board/HOLD.md" != folded.held  # and says why it did not hold
+    assert not (path / "docs" / "board" / "HOLD.md").exists()
+    assert git.tracked_changes(path) == []  # the lane can fold again

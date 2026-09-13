@@ -28,7 +28,6 @@ from board.assemble import (
     folded_under,
     watch_signal,
 )
-from board.collision import footprint
 from board.dial import dial_state, held_lanes
 from board.focus import (
     READ_COLUMNS,
@@ -43,7 +42,7 @@ from board.lane import nothing_read
 from board.leverage import Judged, arrange, wake_line
 from board.parked import commitments_of
 from board.reconcile import SUGGESTION_HOMES, Effects, home_of, reconcile
-from board.release import carried
+from board.release import names
 from board.triage import Sources
 from domain.audit import AuditEntry, AuditKind
 from domain.board import BoardState, CardDetail, MachineState
@@ -597,12 +596,12 @@ class Live:
         card = self.store.card(slug, number)
         if declared is None or card is None:
             return None
-        names = carried(sorted(self.plan_footprint(slug, card)), declared.paths)
-        if not names:
+        said = names(self.plan_text(slug, card), declared.paths)
+        if not said:
             return None
         return (
             f"a release is already waiting on this board and this card's plan names "
-            f"{', '.join(names)}; it starts by itself once that release is promoted"
+            f"{', '.join(said)}; it starts by itself once that release is promoted"
         )
 
     def set_release(self, slug: str, held: Held | None) -> None:
@@ -614,27 +613,22 @@ class Live:
         if (before.sentence if before else None) != (held.sentence if held else None):
             self.bump()
 
-    def plan_footprint(self, slug: str, card: Card) -> set[str]:
-        """The files the card's live plan names in backticks and that exist —
-        the plan's ground, read the one way the board reads it
-        (`board/collision.py::footprint` over `board/parse.py::named_paths_of`).
-
-        One reader, so the collision check before a Start, the neighbours
-        read and the release hold all mean the same thing by "the files
-        this plan names"; a second parse here would be a second answer to
-        the same question (card #139, item 4)."""
+    def plan_text(self, slug: str, card: Card) -> str:
+        """The card's live document as it stands on disk, empty when there is
+        none the board can read: what `board/release.py::names` is asked
+        whether a declared path appears in (card #139, item 4)."""
         live = self.projects.get(slug)
         if live is None or card.link is None:
-            return set()
+            return ""
         document = live.index.find(card.link.kind, card.link.stem)
         if document is None or document.archived:
-            return set()
-        root = Path(live.project.path)
+            return ""
         try:
-            text = (root / document.path).read_text(encoding="utf-8", errors="replace")
+            return (Path(live.project.path) / document.path).read_text(
+                encoding="utf-8", errors="replace"
+            )
         except OSError:
-            return set()
-        return footprint(text, lambda path: (root / path).is_file())
+            return ""
 
     def start_offered(self, slug: str, number: int) -> bool | None:
         """Whether a card's Start door is open, from the loop's last read of
