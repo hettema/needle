@@ -508,6 +508,18 @@ class Folded(BaseModel):
 HOLD_HEAD = "# The release is held"
 
 
+def _inside(worktree: str | Path, hold: str) -> Path | None:
+    """Where the hold file sits in the lane, or None when the path leaves it.
+
+    The declaration is the owner's own words, but a path that climbs out of
+    the project would have a fold write outside the repository it is
+    folding — the one thing a fold must never do. Refused rather than
+    trusted, because a boundary that matters is not a convention."""
+    root = Path(worktree).resolve()
+    place = (root / hold).resolve()
+    return place if place != root and place.is_relative_to(root) else None
+
+
 def _write_hold(worktree: str | Path, hold: str, why: str) -> tuple[str | None, str | None]:
     """Write the project's standing hold file into the lane and commit it,
     so the fold carries it to the shared branch and every close behind it
@@ -515,13 +527,20 @@ def _write_hold(worktree: str | Path, hold: str, why: str) -> tuple[str | None, 
 
     A file that already stands is left exactly as it is: the first held
     release wrote it, the owner's deletion is what lifts it, and a second
-    lane rewriting it would erase the reason he is about to read."""
-    path = Path(worktree) / hold
-    if path.exists():
+    lane rewriting it would erase the reason he is about to read.
+
+    The commit skips the repository's own hooks. The hold is the machine's
+    act at the moment a release is refused, not a session's change, and a
+    project hook that asks every commit to name a card would stop the one
+    commit that keeps every close behind this one finishing."""
+    place = _inside(worktree, hold)
+    if place is None:
+        return None, f"{hold} is not a place inside this project"
+    if place.exists():
         return None, None
     try:
-        path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text(f"{HOLD_HEAD}\n\n{why}\n", encoding="utf-8")
+        place.parent.mkdir(parents=True, exist_ok=True)
+        place.write_text(f"{HOLD_HEAD}\n\n{why}\n", encoding="utf-8")
     except OSError as error:
         return None, str(error)
     try:
@@ -551,12 +570,15 @@ def fold(
     into the lane first, so one push carries both the work and the hold
     that keeps the closes behind it archiving (card #139, item 3). The
     write is never combined with `promote_main`: a held release is one that
-    is not promoting."""
+    is not promoting.
+
+    The hold is written after the tree is proved clean and taken back if the
+    push then fails, so a fold that did not land never leaves a hold commit
+    sitting in the lane. That commit would otherwise ride the *next* fold —
+    and if the owner promoted in between, the shared branch would carry a
+    standing hold no release asked for, which makes a project's archive gate
+    stand aside silently and for good."""
     written: str | None = None
-    if hold and why and not promote_main:
-        written, refused = _write_hold(worktree, hold, why)
-        if refused is not None:
-            written = refused
     dirty = tracked_changes(worktree)
     if dirty:
         return Folded(
@@ -569,8 +591,8 @@ def fold(
             main_pushed=None,
             held=written,
         )
-    tip = head(worktree)
-    if tip is None:
+    was = head(worktree)
+    if was is None:
         return Folded(
             pushed=False,
             words="no HEAD to push",
@@ -578,9 +600,18 @@ def fold(
             main_pushed=None,
             held=written,
         )
+    if hold and why and not promote_main:
+        written, refused = _write_hold(worktree, hold, why)
+        if refused is not None:
+            written = refused
+    tip = head(worktree)
     try:
         _git(worktree, "push", REMOTE, f"HEAD:{TRUNK}", timeout=FETCH_SECONDS)
     except GitFailed as error:
+        if written == hold and tip != was:
+            # The tree was proved clean a moment ago and this commit is ours.
+            _try(worktree, "reset", "--hard", was)
+            written, tip = None, was
         return Folded(
             pushed=False,
             words=str(error),
@@ -588,11 +619,11 @@ def fold(
             main_pushed=None,
             held=written,
         )
-    why = fetch(worktree)
-    if why is not None:
+    unfetched = fetch(worktree)
+    if unfetched is not None:
         return Folded(
             pushed=False,
-            words=f"pushed, but could not fetch to prove it: {why}",
+            words=f"pushed, but could not fetch to prove it: {unfetched}",
             tip=tip,
             main_pushed=None,
             held=written,

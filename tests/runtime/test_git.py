@@ -247,3 +247,40 @@ def test_a_fold_that_holds_the_release_carries_the_hold_in_the_same_push(
     again = git.fold(second, promote_main=False, hold="docs/board/HOLD.md", why="another reason")
     assert again.pushed and again.held is None
     assert (second / "docs" / "board" / "HOLD.md").read_text().endswith("a reason\n")
+
+
+def test_a_fold_that_could_not_push_leaves_no_hold_commit_behind(repos: tuple[Path, Path]):
+    """A hold commit stranded in a lane rides the next fold, and if the owner
+    promoted in between the shared branch carries a standing hold no release
+    asked for — which makes a project's archive gate stand aside for good."""
+    _, checkout = repos
+    path = lane(checkout, "card-9-lane")
+    (path / "notes.md").write_text("two\n")
+    sh(path, "add", "notes.md")
+    sh(path, "commit", "-q", "-m", "two")
+    # Another lane lands first, so this one's push is not a fast-forward.
+    other = lane(checkout, "card-10-lane")
+    (other / "other.md").write_text("three\n")
+    sh(other, "add", "other.md")
+    sh(other, "commit", "-q", "-m", "three")
+    assert git.fold(other, promote_main=False).pushed
+
+    was = git.head(path)
+    folded = git.fold(path, promote_main=False, hold="docs/board/HOLD.md", why="a reason")
+    assert not folded.pushed and folded.held is None
+    assert git.head(path) == was
+    assert not (path / "docs" / "board" / "HOLD.md").exists()
+    assert git.tracked_changes(path) == []
+
+
+def test_a_hold_path_that_leaves_the_project_is_refused(repos: tuple[Path, Path]):
+    """The declaration is the owner's words; a path climbing out of the
+    project would have the fold write outside the repository it is folding."""
+    _, checkout = repos
+    path = lane(checkout, "card-9-lane")
+    (path / "notes.md").write_text("two\n")
+    sh(path, "add", "notes.md")
+    sh(path, "commit", "-q", "-m", "two")
+    folded = git.fold(path, promote_main=False, hold="../../escaped.md", why="a reason")
+    assert folded.pushed and "not a place inside this project" in (folded.held or "")
+    assert not (Path(checkout).parent / "escaped.md").exists()
