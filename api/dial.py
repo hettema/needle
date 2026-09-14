@@ -50,7 +50,9 @@ from board.dial import (
     hands_off,
     held_lanes,
     is_quiet,
+    left_out_words,
     running,
+    said_left_out,
     seat_opens,
     stopped_words,
     switch_was_on,
@@ -457,9 +459,57 @@ class Dial:
                 continue  # a fold on the board restarts the service under every running lane
             self._plan(live, candidate)
             return
-        for candidate in sorted(unread, key=lambda c: c.age_key):
+        for candidate in sorted(self._openable(unread), key=lambda c: c.age_key):
             self._triage(self.live.projects[candidate.project], candidate)
             return
+
+    def _openable(self, unread: list[Candidate]) -> list[Candidate]:
+        """The unread cards whose machine can open a reading this beat
+        (card #148, item 1): each card's project is asked the question the
+        launch would ask — `runtime.place`, over the rooms the pass read —
+        once per project, and a card whose answer is no is left out of the
+        choice, so the oldest card that *can* open is the one opened. Before
+        this, the beat spent its one act on the launch's refusal and read
+        nothing else: twenty-four beats on Omarchy #3 while 127 defects on
+        the rented machine's projects waited (2026-09-14). A card left out
+        says so on its face once per spell (item 2). The launch still
+        rechecks the room at the moment it starts; this is the same rule
+        asked before the choice, never instead of it."""
+        rooms = self.live.machine.machines
+        refused: dict[str, str | None] = {}
+        openable: list[Candidate] = []
+        for candidate in unread:
+            slug = candidate.project
+            if slug not in refused:
+                chosen, why = self.runtime.place(
+                    self.live.projects[slug].project.path, rooms or None
+                )
+                refused[slug] = None if chosen is not None else why
+            why = refused[slug]
+            if why is None:
+                openable.append(candidate)
+            else:
+                self._left_out(slug, candidate.card.number, why)
+        return openable
+
+    def _left_out(self, slug: str, number: int, why: str) -> None:
+        """Write on the card that its machine cannot open a reading of it,
+        once per spell (card #148, item 2): the spell is read from the
+        card's own history — its last dial note by the machine — so twenty
+        beats of the same refusal are one line, and a reading that opens
+        or dies since starts a new spell. Nothing in memory: a restart
+        reads the same row."""
+        last = next(
+            (
+                entry.detail
+                for entry in self.live.store.history(slug, number)
+                if entry.kind == AuditKind.DIAL and entry.actor == Actor.MACHINE
+            ),
+            None,
+        )
+        if said_left_out(last):
+            return
+        self.live.note(slug, number, AuditKind.DIAL, Actor.MACHINE, left_out_words(why))
 
     def _ran(self, slug: str, fix_lanes: list[FixLane], snapshot) -> set[int]:
         """The cards the dial took once already, which are the owner's from

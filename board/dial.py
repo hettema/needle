@@ -391,6 +391,35 @@ def dial_state(
     )
 
 
+# ── card #148: a card whose machine is full never holds the rest ───────
+
+LEFT_OUT = "The board left this card out of its beat: "
+"""How a card says its machine cannot open a reading of it now (card
+#148, item 2). The beat asks each unread card's project the question the
+launch would ask — can this project's machine open a reading, over the
+rooms read this pass — and reads the rest instead of spending its one act
+on the refusal (twenty-four beats on Omarchy #3 while 127 defects waited,
+2026-09-14). The words after the prefix are the rule's own sentence, with
+the machine's numbers; the prefix is what a spell is read by."""
+
+
+def left_out_words(why: str) -> str:
+    """The one note a card left out for room carries."""
+    return (
+        f"{LEFT_OUT}{why}. The beat reads the rest and comes back to this card "
+        "when its machine has room."
+    )
+
+
+def said_left_out(last_dial_note: str | None) -> bool:
+    """Whether the card already says it is left out, in this spell: its last
+    dial note by the machine is a left-out note. A reading that opened, or
+    a death written since, ends the spell, and the next left-out beat says
+    so again — once. The comparison is on the prefix, never the whole note:
+    the machine's numbers in the sentence move between beats."""
+    return last_dial_note is not None and last_dial_note.startswith(LEFT_OUT)
+
+
 # ── card #138: the seat reads a text once, and stops at the cap ────────
 
 TRIAGE_ATTEMPTS = 3
