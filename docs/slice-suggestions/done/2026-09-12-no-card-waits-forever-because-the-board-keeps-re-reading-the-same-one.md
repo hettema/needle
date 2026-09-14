@@ -1,6 +1,6 @@
 # No card waits forever because the board keeps re-reading the same one
 
-**Carried by:** docs/plans/2026-09-13-no-card-waits-forever-because-the-board-keeps-re-reading-the-same-one.md
+**Carried by:** docs/plans/done/2026-09-13-no-card-waits-forever-because-the-board-keeps-re-reading-the-same-one.md
 
 **Kind:** defect
 **Fix:** now — `api/dial.py::_wants_a_reading` already writes the bar it misses in its own words ("under a number above one the beat would otherwise open the same reading every minute and read nothing else"), so the intent is written and this is that same guard one case wider; the fix stays inside that guard and the cap beside it (`api/dial.py::_readings_that_died`, which counts only readings that died and so never bites on one that landed), and it removes the class — every reading whose result cannot change where the card routes until a commit rewrites the document — rather than the two cards stuck tonight

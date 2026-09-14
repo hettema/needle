@@ -1,7 +1,7 @@
 # No card waits forever because the board keeps re-reading the same one
 
 **Carries:** docs/slice-suggestions/2026-09-12-no-card-waits-forever-because-the-board-keeps-re-reading-the-same-one.md
-**Status:** PENDING
+**Status:** SHIPPED
 **Written:** 2026-09-13, from the owner's Idea door conversation on Hello Revenue (e843ad41): he asked whether the 78 defects there were still real, learned that 75 were unread because the second reading had been stuck on three cards, and asked whether that was where the allowance had gone — "Let's stop it and fix it if it is." It was. The seat was stopped by hand at once (below); this plan is the fix.
 **Effort gate:** high — the defect is diagnosed to the line by its own suggestion (`api/dial.py::_wants_a_reading` opens on `needs triage` and `stale` alone; `_readings_that_died` counts only readings that landed nothing), the fix is one guard and one fuse in the same file, and the board's own rules already say what must stay true (a `now` over a `his` never routes; a changed text is read once more; a card the owner parks is read once per park). What remains is scaffolded: where the fuse sits so it never blocks the one legitimate re-read, and what the card says while it waits. No test names either function today, so the tests are part of the work, not a reason for `xhigh`.
 **Loop:** WATCH: no card is read more than twice on the same text — command uv --project /home/dennis/Work/needle run needle decisions all | awk '/^[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]  / && $1 >= "2026-09-14" {print $2, $3, $NF}' | sort | uniq -c | awk '$1 > 2' | wc -l | sed "s/^/texts read more than twice since the fix: /" expect "texts read more than twice since the fix: 0" by 2026-10-13 every 1d
@@ -73,6 +73,8 @@ Behind the guard, a cap that counts every reading opened on a card since its doc
 At the close, the machine's number goes back to what it was (`needle dial --lanes 4`), the readings resume, and the Loop line above reads the next day: no card read more than twice on the same text since the fix. The first cards read are the three Hello Revenue cards whose marks that repository's plan rewrites — each gets exactly one fresh reading of its new text, which is the proof the guard and the fuse both hold.
 
 **Done means:** `needle dial` says 4; readings open on cards other than #129, #184 and #283 within an hour of the fold; the Loop's command prints zero the next day.
+
+Two limits of the Loop's measure, named by the independent review and accepted: it counts the readings `needle decisions` lists — a mark's and a parked card's, never a title's — and keys a parked reading on its whole record (the rows a landing writes included), where the fuse keys it on the record without those rows; a title loop or a parked loop would not show in the Loop's number, and the fuse bounds both regardless. A nonzero count is a prompt to read the lines it names, not a failure in itself.
 
 ## Acceptance, as behaviours
 
