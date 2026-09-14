@@ -74,6 +74,8 @@ At the close, the machine's number goes back to what it was (`needle dial --lane
 
 **Done means:** `needle dial` says 4; readings open on cards other than #129, #184 and #283 within an hour of the fold; the Loop's command prints zero the next day.
 
+**Met:** the number went from 0 back to 4 at 2026-09-14 13:53:27Z, after the fold (origin/develop 1f3fddd) and the served board's restart on the new code (its store at 0027). The seat's first reading opened at 13:55:06Z on Hello Revenue #129's rewritten text, landed `now` at 13:56:36Z and was not opened again; the next opened on #283 at 13:57:15Z, and the next on #287 at 13:59:03Z — a card other than the three, six minutes after the number was restored. Each reading's record carries the text it was bound to. The Loop's command reads the next day.
+
 Two limits of the Loop's measure, named by the independent review and accepted: it counts the readings `needle decisions` lists — a mark's and a parked card's, never a title's — and keys a parked reading on its whole record (the rows a landing writes included), where the fuse keys it on the record without those rows; a title loop or a parked loop would not show in the Loop's number, and the fuse bounds both regardless. A nonzero count is a prompt to read the lines it names, not a failure in itself.
 
 ## Acceptance, as behaviours
