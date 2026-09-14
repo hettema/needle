@@ -50,6 +50,8 @@ from board.dial import (
     held_lanes,
     is_quiet,
     running,
+    seat_opens,
+    stopped_words,
     switch_was_on,
     unread_titles,
     why_not_eligible,
@@ -82,6 +84,7 @@ from domain.triage import (
     Decision,
     Fate,
     Ground,
+    ReadingsSpent,
     Routing,
     Triage,
     TriageResult,
@@ -114,12 +117,9 @@ work, not thinking work: the plan the dial writes gets xhigh, the reading
 that decides who may write it gets high."""
 TRIAGE_SECONDS = 1800.0
 """A reading still without a result past this is stopped and the card says
-so; it reads two documents and answers one question."""
-TRIAGE_ATTEMPTS = 3
-"""How many readings may die on one card before the board stops opening
-them. Without a cap a defect whose brief kills the session is an infinite
-beat, and the card would say `needs triage` forever with nothing saying
-why."""
+so; it reads two documents and answers one question. The cap on readings
+per text, `TRIAGE_ATTEMPTS`, is the board's (`board/dial.py`, card #138):
+the face reads it too."""
 CORPUS_LANE_SECONDS = 1800.0
 CORPUS_LANE_ATTEMPTS = 2
 """One retry. A corpus lane writes one document from a record that already
@@ -395,6 +395,7 @@ class Dial:
             open_triage = store.open_windowless_sessions(slug, SessionWork.TRIAGE)
             triages = store.latest_triages(slug)
             sources = self.live.sources(slug)
+            spent = self.live.readings_spent(slug, sources=sources)
             ran = self._ran(slug, fix_lanes, snapshot)
             for card, document in column_defects(store.cards(slug), live.index):
                 triage = triages.get(card.number)
@@ -423,13 +424,13 @@ class Dial:
                         Candidate(project=slug, card=card, document=document, grade=grade)
                     )
                 elif self._wants_a_reading(
-                    slug,
                     card,
                     routed,
                     snapshot,
                     ran_before=card.number in ran,
                     triage=triage,
                     triage_open=card.number in open_triage,
+                    spent=spent.get(card.number),
                 ):
                     # No placement check here: a reading is a windowless
                     # session in the project's own checkout, so the card's
@@ -438,16 +439,16 @@ class Dial:
                     unread.append(Candidate(project=slug, card=card, document=document))
             # Every plan and idea whose title has not been read as it stands
             # (card #74, item 3): the same seat, the title half of the brief
-            # only, and the same cap on readings that die.
+            # only, and the same cap on readings of one text.
             titles = store.latest_title_readings(slug)
             for card, document in unread_titles(store.cards(slug), live.index, titles):
-                if self._wants_a_title_reading(slug, card, snapshot):
+                if self._wants_a_title_reading(card, snapshot, open_triage, spent.get(card.number)):
                     unread.append(Candidate(project=slug, card=card, document=document))
             # Every card parked on the owner that no reading has read since
             # it was parked, or since he answered on it (card #82, item 1):
             # the same seat, oldest park first, behind the defects and the
             # titles.
-            unread.extend(self._parked_unread(live, snapshot, open_triage))
+            unread.extend(self._parked_unread(live, snapshot, open_triage, spent))
         for candidate in sorted(candidates, key=lambda c: c.order_key):
             live = self.live.projects[candidate.project]
             if self._own_board(live) and not quiet:
@@ -481,7 +482,6 @@ class Dial:
 
     def _wants_a_reading(
         self,
-        slug: str,
         card: Card,
         routed,
         snapshot,
@@ -489,15 +489,20 @@ class Dial:
         ran_before: bool,
         triage: Triage | None = None,
         triage_open: bool = False,
+        spent: ReadingsSpent | None = None,
     ) -> bool:
-        """Whether the board should open a reading on this defect now. Only
-        the two states that mean *nobody has verified today's text*: a
-        cannot-tell is not retried, because the evidence it named has to
-        arrive first — and when it does, the document or the source moves and
-        the row goes stale, which is this same door. And a reading that
-        landed no grade — every reading from before card #100, a cannot-tell
-        among them, since the grade is from the document alone — is read
-        again, because the column has no order for it.
+        """Whether the board should open a reading on this defect now.
+
+        First the fuse (card #138, item 2): a text the board has already
+        spent its cap of readings on is not read again whatever those
+        readings landed, and this comes before every other rule so that no
+        rule below — the ungraded one included — can reopen a door the fuse
+        shut. Then the seat's stance per branch of `routing_of`
+        (`board/dial.py::seat_opens`): a reading opens only where nobody has
+        verified today's text, never where a reading of it already stands
+        and only a commit can move the card — the loop that read two Hello
+        Revenue cards 803 times in 23 hours while 140 defects and every
+        parked card waited behind them.
 
         And only where a reading could still change what the machine does. A
         card with a lane on it, one carrying a question, or one the dial has
@@ -506,37 +511,26 @@ class Dial:
         on. And never while a reading is already open on the card: under a
         number above one the beat would otherwise open the same reading
         every minute and read nothing else (the cold review of card #100)."""
-        ungraded = triage is not None and triage.grade is None
-        if routed.state not in (Routing.NEEDS_TRIAGE, Routing.STALE) and not ungraded:
+        if spent is None or spent.stopped:
             return False
-        if routed.state == Routing.NEEDS_TRIAGE and triage is not None and not ungraded:
-            # A graded reading already stands on this exact text — `routing_of`
-            # would have said STALE otherwise — and it left the card at needs
-            # triage: a `now` the corpus does not mark `now`, a `when` against
-            # another mark, a split. Every one of those waits on a commit
-            # rewriting the document, which no reading can write, so reading
-            # again lands the same answer and leaves the card exactly where it
-            # is — and the card, being the oldest unread, takes the seat again
-            # the next beat and forever (card #138: 803 readings of two Hello
-            # Revenue cards in 23 hours, while 140 defects and every parked
-            # card waited behind them). The commit moves the document, the row
-            # goes STALE, and the door above opens again.
+        if not seat_opens(routed, triage):
             return False
         if triage_open:
             return False
         lane = snapshot.lanes.get(card.number)
         if lane is not None and (lane.state != LaneState.NONE or lane.path is not None):
             return False
-        if ran_before or has_row(card, RowKind.ASK):
-            return False
-        return self._readings_that_died(slug, card.number) < TRIAGE_ATTEMPTS
+        return not (ran_before or has_row(card, RowKind.ASK))
 
-    def _parked_unread(self, live: LiveProject, snapshot, open_triage: dict) -> list[Candidate]:
+    def _parked_unread(
+        self, live: LiveProject, snapshot, open_triage: dict, spent: dict[int, ReadingsSpent]
+    ) -> list[Candidate]:
         """The cards in Decision moment the beat should read now (card #82,
         item 1): `board/parked.py::wants_parked_reading` says which, from
         the card's placement, its latest cold reading and the owner's last
         answer; and never while a reading is open on the card, and never
-        past the cap on readings that died on this park (ruling 9)."""
+        past the cap on readings of this record on this park (ruling 9;
+        card #138)."""
         slug = live.project.slug
         store = self.live.store
         placements = store.placements(slug)
@@ -557,44 +551,31 @@ class Dial:
                 continue
             if card.number in open_triage:
                 continue
-            since = parked_at(placement)
-            if self._readings_that_died(slug, card.number, since=since) >= TRIAGE_ATTEMPTS:
+            count = spent.get(card.number)
+            if count is None or count.stopped:
                 continue
             found.append(
                 Candidate(
                     project=slug,
                     card=card,
                     document=document_of(card, live.index),
-                    parked_since=since or card.born_at,
+                    parked_since=parked_at(placement) or card.born_at,
                 )
             )
         return found
 
-    def _wants_a_title_reading(self, slug: str, card: Card, snapshot) -> bool:
+    def _wants_a_title_reading(
+        self, card: Card, snapshot, open_triage: dict, spent: ReadingsSpent | None
+    ) -> bool:
         """Whether the board should open the cold reading of this card's
         title now: nobody has hands on it, no session is already reading it,
-        and the readings that died on it are under the cap."""
+        and the readings of this title are under the cap."""
+        if spent is None or spent.stopped:
+            return False
         lane = snapshot.lanes.get(card.number)
         if lane is not None and (lane.state != LaneState.NONE or lane.path is not None):
             return False
-        if card.number in self.live.store.open_windowless_sessions(slug, SessionWork.TRIAGE):
-            return False
-        return self._readings_that_died(slug, card.number) < TRIAGE_ATTEMPTS
-
-    def _readings_that_died(self, slug: str, number: int, *, since: datetime | None = None) -> int:
-        """How many readings the board opened on this card that landed no
-        result: the record of sessions, less the results. `since` counts
-        only the readings opened after that moment — a parked card's cap
-        is per park (card #82, ruling 9), so a card parked twice whose
-        first park burned the attempts is read on its second."""
-        store = self.live.store
-        opened = [
-            r
-            for r in store.windowless_sessions(slug, work=SessionWork.TRIAGE)
-            if r.card_number == number and (since is None or r.started_at >= since)
-        ]
-        landed = self._landed(slug, number)
-        return sum(1 for r in opened if r.session_id not in landed and r.ended_at is not None)
+        return card.number not in open_triage
 
     def _landed(self, slug: str, number: int | None = None) -> set[str]:
         """The reading sessions that landed a result: a mark's, or a
@@ -617,6 +598,10 @@ class Dial:
         sources = self.live.sources(slug)
         document = candidate.document
         parked = candidate.parked_since is not None
+        # What this reading opens on, bound to its record at the open (card
+        # #138, item 2): the same count the seat chose the candidate by, so
+        # a reading that dies is counted against the text it read.
+        spent = self.live.readings_spent(slug, sources=sources).get(card.number)
         if parked:
             # A card parked on the owner (card #82): the reading judges the
             # decision against the whole record, never a mark or a title.
@@ -624,7 +609,7 @@ class Dial:
                 detail,
                 project,
                 now.date().isoformat(),
-                document_text=self._document_text(live, document) if document else None,
+                document_text=self.live.document_text(slug, document) if document else None,
                 commitments=self.live.commitments(slug, card.number),
             )
         else:
@@ -634,7 +619,7 @@ class Dial:
                 detail,
                 project,
                 now.date().isoformat(),
-                document_text=self._document_text(live, document),
+                document_text=self.live.document_text(slug, document),
                 source=sources.resolve(ref),
                 vocabulary=read_vocabulary(),
             )
@@ -655,7 +640,13 @@ class Dial:
         session = launch.session
         try:
             self.live.store.open_windowless_session(
-                slug, card.number, SessionWork.TRIAGE, session.session_id, session.slot, now
+                slug,
+                card.number,
+                SessionWork.TRIAGE,
+                session.session_id,
+                session.slot,
+                now,
+                text_fingerprint=spent.text if spent is not None else None,
             )
         except StoreRefusal as refusal:
             # A second reading raced this one to the table; the store refuses
@@ -673,14 +664,6 @@ class Dial:
             f"A reading of {of_what} started: {session.short_id}, {where}, in {project.path}; "
             "never hands on the tree",
         )
-
-    def _document_text(self, live: LiveProject, document: Document) -> str:
-        try:
-            return (Path(live.project.path) / document.path).read_text(
-                encoding="utf-8", errors="replace"
-            )
-        except OSError as error:
-            return f"(the board could not read {document.path}: {error})"
 
     def _own_board(self, live: LiveProject) -> bool:
         return Path(live.project.path).resolve() == REPO_ROOT.resolve()
@@ -817,20 +800,10 @@ class Dial:
                 )
                 tended = Tended.ENDED
             if tended == Tended.ENDED:
-                # A parked card's cap is per park (ruling 9), so the note
-                # counts the same way the beat does.
-                parked = self.live.store.card(slug, record.card_number)
-                since = (
-                    parked_at(self.live.store.placements(slug).get(record.card_number))
-                    if parked is not None and parked.place.column == Column.DECISION_MOMENT
-                    else None
-                )
-                died = self._readings_that_died(slug, record.card_number, since=since)
-                left = (
-                    "the board reads it again"
-                    if died < TRIAGE_ATTEMPTS
-                    else f"{died} readings have died on it; the board stops opening them"
-                )
+                # The note counts the way the beat does (card #138): every
+                # reading spent on this text, per park for a parked card.
+                spent = self.live.readings_spent(slug).get(record.card_number)
+                left = stopped_words(spent) or "the board reads it again"
                 self.live.note(
                     slug,
                     record.card_number,
@@ -1282,6 +1255,7 @@ class Dial:
             triaging = store.open_windowless_sessions(project_slug, SessionWork.TRIAGE)
             triages = store.latest_triages(project_slug)
             sources = self.live.sources(project_slug)
+            spent = self.live.readings_spent(project_slug, sources=sources)
             ran = self._ran(project_slug, fix_lanes, snapshot)
             for card, document in column_defects(store.cards(project_slug), live.index):
                 triage = triages.get(card.number)
@@ -1300,6 +1274,13 @@ class Dial:
                 grade = current_grade(document, triage)
                 if why is None and grade is None:
                     why = "verified before the board graded defects; a reading grades it first"
+                stopped = stopped_words(spent.get(card.number))
+                if why is not None and stopped is not None:
+                    # The fuse's sentence over the routing's: a card the
+                    # board gave up on never reads as merely unread (card
+                    # #138). A card the dial is about to take keeps its own
+                    # words — the readings are spent, but nothing waits.
+                    why = stopped
                 elif why is None:
                     doors = snapshot.doors.get(card.number) if snapshot else None
                     if not switches.get(project_slug, False):
@@ -1379,6 +1360,7 @@ class Dial:
                         else None
                         if parked
                         else Routing.NEEDS_TRIAGE,
+                        text=triage.document_fingerprint,
                         fate=self._parked_fate(project_slug, card, triage)
                         if parked
                         else self._fate(live, card, triage, fix_lanes),

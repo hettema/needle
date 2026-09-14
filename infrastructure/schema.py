@@ -324,6 +324,10 @@ class WindowlessSessionRow(Base):
     slot: Mapped[str] = mapped_column(String(40))
     started_at: Mapped[datetime] = mapped_column(UtcDateTime)
     ended_at: Mapped[datetime | None] = mapped_column(UtcDateTime, nullable=True)
+    text_fingerprint: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    """What a reading was opened on, in its reader's terms (card #138, item
+    2); NULL for a signal or planning session and for readings from before
+    the column."""
 
 
 class DialRow(Base):

@@ -37,4 +37,5 @@ export interface WindowlessSession {
   slot: string;
   started_at: string;
   ended_at: string | null;
+  text_fingerprint?: string | null;
 }

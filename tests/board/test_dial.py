@@ -5,6 +5,8 @@ from datetime import UTC, datetime, timedelta
 
 from board.dial import (
     LIVE_STAGES,
+    SEAT_OPENS,
+    TRIAGE_ATTEMPTS,
     Candidate,
     column_defects,
     defects_count,
@@ -14,7 +16,11 @@ from board.dial import (
     filer_of,
     held_lanes,
     is_quiet,
+    mark_text,
+    readings_spent,
     running,
+    seat_opens,
+    stopped_words,
     switch_was_on,
     why_not_eligible,
 )
@@ -37,8 +43,20 @@ from domain.dial import (
 from domain.document import DocumentKind
 from domain.lane import LaneState
 from domain.row import Row, RowKind
-from domain.signal import Reading
-from domain.triage import Direction, Routing, Triage, TriageResult
+from domain.signal import Reading, SessionWork, WindowlessSession
+from domain.triage import (
+    COMMIT_BOUND,
+    Breaks,
+    Direction,
+    Grade,
+    Often,
+    Reach,
+    ReadingsSpent,
+    Reason,
+    Routing,
+    Triage,
+    TriageResult,
+)
 from tests.board.test_lane import facts, session
 
 NOW = datetime(2026, 9, 5, 12, 0, tzinfo=UTC)
@@ -512,3 +530,156 @@ def test_parked_cards_queue_behind_every_defect_and_title_oldest_park_first():
     )
     ordered = sorted([newer_park, old_park, young_defect], key=lambda c: c.age_key)
     assert [c.card.number for c in ordered] == [2, 1, 3]
+
+
+# ── card #138: the seat reads a text once, and stops at the cap ────────
+
+
+GRADED = Grade(
+    breaks=Breaks.COSTS,
+    breaks_words="a step done by hand until it is fixed",
+    reach=Reach.SESSION,
+    reach_words="the office's own log is what it touches",
+    often=Often.SOMETIMES,
+    often_words="it bites on the nights the log is read",
+)
+
+
+def graded(document, result: TriageResult = TriageResult.NOW) -> Triage:
+    """A reading as every reading since card #100 lands: with its grade."""
+    return verified(document, result).model_copy(update={"grade": GRADED})
+
+
+def every_branch_of_routing() -> dict[Reason, tuple]:
+    """One (document, reading, source fingerprint today) per branch of
+    `routing_of`, keyed by the reason the branch lands. A branch added to
+    `routing_of` without a case here fails the test below, which is the
+    point: the seat's stance table has to stance it first."""
+    now = suggestion("a", "**Kind:** defect\n**Fix:** now the rule already says it")
+    his = suggestion("b", "**Kind:** defect\n**Fix:** his which of the two shapes")
+    when = suggestion(
+        "d", "**Kind:** defect\n**Fix:** when a row exists — file docs/row.md by 2026-12-31"
+    )
+    sourced = graded(now).model_copy(
+        update={"source_ref": "docs/plans/p.md", "source_fingerprint": "abc"}
+    )
+    return {
+        Reason.NO_DOCUMENT: (None, None, None),
+        Reason.UNREAD: (now, None, None),
+        Reason.DOCUMENT_MOVED: (
+            now,
+            graded(now).model_copy(update={"document_fingerprint": "gone"}),
+            None,
+        ),
+        Reason.SOURCE_MOVED: (now, sourced, "moved"),
+        Reason.CANNOT_TELL: (now, graded(now, TriageResult.CANNOT_TELL), None),
+        Reason.SPLIT: (now, graded(now, TriageResult.SPLIT), None),
+        Reason.HIS: (now, graded(now, TriageResult.HIS), None),
+        Reason.WHEN: (when, graded(when, TriageResult.WHEN), None),
+        Reason.WHEN_OVER_MARK: (his, graded(his, TriageResult.WHEN), None),
+        Reason.NOW: (now, graded(now), None),
+        Reason.NOW_OVER_MARK: (his, graded(his), None),
+    }
+
+
+def test_the_seat_has_a_stance_on_every_branch_of_routing_and_opens_only_on_unverified_text():
+    """Card #138, item 1: a reading opens only where nobody has verified
+    today's text. Keyed to `routing_of`'s own reasons, so a new branch
+    fails here until it is stanced — the hole 6efa8db's guard inferred its
+    way around by reading `needs triage` with a graded row as commit-bound."""
+    cases = every_branch_of_routing()
+    assert set(cases) == set(Reason), "every reason has a case, and every case a reason"
+    stances: dict[Reason, bool] = {}
+    for reason, (document, triage, source_now) in cases.items():
+        routed = routing_of(document, triage, source_fingerprint=source_now)
+        assert routed.reason == reason, (reason, routed)
+        stances[reason] = seat_opens(routed, triage)
+    assert {r for r, opens in stances.items() if opens} == {
+        Reason.UNREAD,
+        Reason.DOCUMENT_MOVED,
+        Reason.SOURCE_MOVED,
+    }
+    assert set(SEAT_OPENS) == set(Reason)
+    # The three commit-bound branches are exactly the loop the card was for.
+    assert COMMIT_BOUND == {Reason.SPLIT, Reason.WHEN_OVER_MARK, Reason.NOW_OVER_MARK}
+    for reason in COMMIT_BOUND:
+        assert not stances[reason]
+    # A reading that landed no grade is read again whatever it landed: the
+    # column has no order for the card without one (card #100).
+    for reason, (document, triage, source_now) in cases.items():
+        if triage is None:
+            continue
+        ungraded = triage.model_copy(update={"grade": None})
+        assert seat_opens(routing_of(document, ungraded, source_fingerprint=source_now), ungraded)
+
+
+def test_the_commit_bound_sentences_say_when_it_was_read_and_that_a_commit_moves_it():
+    cases = every_branch_of_routing()
+    for reason in COMMIT_BOUND:
+        document, triage, source_now = cases[reason]
+        why = routing_of(document, triage, source_fingerprint=source_now).why
+        assert f"read on {NOW.date().isoformat()}" in why, (reason, why)
+        assert "the board does not read it again until" in why, (reason, why)
+    assert (
+        "never routes more freely than the corpus"
+        in routing_of(*cases[Reason.NOW_OVER_MARK][:2], source_fingerprint=None).why
+    )
+
+
+def opened(number: int, text: str | None, *, ended: bool = True, hours_ago: float = 1.0):
+    return WindowlessSession(
+        id=number,
+        project="proj",
+        card_number=1,
+        work=SessionWork.TRIAGE,
+        session_id=f"s{number}",
+        slot="alpha",
+        started_at=NOW - timedelta(hours=hours_ago),
+        ended_at=NOW - timedelta(hours=hours_ago) + timedelta(minutes=5) if ended else None,
+        text_fingerprint=text,
+    )
+
+
+def test_readings_are_counted_per_text_once_each_landed_or_not_and_never_while_open():
+    sessions = [
+        opened(1, "t1", hours_ago=9),
+        opened(2, "t1", hours_ago=8),
+        opened(3, "t2", hours_ago=7),
+        opened(4, "t1", hours_ago=6),
+        opened(5, None, hours_ago=5),  # from before the column: bound to no text
+        opened(6, "t1", hours_ago=1, ended=False),
+    ]
+    on_t1 = readings_spent(sessions, text="t1", since=None, parked=False)
+    assert on_t1.opened == 3 and on_t1.stopped, (
+        "three ended readings on t1; the open one is not spent"
+    )
+    on_t2 = readings_spent(sessions, text="t2", since=None, parked=False)
+    assert on_t2.opened == 1 and not on_t2.stopped
+    assert readings_spent(sessions, text="t3", since=None, parked=False).opened == 0, (
+        "a changed text is a new count"
+    )
+    # A parked card's count is per park: the readings before the park are
+    # the earlier park's (card #82, ruling 9).
+    park = NOW - timedelta(hours=6, minutes=30)
+    per_park = readings_spent(sessions, text="t1", since=park, parked=True)
+    assert per_park.opened == 1 and not per_park.stopped
+    assert TRIAGE_ATTEMPTS == 3
+
+
+def test_the_words_say_how_many_and_what_starts_the_readings_again():
+    assert stopped_words(None) is None
+    assert stopped_words(ReadingsSpent(text="t", opened=2, cap=3, parked=False)) is None
+    defect = stopped_words(ReadingsSpent(text="t", opened=3, cap=3, parked=False))
+    assert defect is not None
+    assert "read this 3 times on this text" in defect and "nothing settled it" in defect
+    assert "a change to the document or to the source its mark cites starts them again" in defect
+    parked = stopped_words(ReadingsSpent(text="t", opened=3, cap=3, parked=True))
+    assert parked is not None and "since it was parked" in parked
+    assert "your answer on it, a change to its document, or parking it again" in parked
+
+
+def test_a_marks_text_is_the_document_and_its_source_together():
+    now = suggestion("a", "**Kind:** defect\n**Fix:** now the rule already says it")
+    assert mark_text(now, "abc") != mark_text(now, "abd"), "a moved source is a new text"
+    assert mark_text(now, None) != mark_text(now, "abc")
+    assert mark_text(now, "abc") == mark_text(now, "abc")

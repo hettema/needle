@@ -20,7 +20,7 @@ from pydantic import BaseModel
 
 from board.lane import has_row
 from board.title import wants_title_reading
-from board.triage import GradeKey, order_key
+from board.triage import GradeKey, fingerprint, order_key
 from domain.card import Card
 from domain.column import Column
 from domain.corpus import CorpusIndex
@@ -41,8 +41,8 @@ from domain.lane import HANDS_ON, Lane, LaneState
 from domain.release import Held
 from domain.row import RowKind
 from domain.session import Session
-from domain.signal import Reading
-from domain.triage import Grade, Routed, Routing, TitleReading
+from domain.signal import Reading, WindowlessSession
+from domain.triage import Grade, ReadingsSpent, Reason, Routed, Routing, TitleReading, Triage
 
 LIVE_STAGES: frozenset[FixStage] = frozenset(
     {FixStage.PLANNING, FixStage.PLANNED, FixStage.STARTED}
@@ -388,4 +388,99 @@ def dial_state(
         full=room.sentence if room is not None and room.full else None,
         quiet=is_quiet(lanes_by_project),
         release=release,
+    )
+
+
+# ── card #138: the seat reads a text once, and stops at the cap ────────
+
+TRIAGE_ATTEMPTS = 3
+"""How many readings the board opens on one card's text before it stops —
+landed, died or stopped alike (card #138, item 2). The guard, `seat_opens`,
+means a second reading of one text is already a hole; three bounds what
+any hole in the seat can cost to a handful of readings and a card that
+says the board stopped, never a day of the machine (850 readings of three
+Hello Revenue cards, 629 million tokens, 2026-09-12 to 13)."""
+
+SEAT_OPENS: dict[Reason, bool] = {
+    Reason.NO_DOCUMENT: False,
+    Reason.UNREAD: True,
+    Reason.DOCUMENT_MOVED: True,
+    Reason.SOURCE_MOVED: True,
+    Reason.CANNOT_TELL: False,
+    Reason.SPLIT: False,
+    Reason.HIS: False,
+    Reason.WHEN: False,
+    Reason.WHEN_OVER_MARK: False,
+    Reason.NOW: False,
+    Reason.NOW_OVER_MARK: False,
+}
+"""The seat's stance per branch of `routing_of` (card #138, item 1): a
+reading opens only where nobody has verified today's text — never read,
+or read and the document or its source moved since. A cannot-tell waits
+for the evidence it named, and when that arrives the row goes stale, which
+is this same door. The three commit-bound branches (`COMMIT_BOUND`) are
+the loop this card was written for: today's text was read, the result
+routes to nobody, and only a commit rewriting the document moves it, which
+no reading can write. A card with no document has nothing to read. A
+branch missing here fails `tests/board/test_dial.py` until it is stanced."""
+
+
+def seat_opens(routed: Routed, triage: Triage | None) -> bool:
+    """Whether a reading could still change where this defect routes: the
+    stance per branch, and one exception above it — a reading that landed
+    no grade (every reading from before card #100) is read again whatever
+    it landed, because the column has no order for the card without one."""
+    if triage is not None and triage.grade is None:
+        return True
+    return SEAT_OPENS[routed.reason]
+
+
+def mark_text(document: Document, source_fingerprint: str | None) -> str:
+    """What a mark's reading binds to: the document and the source the mark
+    cites, as they read today — the two fingerprints `routing_of` tests a
+    landed row against, so a change to either is a new text and a fresh
+    count."""
+    return fingerprint(f"{document.fingerprint}\n{source_fingerprint or ''}")
+
+
+def readings_spent(
+    sessions: Sequence[WindowlessSession],
+    *,
+    text: str,
+    since: datetime | None,
+    parked: bool,
+) -> ReadingsSpent:
+    """How many readings the board has opened on this text and seen end —
+    landed or died — counting each once. A reading still open is not yet
+    spent: the seat never opens beside it anyway, and counting it would
+    have the face say the board stopped while a reading is in flight.
+    `since` is a parked card's park (card #82, ruling 9): a park is a
+    placement and moves nothing in the record, so its count is by time."""
+    opened = sum(
+        1
+        for s in sessions
+        if s.text_fingerprint == text
+        and s.ended_at is not None
+        and (since is None or s.started_at >= since)
+    )
+    return ReadingsSpent(text=text, opened=opened, cap=TRIAGE_ATTEMPTS, parked=parked)
+
+
+def stopped_words(spent: ReadingsSpent | None) -> str | None:
+    """The sentence a card the fuse stopped shows — on its face, in
+    `needle fixes` and on the head's count — or None while the board is
+    still reading it. It says how many readings were spent, that nothing
+    settled it, and what starts the readings again, so a card the board
+    gave up on never reads as `needs triage`."""
+    if spent is None or not spent.stopped:
+        return None
+    where = " since it was parked" if spent.parked else ""
+    again = (
+        "your answer on it, a change to its document, or parking it again"
+        if spent.parked
+        else "a change to the document or to the source its mark cites"
+    )
+    return (
+        f"the board read this {spent.opened} times on this text{where} and nothing settled it; "
+        f"it opens no more readings on it — {again} starts them again"
     )

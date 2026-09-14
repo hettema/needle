@@ -107,6 +107,7 @@
                 },
                 "routing": {
                   "state": "triaged now",
+                  "reason": "now",
                   "why": "a reading verified it: the tariff plan says the price on a slip is the price on the day it is printed"
                 },
                 "state": {
@@ -244,6 +245,7 @@
                 "fix": null,
                 "routing": {
                   "state": "needs triage",
+                  "reason": "unread",
                   "why": "unmarked (no Fix: line), and no reading has verified it; it is nobody's yet"
                 },
                 "state": {
@@ -313,6 +315,7 @@
                 },
                 "routing": {
                   "state": "needs triage",
+                  "reason": "unread",
                   "why": "marked now, and no reading has verified it; it is nobody's yet"
                 },
                 "state": {
@@ -2638,6 +2641,7 @@
         },
         "routing": {
           "state": "triaged now",
+          "reason": "now",
           "why": "a reading verified it: the tariff plan says the price on a slip is the price on the day it is printed"
         },
         "state": {
@@ -3014,6 +3018,7 @@
         "fix": null,
         "routing": {
           "state": "needs triage",
+          "reason": "unread",
           "why": "unmarked (no Fix: line), and no reading has verified it; it is nobody's yet"
         },
         "state": {
@@ -3314,6 +3319,7 @@
         },
         "routing": {
           "state": "needs triage",
+          "reason": "unread",
           "why": "marked now, and no reading has verified it; it is nobody's yet"
         },
         "state": {
@@ -11879,7 +11885,8 @@
           "session_id": "bbbb0001-0000-4000-8000-000000000000",
           "slot": "beta",
           "started_at": "2026-09-04T08:28:00Z",
-          "ended_at": null
+          "ended_at": null,
+          "text_fingerprint": null
         },
         "planning": null,
         "triaging": null,
@@ -12067,6 +12074,7 @@
         },
         "routing": {
           "state": "needs triage",
+          "reason": "unread",
           "why": "marked now, and no reading has verified it; it is nobody's yet"
         },
         "state": {
@@ -12106,7 +12114,8 @@
           "session_id": "cccc0001-0000-4000-8000-000000000000",
           "slot": "alpha",
           "started_at": "2026-09-04T08:27:00Z",
-          "ended_at": null
+          "ended_at": null,
+          "text_fingerprint": null
         },
         "triaging": null,
         "triage": null,
@@ -12135,6 +12144,7 @@
         },
         "routing": {
           "state": "needs triage",
+          "reason": "unread",
           "why": "marked now, and no reading has verified it; it is nobody's yet"
         },
         "state": {
@@ -12175,7 +12185,8 @@
           "session_id": "dddd0001-0000-4000-8000-000000000000",
           "slot": "beta",
           "started_at": "2026-09-04T08:26:00Z",
-          "ended_at": null
+          "ended_at": null,
+          "text_fingerprint": null
         },
         "triage": null,
         "title_reading": null,
@@ -12203,6 +12214,7 @@
         },
         "routing": {
           "state": "triaged his",
+          "reason": "his",
           "why": "a reading says it is yours: the berth plan names neither of the two shapes this could take, and both are yours to choose between"
         },
         "state": {

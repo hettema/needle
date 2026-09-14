@@ -103,6 +103,12 @@ class Claim(StrEnum):
     between its fold and its hold — or the project's standing hold file is
     not there. Left alone it turns one waiting card into every card behind
     it half-closed, which is why it reads as broken rather than as his."""
+    READINGS_STOPPED = "readings stopped"
+    """The board opened its cap of readings on this card's text and none
+    settled it, so it opens no more until the text changes (card #138, item
+    2). Broken, not quiet: the seat's guard was meant to stop before the
+    fuse did, and a card nothing reads and nothing moves is a promise the
+    board is not keeping."""
 
 
 CLAIM_MEANING: dict[Claim, Meaning] = {
@@ -130,6 +136,7 @@ CLAIM_MEANING: dict[Claim, Meaning] = {
     Claim.DECISION_BEING_READ: Meaning.LIVE,
     Claim.RELEASE_YOURS: Meaning.YOURS,
     Claim.RELEASE_UNHELD: Meaning.BROKEN,
+    Claim.READINGS_STOPPED: Meaning.BROKEN,
 }
 """Which of the three head words each claim counts under; the two other
 meanings never claim anyone."""

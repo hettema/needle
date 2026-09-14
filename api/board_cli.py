@@ -364,9 +364,13 @@ def decisions(
         return 0
     for line in rows:
         came = f" (out of {line.parent})" if line.parent else ""
+        # The text's fingerprint on the line, so a count of readings per card
+        # can tell a re-read of one text from the one reading each new text
+        # gets (card #138, the Loop).
         print(
             f"{line.at.date().isoformat()}  {line.project} #{line.card_number:<4} "
-            f"{line.ground.value:<7} {line.result.value:<12} {line.decision}{came}"
+            f"{line.ground.value:<7} {line.result.value:<12} {line.decision}{came} "
+            f"text {line.text}"
         )
         print(f"      {line.title}")
         print(f"      says: {line.words}")

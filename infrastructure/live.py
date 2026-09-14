@@ -28,7 +28,7 @@ from board.assemble import (
     folded_under,
     watch_signal,
 )
-from board.dial import dial_state, held_lanes
+from board.dial import dial_state, held_lanes, mark_text, readings_spent
 from board.focus import (
     READ_COLUMNS,
     card_leverage,
@@ -40,17 +40,18 @@ from board.focus import (
 )
 from board.lane import nothing_read
 from board.leverage import Judged, arrange, wake_line
-from board.parked import commitments_of
+from board.parked import commitments_of, parked_at, record_fingerprint
 from board.reconcile import SUGGESTION_HOMES, Effects, home_of, reconcile
 from board.release import names
-from board.triage import Sources
+from board.title import title_fingerprint
+from board.triage import Sources, source_ref_of
 from domain.audit import AuditEntry, AuditKind
 from domain.board import BoardState, CardDetail, MachineState
 from domain.card import Actor, Card, CardOrigin, Place
 from domain.column import Column
 from domain.corpus import CorpusIndex
 from domain.dial import DialState, Headroom
-from domain.document import DocumentKind
+from domain.document import Document, DocumentKind, SuggestionKind
 from domain.evidence import Evidence
 from domain.focus import (
     Arrangement,
@@ -67,8 +68,8 @@ from domain.notice import Shown
 from domain.project import Project
 from domain.release import Held
 from domain.row import Row
-from domain.signal import SessionWork, SignalKind
-from domain.triage import Commitment, Ground
+from domain.signal import SessionWork, SignalKind, WindowlessSession
+from domain.triage import Commitment, Ground, ReadingsSpent
 from domain.watercooler import WatercoolerLine
 from domain.window import WindowKind
 from infrastructure import clock
@@ -354,10 +355,68 @@ class Live:
 
         return Sources(Path(live.project.path), card_document)
 
+    def document_text(self, slug: str, document: Document) -> str:
+        """The document's whole text as the file reads now: what a reading's
+        brief carries and what a parked card's record fingerprint is made
+        of. An unreadable file is a sentence saying so, never an exception,
+        so one lost file costs one card and not the board."""
+        live = self._live(slug)
+        try:
+            return (Path(live.project.path) / document.path).read_text(
+                encoding="utf-8", errors="replace"
+            )
+        except OSError as error:
+            return f"(the board could not read {document.path}: {error})"
+
+    def readings_spent(
+        self, slug: str, *, sources: Sources | None = None
+    ) -> dict[int, ReadingsSpent]:
+        """Every card's count of readings on the text its reader reads today
+        (card #138, item 2), from the one table the seat writes at each
+        open. Three readers, three texts: a card in Decision moment is read
+        on its record, a defect in its column on its document and source, a
+        plan or an idea on its title — each in the terms `api/dial.py::_triage`
+        binds the reading with, so the count and the binding cannot drift.
+        One query for the sessions and one for the placements; a parked
+        card also reads its file, since its record is the text and the
+        rows. Cards standing under another, and cards with no live
+        document that are not parked, have no reader and no count."""
+        live = self._live(slug)
+        sources = sources if sources is not None else self.sources(slug)
+        by_card: dict[int, list[WindowlessSession]] = {}
+        for session in self.store.windowless_sessions(slug, work=SessionWork.TRIAGE):
+            by_card.setdefault(session.card_number, []).append(session)
+        placements = self.store.placements(slug)
+        found: dict[int, ReadingsSpent] = {}
+        for card in self.store.cards(slug):
+            if card.folded_into is not None:
+                continue
+            document = document_of(card, live.index)
+            parked = card.place.column == Column.DECISION_MOMENT
+            since: datetime | None = None
+            if parked:
+                text = record_fingerprint(
+                    self.document_text(slug, document) if document is not None else None,
+                    card.rows,
+                )
+                since = parked_at(placements.get(card.number))
+            elif document is None or document.archived:
+                continue
+            elif document.suggestion_kind == SuggestionKind.DEFECT:
+                ref = source_ref_of(document.fix.why if document.fix is not None else None)
+                text = mark_text(document, sources.fingerprint_of(ref))
+            else:
+                text = title_fingerprint(document.title, document.essence)
+            found[card.number] = readings_spent(
+                by_card.get(card.number, []), text=text, since=since, parked=parked
+            )
+        return found
+
     def board(self, slug: str) -> BoardState:
         live = self._live(slug)
         focus, leverages, leverage = self.focus_of(slug)
         cards = self.store.cards(slug)
+        sources = self.sources(slug)
         return assemble_board(
             project=live.project,
             layout=self.store.layout(slug),
@@ -380,13 +439,14 @@ class Live:
             triages=self.store.latest_triages(slug),
             decisions=self.store.latest_triages(slug, ground=Ground.PARKED),
             histories=self._histories_for_parked(slug),
-            sources=self.sources(slug),
+            sources=sources,
             dial=self.dial_state(slug),
             title_readings=self.store.latest_title_readings(slug),
             focus=focus,
             leverage=leverage,
             leverages=leverages,
             release=self.release_held(slug),
+            spent=self.readings_spent(slug, sources=sources),
         )
 
     def focus_of(self, slug: str) -> tuple[FocusStrip, dict[int, CardLeverage], Arrangement]:
@@ -690,6 +750,7 @@ class Live:
         live = self._live(slug)
         card = self.card(slug, number)
         lane, doors = self.lane_and_doors(slug, card)
+        sources = self.sources(slug)
         return assemble_detail(
             card,
             live.index,
@@ -708,12 +769,13 @@ class Live:
             triaging=self.store.open_windowless_sessions(slug, SessionWork.TRIAGE).get(number),
             triage=self.store.triage(slug, number),
             decision=self.store.triage(slug, number, ground=Ground.PARKED),
-            sources=self.sources(slug),
+            sources=sources,
             title_reading=self.store.latest_title_readings(slug).get(number),
             leverage=self.focus_of(slug)[1].get(number),
             team=self.store.composition(slug, number),
             beside=self.beside(slug).get(number),
             release=(held if (held := self.release_held(slug)) and number in held.cards else None),
+            spent=self.readings_spent(slug, sources=sources).get(number),
         )
 
     def lane_and_doors(self, slug: str, card: Card) -> tuple[Lane | None, Doors]:

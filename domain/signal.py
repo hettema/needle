@@ -106,3 +106,9 @@ class WindowlessSession(BaseModel):
     slot: str
     started_at: datetime
     ended_at: datetime | None
+    text_fingerprint: str | None = None
+    """What a reading was opened on, in its reader's own terms (card #138,
+    item 2): a mark's document and source, a title, or a parked card's
+    record. Bound at the open, so a reading that dies is counted against
+    the text it read as surely as one that lands; None for a signal or a
+    planning session, and for every reading opened before the column."""

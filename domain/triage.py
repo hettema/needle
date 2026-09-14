@@ -287,13 +287,67 @@ ROUTES_TO_THE_OWNER: frozenset[Routing] = frozenset({Routing.TRIAGED_HIS})
 """The one state that puts a defect on the owner's pile and opens Answer."""
 
 
+class Reason(StrEnum):
+    """Which branch of `board/triage.py::routing_of` chose the state: one
+    value per return, so a reader that must stance every branch — the seat
+    deciding whether another reading could change anything (card #138) —
+    keys on the branch and not on the state, which five branches share."""
+
+    NO_DOCUMENT = "no document"
+    UNREAD = "unread"
+    """No reading has verified the mark: the one state a reading opens on."""
+    DOCUMENT_MOVED = "document moved"
+    SOURCE_MOVED = "source moved"
+    CANNOT_TELL = "cannot tell"
+    SPLIT = "split"
+    HIS = "his"
+    WHEN = "when"
+    WHEN_OVER_MARK = "when over mark"
+    """A `when` reading against a document marked `his` or unmarked."""
+    NOW = "now"
+    NOW_OVER_MARK = "now over mark"
+    """A `now` reading against a document the corpus does not mark `now`."""
+
+
+COMMIT_BOUND: frozenset[Reason] = frozenset(
+    {Reason.SPLIT, Reason.WHEN_OVER_MARK, Reason.NOW_OVER_MARK}
+)
+"""The branches a reading of today's text has already been through and
+left the card at `needs triage`: what moves the card from here is a commit
+rewriting the document (or a lane separating it), which no reading can
+write, so the seat never opens another one (card #138, item 1)."""
+
+
 class Routed(BaseModel):
     """A defect's routing state and the sentence that says why, in the words
     the rail, the card and `needle fixes` all print."""
 
     state: Routing
+    reason: Reason
+    """The branch that chose the state."""
     why: str
     """One sentence, from facts the card or its document carries."""
+
+
+class ReadingsSpent(BaseModel):
+    """How many readings the board has opened on one card's text as it
+    stands today (card #138, item 2): every reading opened on that text —
+    landed, died or stopped — counts once, because each was a session the
+    machine paid for, and past the cap the board opens no more on it."""
+
+    text: str
+    """The fingerprint of what the reader reads on this card today, in that
+    reader's own terms: a mark's document and source, a title, or a parked
+    card's record."""
+    opened: int
+    cap: int
+    parked: bool
+    """The count is per park (card #82, ruling 9): a park is a placement,
+    not a change to the record, so it resets the count by time."""
+
+    @property
+    def stopped(self) -> bool:
+        return self.opened >= self.cap
 
 
 class Source(BaseModel):
@@ -393,6 +447,10 @@ class Decision(BaseModel):
     """Where the card routes now, for a mark's reading: a decision whose
     row went stale says so. None for a parked card's reading, which routes
     nothing."""
+    text: str
+    """The fingerprint of the text the reading judged — a mark's document,
+    a parked card's record — so a count of readings per card can tell one
+    text from the next (card #138, the Loop)."""
     fate: Fate
     returned: bool
     """A parked card's reading moved the card out of the owner's column and

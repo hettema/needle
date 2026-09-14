@@ -27,13 +27,16 @@ import pytest
 from fastapi.testclient import TestClient
 
 from api.cli import main
+from domain.signal import SessionWork
 from domain.triage import TriageResult
+from infrastructure import clock
 from infrastructure.store import Store
 from tests.api import test_doors as doors
 from tests.api.test_dial import (
     GRADE,
     READINGS_ON_THE_WAY,
     SOURCE,
+    is_parked,
     land_on_the_way,
     number_of,
     read_the_rail_until,
@@ -43,7 +46,9 @@ from tests.api.test_dial import (
     verify,
     write_defect,
 )
-from tests.api.test_doors import detail, git, reconcile
+from tests.api.test_doors import detail, git, move, reconcile
+from tests.api.test_parked_cards import BERTH_FIRST
+from tests.api.test_title import PLAIN, card_a_plan, retitle
 from tests.floor import Floor
 
 client = doors.client
@@ -245,6 +250,16 @@ def test_a_card_whose_reading_cannot_move_it_is_never_read_again(
             "a reading that cannot change the card's routing is never opened again"
         )
 
+    # What he reads while it waits: when it was read, what it landed, and
+    # that a commit is what moves it — on the card and in `needle fixes`.
+    today = clock.now().date().isoformat()
+    assert f"read on {today}, the reading landed now" in where["why"]
+    assert "the board does not read it again until then" in where["why"]
+    waiting = client.get("/api/fixes").json()["waiting"]
+    assert next(w["why"] for w in waiting if w["card_number"] == defect) == where["why"]
+    assert main(["fixes", "proj"]) == 0
+    assert f"read on {today}" in capsys.readouterr().out
+
     # The commit the row waits on moves the document, and the door opens.
     edit(repo, PATH, "**Fix:** his `", "**Fix:** now `")
     client.app.state.loops.live.rescan("proj")
@@ -407,9 +422,7 @@ def test_the_verb_refuses_a_now_with_no_resolvable_source_and_a_now_with_no_dire
     assert "which way it moves the product" in capsys.readouterr().err
 
 
-def test_the_verb_refuses_a_result_with_no_reading_open(
-    client: TestClient, defect: int, capsys
-):
+def test_the_verb_refuses_a_result_with_no_reading_open(client: TestClient, defect: int, capsys):
     assert (
         main(["triage", "proj", str(defect), "his", "it is a product call for you", "-t", "passes"])
         == 1
@@ -733,3 +746,126 @@ def test_one_command_follows_a_split_decision_to_both_fates(
     assert fix.decision == store.triages("proj", half)[-1].decision
     assert main(["decisions", "proj"]) == 0
     assert "the dial's fix lane is planning" in capsys.readouterr().out
+
+
+# ── card #138, item 2: the fuse behind the guard ───────────────────────
+
+
+def spend_readings(client: TestClient, store: Store, number: int, times: int = 3) -> str:
+    """Three readings the board opened on the card's text as it stands and
+    saw end — the exact rows a hole in the seat would leave, whatever the
+    readings landed — written straight into the store, since the guard
+    refuses to open a second one and the verb refuses a result with no
+    grade: the fuse is proved from the state it reads, not from a hole
+    manufactured above it."""
+    text = client.app.state.loops.live.readings_spent("proj")[number].text
+    for i in range(times):
+        at = clock.now()
+        row = store.open_windowless_session(
+            "proj",
+            number,
+            SessionWork.TRIAGE,
+            f"spent-{number}-{i}",
+            "alpha",
+            at,
+            text_fingerprint=text,
+        )
+        store.end_windowless_session(row.id, at)
+    reconcile(client)
+    return text
+
+
+def face_of(client: TestClient, number: int) -> dict:
+    board = client.get("/api/projects/proj/board").json()
+    for column in board["columns"]:
+        for group in column["groups"]:
+            for card in group["cards"]:
+                if card["number"] == number:
+                    return card
+    raise AssertionError(f"#{number} is not on the board")
+
+
+def readings_of(store: Store, number: int) -> int:
+    return len([r for r in store.windowless_sessions("proj") if r.card_number == number])
+
+
+def test_three_readings_on_one_text_stop_the_board_loudly_and_a_changed_text_starts_it_again(
+    client: TestClient, machine_floor: Floor, repo: Path, store: Store, defect: int, capsys
+):
+    """The fuse (card #138, item 2): whatever a hole above it does, no card
+    is read more than three times on one text, and the card says so where
+    the owner looks — its face, the head's count and `needle fixes` — never
+    as a bare `needs triage`."""
+    spend_readings(client, store, defect)
+    before = len(machine_floor.state()["launch_log"])
+    tick(client)
+    assert reading_or_nothing(machine_floor, before) is None, "the fuse holds the seat shut"
+    assert readings_of(store, defect) == 3
+
+    face = face_of(client, defect)
+    assert face["state"]["word"] == "stopped reading" and face["state"]["meaning"] == "broken"
+    assert "read this 3 times on this text" in face["state"]["detail"]
+    assert "a change to the document or to the source its mark cites" in face["state"]["detail"]
+    assert "readings stopped" in face["claims"]
+    head = client.get("/api/projects/proj/board").json()["attention"]
+    assert any(c["claim"] == "readings stopped" and c["count"] == 1 for c in head["broken"]), head
+    waiting = client.get("/api/fixes").json()["waiting"]
+    why = next(w["why"] for w in waiting if w["card_number"] == defect)
+    assert "read this 3 times on this text" in why and "needs triage" not in why
+    assert main(["fixes", "proj"]) == 0
+    assert "read this 3 times on this text" in capsys.readouterr().out
+
+    # The document changes: a new text, a new count, and the seat opens.
+    edit(repo, PATH, "## Observation\n\nx", "## Observation\n\nThe lights burn from dusk to dawn")
+    client.app.state.loops.live.rescan("proj")
+    reconcile(client)
+    assert face_of(client, defect)["state"]["word"] != "stopped reading"
+    read_the_rail_until(client, machine_floor, defect)
+    assert readings_of(store, defect) == 4
+
+
+def test_the_fuse_holds_a_title_and_a_parked_card_alike_and_a_new_park_or_title_starts_it_again(
+    client: TestClient, machine_floor: Floor, repo: Path, store: Store, capsys
+):
+    turn(client, on=True, lanes=1)
+    park_the_rail(client, machine_floor)
+    plan = card_a_plan(client, repo, "proj", "2026-09-14-the-harbour-lights-dim-at-midnight", PLAIN)
+    parked = BERTH_FIRST
+    assert is_parked(client, parked)
+    # The rail's first walk read the parked card once and landed `his` on
+    # it; that reading was of the record before his line, a different text.
+    parked_before = readings_of(store, parked)
+    spend_readings(client, store, plan)
+    spend_readings(client, store, parked)
+    park_the_rail(client, machine_floor)
+    assert readings_of(store, plan) == 3, "the title is not read a fourth time"
+    assert readings_of(store, parked) == parked_before + 3, (
+        "the parked card is not read a fourth time on this record"
+    )
+
+    title = face_of(client, plan)
+    assert title["state"]["word"] == "stopped reading" and "readings stopped" in title["claims"]
+    yours = face_of(client, parked)
+    assert yours["state"]["word"] == "your move", "his column stays his"
+    assert "since it was parked" in yours["state"]["detail"]
+    assert "parking it again starts them again" in yours["state"]["detail"]
+    assert "readings stopped" in yours["claims"]
+
+    # A rewritten title is a new text; a new park is a new count.
+    retitle(
+        client,
+        repo,
+        "proj",
+        repo / "docs" / "plans" / "2026-09-14-the-harbour-lights-dim-at-midnight.md",
+        PLAIN,
+        "The harbour lights dim at midnight",
+    )
+    assert face_of(client, plan)["state"]["word"] != "stopped reading"
+    move(client, parked, "Up next")
+    move(client, parked, "Decision moment")
+    assert "readings stopped" not in face_of(client, parked)["claims"]
+    read_the_rail_until(client, machine_floor, plan)
+    assert readings_of(store, plan) == 4
+    land_on_the_way(client, plan)
+    read_the_rail_until(client, machine_floor, parked)
+    assert readings_of(store, parked) == parked_before + 4

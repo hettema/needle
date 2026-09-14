@@ -10,6 +10,7 @@ from datetime import UTC, datetime, timedelta
 
 from pydantic import ValidationError
 
+from board.dial import stopped_words
 from board.evidence import standing_for
 from board.focus import strip_of
 from board.handouts import handouts_for
@@ -84,7 +85,7 @@ from domain.release import Held
 from domain.row import ROW_HALF, Row, RowHalf, RowKind
 from domain.signal import Reading, Signal, SignalKind, WindowlessSession
 from domain.team import Composition
-from domain.triage import Grade, Routed, Routing, TitleReading, Triage
+from domain.triage import Grade, ReadingsSpent, Routed, Routing, TitleReading, Triage
 from domain.verdict import Verdict, VerdictLine
 from domain.watercooler import WatercoolerLine
 
@@ -106,6 +107,7 @@ CLAIM_WORDS: dict[Claim, tuple[str, str]] = {
     Claim.DOUBTED: ("status doubted", "statuses doubted"),
     Claim.SIGNAL_OVERDUE: ("signal past due, unread", "signals past due, unread"),
     Claim.DOCUMENT_GONE: ("document nowhere", "documents nowhere"),
+    Claim.READINGS_STOPPED: ("card the board stopped reading", "cards the board stopped reading"),
     Claim.COLLIDING: ("lane colliding", "lanes colliding"),
     Claim.DOCUMENT_WITHOUT_CARD: ("document with no card", "documents with no card"),
     Claim.NO_REVIEW: ("shipped with no review record", "shipped with no review record"),
@@ -639,6 +641,7 @@ def state_of(
     doubt: str | None = None,
     parked_by_owner: bool = False,
     release: Held | None = None,
+    stopped: str | None = None,
 ) -> CardState:
     """The one function that names a card's state (plan 27, item 2). The
     order is the rule's precedence: broken before yours, yours before live,
@@ -649,7 +652,10 @@ def state_of(
     where it routes (plan 59); `hold` is why a cold reading could not place
     the card from its title, and `defect` whether a reading in flight is a
     mark's or only a title's (card #74, item 3); `grade` how bad a defect
-    is, from the reading that stands for its document today (card #100)."""
+    is, from the reading that stands for its document today (card #100);
+    `stopped` the sentence for a card the seat's fuse stopped reading
+    (card #138, item 2), broken on its face outside the owner's column
+    and appended to his line inside it."""
     hands_on = lane is not None and lane.state in HANDS_ON
     if document_state == DocumentState.GONE:
         return _state(
@@ -755,6 +761,18 @@ def state_of(
         # Broken before quiet: the title and the bar disagree, and nothing
         # below this line — a Start, a plan door — is offered while they do.
         return _state("title fails", Meaning.BROKEN, detail=hold_sentence(hold), hint="open to see")
+    if stopped is not None and card.place.column != Column.DECISION_MOMENT:
+        # The seat's fuse (card #138): the board spent its cap of readings
+        # on this text and none settled the card. Broken, because the guard
+        # was meant to stop before the fuse did and a card nothing reads
+        # and nothing moves is a promise the board is not keeping; loud,
+        # because the failure it bounds cost a day of the machine.
+        return _state(
+            "stopped reading",
+            Meaning.BROKEN,
+            detail=say(Meaning.BROKEN, stopped, then="open it for what each reading landed"),
+            hint="open to see",
+        )
     if card.place.column == Column.DECISION_MOMENT:
         # A cold reading of the record says what the decision is (card
         # #82): his line, the doubt of a refused close, or what the reading
@@ -770,6 +788,10 @@ def state_of(
             standing.words
             or "it sits in Decision moment, and nothing there moves without a word from you"
         )
+        if stopped is not None:
+            # His column, his move: the fuse's sentence rides on his line
+            # rather than replacing it (card #138).
+            why = f"{why}; {stopped}"
         return _state(
             "your move",
             Meaning.YOURS,
@@ -989,6 +1011,7 @@ def claims_of(
     beside: Beside | None = None,
     unplaced: bool = False,
     release: Held | None = None,
+    stopped: str | None = None,
 ) -> list[Claim]:
     """Every claim the card makes on the owner's eye, in the head's order.
     A card can carry several; the head counts each. `placement` is the
@@ -1037,6 +1060,8 @@ def claims_of(
         claims.append(Claim.BESIDE_UNNAMED)
     if unplaced and card.place.column not in SHIPPED:
         claims.append(Claim.HOLD_UNREAD)
+    if stopped is not None and card.place.column not in SHIPPED:
+        claims.append(Claim.READINGS_STOPPED)
     if release is not None:
         claims.append(
             Claim.RELEASE_YOURS if release.claimed and release.hold_stands else Claim.RELEASE_UNHELD
@@ -1095,6 +1120,7 @@ def summarize(
     decision: Triage | None = None,
     history: list[AuditEntry] | None = None,
     release: Held | None = None,
+    spent: ReadingsSpent | None = None,
 ) -> CardSummary:
     """`doors` is the card's doors as the loop last read them; before its
     first read they are the closed doors of `nothing_read`. The state line and
@@ -1105,8 +1131,11 @@ def summarize(
     `title_reading` the latest cold reading of its title (card #74);
     `decision` its latest cold reading as a card parked on the owner and
     `history` the card's own, given only where a parked card's rule reads
-    it — the commitments on the card, re-tested on every read (card #82)."""
+    it — the commitments on the card, re-tested on every read (card #82);
+    `spent` the readings the seat has opened on the card's text as it
+    stands, whose cap the face says when the board stopped (card #138)."""
     document = document_of(card, index)
+    stopped = stopped_words(spent)
     text, source = essence(card, document)
     state = document_state(card, document)
     path = document.path if document is not None else cited_path(card)
@@ -1155,6 +1184,7 @@ def summarize(
             doubt=doubt,
             parked_by_owner=owner_parked(placement),
             release=release,
+            stopped=stopped,
         )
     except ValidationError as refusal:
         face = _refused_face(card, refusal)
@@ -1192,6 +1222,7 @@ def summarize(
             beside=beside if card.folded_into is None else None,
             unplaced=doors.readiness.state == StartState.HOLD_UNREAD,
             release=release,
+            stopped=stopped,
         ),
         folded=folded or [],
         is_new=is_new(card, now),
@@ -1345,6 +1376,7 @@ def assemble_board(
     decisions: dict[int, Triage] | None = None,
     histories: dict[int, list[AuditEntry]] | None = None,
     release: Held | None = None,
+    spent: dict[int, ReadingsSpent] | None = None,
 ) -> BoardState:
     """`snapshot`, `readings`, `trunk` and `machine` are what the loop has
     read; before its first read they are absent and the board says so.
@@ -1361,6 +1393,7 @@ def assemble_board(
     leverages = leverages or {}
     decisions = decisions or {}
     histories = histories or {}
+    spent = spent or {}
     watercooler = watercooler or []
     placements = placements or {}
     trunk = trunk or TrunkState(level=None, behind=0, note=None, read_at=None)
@@ -1399,6 +1432,7 @@ def assemble_board(
             decision=decisions.get(n),
             history=histories.get(n),
             release=release if release is not None and n in release.cards else None,
+            spent=spent.get(n),
         )
         for n, c in by_number.items()
     }
@@ -1551,6 +1585,7 @@ def assemble_detail(
     beside: Beside | None = None,
     decision: Triage | None = None,
     release: Held | None = None,
+    spent: ReadingsSpent | None = None,
 ) -> CardDetail:
     """`readings` newest first; `read` is whether the loop has read the
     machine; `folded` the cards folded under this one; `reading` the
@@ -1585,6 +1620,7 @@ def assemble_detail(
             decision=decision,
             history=history,
             release=release,
+            spent=spent,
         ),
         brief=brief,
         record=record,

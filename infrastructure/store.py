@@ -1464,12 +1464,15 @@ class Store:
         session_id: str,
         slot: str,
         at: datetime,
+        text_fingerprint: str | None = None,
     ) -> WindowlessSession:
         """One open session per card and kind, refused here rather than
         remembered by every caller (plan 59, item 3). Both callers before
         this checked first and then opened, which is a check and an act with
         a beat in between; a second triager is exactly the duplicate the
-        seat cannot have, so the invariant lives at the door of the table."""
+        seat cannot have, so the invariant lives at the door of the table.
+        `text_fingerprint` is what a reading opens on, bound here so a
+        reading that dies is still counted against its text (card #138)."""
         with self._session() as session, session.begin():
             standing = session.scalars(
                 select(WindowlessSessionRow).where(
@@ -1492,6 +1495,7 @@ class Store:
                 slot=slot,
                 started_at=at,
                 ended_at=None,
+                text_fingerprint=text_fingerprint,
             )
             session.add(row)
             session.flush()
@@ -3248,6 +3252,7 @@ def _windowless_session(row: WindowlessSessionRow) -> WindowlessSession:
         slot=row.slot,
         started_at=row.started_at,
         ended_at=row.ended_at,
+        text_fingerprint=row.text_fingerprint,
     )
 
 

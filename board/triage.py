@@ -31,6 +31,7 @@ from domain.triage import (
     Grade,
     Often,
     Reach,
+    Reason,
     Routed,
     Routing,
     Source,
@@ -227,16 +228,19 @@ def routing_of(
     if document is None:
         return Routed(
             state=Routing.NEEDS_TRIAGE,
+            reason=Reason.NO_DOCUMENT,
             why="no live document behind the card; nothing to verify",
         )
     if triage is None:
         return Routed(
             state=Routing.NEEDS_TRIAGE,
+            reason=Reason.UNREAD,
             why=f"{_mark_words(document)}, and no reading has verified it; it is nobody's yet",
         )
     if triage.document_fingerprint != document.fingerprint:
         return Routed(
             state=Routing.STALE,
+            reason=Reason.DOCUMENT_MOVED,
             why=(
                 f"the reading of {triage.at.date().isoformat()} judged an earlier text of "
                 f"{document.path}; it is nobody's until a fresh reading"
@@ -246,49 +250,68 @@ def routing_of(
         moved = "has changed" if source_fingerprint is not None else "is gone"
         return Routed(
             state=Routing.STALE,
+            reason=Reason.SOURCE_MOVED,
             why=(
                 f"the source the reading relied on ({triage.source_ref}) {moved}; it is "
                 "nobody's until a fresh reading"
             ),
         )
     mark = document.fix.mark if document.fix is not None else None
+    # The three sentences below are read by the owner on a card the seat
+    # will not read again (card #138): they say when it was read, what the
+    # reading landed, and that a commit is what moves it.
+    read_on = f"read on {triage.at.date().isoformat()}"
     if triage.result == TriageResult.CANNOT_TELL:
         return Routed(
             state=Routing.CANNOT_TELL,
+            reason=Reason.CANNOT_TELL,
             why=f"the reading could not settle it: {triage.words}",
         )
     if triage.result == TriageResult.SPLIT:
         return Routed(
             state=Routing.NEEDS_TRIAGE,
+            reason=Reason.SPLIT,
             why=(
-                "the reading found two decisions in one document and authorises neither: "
-                f"{triage.words}"
+                f"{read_on}, the reading found two decisions in one document and authorises "
+                f"neither: {triage.words}; a short lane separates the two, and the board does "
+                "not read it again until the document changes"
             ),
         )
     if triage.result == TriageResult.HIS:
-        return Routed(state=Routing.TRIAGED_HIS, why=f"a reading says it is yours: {triage.words}")
+        return Routed(
+            state=Routing.TRIAGED_HIS,
+            reason=Reason.HIS,
+            why=f"a reading says it is yours: {triage.words}",
+        )
     if triage.result == TriageResult.WHEN:
         if mark in (FixMark.WHEN, FixMark.NOW):
             return Routed(
                 state=Routing.TRIAGED_WHEN,
+                reason=Reason.WHEN,
                 why=f"a reading says it waits for a trigger: {triage.words}",
             )
         return Routed(
             state=Routing.NEEDS_TRIAGE,
+            reason=Reason.WHEN_OVER_MARK,
             why=(
-                "a reading says it waits for a trigger, and the document is "
-                f"{_mark_words(document)}; nothing routes until a commit rewrites the "
-                "mark citing the reading"
+                f"{read_on}, the reading landed that it waits for a trigger, and the document "
+                f"is {_mark_words(document)}; nothing routes until a commit rewrites the mark "
+                "citing the reading, and the board does not read it again until then"
             ),
         )
     if mark == FixMark.NOW:
-        return Routed(state=Routing.TRIAGED_NOW, why=f"a reading verified it: {triage.words}")
+        return Routed(
+            state=Routing.TRIAGED_NOW,
+            reason=Reason.NOW,
+            why=f"a reading verified it: {triage.words}",
+        )
     return Routed(
         state=Routing.NEEDS_TRIAGE,
+        reason=Reason.NOW_OVER_MARK,
         why=(
-            f"a reading verified it as now, and the document is {_mark_words(document)}; a row "
-            "never routes more freely than the corpus — a commit has to rewrite the mark citing "
-            "the reading first"
+            f"{read_on}, the reading landed now, and the document is {_mark_words(document)}; "
+            "a row never routes more freely than the corpus — a commit has to rewrite the mark "
+            "citing the reading first, and the board does not read it again until then"
         ),
     )
 

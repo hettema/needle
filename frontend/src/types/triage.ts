@@ -23,6 +23,9 @@ export type Often = (typeof OFTEN_VALUES)[number];
 export const REACH_VALUES = ["client", "money", "you", "session"] as const;
 export type Reach = (typeof REACH_VALUES)[number];
 
+export const REASON_VALUES = ["no document", "unread", "document moved", "source moved", "cannot tell", "split", "his", "when", "when over mark", "now", "now over mark"] as const;
+export type Reason = (typeof REASON_VALUES)[number];
+
 export const ROUTING_VALUES = ["needs triage", "triaged now", "triaged his", "triaged when", "cannot tell", "stale"] as const;
 export type Routing = (typeof ROUTING_VALUES)[number];
 
@@ -67,6 +70,7 @@ export interface Decision {
   direction: Direction | null;
   source: string;
   routing: Routing | null;
+  text: string;
   fate: Fate;
   returned: boolean;
 }
@@ -90,8 +94,16 @@ export interface Grade {
   often_words: string | null;
 }
 
+export interface ReadingsSpent {
+  text: string;
+  opened: number;
+  cap: number;
+  parked: boolean;
+}
+
 export interface Routed {
   state: Routing;
+  reason: Reason;
   why: string;
 }
 
@@ -163,3 +175,5 @@ export const BREAKS_WORDS: Record<Breaks, string> = {
 export const ROUTES_TO_THE_MACHINE: readonly Routing[] = ["triaged now"];
 
 export const ROUTES_TO_THE_OWNER: readonly Routing[] = ["triaged his"];
+
+export const COMMIT_BOUND: readonly Reason[] = ["now over mark", "split", "when over mark"];
