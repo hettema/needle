@@ -104,12 +104,14 @@ def notes(store: Store, slug: str, number: int, prefix: str) -> list[str]:
     return [h.detail for h in store.history(slug, number) if h.detail.startswith(prefix)]
 
 
-def test_a_beat_opens_the_oldest_card_a_machine_with_room_can_read_and_the_full_machines_cards_wait(
+def test_a_beat_opens_the_oldest_card_a_machine_with_room_can_read_and_the_rest_wait(
     client: TestClient, machine_floor: Floor, store: Store, repo: Path, tmp_path: Path
 ):
     other = laptop_full_rented_with_room(client, machine_floor, store, repo, tmp_path)
     turn(client, lanes=1)
-    assert board(client)["dial"]["full"] is None, "the rented machine has room, so the head is not full"
+    assert board(client)["dial"]["full"] is None, (
+        "the rented machine has room, so the head is not full"
+    )
     before = len(machine_floor.state()["launch_log"])
     tick(client)
     assert len(machine_floor.state()["launch_log"]) == before + 1, (
@@ -120,9 +122,10 @@ def test_a_beat_opens_the_oldest_card_a_machine_with_room_can_read_and_the_full_
     assert open_readings(store, "proj") == [reading_for(machine_floor)]
     held = oldest_unread(store, GROUND)
     assert len(notes(store, GROUND, held, LEFT_OUT)) == 1
-    assert "laptop is the machine this project records and it is full" in notes(
-        store, GROUND, held, LEFT_OUT
-    )[0]
+    assert (
+        "laptop is the machine this project records and it is full"
+        in notes(store, GROUND, held, LEFT_OUT)[0]
+    )
     assert notes(store, GROUND, held, REFUSED) == [], "the launch was never asked"
     # Every machine full: the beat opens nothing and the head names both.
     other.set_memory(available_gb=1.5, swap_free_gb=8.0)
