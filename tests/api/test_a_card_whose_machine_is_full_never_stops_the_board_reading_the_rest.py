@@ -17,15 +17,17 @@ import shutil
 from datetime import timedelta
 from pathlib import Path
 
+import pytest
 from fastapi.testclient import TestClient
 
-from board.dial import LEFT_OUT
+from board.dial import LEFT_OUT, REFUSED
 from domain.card import CardOrigin
 from domain.machine import Machine
 from domain.project import Project
 from domain.signal import SessionWork
 from infrastructure.live import sweep
 from infrastructure.store import Store
+from runtime import launch
 from tests.api import test_doors as doors
 from tests.api.test_dial import board, land_on_the_way, reading_for, tick, turn
 from tests.api.test_doors import git, reconcile
@@ -42,17 +44,21 @@ cards are a day older than the fixture's, so a beat that ranks by age
 alone picks one of these first — and is refused, since the laptop is
 full and its own cards run nowhere else."""
 
-REFUSED = "The board could not start a reading"
-"""What the launch's refusal writes: the line the beat used to spend its
-one act on, once a minute."""
 
-
-def laptop_full_rented_with_room(
-    client: TestClient, machine_floor: Floor, store: Store, repo: Path, tmp_path: Path
+def two_machines(
+    client: TestClient,
+    machine_floor: Floor,
+    store: Store,
+    repo: Path,
+    tmp_path: Path,
+    *,
+    ground_on: str,
 ) -> Floor:
-    """Two machines: this floor as the laptop, full, the ground of a second
-    project whose cards are older than the fixture's; a second floor as
-    the rented machine with room, which reads the fixture project."""
+    """Two machines and two projects: this floor as the laptop, a second
+    floor as the rented machine with 24 GB; the fixture project, read
+    wherever there is room, and a second project — a copy whose cards are
+    a day older — that is the record of the machine `ground_on` names,
+    so its cards run there or nowhere."""
     ground = tmp_path / GROUND
     shutil.copytree(repo, ground, ignore=shutil.ignore_patterns(".git"))
     git(ground, "init", "-q", "-b", "develop")
@@ -68,7 +74,7 @@ def laptop_full_rented_with_room(
             machine_id=machine_floor.machine_id,
             host=None,
             desktop=True,
-            ground=str(ground),
+            ground=str(ground) if ground_on == "laptop" else None,
             command="needle",
             added_at=NOW,
         )
@@ -79,11 +85,20 @@ def laptop_full_rented_with_room(
             machine_id=other.machine_id,
             host="rented",
             desktop=False,
-            ground=None,
+            ground=str(ground) if ground_on == "rented" else None,
             command="needle",
             added_at=NOW,
         )
     )
+    return other
+
+
+def laptop_full_rented_with_room(
+    client: TestClient, machine_floor: Floor, store: Store, repo: Path, tmp_path: Path
+) -> Floor:
+    """The laptop full and the ground of the older project; the rented
+    machine with room reads the fixture project."""
+    other = two_machines(client, machine_floor, store, repo, tmp_path, ground_on="laptop")
     machine_floor.set_memory(available_gb=2.0, swap_free_gb=8.0)
     client.app.state.loops.live.load()
     reconcile(client)
@@ -120,6 +135,10 @@ def test_a_beat_opens_the_oldest_card_a_machine_with_room_can_read_and_the_rest_
     )
     assert open_readings(store, GROUND) == [], "the laptop is full: its own cards wait"
     assert open_readings(store, "proj") == [reading_for(machine_floor)]
+    launched = machine_floor.state()["launch_log"][-1]
+    assert launched["config_dir"].startswith(str(other.root)), (
+        f"the reading opened under {launched['config_dir']}, not on the rented machine"
+    )
     held = oldest_unread(store, GROUND)
     assert len(notes(store, GROUND, held, LEFT_OUT)) == 1
     assert (
@@ -160,3 +179,49 @@ def test_a_card_left_out_says_so_once_per_spell_and_once_more_when_its_reading_o
     history = [h.detail for h in store.history(GROUND, held)]
     assert [line for line in history if line.startswith(LEFT_OUT)] == [history[1]]
     assert history[0].startswith("A reading of the ") and "started" in history[0]
+
+
+def test_a_launch_refused_for_another_cause_holds_the_beat_no_more_than_room_does(
+    client: TestClient,
+    machine_floor: Floor,
+    store: Store,
+    repo: Path,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+):
+    """The rooms say the older project's machine can open its reading — the
+    laptop has room — and the launch itself refuses for a cause the rooms
+    do not carry (here: no subscription with allowance, played by refusing
+    every start in that project's checkout). The card says so once, its
+    project is passed over for the beat, and the fixture project's oldest
+    card opens on the rented machine instead."""
+    other = two_machines(client, machine_floor, store, repo, tmp_path, ground_on="laptop")
+    machine_floor.set_memory(available_gb=9.0, swap_free_gb=8.0)
+    client.app.state.loops.live.load()
+    reconcile(client)
+    runtime = client.app.state.dial.runtime
+    ground = str(tmp_path / GROUND)
+    real = runtime.start_windowless
+
+    def refusing(request):
+        if request.repo == ground:
+            return launch.dead(request.card, [], "no subscription has allowance on laptop", None)
+        return real(request)
+
+    monkeypatch.setattr(runtime, "start_windowless", refusing)
+    turn(client, lanes=1)
+    held = oldest_unread(store, GROUND)
+    for _ in range(5):
+        before = len(machine_floor.state()["launch_log"])
+        tick(client)
+        assert len(machine_floor.state()["launch_log"]) == before + 1, (
+            f"the beat should have read on past the ground's #{held}, whose launch was refused"
+        )
+        on = reading_for(machine_floor)
+        assert on is not None and open_readings(store, "proj") == [on]
+        assert open_readings(store, GROUND) == []
+        assert machine_floor.state()["launch_log"][-1]["config_dir"].startswith(str(other.root))
+        land_on_the_way(client, on)
+    refusals = notes(store, GROUND, held, REFUSED)
+    assert len(refusals) == 1 and "no subscription has allowance" in refusals[0], refusals
+    assert notes(store, GROUND, held, LEFT_OUT) == []

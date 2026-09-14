@@ -402,6 +402,15 @@ on the refusal (twenty-four beats on Omarchy #3 while 127 defects waited,
 2026-09-14). The words after the prefix are the rule's own sentence, with
 the machine's numbers; the prefix is what a spell is read by."""
 
+REFUSED = "The board could not start a reading of "
+"""How a card says the launch itself refused its reading — a cause the
+rooms do not carry: a machine that did not answer, no subscription with
+allowance. The beat passes over the card and its project for the rest of
+the beat and reads the next (card #148's suggestion names the class: any
+candidate the runtime refuses to open this beat, for room or any other
+reason the refusal names); the card says so once per spell, as a left-out
+card does."""
+
 
 def left_out_words(why: str) -> str:
     """The one note a card left out for room carries."""
@@ -411,13 +420,19 @@ def left_out_words(why: str) -> str:
     )
 
 
-def said_left_out(last_dial_note: str | None) -> bool:
-    """Whether the card already says it is left out, in this spell: its last
-    dial note by the machine is a left-out note. A reading that opened, or
-    a death written since, ends the spell, and the next left-out beat says
-    so again — once. The comparison is on the prefix, never the whole note:
-    the machine's numbers in the sentence move between beats."""
-    return last_dial_note is not None and last_dial_note.startswith(LEFT_OUT)
+def refused_words(of_what: str, why: str) -> str:
+    """The one note a card whose reading the launch refused carries."""
+    return f"{REFUSED}{of_what}: {why}"
+
+
+def spell_stands(last_dial_note: str | None, prefix: str) -> bool:
+    """Whether the card already says it, in this spell: its last dial note
+    by the machine opens with the prefix. A reading that opened, or a
+    death written since, ends the spell, and the next beat that leaves the
+    card out or is refused says so again — once. The comparison is on the
+    prefix, never the whole note: the machine's numbers in the sentence
+    move between beats."""
+    return last_dial_note is not None and last_dial_note.startswith(prefix)
 
 
 # ── card #138: the seat reads a text once, and stops at the cap ────────

@@ -42,7 +42,9 @@ from board.brief import (
     triage_name,
 )
 from board.dial import (
+    LEFT_OUT,
     LIVE_STAGES,
+    REFUSED,
     Candidate,
     column_defects,
     defects_count,
@@ -51,9 +53,10 @@ from board.dial import (
     held_lanes,
     is_quiet,
     left_out_words,
+    refused_words,
     running,
-    said_left_out,
     seat_opens,
+    spell_stands,
     stopped_words,
     switch_was_on,
     text_of_mark,
@@ -459,9 +462,18 @@ class Dial:
                 continue  # a fold on the board restarts the service under every running lane
             self._plan(live, candidate)
             return
+        # A launch the runtime refuses for a cause the rooms do not carry —
+        # a machine that did not answer, no subscription with allowance — is
+        # not the beat's one act either: the card says so once, its project
+        # is passed over for the rest of the beat (the cause is the
+        # machine's, not the card's), and the next project's oldest opens.
+        refused: set[str] = set()
         for candidate in sorted(self._openable(unread), key=lambda c: c.age_key):
-            self._triage(self.live.projects[candidate.project], candidate)
-            return
+            if candidate.project in refused:
+                continue
+            if self._triage(self.live.projects[candidate.project], candidate) is None:
+                return
+            refused.add(candidate.project)
 
     def _openable(self, unread: list[Candidate]) -> list[Candidate]:
         """The unread cards whose machine can open a reading this beat
@@ -489,16 +501,15 @@ class Dial:
             if why is None:
                 openable.append(candidate)
             else:
-                self._left_out(slug, candidate.card.number, why)
+                self._say_once(slug, candidate.card.number, LEFT_OUT, left_out_words(why))
         return openable
 
-    def _left_out(self, slug: str, number: int, why: str) -> None:
-        """Write on the card that its machine cannot open a reading of it,
-        once per spell (card #148, item 2): the spell is read from the
-        card's own history — its last dial note by the machine — so twenty
-        beats of the same refusal are one line, and a reading that opens
-        or dies since starts a new spell. Nothing in memory: a restart
-        reads the same row."""
+    def _say_once(self, slug: str, number: int, prefix: str, words: str) -> None:
+        """Write on the card why the beat is not reading it, once per spell
+        (card #148, item 2): the spell is read from the card's own history —
+        its last dial note by the machine — so twenty beats of the same
+        refusal are one line, and a reading that opens or dies since starts
+        a new spell. Nothing in memory: a restart reads the same row."""
         last = next(
             (
                 entry.detail
@@ -507,9 +518,9 @@ class Dial:
             ),
             None,
         )
-        if said_left_out(last):
+        if spell_stands(last, prefix):
             return
-        self.live.note(slug, number, AuditKind.DIAL, Actor.MACHINE, left_out_words(why))
+        self.live.note(slug, number, AuditKind.DIAL, Actor.MACHINE, words)
 
     def _ran(self, slug: str, fix_lanes: list[FixLane], snapshot) -> set[int]:
         """The cards the dial took once already, which are the owner's from
@@ -632,11 +643,14 @@ class Dial:
         titles = {t.session_id for t in store.title_readings(slug, number) if t.session_id}
         return marks | titles
 
-    def _triage(self, live: LiveProject, candidate: Candidate) -> None:
+    def _triage(self, live: LiveProject, candidate: Candidate) -> str | None:
         """Open the one independent reading of this defect's mark, in the
         project's own checkout. The brief carries the rule, the document
         whole, and the source the mark cites as this board resolved it — so
-        the reading never has to go looking for context it must not have."""
+        the reading never has to go looking for context it must not have.
+        Answers None when the beat's act is spent — a reading opened, or a
+        race the store settled — and the launch's refusal otherwise, so the
+        beat can read the next project's card (card #148)."""
         slug, project = live.project.slug, live.project
         card = candidate.card
         now = clock.now()
@@ -680,9 +694,9 @@ class Dial:
         defect = document is not None and document.suggestion_kind == SuggestionKind.DEFECT
         of_what = "the decision" if parked else "the mark" if defect else "the title"
         if launch.verdict != LaunchVerdict.ALIVE or launch.session is None:
-            words = f"The board could not start a reading of {of_what}: {launch.reason}"
-            self.live.note(slug, card.number, AuditKind.DIAL, Actor.MACHINE, words)
-            return
+            why = launch.reason or "no reason given"
+            self._say_once(slug, card.number, REFUSED, refused_words(of_what, why))
+            return why
         session = launch.session
         try:
             self.live.store.open_windowless_session(
