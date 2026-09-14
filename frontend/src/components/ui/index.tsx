@@ -192,10 +192,12 @@ export function IdeaDoor({ onOpen, disabled, said }: { onOpen: (text: string) =>
  */
 export function DialControl({ state, others, onTurn, disabled, said }: { state: DialState; others: string[]; onTurn: (on: boolean, lanes: number) => void; disabled: boolean; said: string | null }) {
   const { dial, running, held, full, quiet, release } = state;
-  // What this board says cannot be taken back, in his own words (card #139,
+  // What this board says cannot be taken back, in his own words (card 139,
   // item 2). A board turned on before the question existed says nobody has
   // said, which releases everything and is not the same fact as a board
-  // that declared there is nothing.
+  // that declared there is nothing. The card number is written without its
+  // hash here: the design-system check reads a hash and three digits as a
+  // raw colour, and it is right to.
   const declaration = !dial.on
     ? null
     : dial.undoable === null || dial.undoable === undefined
