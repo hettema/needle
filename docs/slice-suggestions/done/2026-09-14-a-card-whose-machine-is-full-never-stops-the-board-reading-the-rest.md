@@ -1,5 +1,6 @@
 # A card whose machine is full never stops the board reading the rest
 
+**Carried by:** docs/plans/2026-09-14-a-card-whose-machine-is-full-never-stops-the-board-reading-the-rest.md
 **Kind:** defect
 **Fix:** now — the intent is written (card #138: no card waits forever because the board keeps re-reading the same one; card #83's plan, item 4: the rented machine takes the cards the laptop cannot hold), the fix stays inside `api/dial.py` where the seat chooses its candidate and opens the reading, and it removes the class — any candidate the runtime refuses to open this beat, for room or any other reason the refusal names — not the one card it was seen on
 **Found by:** the session at the Discuss door of Needle #138, 2026-09-14 16:45Z, asked "how is the defect triage going?": the seat had landed nothing since 16:05Z, and the laptop's board had written the same refusal on Omarchy #3 twenty-four times, one per beat, from 16:06:56Z to 16:42:31Z
