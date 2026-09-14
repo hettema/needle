@@ -435,12 +435,27 @@ def seat_opens(routed: Routed, triage: Triage | None) -> bool:
     return SEAT_OPENS[routed.reason]
 
 
+def hands_off(lane: Lane | None) -> bool:
+    """Whether the seat may read a card at all: nobody has hands on it and
+    no copy of the code stands for it. A card with a lane is the owner's
+    or a session's from here, so a reading of it is a session spent on an
+    answer nothing will act on."""
+    return lane is None or (lane.state == LaneState.NONE and lane.path is None)
+
+
+def text_of_mark(document_fingerprint: str, source_fingerprint: str | None) -> str:
+    """The text a mark's reading is bound to, from the two fingerprints a
+    landed row carries: the one composition, so the count the seat keeps
+    and the text `needle decisions` prints name the same thing."""
+    return fingerprint(f"{document_fingerprint}\n{source_fingerprint or ''}")
+
+
 def mark_text(document: Document, source_fingerprint: str | None) -> str:
     """What a mark's reading binds to: the document and the source the mark
     cites, as they read today — the two fingerprints `routing_of` tests a
     landed row against, so a change to either is a new text and a fresh
     count."""
-    return fingerprint(f"{document.fingerprint}\n{source_fingerprint or ''}")
+    return text_of_mark(document.fingerprint, source_fingerprint)
 
 
 def readings_spent(
@@ -449,13 +464,15 @@ def readings_spent(
     text: str,
     since: datetime | None,
     parked: bool,
+    wanted: bool,
 ) -> ReadingsSpent:
     """How many readings the board has opened on this text and seen end —
     landed or died — counting each once. A reading still open is not yet
     spent: the seat never opens beside it anyway, and counting it would
     have the face say the board stopped while a reading is in flight.
-    `since` is a parked card's park (card #82, ruling 9): a park is a
-    placement and moves nothing in the record, so its count is by time."""
+    `since` is a parked card's park or the owner's answer on it (card #82,
+    rulings 5 and 9): neither moves the record, so that count is by time.
+    `wanted` is whether the card's reader would open on this text today."""
     opened = sum(
         1
         for s in sessions
@@ -463,18 +480,23 @@ def readings_spent(
         and s.ended_at is not None
         and (since is None or s.started_at >= since)
     )
-    return ReadingsSpent(text=text, opened=opened, cap=TRIAGE_ATTEMPTS, parked=parked)
+    return ReadingsSpent(
+        text=text, opened=opened, cap=TRIAGE_ATTEMPTS, parked=parked, wanted=wanted
+    )
 
 
 def stopped_words(spent: ReadingsSpent | None) -> str | None:
     """The sentence a card the fuse stopped shows — on its face, in
     `needle fixes` and on the head's count — or None while the board is
-    still reading it. It says how many readings were spent, that nothing
-    settled it, and what starts the readings again, so a card the board
-    gave up on never reads as `needs triage`."""
-    if spent is None or not spent.stopped:
+    still reading it, and None where the fuse is not what holds the card:
+    a card whose third reading settled it is settled, and saying the board
+    stopped would paint broken over yours (the review of #138, finding 1).
+    It says how many readings were spent, that nothing settled it, and
+    what starts the readings again, so a card the board gave up on never
+    reads as `needs triage`."""
+    if spent is None or not spent.stopped or not spent.wanted:
         return None
-    where = " since it was parked" if spent.parked else ""
+    where = " since it was parked or you last answered on it" if spent.parked else ""
     again = (
         "your answer on it, a change to its document, or parking it again"
         if spent.parked

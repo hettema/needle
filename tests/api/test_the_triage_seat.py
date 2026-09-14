@@ -835,6 +835,11 @@ def test_the_fuse_holds_a_title_and_a_parked_card_alike_and_a_new_park_or_title_
     # The rail's first walk read the parked card once and landed `his` on
     # it; that reading was of the record before his line, a different text.
     parked_before = readings_of(store, parked)
+    # His answer is what re-opens a parked card's reading (card #82, ruling
+    # 5), so the seat wants it again — and the fuse is what then holds it.
+    assert (
+        answer(client, parked, "the four rulings stand; one sitting, next week").status_code == 200
+    )
     spend_readings(client, store, plan)
     spend_readings(client, store, parked)
     park_the_rail(client, machine_floor)
@@ -847,7 +852,7 @@ def test_the_fuse_holds_a_title_and_a_parked_card_alike_and_a_new_park_or_title_
     assert title["state"]["word"] == "stopped reading" and "readings stopped" in title["claims"]
     yours = face_of(client, parked)
     assert yours["state"]["word"] == "your move", "his column stays his"
-    assert "since it was parked" in yours["state"]["detail"]
+    assert "since it was parked or you last answered on it" in yours["state"]["detail"]
     assert "parking it again starts them again" in yours["state"]["detail"]
     assert "readings stopped" in yours["claims"]
 
@@ -869,3 +874,74 @@ def test_the_fuse_holds_a_title_and_a_parked_card_alike_and_a_new_park_or_title_
     land_on_the_way(client, plan)
     read_the_rail_until(client, machine_floor, parked)
     assert readings_of(store, parked) == parked_before + 4
+
+
+# ── the independent review's two demonstrated findings, inverted ───────
+
+
+def test_a_third_reading_that_settles_the_card_is_settled_not_stopped(
+    client: TestClient, machine_floor: Floor, repo: Path, store: Store, defect: int, capsys
+):
+    """Finding 1 of #138's review: the fuse's words belong only where the
+    fuse is what holds the card. Two readings die, the third lands `his`:
+    the card is his, and broken must not paint over yours."""
+    text = spend_readings(client, store, defect, times=2)
+    store.open_windowless_session(
+        "proj",
+        defect,
+        SessionWork.TRIAGE,
+        "third-real",
+        "alpha",
+        clock.now(),
+        text_fingerprint=text,
+    )
+    assert (
+        main(
+            [
+                "triage",
+                "proj",
+                str(defect),
+                "his",
+                "which of the two shapes is his call",
+                "--title",
+                "passes",
+                *GRADE,
+            ]
+        )
+        == 0
+    )
+    capsys.readouterr()
+    reconcile(client)
+    count = client.app.state.loops.live.readings_spent("proj")[defect]
+    assert count.opened == 3 and count.stopped and not count.wanted
+    assert routing(client, defect)["state"] == "triaged his"
+    face = face_of(client, defect)
+    assert face["state"]["word"] != "stopped reading" and "readings stopped" not in face["claims"]
+    waiting = client.get("/api/fixes").json()["waiting"]
+    why = next(w["why"] for w in waiting if w["card_number"] == defect)
+    assert "nothing settled it" not in why and "a reading says it is yours" in why
+    # And the seat still opens nothing on it: the text is spent either way.
+    before = len(machine_floor.state()["launch_log"])
+    tick(client)
+    assert reading_or_nothing(machine_floor, before) is None
+
+
+def test_a_parked_readings_landing_does_not_move_the_text_it_was_bound_to(
+    client: TestClient, machine_floor: Floor, repo: Path, store: Store, capsys
+):
+    """Finding 2 of #138's review: a parked reading writes a TRIAGED row
+    when it lands, so the text the seat counts by must leave out the rows
+    a landing writes, or every landing would reset its own count."""
+    turn(client, on=True, lanes=1)
+    park_the_rail(client, machine_floor)
+    parked = BERTH_FIRST
+    assert is_parked(client, parked)
+    landed = [
+        s
+        for s in store.windowless_sessions("proj")
+        if s.card_number == parked and s.ended_at is not None and s.text_fingerprint is not None
+    ]
+    assert len(landed) == 1, "the rail's walk read the parked card once"
+    now = client.app.state.loops.live.readings_spent("proj")[parked]
+    assert landed[0].text_fingerprint == now.text, "the landing's own row is not the text"
+    assert now.opened == 1 and now.parked and not now.wanted

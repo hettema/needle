@@ -342,8 +342,15 @@ class ReadingsSpent(BaseModel):
     opened: int
     cap: int
     parked: bool
-    """The count is per park (card #82, ruling 9): a park is a placement,
-    not a change to the record, so it resets the count by time."""
+    """The count is per park and per answer (card #82, rulings 5 and 9): a
+    park is a placement and an answer is an audit row, neither a change to
+    the record, so both reset the count by time."""
+    wanted: bool
+    """Whether the card's own reader would open a reading on this text
+    today by its own rule — a mark nobody has verified, a title not read
+    as it stands, a parked card unread since its park or his answer. The
+    fuse holds only where this is true; a card whose third reading
+    settled it is not stopped, it is settled, and its face says so."""
 
     @property
     def stopped(self) -> bool:

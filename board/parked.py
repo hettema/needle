@@ -52,6 +52,23 @@ def record_fingerprint(document_text: str | None, rows: list[Row]) -> str:
     return fingerprint("\n".join(parts))
 
 
+LANDING_WRITES: frozenset[RowKind] = frozenset({RowKind.TRIAGED, RowKind.WATCH})
+"""The rows a parked card's reading writes on the card when it lands
+(`api/doors.py::_decide`): its TRIAGED row, and the WATCH a `waiting`
+carries. Part of the record the audit reads, never of the text the seat
+counts by."""
+
+
+def reading_text(document_text: str | None, rows: list[Row]) -> str:
+    """What the seat counts a parked card's readings by (card #138, item
+    2): the record less the rows a landing writes itself. A reading is
+    bound to this at its open; were it bound to the whole record, every
+    landing would move the text out from under its own count and the fuse
+    would count only readings that died — the review of #138 demonstrated
+    exactly that."""
+    return record_fingerprint(document_text, [r for r in rows if r.kind not in LANDING_WRITES])
+
+
 def parked_at(placement: AuditEntry | None) -> datetime | None:
     """When the card was last put in Decision moment, from the audit row
     that placed it; None when the placement is not into that column."""

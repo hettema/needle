@@ -14,6 +14,7 @@ from board.dial import (
     filed_against,
     filed_by_the_card,
     filer_of,
+    hands_off,
     held_lanes,
     is_quiet,
     mark_text,
@@ -22,6 +23,7 @@ from board.dial import (
     seat_opens,
     stopped_words,
     switch_was_on,
+    text_of_mark,
     why_not_eligible,
 )
 from board.lane import lane_for
@@ -601,12 +603,12 @@ def test_the_seat_has_a_stance_on_every_branch_of_routing_and_opens_only_on_unve
     }
     assert set(SEAT_OPENS) == set(Reason)
     # The three commit-bound branches are exactly the loop the card was for.
-    assert COMMIT_BOUND == {Reason.SPLIT, Reason.WHEN_OVER_MARK, Reason.NOW_OVER_MARK}
+    assert {Reason.SPLIT, Reason.WHEN_OVER_MARK, Reason.NOW_OVER_MARK} == COMMIT_BOUND
     for reason in COMMIT_BOUND:
         assert not stances[reason]
     # A reading that landed no grade is read again whatever it landed: the
     # column has no order for the card without one (card #100).
-    for reason, (document, triage, source_now) in cases.items():
+    for document, triage, source_now in cases.values():
         if triage is None:
             continue
         ungraded = triage.model_copy(update={"grade": None})
@@ -649,33 +651,43 @@ def test_readings_are_counted_per_text_once_each_landed_or_not_and_never_while_o
         opened(5, None, hours_ago=5),  # from before the column: bound to no text
         opened(6, "t1", hours_ago=1, ended=False),
     ]
-    on_t1 = readings_spent(sessions, text="t1", since=None, parked=False)
+    on_t1 = readings_spent(sessions, text="t1", since=None, parked=False, wanted=True)
     assert on_t1.opened == 3 and on_t1.stopped, (
         "three ended readings on t1; the open one is not spent"
     )
-    on_t2 = readings_spent(sessions, text="t2", since=None, parked=False)
+    on_t2 = readings_spent(sessions, text="t2", since=None, parked=False, wanted=True)
     assert on_t2.opened == 1 and not on_t2.stopped
-    assert readings_spent(sessions, text="t3", since=None, parked=False).opened == 0, (
+    assert readings_spent(sessions, text="t3", since=None, parked=False, wanted=True).opened == 0, (
         "a changed text is a new count"
     )
     # A parked card's count is per park: the readings before the park are
     # the earlier park's (card #82, ruling 9).
     park = NOW - timedelta(hours=6, minutes=30)
-    per_park = readings_spent(sessions, text="t1", since=park, parked=True)
+    per_park = readings_spent(sessions, text="t1", since=park, parked=True, wanted=True)
     assert per_park.opened == 1 and not per_park.stopped
     assert TRIAGE_ATTEMPTS == 3
 
 
+def spent(opened: int, *, parked: bool = False, wanted: bool = True) -> ReadingsSpent:
+    return ReadingsSpent(text="t", opened=opened, cap=3, parked=parked, wanted=wanted)
+
+
 def test_the_words_say_how_many_and_what_starts_the_readings_again():
     assert stopped_words(None) is None
-    assert stopped_words(ReadingsSpent(text="t", opened=2, cap=3, parked=False)) is None
-    defect = stopped_words(ReadingsSpent(text="t", opened=3, cap=3, parked=False))
+    assert stopped_words(spent(2)) is None
+    defect = stopped_words(spent(3))
     assert defect is not None
     assert "read this 3 times on this text" in defect and "nothing settled it" in defect
     assert "a change to the document or to the source its mark cites starts them again" in defect
-    parked = stopped_words(ReadingsSpent(text="t", opened=3, cap=3, parked=True))
-    assert parked is not None and "since it was parked" in parked
+    parked = stopped_words(spent(3, parked=True))
+    assert parked is not None and "since it was parked or you last answered on it" in parked
     assert "your answer on it, a change to its document, or parking it again" in parked
+    # The fuse's words only where the fuse is what holds the card: three
+    # readings whose last one settled it are three readings, not a stop
+    # (the review of #138, finding 1).
+    assert stopped_words(spent(3, wanted=False)) is None
+    assert stopped_words(spent(5, parked=True, wanted=False)) is None
+    assert spent(3, wanted=False).stopped, "the seat still opens nothing on it"
 
 
 def test_a_marks_text_is_the_document_and_its_source_together():
@@ -683,3 +695,11 @@ def test_a_marks_text_is_the_document_and_its_source_together():
     assert mark_text(now, "abc") != mark_text(now, "abd"), "a moved source is a new text"
     assert mark_text(now, None) != mark_text(now, "abc")
     assert mark_text(now, "abc") == mark_text(now, "abc")
+    assert mark_text(now, "abc") == text_of_mark(now.fingerprint, "abc"), (
+        "the seat's count and the decisions line name one text"
+    )
+
+
+def test_hands_off_is_no_lane_at_all():
+    assert hands_off(None)
+    assert not hands_off(lane_for(card(7, "a"), facts(sessions=[session()])))

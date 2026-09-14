@@ -99,6 +99,7 @@ export interface ReadingsSpent {
   opened: number;
   cap: number;
   parked: boolean;
+  wanted: boolean;
 }
 
 export interface Routed {

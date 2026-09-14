@@ -47,12 +47,14 @@ from board.dial import (
     column_defects,
     defects_count,
     filed_against,
+    hands_off,
     held_lanes,
     is_quiet,
     running,
     seat_opens,
     stopped_words,
     switch_was_on,
+    text_of_mark,
     unread_titles,
     why_not_eligible,
 )
@@ -515,10 +517,7 @@ class Dial:
             return False
         if not seat_opens(routed, triage):
             return False
-        if triage_open:
-            return False
-        lane = snapshot.lanes.get(card.number)
-        if lane is not None and (lane.state != LaneState.NONE or lane.path is not None):
+        if triage_open or not hands_off(snapshot.lanes.get(card.number)):
             return False
         return not (ran_before or has_row(card, RowKind.ASK))
 
@@ -572,10 +571,7 @@ class Dial:
         and the readings of this title are under the cap."""
         if spent is None or spent.stopped:
             return False
-        lane = snapshot.lanes.get(card.number)
-        if lane is not None and (lane.state != LaneState.NONE or lane.path is not None):
-            return False
-        return card.number not in open_triage
+        return hands_off(snapshot.lanes.get(card.number)) and card.number not in open_triage
 
     def _landed(self, slug: str, number: int | None = None) -> set[str]:
         """The reading sessions that landed a result: a mark's, or a
@@ -1360,7 +1356,11 @@ class Dial:
                         else None
                         if parked
                         else Routing.NEEDS_TRIAGE,
-                        text=triage.document_fingerprint,
+                        # A mark's text is the document and its source, as the
+                        # seat counts it; a parked card's is its record.
+                        text=triage.document_fingerprint
+                        if parked
+                        else text_of_mark(triage.document_fingerprint, triage.source_fingerprint),
                         fate=self._parked_fate(project_slug, card, triage)
                         if parked
                         else self._fate(live, card, triage, fix_lanes),

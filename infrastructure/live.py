@@ -26,9 +26,18 @@ from board.assemble import (
     card_gate,
     document_of,
     folded_under,
+    routing_for,
     watch_signal,
 )
-from board.dial import dial_state, held_lanes, mark_text, readings_spent
+from board.dial import (
+    TITLE_READ_COLUMNS,
+    dial_state,
+    hands_off,
+    held_lanes,
+    mark_text,
+    readings_spent,
+    seat_opens,
+)
 from board.focus import (
     READ_COLUMNS,
     card_leverage,
@@ -40,10 +49,10 @@ from board.focus import (
 )
 from board.lane import nothing_read
 from board.leverage import Judged, arrange, wake_line
-from board.parked import commitments_of, parked_at, record_fingerprint
+from board.parked import commitments_of, parked_at, reading_text, wants_parked_reading
 from board.reconcile import SUGGESTION_HOMES, Effects, home_of, reconcile
 from board.release import names
-from board.title import title_fingerprint
+from board.title import title_fingerprint, wants_title_reading
 from board.triage import Sources, source_ref_of
 from domain.audit import AuditEntry, AuditKind
 from domain.board import BoardState, CardDetail, MachineState
@@ -78,6 +87,9 @@ from infrastructure.store import Store, StoreRefusal
 
 log = logging.getLogger("needle")
 
+TEXTS_KEPT = 256
+"""How many parked cards' texts the board keeps by fingerprint before it
+lets them all go (card #138): a bound, not a policy."""
 WATERCOOLER_SHOWN = 20
 """How many of the newest watercooler lines the page and a brief carry; the
 whole file is `needle watercooler SLUG`."""
@@ -142,6 +154,7 @@ class Live:
         self.now = now
         self.renames_of = renames_of
         self.version = 0
+        self._texts: dict[tuple[str, str, str], str] = {}
         self.projects: dict[str, LiveProject] = {}
         self.closing = False
         """Set once the server was told to stop; every open stream ends on it."""
@@ -369,48 +382,96 @@ class Live:
             return f"(the board could not read {document.path}: {error})"
 
     def readings_spent(
-        self, slug: str, *, sources: Sources | None = None
+        self, slug: str, *, sources: Sources | None = None, number: int | None = None
     ) -> dict[int, ReadingsSpent]:
         """Every card's count of readings on the text its reader reads today
         (card #138, item 2), from the one table the seat writes at each
-        open. Three readers, three texts: a card in Decision moment is read
-        on its record, a defect in its column on its document and source, a
-        plan or an idea on its title — each in the terms `api/dial.py::_triage`
-        binds the reading with, so the count and the binding cannot drift.
-        One query for the sessions and one for the placements; a parked
-        card also reads its file, since its record is the text and the
-        rows. Cards standing under another, and cards with no live
-        document that are not parked, have no reader and no count."""
+        open — or one card's, for the open card's detail. Three readers,
+        three texts: a card in Decision moment is read on its record less
+        the rows a landing writes, a defect in its column on its document
+        and source, a plan or an idea on its title — each in the terms
+        `api/dial.py::_triage` binds the reading with, so the count and the
+        binding cannot drift. Each count also says whether its reader would
+        open on that text today by the reader's own rule, which is what the
+        face and `needle fixes` hold the fuse's words to. A handful of
+        queries, never one per card; a parked card's text is read from its
+        file once per fingerprint. Cards standing under another, and cards
+        with no live document that are not parked, have no reader and no
+        count."""
         live = self._live(slug)
         sources = sources if sources is not None else self.sources(slug)
         by_card: dict[int, list[WindowlessSession]] = {}
         for session in self.store.windowless_sessions(slug, work=SessionWork.TRIAGE):
             by_card.setdefault(session.card_number, []).append(session)
         placements = self.store.placements(slug)
+        marks = self.store.latest_triages(slug)
+        decisions = self.store.latest_triages(slug, ground=Ground.PARKED)
+        titles = self.store.latest_title_readings(slug)
+        answers = self.store.answers(slug)
+        lanes = live.snapshot.lanes if live.snapshot is not None else {}
         found: dict[int, ReadingsSpent] = {}
         for card in self.store.cards(slug):
-            if card.folded_into is not None:
+            if card.folded_into is not None or (number is not None and card.number != number):
                 continue
             document = document_of(card, live.index)
+            lane = lanes.get(card.number)
             parked = card.place.column == Column.DECISION_MOMENT
             since: datetime | None = None
             if parked:
-                text = record_fingerprint(
-                    self.document_text(slug, document) if document is not None else None,
-                    card.rows,
+                text = reading_text(
+                    self._text_of(slug, document) if document is not None else None, card.rows
                 )
-                since = parked_at(placements.get(card.number))
+                placement = placements.get(card.number)
+                answered = answers.get(card.number)
+                since = max(
+                    (at for at in (parked_at(placement), answered.at if answered else None) if at),
+                    default=None,
+                )
+                wanted = wants_parked_reading(
+                    card, placement, decisions.get(card.number), answered, lane
+                )
             elif document is None or document.archived:
                 continue
             elif document.suggestion_kind == SuggestionKind.DEFECT:
                 ref = source_ref_of(document.fix.why if document.fix is not None else None)
                 text = mark_text(document, sources.fingerprint_of(ref))
+                triage = marks.get(card.number)
+                routed = routing_for(card, document, triage, sources)
+                wanted = (
+                    card.place.column == Column.DEFECTS
+                    and routed is not None
+                    and seat_opens(routed, triage)
+                    and hands_off(lane)
+                )
             else:
                 text = title_fingerprint(document.title, document.essence)
+                wanted = (
+                    card.place.column in TITLE_READ_COLUMNS
+                    and wants_title_reading(document, titles.get(card.number))
+                    and hands_off(lane)
+                )
             found[card.number] = readings_spent(
-                by_card.get(card.number, []), text=text, since=since, parked=parked
+                by_card.get(card.number, []),
+                text=text,
+                since=since,
+                parked=parked,
+                wanted=wanted,
             )
         return found
+
+    def _text_of(self, slug: str, document: Document) -> str:
+        """A document's text by its fingerprint, read from the file once: a
+        parked card's text is part of what its readings are counted by, and
+        the count is taken on every board read. The fingerprint is the
+        key, so an edited file is a new read and never a stale text; the
+        cache is emptied rather than grown past a few hundred texts."""
+        key = (slug, document.path, document.fingerprint)
+        text = self._texts.get(key)
+        if text is None:
+            if len(self._texts) > TEXTS_KEPT:
+                self._texts.clear()
+            text = self._texts[key] = self.document_text(slug, document)
+        return text
 
     def board(self, slug: str) -> BoardState:
         live = self._live(slug)
@@ -775,7 +836,7 @@ class Live:
             team=self.store.composition(slug, number),
             beside=self.beside(slug).get(number),
             release=(held if (held := self.release_held(slug)) and number in held.cards else None),
-            spent=self.readings_spent(slug, sources=sources).get(number),
+            spent=self.readings_spent(slug, sources=sources, number=number).get(number),
         )
 
     def lane_and_doors(self, slug: str, card: Card) -> tuple[Lane | None, Doors]:
