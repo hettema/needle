@@ -62,14 +62,6 @@ and counting from there is the only reading under which the number bounds
 what the dial opens — otherwise a dial at one would open one planning
 session per defect on the rail before the first lane started."""
 
-FOLLOWED_STAGES: frozenset[FixStage] = frozenset(LIVE_STAGES | {FixStage.ENDED})
-"""The stages whose beat may reach a door, so the machine is re-read before
-it is judged (card #151, item 2). An ended lane joined the live ones when a
-plan arriving after the board gave up on its session began to re-open the
-card: the beat decides that card's Start on this read, not the beat before.
-Not the same set as the one that counts against the number — an ended lane
-counts against nothing."""
-
 _FIX_LANE = re.compile(r"\bfix lane\b|\bstarted by the dial\b", re.I)
 _OWNER = re.compile(r"^\W*(?:the\s+)?owner\b", re.I)
 _READING = re.compile(r"^\W*(?:#\d+'?s?\s+)?reading\b|^\W*the reading\b|\breading session\b", re.I)

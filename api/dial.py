@@ -43,7 +43,6 @@ from board.brief import (
     triage_name,
 )
 from board.dial import (
-    FOLLOWED_STAGES,
     LEFT_OUT,
     LIVE_STAGES,
     READINGS_AT_ONCE,
@@ -117,7 +116,7 @@ from domain.triage import (
 from infrastructure import clock
 from infrastructure.live import Live, LiveProject
 from infrastructure.store import StoreRefusal
-from runtime.service import Runtime
+from runtime.service import NoSuchSession, Runtime
 
 log = logging.getLogger("needle")
 
@@ -840,12 +839,13 @@ class Dial:
 
     def _follow(self, by_id) -> None:
         fix_lanes = self.live.store.fix_lanes()
-        if any(f.stage in FOLLOWED_STAGES for f in fix_lanes):
+        if any(f.stage in LIVE_STAGES for f in fix_lanes):
             # A plan that landed changed the card's gate and its footprint,
             # and a lane that folded changed its record: the doors the Start
             # is judged by are this read's, not the beat before. An ended
-            # lane is followed for the same reason since card #151: its card
-            # may have gained the plan that reaches Start.
+            # lane is not read for: they never go away, so reading for them
+            # here would buy this every beat for ever — `_follow_ended` pays
+            # it for the one card that is actually about to reach Start.
             self.loops.reconcile_now()
         now = clock.now()
         for fix in fix_lanes:
@@ -1229,14 +1229,29 @@ class Dial:
         writer = self._wrote_the_plan(live, card.number)
         if writer is None:
             return
-        launch = self.runtime.resume(
-            writer,
-            prompt=retitle_brief(
-                self.live.detail(slug, card.number), live.project, latest, now.date().isoformat()
-            ),
-            card=planning_name(card.number, card.title),
-            reason="a cold reading refused the plan's title",
-        )
+        try:
+            launch = self.runtime.resume(
+                writer,
+                prompt=retitle_brief(
+                    self.live.detail(slug, card.number),
+                    live.project,
+                    latest,
+                    now.date().isoformat(),
+                ),
+                card=planning_name(card.number, card.title),
+                reason="a cold reading refused the plan's title",
+            )
+        except NoSuchSession as gone:
+            # Its registry row has aged out, so there is no writer to ask.
+            # Said once; the card is the owner's with the reading on its
+            # face. Caught here because the beat must not die on one card.
+            self._say_once(
+                slug,
+                card.number,
+                REFUSED,
+                refused_words("the rewrite of its title", str(gone)),
+            )
+            return
         if launch.verdict != LaunchVerdict.ALIVE or launch.session is None:
             self._say_once(
                 slug,
@@ -1292,6 +1307,9 @@ class Dial:
             return
         if card.link is None or card.link.kind != DocumentKind.PLAN:
             return
+        # The doors this card's Start is judged by were answered when it had
+        # no plan; read the machine once, here, for the one card re-opening.
+        self.loops.reconcile_now()
         planned = self.live.store.stage_fix_lane(
             fix.id,
             FixStage.PLANNED,
