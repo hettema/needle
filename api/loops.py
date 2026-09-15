@@ -1709,7 +1709,6 @@ class Loops:
             # is there, read on every pass so a wait or a restart between
             # passes cannot reuse a rung that ran out; an older handoff asks
             # the rule now.
-            placement: Placement | None = None
             wall = session.wall
             young = (
                 wall is not None
@@ -1717,8 +1716,17 @@ class Loops:
                 and self._rung_open(wall, now, session.machine)
             )
             if not young:
-                placement, note = self._placement(live.project.path)
-                if placement is None:
+                # Whether anywhere has room at all, and nothing more: never
+                # which rung, and never a rung sent over the wire (card
+                # #143). The board reads the accounts from a cache and the
+                # machine holding the lane reads them fresh; when the two
+                # disagree the machine is right and refuses the rung this
+                # one names, and the lane parks an hour on a refusal that
+                # will repeat. So the only answer taken from here is the
+                # park's "nowhere", and the stale handoff is dropped below
+                # so that machine's own rule chooses.
+                anywhere, note = self._placement(live.project.path)
+                if anywhere is None:
                     changed = (
                         self._park(slug, number, session, cause, words, now, nowhere=note)
                         or changed
@@ -1751,13 +1759,21 @@ class Loops:
             count = len(recent) + 1
             had_window = lane.window_open
             reason = f"brought back by the board: {words}"
+            if not young and wall is not None:
+                # The rung the wall detector chose is spent, or too old to
+                # trust: remove it on the machine that wrote it, so the
+                # resume below names nothing and `runtime/launch.py::move`
+                # asks that machine's rule uncached instead of reaching for
+                # the file (card #143). Done after the recovery row is
+                # claimed, so a process that loses the claim never removes
+                # a handoff the winner is about to act on.
+                self.runtime.expire_handoff(wall, machine_name=session.machine)
             result = self.runtime.resume(
                 session.short_id,
                 prompt=None
                 if wall is not None or cause == Cause.WALL
                 else self._resume_words(words),
                 card=lane.name,
-                placement=placement,
                 reason=reason,
             )
             alive = result.verdict == LaunchVerdict.ALIVE and result.session is not None

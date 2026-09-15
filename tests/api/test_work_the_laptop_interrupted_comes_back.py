@@ -382,6 +382,67 @@ def test_a_walled_lane_that_waited_asks_the_rule_when_its_rung_has_since_run_out
     )
 
 
+def test_a_rung_the_board_calls_spent_is_dropped_on_its_machine_and_the_resume_names_none(
+    client: TestClient, machine_floor: Floor, monkeypatch
+):
+    """Card #143. The board reads the accounts from a cache; the machine
+    holding the lane reads them fresh. A rung named from here is a rung that
+    machine refuses — `needle resume --to <slot>` re-asks its own rule and
+    exits 1 on a mismatch — and the lane then parks an hour on a refusal
+    that repeats identically. So when the board judges the handoff's rung
+    spent it removes the handoff on the machine that wrote it and names
+    nothing, leaving the choice to that machine's uncached rule.
+
+    Live on 2026-09-15: ten lanes on the rented machine walled on hrme at
+    12:56Z with four accounts idle. The hook chose armana/opus correctly;
+    the board called that rung spent, named hrme — the account that had just
+    walled — from its cache, and rented refused every one.
+    """
+    launched = begun(client, machine_floor)
+    wall = dict(**{"from": "alpha"}, account="beta", pid=launched["pid"], reason="a limit")
+    held = clock.now() + timedelta(minutes=5)
+    machine_floor.write_handoff(
+        launched["session_id"], at=(held - timedelta(minutes=5)).timestamp(), **wall
+    )
+    machine_floor.write_limits(
+        "beta",
+        spent={"Session (5-hour)": 1.0},
+        resets={"Session (5-hour)": (held + timedelta(hours=2)).isoformat()},
+        fetched_at=held.timestamp(),
+    )
+    hold_clock(monkeypatch, held)
+
+    loops = client.app.state.loops
+    named: list[object] = []
+    dropped: list[str] = []
+    real_resume, real_expire = loops.runtime.resume, loops.runtime.expire_handoff
+
+    def resume(ref, **kwargs):
+        named.append(kwargs.get("placement"))
+        return real_resume(ref, **kwargs)
+
+    def expire_handoff(handoff, **kwargs):
+        dropped.append(handoff.session_id)
+        return real_expire(handoff, **kwargs)
+
+    loops.runtime.resume = resume
+    loops.runtime.expire_handoff = expire_handoff
+    try:
+        reconcile(client)
+    finally:
+        loops.runtime.resume = real_resume
+        loops.runtime.expire_handoff = real_expire
+
+    assert named == [None], "the board named a rung the holding machine would re-decide"
+    assert dropped == [launched["session_id"]], (
+        "the spent handoff stayed on the machine, so its own rule never got the question"
+    )
+    assert len(launches(machine_floor)) == 2
+    assert launches(machine_floor)[1]["config_dir"] == str(machine_floor.config_dir("alpha")), (
+        "the machine's own rule placed it, beta's allowance being gone"
+    )
+
+
 def test_the_owners_stop_on_a_walled_session_removes_the_machines_request_to_move_it(
     client: TestClient, machine_floor: Floor
 ):
