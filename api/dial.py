@@ -109,7 +109,7 @@ from domain.triage import (
     Ground,
     ReadingsSpent,
     Routing,
-    TitleVerdict,
+    TitleReading,
     Triage,
     TriageResult,
 )
@@ -135,6 +135,13 @@ HANDED_BACK = "the reading refused the plan's title, handed back: "
 has already handed this refusal back, across a restart and without reading
 a registry field. The idiom is `_start`'s — a note the beat compares before
 it says a thing twice."""
+
+HOUR_SPENT = "The dial has spent its hour rewriting this card's title: "
+"""How a card says the dial is finished with its title (card #151, ruling
+1): the hour bounds the rewrites, and when it is up the card is the
+owner's. Without it the card's Start would go on showing the reading's
+"the writer rewrites the title" with no writer left to do it, which is the
+failure #453 was filed for. Said once per spell."""
 
 FACE_UNLIKE_ITS_PLAN = "This card's face does not show its plan's title, so "
 """How a card says the one refusal its writer cannot answer (card #151,
@@ -1154,12 +1161,19 @@ class Dial:
         slug = live.project.slug
         store = self.live.store
         session = by_id.get(record.session_id)
+        # The ceiling is the *lane's* hour, expressed in the record's terms:
+        # `tend_windowless` measures from the record's own start, and this
+        # record opened partway through the hour the dial has spent on the
+        # card. Without the subtraction a refusal arriving in the fifty-ninth
+        # minute would buy a second hour, which is the one thing ruling 1
+        # refuses — the hour bounds the rewrites together.
+        spent = (record.started_at - fix.planning_started_at).total_seconds()
         tended, words = self.loops.tend_windowless(
             live,
             record,
             session,
             now,
-            ceiling_seconds=PLANNING_SECONDS,
+            ceiling_seconds=max(PLANNING_SECONDS - spent, 0.0),
             what="planning",
             without="with its title still failing",
         )
@@ -1212,11 +1226,24 @@ class Dial:
         if document is None or latest is None or title_hold(latest, document) is None:
             self._start(live, fix, card, now)
             return
-        if latest.verdict != TitleVerdict.UNPLACEABLE or wants_title_reading(document, latest):
+        if wants_title_reading(document, latest):
             return  # a reading of the title as it stands is still to come
         handed = f"{HANDED_BACK}{latest.id}"
-        if fix.note == handed or self._hours_up(fix, now):
-            return  # already with its writer, or the dial's hour is spent
+        if fix.note == handed:
+            return  # this refusal is already with its writer
+        if self._hours_up(fix, now):
+            # The dial is finished with this card, so the card says so: its
+            # Start still carries the reading's "the writer rewrites the
+            # title", and that writer is gone. Said once, since every beat
+            # after it would say the same.
+            self._say_once(
+                slug,
+                card.number,
+                HOUR_SPENT,
+                f"{HOUR_SPENT}the title is yours to rewrite, and Start opens by itself once a "
+                "reading of it passes",
+            )
+            return
         if not self._title_is_the_writers(live, card):
             self._say_once(
                 slug,
@@ -1949,6 +1976,7 @@ class Dial:
         reports: list[FixReport] = []
         changes = store.dial_changes()
         graded: dict[str, dict[str, Grade]] = {}
+        titles_by_project: dict[str, dict[int, TitleReading]] = {}
         for fix in store.fix_lanes(slug):
             live = self.live.projects.get(fix.project)
             card = store.card(fix.project, fix.card_number)
@@ -1973,7 +2001,9 @@ class Dial:
             # What the dial left behind by its own hand (card #151, item 4):
             # the card's plan, whether a failing title holds it, whether a
             # writer is on it now, and whether the dial's hour is spent.
-            titles = store.latest_title_readings(fix.project)
+            if fix.project not in titles_by_project:
+                titles_by_project[fix.project] = store.latest_title_readings(fix.project)
+            titles = titles_by_project[fix.project]
             stranded = stranded_words(
                 fix,
                 carries_a_plan=card.link is not None and card.link.kind == DocumentKind.PLAN,

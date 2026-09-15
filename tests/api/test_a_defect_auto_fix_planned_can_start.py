@@ -539,7 +539,13 @@ def test_a_title_the_reading_refuses_goes_back_to_its_writer_until_a_reading_pas
 
 
 def test_when_the_hour_runs_out_the_title_is_the_owners_and_the_lane_stays_planned(
-    client: TestClient, machine_floor: Floor, repo: Path, store: Store, tmp_path: Path, monkeypatch
+    client: TestClient,
+    machine_floor: Floor,
+    repo: Path,
+    store: Store,
+    tmp_path: Path,
+    monkeypatch,
+    capsys,
 ):
     turn(client, on=True, lanes=1)
     tide = number_of(client, TIDE)
@@ -561,8 +567,21 @@ def test_when_the_hour_runs_out_the_title_is_the_owners_and_the_lane_stays_plann
     lane = store.fix_lanes("proj")[0]
     assert lane.stage.value == "planned"
     assert column_of(client, tide) == "Planned"
-    # And the board says so where the Loop can count it.
+    # The card says the dial is finished with it, once, rather than leaving
+    # its Start showing advice addressed to a writer that has gone.
+    spent = [h for h in history_of(client, tide) if h.startswith("The dial has spent its hour")]
+    assert len(spent) == 1 and "the title is yours to rewrite" in spent[0]
+    tick(client)
+    assert (
+        len([h for h in history_of(client, tide) if h.startswith("The dial has spent its hour")])
+        == 1
+    ), "said once per spell, not once a beat"
+    # And the Loop counts it: this is item 4's second shape.
+    capsys.readouterr()
     assert main(["fixes", "all", "--stranded", "--count"]) == 0
+    assert capsys.readouterr().out == "1\n"
+    assert main(["fixes", "proj", "--stranded"]) == 0
+    assert "the dial has spent its hour rewriting it" in capsys.readouterr().out
 
     # His rewrite, and a reading that passes, start it on the next beat with
     # nothing else touched.
@@ -576,6 +595,39 @@ def test_when_the_hour_runs_out_the_title_is_the_owners_and_the_lane_stays_plann
     read_the_title(client, machine_floor, tide, "--title", "passes")
     tick(client)
     assert store.fix_lanes("proj")[0].stage.value == "started"
+    capsys.readouterr()
+    assert main(["fixes", "all", "--stranded", "--count"]) == 0
+    assert capsys.readouterr().out == "0\n", "a started card is nobody's strand"
+
+
+def test_a_rewrite_never_buys_a_second_hour(
+    client: TestClient, machine_floor: Floor, repo: Path, store: Store, tmp_path: Path, monkeypatch
+):
+    """Ruling 1: the hour bounds the rewrites together. A refusal arriving
+    late in the hour is handed back, and the writer it resumes is held to
+    what is left of the lane's hour — never to a fresh one of its own."""
+    turn(client, on=True, lanes=1)
+    tide = number_of(client, TIDE)
+    verify_with_a_failing_title(client, machine_floor, tide)
+    a_planning_session(client, machine_floor, tide)
+    push_a_plan(repo, tmp_path, TIDE_PATH, STEM, JARGON)
+    tick(client)
+    read_the_title(
+        client, machine_floor, tide, "--title", "still the machinery", "--failed", "fix stage"
+    )
+    tick(client)
+    record = store.open_windowless_sessions("proj", SessionWork.PLANNING)[tide]
+    fix = store.fix_lanes("proj")[0]
+    assert record.started_at > fix.planning_started_at, "the writer was resumed later than the lane"
+
+    # The lane's hour is up, though this record opened moments ago. The
+    # writer is stopped on its own hour, not given a second one.
+    monkeypatch.setattr("api.dial.PLANNING_SECONDS", 0.0)
+    tick(client)
+    assert store.open_windowless_sessions("proj", SessionWork.PLANNING).get(tide) is None, (
+        "the record is held to what was left of the lane's hour"
+    )
+    assert store.fix_lanes("proj")[0].stage.value == "planned"
 
 
 def test_a_card_whose_face_is_not_its_plans_title_is_his_at_once(
