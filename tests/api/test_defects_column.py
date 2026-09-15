@@ -470,7 +470,16 @@ def test_a_defect_verified_before_the_scale_is_read_again_before_it_is_taken(
     waiting = {
         w["card_number"]: w["why"] for w in client.get("/api/fixes?slug=proj").json()["waiting"]
     }
-    assert waiting[number] == "verified before the board graded defects; a reading grades it first"
+    # Either sentence is this card's truth, a moment apart: the board says
+    # why it leaves the card, and once its reading is open it says that
+    # instead. Since card #154 the seat is no longer queued behind the
+    # number, so the reading can already stand here; what this test is
+    # about — that the card is read again before it is taken — is the
+    # assertion below, and it holds either way.
+    assert waiting[number] in (
+        "verified before the board graded defects; a reading grades it first",
+        "a reading is verifying its mark now",
+    ), waiting[number]
     before = acts(machine_floor)
     tick(client)
     assert acts(machine_floor) == before, "not planned: read again first"
