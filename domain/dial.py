@@ -31,10 +31,10 @@ from domain.triage import Band, Decision
 
 
 class Dial(BaseModel):
-    """One board's switch as the store holds it, with the machine's number
-    beside it: whether this board's defects fix themselves, and how many
-    fix lanes may run at once across every board (card #80). Both survive a
-    restart; every change is audited."""
+    """One board's dial as the store holds it: whether this board's defects
+    fix themselves, where auto-fix stops on this board (card #149), and how
+    many fix lanes may run at once across every board (card #80). All three
+    survive a restart; every change is audited."""
 
     project: str
     """The board whose switch this is, by slug."""
@@ -42,8 +42,9 @@ class Dial(BaseModel):
     lanes: int = Field(ge=0)
     """The machine's number: the same through every board's `Dial`."""
     changed_at: datetime | None
-    """When the owner last turned this board's switch; None while it has
-    never been touched."""
+    """When the owner last changed this board's dial — its switch, or its
+    line (card #149); None while neither has been touched. The head says
+    "changed <then>" of the row, so a line move stamps it as a turn does."""
     first_on_at: datetime | None
     """When this board was first turned on: the moment its Defects column's
     size was recorded for the loop (plan 11, item 6)."""
@@ -65,10 +66,13 @@ class Dial(BaseModel):
 
 class DialChange(BaseModel):
     """One turn, as the record keeps it: who, when, which board, and to
-    what. A turn of a board's switch names the board and its new setting;
-    a change of the machine's number names no board and no setting. The
-    rows from before the switch was per board (2026-09-05 to 2026-09-12)
-    name no board and carry a setting: they turned every board."""
+    what. A turn of a board's switch names the board and its new setting,
+    and every row that names a board carries that board's line after the
+    turn (card #149), so a line move alone is a row with a line and no
+    setting; a change of the machine's number names no board, no setting
+    and no line. The rows from before the switch was per board (2026-09-05
+    to 2026-09-12) name no board and carry a setting: they turned every
+    board."""
 
     id: int
     at: datetime
