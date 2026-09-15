@@ -62,7 +62,8 @@
         "lanes": 1,
         "changed_at": null,
         "first_on_at": null,
-        "undoable": null
+        "undoable": null,
+        "line": "nothing"
       },
       "others_on": [],
       "running": 0,

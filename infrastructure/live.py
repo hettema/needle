@@ -31,6 +31,7 @@ from board.assemble import (
 )
 from board.dial import (
     TITLE_READ_COLUMNS,
+    below_line_words,
     dial_state,
     hands_off,
     held_lanes,
@@ -53,7 +54,7 @@ from board.parked import commitments_of, parked_at, reading_text, wants_parked_r
 from board.reconcile import SUGGESTION_HOMES, Effects, home_of, reconcile
 from board.release import names
 from board.title import title_fingerprint, wants_title_reading
-from board.triage import Sources, source_ref_of
+from board.triage import Sources, at_or_above, band_of, source_ref_of
 from domain.audit import AuditEntry, AuditKind
 from domain.board import BoardState, CardDetail, MachineState
 from domain.card import Actor, Card, CardOrigin, Place
@@ -78,7 +79,7 @@ from domain.project import Project
 from domain.release import Held
 from domain.row import Row
 from domain.signal import SessionWork, SignalKind, WindowlessSession
-from domain.triage import Commitment, Ground, ReadingsSpent
+from domain.triage import Band, Commitment, Ground, ReadingsSpent
 from domain.watercooler import WatercoolerLine
 from domain.window import WindowKind
 from infrastructure import clock
@@ -683,7 +684,13 @@ class Live:
             switches,
             fix_lanes,
             lanes,
-            held=held_lanes(fix_lanes, self.start_offered, on.__contains__, self.held_by_release),
+            held=held_lanes(
+                fix_lanes,
+                self.start_offered,
+                on.__contains__,
+                self.held_by_release,
+                self.below_line,
+            ),
             room=self.headroom,
             triaging=triaging,
             release=self.release_held(slug),
@@ -693,6 +700,27 @@ class Live:
         """Whether a board's auto-fix switch is on, from the store (card #80):
         what the beat reads before a board's defects and before a Start."""
         return self.store.dial(slug).on
+
+    def below_line(self, slug: str, number: int) -> str | None:
+        """Why the beat leaves a planned card where it is while this board's
+        line stands above the card's band, or None (card #149, ruling 5): a
+        plan the dial wrote when the card stood above the line holds at
+        Start once the line moves below it, and starts by itself when the
+        line moves back. The band is the grade of the card's newest reading
+        of its mark — the reading the lane's decision came from — and not
+        the grade bound to the document as it reads today: a planned card's
+        document is its plan, whose text no reading graded, so the bound
+        grade is always gone by the time this is asked (the class-closer
+        found exactly that on 2026-09-15: a plan started under a line moved
+        below it). A card with no graded reading is not held by the line,
+        since there is no band to compare."""
+        line = self.store.dial(slug).line
+        if line is Band.NOTHING:
+            return None
+        triage = self.store.triage(slug, number)
+        if triage is None or triage.grade is None or at_or_above(band_of(triage.grade), line):
+            return None
+        return below_line_words(line)
 
     def release_held(self, slug: str) -> Held | None:
         """This board's release when one is waiting on the owner, as the
@@ -837,6 +865,7 @@ class Live:
             beside=self.beside(slug).get(number),
             release=(held if (held := self.release_held(slug)) and number in held.cards else None),
             spent=self.readings_spent(slug, sources=sources, number=number).get(number),
+            line=self.store.dial(slug).line,
         )
 
     def lane_and_doors(self, slug: str, card: Card) -> tuple[Lane | None, Doors]:

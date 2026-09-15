@@ -3,6 +3,7 @@
 import type { BoardState, CardDetail, ProjectFile } from "./types/board";
 import type { Move, Place } from "./types/card";
 import type { DialState } from "./types/dial";
+import type { Band } from "./types/triage";
 import type { FocusStrip } from "./types/focus";
 import type { DoorResult } from "./types/lane";
 import type { Project } from "./types/project";
@@ -102,12 +103,12 @@ export function acceptClass(slug: string, evidenceClass: EvidenceClass): Promise
   });
 }
 
-/** The dial (plan 11, item 3): the owner's standing ruling that a defect marked `Fix: now` enters execution without him — one board's switch, and the machine's number of fix lanes at once (card #80). Answers that board's head. */
-export function turnDial(slug: string, on: boolean, lanes: number): Promise<DialState> {
+/** The dial (plan 11, item 3): the owner's standing ruling that a defect marked `Fix: now` enters execution without him — one board's switch, one board's line (card 149), and the machine's number of fix lanes at once (card #80). Answers that board's head. */
+export function turnDial(slug: string, on: boolean, lanes: number, line: Band): Promise<DialState> {
   return call<DialState>("/api/dial", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ project: slug, on, lanes }),
+    body: JSON.stringify({ project: slug, on, lanes, line }),
   });
 }
 

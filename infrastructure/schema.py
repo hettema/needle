@@ -335,7 +335,8 @@ class DialRow(Base):
     restart keeps it. Row 1, with no project, is the machine's: it holds
     the number of fix lanes and nothing else. Every other row is one
     board's switch, keyed by slug (card #80): on or off, and when it was
-    turned. A board without a row is off. Every turn is a row in
+    turned, and where its auto-fix stops (card #149). A board without a
+    row is off and takes every defect. Every turn is a row in
     `dial_changes`."""
 
     __tablename__ = "dial"
@@ -359,6 +360,12 @@ class DialRow(Base):
     declared_at: Mapped[datetime | None] = mapped_column(UtcDateTime, nullable=True)
     """When the declaration was last made. NULL with the switch on is a board
     turned on before the declaration existed: undeclared, not empty."""
+    line: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    """Where this board's auto-fix stops, as a band's name (card #149): the
+    beat takes a verified defect only at or above it. NULL reads as the
+    last rung — every defect, which is where auto-fix reached before the
+    line existed — and is the same fact as the last rung written out
+    (ruling 3), so no board changes behaviour by the migration."""
 
 
 class DialChangeRow(Base):
@@ -383,6 +390,10 @@ class DialChangeRow(Base):
     the turn said anything new (card #139, item 2): the standing ruling and
     the declaration it bounds are audited together, so the owner can see
     which turn widened or narrowed what waits for him."""
+    line: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    """The board's line after the turn, on every row that names a board
+    (card #149): a moment's line is read from the audit as the switch is.
+    NULL on a change of the number and on every row from before the line."""
 
 
 class FixLaneRow(Base):

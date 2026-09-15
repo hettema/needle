@@ -10,7 +10,13 @@ path. The switch is one per board and the number is one for the machine
 board by board, while the limit is the machine's slots and its one trunk,
 not a project (plan 11, rulings — kept for the number, overturned for the
 switch on 2026-09-07 and 2026-09-12: "if I auto fix HR it only fixes HR
-defects").
+defects"). The line is one per board too (card #149): where auto-fix
+stops, named as a rung of the grade's ladder, so "on" means every verified
+defect down to the line he drew and never the whole column until it is
+empty — his ruling of 2026-09-15 that what reaches only him or a session
+waits for a signal, held by the board and not by his memory. So the dial
+is three things: a switch per board, a line per board, one number for the
+machine.
 """
 
 from collections.abc import Sequence
@@ -21,7 +27,7 @@ from pydantic import BaseModel, Field
 
 from domain.card import Actor
 from domain.release import Held, Undoable
-from domain.triage import Decision
+from domain.triage import Band, Decision
 
 
 class Dial(BaseModel):
@@ -47,6 +53,14 @@ class Dial(BaseModel):
     before the declaration existed, which releases everything as it always
     did; an `Undoable` with no paths is the owner having said there is
     nothing, which is the same release and a different fact."""
+    line: Band = Band.NOTHING
+    """Where this board's auto-fix stops (card #149): the beat takes a
+    verified defect only when its band is at or above this rung. Always a
+    band, never absent (ruling 3): a board with no line drawn and a board
+    whose line is at the bottom take the same defects and are the same
+    fact, so the last rung is the one spelling of both, said as "takes
+    every defect" (ruling 4) — which is where auto-fix reached before the
+    line existed, so no board changes behaviour by its landing."""
 
 
 class DialChange(BaseModel):
@@ -67,6 +81,12 @@ class DialChange(BaseModel):
     said anything (card #139, item 2): the paths and the standing hold file,
     or "nothing". None on every turn that declared nothing new, and on every
     row written before the declaration existed."""
+    line: Band | None = None
+    """The board's line after the turn, on every row that names a board
+    (card #149): what `board/dial.py::line_at` reads a moment's line from,
+    the way `switch_was_on` reads the switch. None on a change of the
+    number, which names no board, and on every row from before the line
+    existed — which read as the last rung, where auto-fix reached then."""
 
 
 class Meminfo(BaseModel):
@@ -351,6 +371,13 @@ class FixReport(BaseModel):
     """Its board's switch was on the moment its planning began, read from
     the audit of turns (card #80): a lane this is False for began on a
     board whose switch was off, which is what the Loop counts."""
+    below_the_line: bool = False
+    """Its planning began on a card whose band was below its board's line
+    at that moment (card #149, item 2), read from the audit of line moves
+    and the grade of the reading its decision came from: a lane this is
+    True for is the beat reading the wrong fact or a second path to Start,
+    and is what the Loop counts. False for a lane from before the seat
+    graded defects, whose reading has no band to compare."""
     note: str | None = None
     """Why this one stands where it does, in the board's own sentence: what a
     planned card is waiting on, or how a lane ended. Without it a card held

@@ -53,6 +53,7 @@ from board.dial import (
     held_lanes,
     is_quiet,
     left_out_words,
+    line_at,
     refused_words,
     running,
     seat_opens,
@@ -67,7 +68,15 @@ from board.lane import has_row, is_question
 from board.parked import parked_at, wants_parked_reading
 from board.release import carried, sentence, under
 from board.title import read_vocabulary
-from board.triage import already_ruled, current_grade, order_key, source_ref_of, split_row
+from board.triage import (
+    already_ruled,
+    at_or_above,
+    band_of,
+    current_grade,
+    order_key,
+    source_ref_of,
+    split_row,
+)
 from domain.audit import AuditKind
 from domain.card import Actor, Card
 from domain.column import Column
@@ -86,10 +95,12 @@ from domain.session import SessionState
 from domain.signal import SessionWork
 from domain.slot import rung_words
 from domain.triage import (
+    Band,
     CorpusLane,
     CorpusLaneKind,
     Decision,
     Fate,
+    Grade,
     Ground,
     ReadingsSpent,
     Routing,
@@ -205,10 +216,12 @@ class Dial:
         lanes: int | None = None,
         cannot_undo: list[str] | None = None,
         hold: str | None = None,
+        line: Band | None = None,
         actor: Actor = Actor.OWNER,
     ) -> list[DialSetting]:
         """The owner's turn (plan 11, item 3), audited as his: one board's
-        switch, the machine's number, or both. A board's first turn to on
+        switch, the machine's number, the board's line (card #149), or
+        several at once. A board's first turn to on
         records its Defects column as it stands, by who filed each card: the baseline
         the loop reads that board's column against (item 6; per board since
         card #80), and what that board says cannot be taken back, which is
@@ -222,6 +235,7 @@ class Dial:
             lanes=lanes,
             cannot_undo=cannot_undo,
             hold=hold,
+            line=line,
             actor=actor,
             at=clock.now(),
         )
@@ -375,7 +389,11 @@ class Dial:
         if self._full() is not None:
             return
         held = held_lanes(
-            fix_lanes, self.live.start_offered, self.live.switched_on, self.live.held_by_release
+            fix_lanes,
+            self.live.start_offered,
+            self.live.switched_on,
+            self.live.held_by_release,
+            self.live.below_line,
         )
         triaging = self._triaging()
         # The number is the machine's, one for every board (card #80).
@@ -395,8 +413,11 @@ class Dial:
             if snapshot is None:
                 continue  # the machine has not been read for this project yet
             # This board's switch, read before its column: with it off, the
-            # column below yields readings and never a candidate.
+            # column below yields readings and never a candidate. Its line
+            # too (card #149): a verified defect below it is never appended,
+            # and the readings path below is untouched by either.
             switched_on = slug in switches and switches[slug].on
+            line = switches[slug].line if slug in switches else Band.NOTHING
             readings = store.last_readings(slug)
             planning = store.open_windowless_sessions(slug, SessionWork.PLANNING)
             open_triage = store.open_windowless_sessions(slug, SessionWork.TRIAGE)
@@ -408,6 +429,7 @@ class Dial:
                 triage = triages.get(card.number)
                 routed = routing_for(card, document, triage, sources)
                 assert routed is not None  # a defect in the column always routes somewhere
+                grade = current_grade(document, triage)
                 why = why_not_eligible(
                     card,
                     document,
@@ -417,8 +439,9 @@ class Dial:
                     planning_open=card.number in planning,
                     triage_open=card.number in open_triage,
                     ran_before=card.number in ran,
+                    grade=grade,
+                    line=line,
                 )
-                grade = current_grade(document, triage)
                 # A defect verified before the board graded defects is read
                 # again before it is taken: the column has no order for it.
                 if why is None and grade is not None:
@@ -961,6 +984,11 @@ class Dial:
         # turns it back on.
         if not self.live.switched_on(slug):
             why = "this board's switch is off"
+        elif (filed := self.live.below_line(slug, card.number)) is not None:
+            # The line is read at the Start as the switch is (card #149,
+            # ruling 5): a plan written above the line holds once the line
+            # moves below its card, and starts by itself when it moves back.
+            why = filed
         elif (waits := self.live.held_by_release(slug, card.number)) is not None:
             # A second change of the same irreversible shape does not pile
             # onto the first (card #139, item 4): the owner wakes to one
@@ -1304,7 +1332,7 @@ class Dial:
             s: live.snapshot.lanes for s, live in self.live.projects.items() if live.snapshot
         }
         quiet = is_quiet(lanes_by_project)
-        switches = {setting.project: setting.on for setting in store.dials()}
+        switches = {setting.project: setting for setting in store.dials()}
         found: list[tuple[tuple, Waiting]] = []
         for project_slug, live in self.live.projects.items():
             if slug is not None and project_slug != slug:
@@ -1321,6 +1349,8 @@ class Dial:
                 triage = triages.get(card.number)
                 routed = routing_for(card, document, triage, sources)
                 assert routed is not None
+                grade = current_grade(document, triage)
+                setting = switches.get(project_slug)
                 why = why_not_eligible(
                     card,
                     document,
@@ -1330,8 +1360,9 @@ class Dial:
                     planning_open=card.number in planning,
                     triage_open=card.number in triaging,
                     ran_before=card.number in ran,
+                    grade=grade,
+                    line=setting.line if setting is not None else Band.NOTHING,
                 )
-                grade = current_grade(document, triage)
                 if why is None and grade is None:
                     why = "verified before the board graded defects; a reading grades it first"
                 stopped = stopped_words(spent.get(card.number))
@@ -1343,7 +1374,7 @@ class Dial:
                     why = stopped
                 elif why is None:
                     doors = snapshot.doors.get(card.number) if snapshot else None
-                    if not switches.get(project_slug, False):
+                    if setting is None or not setting.on:
                         why = "this board's switch is off"
                     elif snapshot is None:
                         why = "the machine has not been read for this project yet"
@@ -1549,11 +1580,24 @@ class Dial:
         store = self.live.store
         reports: list[FixReport] = []
         changes = store.dial_changes()
+        graded: dict[str, dict[str, Grade]] = {}
         for fix in store.fix_lanes(slug):
             live = self.live.projects.get(fix.project)
             card = store.card(fix.project, fix.card_number)
             if live is None or card is None:
                 continue
+            if fix.project not in graded:
+                # The grade of the reading each lane's decision came from,
+                # by decision (card #149, item 2): the band the beat compared
+                # against the line at planning, never today's.
+                graded[fix.project] = {
+                    t.decision: t.grade for t in store.triages(fix.project) if t.grade is not None
+                }
+            band = (
+                band_of(graded[fix.project][fix.decision])
+                if fix.decision is not None and fix.decision in graded[fix.project]
+                else None
+            )
             document = document_of(card, live.index)
             record = store.lane(fix.project, fix.card_number)
             name = lane_name(card.number, card.title)
@@ -1583,6 +1627,16 @@ class Dial:
                     and (
                         fix.started_at is None
                         or switch_was_on(changes, fix.project, fix.started_at)
+                    ),
+                    below_the_line=band is not None
+                    and (
+                        not at_or_above(
+                            band, line_at(changes, fix.project, fix.planning_started_at)
+                        )
+                        or (
+                            fix.started_at is not None
+                            and not at_or_above(band, line_at(changes, fix.project, fix.started_at))
+                        )
                     ),
                 )
             )

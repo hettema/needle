@@ -349,6 +349,54 @@ def band_of(grade: Grade) -> Band:
     return BAND_OF_BREAKS[grade.breaks]
 
 
+def at_or_above(band: Band, line: Band) -> bool:
+    """Whether a band is at or above a board's line (card #149, item 2):
+    the one place the comparison is written, so the beat, `needle fixes`,
+    the head's count and the face cannot disagree about which side of the
+    line a defect stands. The ladder's order is the enum's; the last rung
+    is above nothing, so a line there takes every graded defect."""
+    return BANDS.index(band) <= BANDS.index(line)
+
+
+LINE_WORDS: dict[Band, str] = {
+    Band.HARM_OUTSIDE: "stops at harm outside",
+    Band.LIES: "stops at lies",
+    Band.LOSES: "stops at loses",
+    Band.COSTS: "stops at costs",
+    Band.LOOKS: "stops at looks",
+    Band.NOTHING: "takes every defect",
+}
+"""The line in one phrase wherever it is said — the head, its said-sentence,
+`needle dial`, `needle fixes` — so the page and the terminal never differ
+(card #149, ruling 4). The last rung is "takes every defect" because the
+ladder's own word for it, nothing, means "graded as describing no failure"
+on a card and would read as "no line" beside a switch."""
+
+EVERY_DEFECT = "every defect"
+"""What the owner types to move a line back to the last rung."""
+
+
+def line_words(line: Band) -> str:
+    return LINE_WORDS[line]
+
+
+def line_from_words(word: str) -> Band | None:
+    """A line from the owner's words: a band's own name, or `every defect`
+    for the last rung; None for anything else, which the verb refuses by
+    naming the rungs."""
+    said = " ".join(word.strip().lower().split())
+    if said == EVERY_DEFECT:
+        return Band.NOTHING
+    return next((band for band in BANDS if band.value == said and band is not Band.NOTHING), None)
+
+
+def line_rungs() -> str:
+    """The rungs a line may be drawn at, for a refusal."""
+    return (
+        ", ".join(band.value for band in BANDS if band is not Band.NOTHING) + f", or {EVERY_DEFECT}"
+    )
+
+
 def current_grade(document: Document | None, triage: Triage | None) -> Grade | None:
     """The grade that stands for this document today, or None: a reading
     binds its grade to the text it judged exactly as it binds its result,

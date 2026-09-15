@@ -1,13 +1,14 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { DndContext, DragOverlay, PointerSensor, pointerWithin, rectIntersection, useSensor, useSensors, type CollisionDetection, type DragEndEvent, type DragMoveEvent, type DragStartEvent } from "@dnd-kit/core";
 import type { Beat, BoardState, CardSummary } from "../types/board";
+import type { Band } from "../types/triage";
 import type { MachineRoom } from "../types/machine";
 import type { Place } from "../types/card";
 import type { Claim } from "../types/board";
 import type { Column } from "../types/column";
 import type { Project } from "../types/project";
 import { acceptOrder, chooseFocus, openDoor, openFocus, openIdea, openPlan, proposeMoves, putBack, turnDial } from "../api";
-import { AcceptBar, AppHead, AskList, AskRow, BoardStrip, Breakdown, CardShell, CorpusLine, DialControl, Fact, FocusBar, HeadFrame, HeadTools, IdeaDoor, Lens, List, Notice, Off, ProjectSwitcher, Rail, Strong, Sub, TalkList, TalkRow, TogetherBar, Word, Wordmark, Words } from "../components/ui";
+import { AcceptBar, AppHead, AskList, AskRow, BoardStrip, Breakdown, CardShell, CorpusLine, DialControl, Fact, FocusBar, HeadFrame, HeadTools, IdeaDoor, Lens, List, lineWords, Notice, Off, ProjectSwitcher, Rail, Strong, Sub, TalkList, TalkRow, TogetherBar, Word, Wordmark, Words } from "../components/ui";
 import type { BoardStore } from "../state/board";
 import { CardBody } from "./CardView";
 import { ColumnBlock, FOLD_AT } from "./ColumnBlock";
@@ -289,13 +290,14 @@ export function Board({ slug, store, projects, onSwitch }: { slug: string; store
   // The dial is the owner's standing ruling (plan 11, item 3): a turn is
   // persisted and audited as his before the head shows it, and the board is
   // re-read so the count beside it is the store's, never the page's. The
-  // switch turned is this board's (card #80); the number is the machine's.
+  // switch turned is this board's (card #80), and so is the line (card 149);
+  // the number is the machine's.
   const turnTheDial = useCallback(
-    async (on: boolean, lanes: number) => {
+    async (on: boolean, lanes: number, line: Band) => {
       setDialTurning(true);
       try {
-        const state = await turnDial(slug, on, lanes);
-        setDialSaid(`auto-fix ${state.dial.on ? "on" : "off"} here, ${state.dial.lanes} fix lane${state.dial.lanes === 1 ? "" : "s"} at most across every board`);
+        const state = await turnDial(slug, on, lanes, line);
+        setDialSaid(`auto-fix ${state.dial.on ? "on" : "off"} here, ${lineWords(state.dial.line)}, ${state.dial.lanes} fix lane${state.dial.lanes === 1 ? "" : "s"} at most across every board`);
       } catch (e) {
         setDialSaid(`The dial did not turn: ${e instanceof Error ? e.message : String(e)}`);
       } finally {
@@ -482,7 +484,7 @@ export function Board({ slug, store, projects, onSwitch }: { slug: string; store
           ))}
         </Words>
         <HeadTools>
-          <DialControl state={board.dial} others={(board.dial.others_on ?? []).map((other) => listed.find((p) => p.slug === other)?.name ?? other)} onTurn={(on, lanes) => void turnTheDial(on, lanes)} disabled={dialTurning} said={dialSaid} />
+          <DialControl state={board.dial} others={(board.dial.others_on ?? []).map((other) => listed.find((p) => p.slug === other)?.name ?? other)} onTurn={(on, lanes, line) => void turnTheDial(on, lanes, line)} disabled={dialTurning} said={dialSaid} />
           <Lens value={lens} options={LENSES} onChange={setLens} title="A lens, never a write: sorting changes what you see, never the rank. Drag needs Rank." />
           <IdeaDoor onOpen={(text) => void openAnIdea(text)} disabled={ideaOpening} said={ideaSaid} />
         </HeadTools>

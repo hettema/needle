@@ -8,6 +8,7 @@ import type { CardState, ClaimCount, FoldedCard } from "../../types/board";
 import { OPENING, type Meaning } from "../../types/meaning";
 import type { Column } from "../../types/column";
 import type { DialState } from "../../types/dial";
+import { BAND_VALUES, type Band } from "../../types/triage";
 import type { CardLeverage, FocusState, FocusStrip, Leverage, ProposedMove } from "../../types/focus";
 import type { DocumentState, Fix, Item, Review, SuggestionKind } from "../../types/document";
 import type { Progress } from "../../types/lane";
@@ -190,8 +191,25 @@ export function IdeaDoor({ onOpen, disabled, said }: { onOpen: (text: string) =>
  * keystroke is not a turn; the count is the one part that can carry a
  * meaning, and only while something runs.
  */
-export function DialControl({ state, others, onTurn, disabled, said }: { state: DialState; others: string[]; onTurn: (on: boolean, lanes: number) => void; disabled: boolean; said: string | null }) {
+/** The line in one phrase wherever it is said — the head, its said-sentence, `needle dial`, `needle fixes` (card 149, ruling 4): where auto-fix stops, or "takes every defect" for the last rung, whose own word on the ladder would read as "no line" beside a switch. */
+export const LINE_WORDS: Record<Band, string> = {
+  "harm outside": "stops at harm outside",
+  lies: "stops at lies",
+  loses: "stops at loses",
+  costs: "stops at costs",
+  looks: "stops at looks",
+  nothing: "takes every defect",
+};
+
+export function lineWords(line: Band | null | undefined): string {
+  return LINE_WORDS[line ?? "nothing"];
+}
+
+export function DialControl({ state, others, onTurn, disabled, said }: { state: DialState; others: string[]; onTurn: (on: boolean, lanes: number, line: Band) => void; disabled: boolean; said: string | null }) {
   const { dial, running, held, full, quiet, release } = state;
+  // Where this board's auto-fix stops (card 149): a rung of the grade's
+  // ladder, the last rung being every defect. Always a band, never absent.
+  const line: Band = dial.line ?? "nothing";
   // What this board says cannot be taken back, in his own words (card 139,
   // item 2). A board turned on before the question existed says nobody has
   // said, which releases everything and is not the same fact as a board
@@ -215,23 +233,30 @@ export function DialControl({ state, others, onTurn, disabled, said }: { state: 
       setLanes(String(dial.lanes));
       return;
     }
-    if (wanted !== dial.lanes) onTurn(dial.on, wanted);
+    if (wanted !== dial.lanes) onTurn(dial.on, wanted, line);
   };
   return (
     <form
       className="dial"
       role="group"
       aria-label="Auto-fix"
-      title="Auto-fix: while on, the board plans and starts this board's defects marked Fix: now on its own, and the lane then runs like every other lane. The switch is this board's; the number of fix lanes at once is the machine's, across every board. The board's own defects run only while no lane is live anywhere."
+      title="Auto-fix: while on, the board plans and starts this board's defects marked Fix: now on its own, down to the line, and the lane then runs like every other lane. The dial is three things: the switch is this board's; the line is this board's — where auto-fix stops, as a rung of the grade's ladder, so a defect below it stays filed until you move the line or a fresh reading grades it graver; the number of fix lanes at once is the machine's, across every board. The board's own defects run only while no lane is live anywhere."
       onSubmit={(e) => {
         e.preventDefault();
         commit();
       }}
     >
       <label className="dial-on">
-        <input type="checkbox" checked={dial.on} disabled={disabled} onChange={(e) => onTurn(e.target.checked, dial.lanes)} aria-label="Auto-fix defects" />
+        <input type="checkbox" checked={dial.on} disabled={disabled} onChange={(e) => onTurn(e.target.checked, dial.lanes, line)} aria-label="Auto-fix defects" />
         <span>auto-fix</span>
       </label>
+      <select className="dial-line" value={line} disabled={disabled} aria-label="Auto-fix stops at" title="Where this board's auto-fix stops: a rung of the grade's ladder. A verified defect below it is filed, not taken, until you move the line or a fresh reading grades it graver. The last rung takes every verified defect." onChange={(e) => onTurn(dial.on, dial.lanes, e.target.value as Band)}>
+        {BAND_VALUES.map((band) => (
+          <option key={band} value={band}>
+            {LINE_WORDS[band]}
+          </option>
+        ))}
+      </select>
       {others.length > 0 ? (
         <span className="dial-others" title="Other boards whose auto-fix is on: the number below is shared with them">
           also on: {others.join(", ")}

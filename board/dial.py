@@ -20,7 +20,7 @@ from pydantic import BaseModel
 
 from board.lane import has_row
 from board.title import wants_title_reading
-from board.triage import GradeKey, fingerprint, order_key
+from board.triage import GradeKey, at_or_above, band_of, fingerprint, order_key
 from domain.card import Card
 from domain.column import Column
 from domain.corpus import CorpusIndex
@@ -42,7 +42,16 @@ from domain.release import Held
 from domain.row import RowKind
 from domain.session import Session
 from domain.signal import Reading, WindowlessSession
-from domain.triage import Grade, ReadingsSpent, Reason, Routed, Routing, TitleReading, Triage
+from domain.triage import (
+    Band,
+    Grade,
+    ReadingsSpent,
+    Reason,
+    Routed,
+    Routing,
+    TitleReading,
+    Triage,
+)
 
 LIVE_STAGES: frozenset[FixStage] = frozenset(
     {FixStage.PLANNING, FixStage.PLANNED, FixStage.STARTED}
@@ -218,6 +227,8 @@ def why_not_eligible(
     planning_open: bool,
     triage_open: bool,
     ran_before: bool,
+    grade: Grade | None = None,
+    line: Band | None = None,
 ) -> str | None:
     """Why the dial leaves this defect where it is, in one sentence, or None
     when it may take it. Every reason is a fact the card, its document or
@@ -226,7 +237,11 @@ def why_not_eligible(
     The mark alone no longer opens the door (plan 59): `routed` is the state
     every reader derives from the document's mark and the card's latest
     reading together, and anything but `triaged now` — or a verified `when`
-    whose own trigger has fired — is a reason in its own words."""
+    whose own trigger has fired — is a reason in its own words. The board's
+    line is one more fact (card #149, item 2): a graded defect whose band
+    is below it is left with the line's own sentence, so the beat, `needle
+    fixes` and the face say one thing; the comparison is `at_or_above` and
+    is written nowhere else."""
     fix = document.fix
     if routed.state == Routing.TRIAGED_WHEN and fix is not None and fix.mark == FixMark.WHEN:
         if fix.trigger is None:
@@ -248,7 +263,16 @@ def why_not_eligible(
         return "the dial took it once already; it is the owner's from here"
     if has_row(card, RowKind.ASK):
         return "it carries a question for the owner"
+    if grade is not None and line is not None and not at_or_above(band_of(grade), line):
+        return below_line_words(line)
     return None
+
+
+def below_line_words(line: Band) -> str:
+    """The one sentence for a defect the line leaves filed (card #149):
+    what `needle fixes` says of it, what holds its plan at Start, and what
+    the face ends with."""
+    return f"below this board's line at {line.value}"
 
 
 def held_lanes(
@@ -256,16 +280,20 @@ def held_lanes(
     start_offered: Callable[[str, int], bool | None],
     switched_on: Callable[[str], bool],
     held_by_release: Callable[[str, int], str | None] | None = None,
+    below_line: Callable[[str, int], str | None] | None = None,
 ) -> list[FixLane]:
     """The fix lanes at the planned stage the dial cannot start — the Start
     door closed (parked, waiting on a Sequencing card, nowhere to run, or
     not read yet), the board's switch off since the plan was written (card
-    #80), or a release already waiting on this board that this card's plan
-    would pile onto (card #139, item 4). Such a card is no process: on the
-    dial's first night four of them held four slots while fourteen eligible
-    defects waited. `start_offered` answers from the loop's last read; None
-    (unread) is closed. `switched_on` and `held_by_release` answer from the
-    board's own state."""
+    #80), a release already waiting on this board that this card's plan
+    would pile onto (card #139, item 4), or the board's line moved below
+    the card's band since the plan was written (card #149, ruling 5: a
+    plan is not execution until Start, and the line at that moment is the
+    ruling that applies). Such a card is no process: on the dial's first
+    night four of them held four slots while fourteen eligible defects
+    waited. `start_offered` answers from the loop's last read; None
+    (unread) is closed. `switched_on`, `held_by_release` and `below_line`
+    answer from the board's own state."""
     return [
         lane
         for lane in fix_lanes
@@ -277,6 +305,7 @@ def held_lanes(
                 held_by_release is not None
                 and held_by_release(lane.project, lane.card_number) is not None
             )
+            or (below_line is not None and below_line(lane.project, lane.card_number) is not None)
         )
     ]
 
@@ -363,6 +392,24 @@ def switch_was_on(changes: Sequence[DialChange], slug: str, moment: datetime) ->
             continue
         state = change.on
     return state
+
+
+def line_at(changes: Sequence[DialChange], slug: str, moment: datetime) -> Band:
+    """Where a board's line stood at a moment, from the audit of turns (card
+    #149, item 2): the last row at or before the moment that names this
+    board and carries a line says. No such row is the last rung — every
+    defect — which is where auto-fix reached before the line existed and
+    how every board is born. Read in the order of moments, as
+    `switch_was_on` is, so a clock that stepped back cannot end the read
+    early."""
+    line = Band.NOTHING
+    for change in sorted(changes, key=lambda c: (c.at, c.id)):
+        if change.at > moment:
+            continue
+        if change.project != slug or change.line is None:
+            continue
+        line = change.line
+    return line
 
 
 def dial_state(

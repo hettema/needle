@@ -67,6 +67,7 @@ from domain.signal import Reading, SessionWork, WindowlessSession
 from domain.slot import Rung
 from domain.team import Composition, Route
 from domain.triage import (
+    Band,
     Breaks,
     CorpusLane,
     CorpusLaneKind,
@@ -1578,15 +1579,19 @@ class Store:
         lanes: int | None = None,
         cannot_undo: list[str] | None = None,
         hold: str | None = None,
+        line: Band | None = None,
         actor: Actor,
         at: datetime,
     ) -> list[Dial]:
-        """The owner turns it: one board's switch, the machine's number, or
-        both in one act, each audited on its own row when it changed; a turn
-        that changes nothing writes nothing. A switch needs its board, and a
-        board the store does not know is refused by name. The first turn of
-        a board to on stamps that board's `first_on_at`, the moment its rail
-        is measured against.
+        """The owner turns it: one board's switch, the machine's number, the
+        board's line (card #149), or several in one act, each audited on its
+        own row when it changed; a turn that changes nothing writes nothing.
+        A switch or a line needs its board, and a board the store does not
+        know is refused by name. The first turn of a board to on stamps that
+        board's `first_on_at`, the moment its rail is measured against. A
+        board's audit row carries its line after the turn, so a moment's
+        line is read from the audit as its switch is; a line move alone
+        carries no setting, so it turns nothing.
 
         A turn to on also records what that board says cannot be taken back
         (card #139, item 2), because that is the ruling this one bounds. A
@@ -1598,6 +1603,8 @@ class Store:
             raise StoreRefusal("The dial's number of fix lanes cannot be below zero.")
         if on is not None and project is None:
             raise StoreRefusal("A switch is one board's: name the board to turn it on or off.")
+        if line is not None and project is None:
+            raise StoreRefusal("A line is one board's: name the board to move it.")
         if (cannot_undo is not None or hold is not None) and not on:
             raise StoreRefusal(
                 "What cannot be undone is declared at the turn that bounds it: name it with "
@@ -1616,24 +1623,37 @@ class Store:
                 session.add(
                     DialChangeRow(at=at, actor=actor.value, project_slug=None, on=None, lanes=lanes)
                 )
-            if on is not None:
+            if on is not None or line is not None:
                 assert project is not None
                 if session.get(ProjectRow, project) is None:
                     raise StoreRefusal(f'No project "{project}" is on the board.')
                 row = session.scalar(select(DialRow).where(DialRow.project_slug == project))
-                if row is None and not on:
-                    return self.dials()  # off is how a board is born: nothing to write
+                # Off with every defect is how a board is born: nothing to write.
+                born_so = (on is None or not on) and (line is None or line is Band.NOTHING)
+                if row is None and born_so:
+                    return self.dials()
                 if row is None:
                     row = DialRow(project_slug=project, on=False, lanes=None)
                     session.add(row)
-                declared = self._declare(row, on=on, cannot_undo=cannot_undo, hold=hold, at=at)
-                turned = row.on != on
-                if turned:
-                    row.on = on
+                declared = None
+                turned = False
+                if on is not None:
+                    declared = self._declare(row, on=on, cannot_undo=cannot_undo, hold=hold, at=at)
+                    turned = row.on != on
+                    if turned:
+                        row.on = on
+                        row.changed_at = at
+                        if on and row.first_on_at is None:
+                            row.first_on_at = at
+                # The line is always a band (ruling 3): NULL and the last rung
+                # are one fact, so a move to the last rung on a row with no
+                # line moves nothing and writes nothing.
+                moved = line is not None and _line_of(row) is not line
+                if moved:
+                    assert line is not None
+                    row.line = line.value
                     row.changed_at = at
-                    if on and row.first_on_at is None:
-                        row.first_on_at = at
-                if turned or declared is not None:
+                if turned or declared is not None or moved:
                     session.add(
                         DialChangeRow(
                             at=at,
@@ -1642,6 +1662,7 @@ class Store:
                             on=on,
                             lanes=machine.lanes,
                             declared=declared,
+                            line=_line_of(row).value,
                         )
                     )
             session.flush()
@@ -1697,6 +1718,7 @@ class Store:
                     on=r.on,
                     lanes=r.lanes,
                     declared=r.declared,
+                    line=Band(r.line) if r.line else None,
                 )
                 for r in rows
             ]
@@ -3268,7 +3290,14 @@ def _dial(slug: str, row: DialRow | None, lanes: int) -> Dial:
         changed_at=row.changed_at,
         first_on_at=row.first_on_at,
         undoable=_undoable(row),
+        line=_line_of(row),
     )
+
+
+def _line_of(row: DialRow) -> Band:
+    """Where a board's auto-fix stops, from its row (card #149): NULL is the
+    last rung, one fact with the rung written out (ruling 3)."""
+    return Band(row.line) if row.line else Band.NOTHING
 
 
 def _undoable(row: DialRow) -> Undoable | None:

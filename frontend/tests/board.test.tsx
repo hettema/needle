@@ -10,6 +10,7 @@ import type { Project } from "../src/types/project";
 import type { ClaimCount } from "../src/types/board";
 import type { EvidenceClass, VerdictLine, VerdictsRuled } from "../src/types/verdict";
 import type { DialState } from "../src/types/dial";
+import type { Band } from "../src/types/triage";
 
 const api = vi.hoisted(() => ({
   getBoard: vi.fn<(slug: string) => Promise<BoardState>>(),
@@ -21,7 +22,7 @@ const api = vi.hoisted(() => ({
   openIdea: vi.fn<(slug: string, text: string) => Promise<DoorResult>>(),
   openPlan: vi.fn<(slug: string, numbers: number[]) => Promise<DoorResult>>(),
   acceptClass: vi.fn<(slug: string, evidenceClass: EvidenceClass) => Promise<VerdictsRuled>>(),
-  turnDial: vi.fn<(slug: string, on: boolean, lanes: number) => Promise<DialState>>(),
+  turnDial: vi.fn<(slug: string, on: boolean, lanes: number, line: Band) => Promise<DialState>>(),
   getFocus: vi.fn(),
   openFocus: vi.fn<(slug: string, text: string) => Promise<DoorResult>>(),
   proposeMoves: vi.fn<(slug: string) => Promise<DoorResult>>(),
@@ -1047,8 +1048,9 @@ describe("defects fix themselves (plan 11)", () => {
     api.getBoard.mockResolvedValue(turned);
     await userEvent.click(toggle);
     // The switch turned is this board's (card #80).
-    await waitFor(() => expect(api.turnDial).toHaveBeenCalledWith("harbourmaster", true, 1));
-    expect(await within(dial).findByText("auto-fix on here, 1 fix lane at most across every board")).toBeInTheDocument();
+    // The line rides with every turn (card 149): unchanged here, at the last rung.
+    await waitFor(() => expect(api.turnDial).toHaveBeenCalledWith("harbourmaster", true, 1, "nothing"));
+    expect(await within(dial).findByText("auto-fix on here, takes every defect, 1 fix lane at most across every board")).toBeInTheDocument();
     await waitFor(() => expect(within(dial).getByRole("checkbox", { name: "Auto-fix defects" })).toBeChecked());
     // Something runs under the dial: the count is live, and only the count.
     expect(within(dial).getByText("1 of 1 live").dataset["meaning"]).toBe("live");
@@ -1061,7 +1063,32 @@ describe("defects fix themselves (plan 11)", () => {
     await userEvent.type(lanes, "3");
     expect(api.turnDial).toHaveBeenCalledTimes(1);
     fireEvent.blur(lanes);
-    await waitFor(() => expect(api.turnDial).toHaveBeenLastCalledWith("harbourmaster", true, 3));
+    await waitFor(() => expect(api.turnDial).toHaveBeenLastCalledWith("harbourmaster", true, 3, "nothing"));
+  });
+
+  it("shows this board's line beside its switch and a move is persisted before the head shows it (card 149)", async () => {
+    // A board with no line drawn reads as the last rung: the select says
+    // "takes every defect" and the head reads exactly as it did before
+    // the line existed.
+    await renderBoard();
+    const dial = screen.getByRole("group", { name: "Auto-fix" });
+    const line = within(dial).getByRole("combobox", { name: "Auto-fix stops at" });
+    expect(line).toHaveValue("nothing");
+    expect(within(line).getByRole("option", { name: "takes every defect" })).toBeInTheDocument();
+    expect(within(line).getByRole("option", { name: "stops at harm outside" })).toBeInTheDocument();
+    // Moving the line posts the same route as the switch, with the switch
+    // and the number as they are, and the head's word says where it stops.
+    const drawn = board();
+    drawn.dial = { dial: { project: "harbourmaster", on: false, lanes: 1, changed_at: "2026-09-15T08:00:00+00:00", first_on_at: null, line: "harm outside" }, others_on: [], running: 0, held: 0, full: null, quiet: true };
+    api.turnDial.mockResolvedValue(drawn.dial);
+    api.getBoard.mockResolvedValue(drawn);
+    await userEvent.selectOptions(line, "harm outside");
+    await waitFor(() => expect(api.turnDial).toHaveBeenCalledWith("harbourmaster", false, 1, "harm outside"));
+    expect(await within(dial).findByText("auto-fix off here, stops at harm outside, 1 fix lane at most across every board")).toBeInTheDocument();
+    await waitFor(() => expect(within(dial).getByRole("combobox", { name: "Auto-fix stops at" })).toHaveValue("harm outside"));
+    // A turn of the switch carries the line as it stands, never resets it.
+    await userEvent.click(within(dial).getByRole("checkbox", { name: "Auto-fix defects" }));
+    await waitFor(() => expect(api.turnDial).toHaveBeenLastCalledWith("harbourmaster", true, 1, "harm outside"));
   });
 
   it("shows this board's own switch, off, and names the other board that is on (card #80)", async () => {

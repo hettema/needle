@@ -10,7 +10,7 @@ from datetime import UTC, datetime, timedelta
 
 from pydantic import ValidationError
 
-from board.dial import stopped_words
+from board.dial import below_line_words, stopped_words
 from board.evidence import standing_for
 from board.focus import strip_of
 from board.handouts import handouts_for
@@ -31,6 +31,8 @@ from board.signals import is_due, past_due, read_or_decline
 from board.title import hold_sentence, title_hold
 from board.triage import (
     Sources,
+    at_or_above,
+    band_of,
     current_grade,
     grade_why,
     grade_words,
@@ -85,7 +87,7 @@ from domain.release import Held
 from domain.row import ROW_HALF, Row, RowHalf, RowKind
 from domain.signal import Reading, Signal, SignalKind, WindowlessSession
 from domain.team import Composition
-from domain.triage import Grade, ReadingsSpent, Routed, Routing, TitleReading, Triage
+from domain.triage import Band, Grade, ReadingsSpent, Routed, Routing, TitleReading, Triage
 from domain.verdict import Verdict, VerdictLine
 from domain.watercooler import WatercoolerLine
 
@@ -642,6 +644,7 @@ def state_of(
     parked_by_owner: bool = False,
     release: Held | None = None,
     stopped: str | None = None,
+    line: Band | None = None,
 ) -> CardState:
     """The one function that names a card's state (plan 27, item 2). The
     order is the rule's precedence: broken before yours, yours before live,
@@ -655,7 +658,10 @@ def state_of(
     is, from the reading that stands for its document today (card #100);
     `stopped` the sentence for a card the seat's fuse stopped reading
     (card #138, item 2), broken on its face outside the owner's column
-    and appended to his line inside it."""
+    and appended to his line inside it; `line` where the board's auto-fix
+    stops (card #149, item 3), which a verified defect below it ends its
+    sentence with — filed, and what would take it — while its routing word
+    stays the mark's and the reading's (ruling 6)."""
     hands_on = lane is not None and lane.state in HANDS_ON
     if document_state == DocumentState.GONE:
         return _state(
@@ -899,6 +905,15 @@ def state_of(
         # The grade is the face's one word (card #100, item 2): what it
         # breaks, with who it reaches and how often as the fact, and the
         # reading's words for what in the document selected it as the why.
+        # A verified `now` below the board's line says so and what would
+        # take it (card #149, item 3), never that the board stopped or
+        # that it is his.
+        filed = (
+            routed is not None
+            and routed.state == Routing.TRIAGED_NOW
+            and line is not None
+            and not at_or_above(band_of(grade), line)
+        )
         return _state(
             grade.breaks.value,
             Meaning.QUIET,
@@ -906,7 +921,12 @@ def state_of(
                 Meaning.QUIET,
                 f"a second reading graded it: it {grade_words(grade)}",
                 why=grade_why(grade),
-                then="Create plan writes one when you want it planned"
+                then=(
+                    f"filed {below_line_words(line)}; taken the moment you move the line "
+                    "or a fresh reading grades it graver"
+                )
+                if filed and line is not None
+                else "Create plan writes one when you want it planned"
                 if doors.plan.offered
                 else None,
             ),
@@ -1121,6 +1141,7 @@ def summarize(
     history: list[AuditEntry] | None = None,
     release: Held | None = None,
     spent: ReadingsSpent | None = None,
+    line: Band | None = None,
 ) -> CardSummary:
     """`doors` is the card's doors as the loop last read them; before its
     first read they are the closed doors of `nothing_read`. The state line and
@@ -1185,6 +1206,7 @@ def summarize(
             parked_by_owner=owner_parked(placement),
             release=release,
             stopped=stopped,
+            line=line,
         )
     except ValidationError as refusal:
         face = _refused_face(card, refusal)
@@ -1247,9 +1269,17 @@ UNREAD_LINE = "nobody has read yet"
 """The name of the Defects column's second group, the board's own: what
 the page shows over the defects no reading has graded (card #100, item 3)."""
 
+BELOW_LINE = "filed below the line"
+"""The head's words for the verified defects the board's line leaves filed
+(card #149, item 3), shown only while a line is drawn above the last rung."""
+
 
 def defects_column(
-    groups: list[GroupView], cards: dict[int, Card], triages: dict[int, Triage]
+    groups: list[GroupView],
+    cards: dict[int, Card],
+    triages: dict[int, Triage],
+    *,
+    line: Band = Band.NOTHING,
 ) -> tuple[list[GroupView], str]:
     """The Defects column as the owner sees it (card #100, item 3): one
     group in the board's order, gravest first, and under it a line with the
@@ -1259,7 +1289,11 @@ def defects_column(
     what `routing_of` says of each graded card — how many are his, how many
     wait on a signal, how many are fixing themselves — beside the unread,
     counted by the same predicate as the line over them, and never the
-    words."""
+    words. The board's line splits the cards a reading verified `now` by
+    the predicate the beat uses (card #149, item 3): "fixing themselves"
+    counts only those at or above it, and those below it are counted apart
+    as filed, never folded into the `when` mark's count or into his; with
+    the line at the last rung the head reads as it did before the line."""
     summaries = [summary for group in groups for summary in group.cards]
     graded = [s for s in summaries if s.grade is not None]
     unread = [s for s in summaries if s.grade is None]
@@ -1278,7 +1312,7 @@ def defects_column(
     drawn = [GroupView(name=None, cards=graded)]
     if unread:
         drawn.append(GroupView(name=f"{len(unread)} {UNREAD_LINE}", cards=unread, machine=True))
-    counts = {"yours": 0, "waits": 0, "fixing": 0, "unsettled": 0, "no_document": 0}
+    counts = {"yours": 0, "waits": 0, "fixing": 0, "below": 0, "unsettled": 0, "no_document": 0}
     for summary in summaries:
         routed = summary.routing
         if routed is None:
@@ -1289,8 +1323,10 @@ def defects_column(
             counts["yours"] += 1
         elif routed.state == Routing.TRIAGED_WHEN:
             counts["waits"] += 1
-        elif routed.state == Routing.TRIAGED_NOW:
+        elif routed.state == Routing.TRIAGED_NOW and at_or_above(band_of(summary.grade), line):
             counts["fixing"] += 1
+        elif routed.state == Routing.TRIAGED_NOW:
+            counts["below"] += 1
         else:
             counts["unsettled"] += 1
     parts = [
@@ -1299,6 +1335,8 @@ def defects_column(
         f"{counts['waits']} waiting on a signal",
         f"{counts['fixing']} fixing themselves",
     ]
+    if line is not Band.NOTHING:
+        parts.append(f"{counts['below']} {BELOW_LINE}")
     if counts["unsettled"]:
         parts.append(f"{counts['unsettled']} read and settled by nobody")
     if counts["no_document"]:
@@ -1433,6 +1471,7 @@ def assemble_board(
             history=histories.get(n),
             release=release if release is not None and n in release.cards else None,
             spent=spent.get(n),
+            line=dial.dial.line,
         )
         for n, c in by_number.items()
     }
@@ -1450,7 +1489,7 @@ def assemble_board(
             groups = [GroupView(name=None, cards=[])]
         line = None
         if definition.column == Column.DEFECTS:
-            groups, line = defects_column(groups, by_number, triages)
+            groups, line = defects_column(groups, by_number, triages, line=dial.dial.line)
         columns.append(
             ColumnView(
                 definition=definition,
@@ -1586,6 +1625,7 @@ def assemble_detail(
     decision: Triage | None = None,
     release: Held | None = None,
     spent: ReadingsSpent | None = None,
+    line: Band | None = None,
 ) -> CardDetail:
     """`readings` newest first; `read` is whether the loop has read the
     machine; `folded` the cards folded under this one; `reading` the
@@ -1621,6 +1661,7 @@ def assemble_detail(
             history=history,
             release=release,
             spent=spent,
+            line=line,
         ),
         brief=brief,
         record=record,

@@ -31,6 +31,7 @@ from domain.lane import DoorResult
 from domain.notice import Shown
 from domain.project import Project
 from domain.team import TeamReading
+from domain.triage import Band
 from domain.verdict import EvidenceClass, VerdictsRuled
 from infrastructure import clock
 from infrastructure.live import Live
@@ -83,6 +84,9 @@ class DialBody(BaseModel):
     declaration it has, an empty list says there is none."""
     hold: str | None = None
     """Where this project's standing hold on releasing is written."""
+    line: Band | None = None
+    """Where this board's auto-fix stops (card #149): a band of the grade's
+    ladder, the last rung meaning every defect; None leaves it as it is."""
 
 
 class FocusBody(BaseModel):
@@ -360,6 +364,7 @@ def create_app(store: Store | None = None, *, dist: Path | None = FRONTEND_DIST)
                 lanes=body.lanes,
                 cannot_undo=body.cannot_undo,
                 hold=body.hold,
+                line=body.line,
             )
             return dial.state(body.project)
 
