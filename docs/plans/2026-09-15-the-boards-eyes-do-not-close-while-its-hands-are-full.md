@@ -9,15 +9,16 @@
 
 ## Intent
 
-A reading enters nothing. It opens no lane, writes no commit, folds nothing:
-it reads one document, lands one verdict, and until it lands, the card it
-judges cannot move. Fixing a defect is the opposite — it plans, edits, runs
-the project's whole suite and folds to the shared work.
+While auto-fix is busy, the board stops looking at anything — no defect is
+graded, no new card's title is read, and no card parked on you is picked up —
+so the work you can see and rank dries up exactly when the most is moving.
 
-Today the board counts them as one thing against one number, so the moment
-auto-fix fills that number, the board stops looking: no defect graded, no
-title read cold, no card parked on you looked at. It stops exactly when the
-most work is moving and the most cards are arriving.
+The two are counted as one thing against one number. A reading enters
+nothing: it opens no lane, writes no commit, folds nothing; it reads one
+document, lands one verdict, and until it lands, the card it judges cannot
+move. Fixing a defect is the opposite — it plans, edits, runs the project's
+whole suite and folds to the shared work. The moment auto-fix fills the
+number with the second kind, the first kind stops.
 
 After this plan, what commits and what only looks have a bound each, the
 machine's memory still governs both, and the board can never be busy enough
