@@ -1,6 +1,6 @@
 # A defect auto-fix planned can start, whatever machine wrote the plan and whatever the title read
 
-**Carried by:** docs/plans/2026-09-15-a-defect-auto-fix-planned-can-start-whatever-machine-wrote-the-plan-and-whatever-the-title-read.md
+**Carried by:** docs/plans/done/2026-09-15-a-defect-auto-fix-planned-can-start-whatever-machine-wrote-the-plan-and-whatever-the-title-read.md
 **Kind:** defect
 **Fix:** now — the intent is written (`docs/HOW-WE-WORK.md` §10: the dial is his standing ruling that a verified defect enters execution without him; `docs/plans/README.md`: the title says what he gets, and a reading that fails it keeps Start closed "until a reading of the rewritten title passes"; card #83: the work runs where the horsepower is, so a plan is pushed from another machine and reaches the board's clone on the trunk loop); the fix stays inside the dial's own beat and brief (`api/dial.py`'s settle after a planning turn, `board/brief.py::planning_brief`); and it removes a class — every defect auto-fix plans from a machine that is not the board's, and every one whose title a cold reading refused — not #453 alone.
 **Found by:** the owner, from Hello Revenue's Idea door on 2026-09-15 (conversation 33980f33): "auto fix is running now. Can you please keep an eye on it? I want to make sure we don't derail or anything" — the watch that followed, on the first four cards the switch took

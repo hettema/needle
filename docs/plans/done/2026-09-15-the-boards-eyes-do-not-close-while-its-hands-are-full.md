@@ -53,7 +53,7 @@ has its guard; the number is holding a second, cruder one in a currency that
 does not fit.
 
 *Somebody else's plan on this ground:* #149 (`docs/plans/2026-09-15-auto-fix-stops-at-the-line-you-drew-and-leaves-the-rest-filed.md`)
-and #151 (`docs/plans/2026-09-15-a-defect-auto-fix-planned-can-start-whatever-machine-wrote-the-plan-and-whatever-the-title-read.md`)
+and #151 (`docs/plans/done/2026-09-15-a-defect-auto-fix-planned-can-start-whatever-machine-wrote-the-plan-and-whatever-the-title-read.md`)
 are both live on the beat. #149 changes which defects are eligible; #151
 changes what happens to a planning session that lands nothing. Neither reads
 or writes `running()`, and #151's intent names the readings cap as out of
