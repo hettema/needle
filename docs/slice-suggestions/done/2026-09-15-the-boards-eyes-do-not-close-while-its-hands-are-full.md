@@ -1,5 +1,7 @@
 # The board's eyes do not close while its hands are full
 
+**Carried by:** docs/plans/2026-09-15-the-boards-eyes-do-not-close-while-its-hands-are-full.md
+
 **Kind:** defect
 **Fix:** now — the intent is written in three places (plan 59: a defect's
 mark is verified before it routes; card #74 item 3: every plan and idea has
