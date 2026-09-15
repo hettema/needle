@@ -42,6 +42,7 @@ from tests.api.test_dial import (
     SOURCE,
     TIDE,
     TIDE_PATH,
+    acts,
     board,
     detail,
     number_of,
@@ -100,13 +101,25 @@ def push_a_plan(
     return clone
 
 
+def planning_launch(machine_floor: Floor, number: int) -> dict:
+    """The launch of this card's planning session, newest first — never
+    simply the last launch, because a beat may open a reading beside its act
+    (card #154) and the last launch is then a reading of some other card."""
+    for launch in reversed(machine_floor.state()["launch_log"]):
+        argv = launch["argv"]
+        name = argv[argv.index("-n") + 1]
+        if name.startswith(f"planning-card-{number}-"):
+            return launch
+    raise AssertionError(f"no planning session was launched for #{number}")
+
+
 def a_planning_session(client: TestClient, machine_floor: Floor, number: int) -> dict:
     """The dial's planning session for this card, whose turn ends without it
     writing anything into the board's own checkout."""
     machine_floor.script_launches({"then": "done", "after": 0.4})
     tick(client)
     time.sleep(1.2)
-    return machine_floor.state()["launch_log"][-1]
+    return planning_launch(machine_floor, number)
 
 
 def end_the_turn(launch: dict) -> None:
@@ -194,7 +207,7 @@ def test_the_fetch_is_once_per_turns_end_and_never_once_a_beat(
     assert store.trunk("proj").read_at == before, "a working session settles nothing"
 
     # Its turn ends: one level settles it, and no beat after it fetches again.
-    end_the_turn(machine_floor.state()["launch_log"][-1])
+    end_the_turn(planning_launch(machine_floor, tide))
     tick(client)
     settled = store.trunk("proj").read_at
     assert settled is not None and settled != before, (
@@ -311,10 +324,12 @@ def test_a_plan_that_arrives_after_the_board_gave_up_re_opens_the_card(
     assert lane.stage.value == "started", (lane.note, history_of(client, tide)[:3])
     assert column_of(client, tide) == "Executing"
     assert any("after the planning session was called ended" in h for h in history_of(client, tide))
-    # It is still a card the dial took once: no second planning session.
-    opened = len(machine_floor.state()["launch_log"])
+    # It is still a card the dial took once: no second planning session and
+    # no second start. Acts, not the raw log — a beat may open a reading of
+    # another card beside its act (card #154).
+    done_so_far = acts(machine_floor)
     tick(client)
-    assert len(machine_floor.state()["launch_log"]) == opened
+    assert acts(machine_floor) == done_so_far
     assert len(store.fix_lanes("proj")) == 1, "not planned a second time"
 
 
@@ -514,7 +529,7 @@ def test_the_planning_brief_opens_with_the_words_that_failed_and_his_test(
     verify_with_a_failing_title(client, machine_floor, tide)
     machine_floor.script_launches({"then": "work"})
     tick(client)
-    brief = machine_floor.state()["launch_log"][-1]["argv"][-1]
+    brief = planning_launch(machine_floor, tide)["argv"][-1]
     assert brief.startswith("A cold reading with no share of your context could not place")
     assert REFUSAL in brief
     assert "The words that failed: lane, machine ended, fix stage." in brief
@@ -549,14 +564,16 @@ def test_a_title_the_reading_refuses_goes_back_to_its_writer_until_a_reading_pas
     )
 
     # The seat reads the plan's title — it has room, because the lane holds
-    # no process — and refuses it.
+    # no process — and refuses it. The walk to that reading ticks the beat,
+    # so the hand-back may already have happened by the time it lands; what
+    # is held here is that exactly one resume follows the refusal, whichever
+    # beat carried it.
+    before = len(resumes(machine_floor))
     read_the_title(
         client, machine_floor, tide, "--title", "still the machinery", "--failed", "fix stage"
     )
-    before = len(resumes(machine_floor))
-
     tick(client)
-    assert len(resumes(machine_floor)) == before + 1, "the refusal was handed back"
+    assert len(resumes(machine_floor)) == before + 1, "the refusal was handed back, once"
     resumed = resumes(machine_floor)[-1]
     assert "--resume" in resumed["argv"], "the same colleague, not a fresh one"
     prompt = resumed["argv"][-1]
