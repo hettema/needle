@@ -262,7 +262,7 @@ export function DialControl({ state, others, onTurn, disabled, said }: { state: 
         {running} of {dial.lanes} live
       </span>
       <span className="dial-live" {...(reading > 0 ? { "data-meaning": "live" as const } : {})} title="Readings open now, against their own bound: a reading grades a defect, reads a title cold or looks at a card parked on you, and is never held back by the fix lanes above">
-        {reading} of {readingsAtMost} reading
+        {reading} of {readingsAtMost} reading{readingsAtMost === 1 ? "" : "s"}
       </span>
       {held > 0 ? (
         <span className="dial-held" title={`${OPENING.quiet}: these planned cards cannot start yet, so they run nothing and take no account. Each waits on another card, on room to run, or is parked; each starts by itself when its wait ends.`}>

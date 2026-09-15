@@ -132,9 +132,14 @@ bounds; the head's sentence agrees with it; `docs/vocabulary.md` carries
 whatever word this plan lands on, and the doctrine ratchets stay green.
 
 **Met:** `needle dial`'s last line reads "N fix lanes at most across every
-board; M live now; 3 readings at once, K open now", and the head shows the
-same two pairs (`frontend/src/components/ui/index.tsx`), pinned by
-`tests/api/test_dial.py::test_the_board_says_which_of_the_two_it_is_holding_back`.
+board; M live now; 3 readings at once, K open now", pinned by
+`tests/api/test_dial.py::test_the_board_says_which_of_the_two_it_is_holding_back`
+and restated wherever that line was already asserted. The head shows the same
+two pairs, pinned where it is rendered rather than where it is printed:
+`frontend/tests/board.test.tsx`'s two card-154 cases read "2 of 3 readings"
+beside "1 of 1 live" and check that the readings pair claims nothing while
+nothing is being read (the cold read caught the record claiming the terminal
+test covered the page).
 The word landed on is "reading", which `docs/vocabulary.md` already gives as
 the owner's word for this (under **triage**), so the file needed no line; a
 card the per-card fuse stopped still says the board stopped reading *that

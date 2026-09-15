@@ -1,6 +1,7 @@
 """What the dial may take, what counts against its number, and who filed
 each defect (plan 11), pure over domain values."""
 
+import inspect
 from datetime import UTC, datetime, timedelta
 
 from board.dial import (
@@ -314,8 +315,12 @@ def test_a_reading_does_not_count_against_the_number_that_bounds_fix_lanes():
     looks is never held back by what commits. Plan 59, item 3 folded them
     into this number to keep a rail of forty out; `READINGS_AT_ONCE` keeps
     the forty out now, and the number means fix lanes again."""
-    assert running([]) == 0, "two readings open and no lane: the number is free"
-    assert running([fix(FixStage.STARTED)]) == 1
+    # The signature is the guard: `running` has no way left to be told about
+    # readings, so no caller can fold them back in. What the two bounds do to
+    # a live beat is pinned on the floor, in
+    # tests/api/test_dial.py::test_a_full_number_no_longer_stops_the_board_looking.
+    assert "triaging" not in inspect.signature(running).parameters
+    assert running([fix(FixStage.STARTED)]) == 1, "one lane, whatever is being read"
     assert READINGS_AT_ONCE >= 1, "the board always keeps an eye open"
 
 

@@ -1635,6 +1635,21 @@ def test_the_memory_floor_stops_a_reading_too_and_stops_it_first(
     assert len(machine_floor.state()["launch_log"]) == before + 1, "room again: the board looks"
 
 
+def test_the_number_at_zero_plans_nothing_and_the_board_still_looks(
+    client: TestClient, machine_floor: Floor
+):
+    """The acceptance in the owner's words: the number still means how much
+    work that commits runs at once. At zero the board commits nothing and
+    keeps looking, where before this it did nothing at all."""
+    turn(client, on=True, lanes=0)
+    before = len(machine_floor.state()["launch_log"])
+    tick(client)
+    assert acts(machine_floor) == 0, "nothing commits while the number is zero"
+    assert len(machine_floor.state()["launch_log"]) == before + 1, "and a reading still opened"
+    assert reading_for(machine_floor) is not None
+    assert board(client)["dial"]["triaging"] == 1
+
+
 def test_the_board_says_which_of_the_two_it_is_holding_back(
     client: TestClient, machine_floor: Floor, capsys
 ):

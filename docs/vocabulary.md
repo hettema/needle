@@ -60,7 +60,10 @@ the birth reading in `board/brief.py` name it by path.
 - **ratchet** — a test that holds a boundary named in the rules. Say "a check
   that refuses", "held by a test".
 - **triage** — the independent reading that verifies a defect's mark. Say "a
-  second reading", "read again cold".
+  second reading", "read again cold". The same seat also reads a plan or an
+  idea's title cold and looks at a card parked on him, and "a reading" is his
+  word for all three: the board's own bound on them (card #154) counts every
+  kind.
 - **worktree** — the isolated checkout a lane works in. Say "its own copy of
   the code".
 - **hook** — the script the harness runs at a session's start, stop or

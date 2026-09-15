@@ -1066,6 +1066,28 @@ describe("defects fix themselves (plan 11)", () => {
     await waitFor(() => expect(api.turnDial).toHaveBeenLastCalledWith("harbourmaster", true, 3, "nothing"));
   });
 
+  it("shows what only looks beside what commits, each against its own bound (card 154)", async () => {
+    // The board keeps looking while auto-fix's hands are full: the head
+    // carries two pairs, and the readings pair is never the number's.
+    const busy = board();
+    busy.dial = { dial: { project: "harbourmaster", on: true, lanes: 1, changed_at: null, first_on_at: null }, others_on: [], running: 1, triaging: 2, readings_at_most: 3, held: 0, full: null, quiet: false };
+    api.getBoard.mockResolvedValue(busy);
+    await renderBoard();
+    const dial = screen.getByRole("group", { name: "Auto-fix" });
+    expect(within(dial).getByText("1 of 1 live").dataset["meaning"]).toBe("live");
+    const readings = within(dial).getByText("2 of 3 readings");
+    expect(readings.dataset["meaning"]).toBe("live");
+  });
+
+  it("says the readings bound even while nothing is being read, and claims nothing (card 154)", async () => {
+    const quiet = board();
+    quiet.dial = { dial: { project: "harbourmaster", on: true, lanes: 1, changed_at: null, first_on_at: null }, others_on: [], running: 0, triaging: 0, readings_at_most: 3, held: 0, full: null, quiet: true };
+    api.getBoard.mockResolvedValue(quiet);
+    await renderBoard();
+    const dial = screen.getByRole("group", { name: "Auto-fix" });
+    expect(within(dial).getByText("0 of 3 readings").dataset["meaning"]).toBeUndefined();
+  });
+
   it("shows this board's line beside its switch and a move is persisted before the head shows it (card 149)", async () => {
     // A board with no line drawn reads as the last rung: the select says
     // "takes every defect" and the head reads exactly as it did before

@@ -1109,6 +1109,12 @@ def fixes(
         return 1
     loops.reconcile_now()
     report = Dial(live, runtime, loops, doors).fixes(slug)
+    if args.reading_gaps and (args.started_off or args.below_the_line):
+        print(
+            "--reading-gaps counts hours, not lanes; ask it on its own",
+            file=sys.stderr,
+        )
+        return 1
     if args.reading_gaps:
         # The plan's own class (card #154, item 5): every whole hour of the
         # last day in which a fix lane ran and no reading opened anywhere.
