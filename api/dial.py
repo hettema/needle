@@ -1659,11 +1659,16 @@ class Dial:
             defects_at_first_on=store.defects_at_on(),
             waiting=self.waiting(slug),
             decisions=self.decisions(slug),
+            # One scope for both halves (card #154, item 5): asked of one
+            # board, an hour is a gap when that board's lanes ran and that
+            # board got no reading; asked of all, when any lane ran and the
+            # board looked at nothing anywhere, which is what the Loop reads.
             reading_gaps=reading_gaps(
                 store.fix_lanes(slug),
                 [
                     reading
                     for project in self.live.projects
+                    if slug is None or project == slug
                     for reading in store.windowless_sessions(project, work=SessionWork.TRIAGE)
                 ],
                 clock.now(),

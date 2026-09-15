@@ -343,20 +343,27 @@ def reading_gaps(
     opened — the plan's own class made loud (card #154, item 5), what
     `needle fixes --reading-gaps` prints and its Loop reads. Only whole
     hours: the twenty-four ending at the top of this one, so the hour still
-    running never reads as a gap before it has had its chance. A lane ran
-    in an hour when its life — from its planning session's start to its
-    end, or to now while it has none — overlaps that hour; a reading opened
-    in it when its start falls inside."""
+    running never reads as a gap before it has had its chance.
+
+    A lane ran in an hour when the hour meets one of its two working
+    spells — its planning session, from the start to the plan or the end,
+    and its lane, from the Start to the end — and never the wait between
+    them: a plan held at a closed door for a week is nothing running, and
+    counting it would give the Loop a number it could not bring back to
+    zero. A reading opened in an hour when its start falls inside it."""
     top = now.replace(minute=0, second=0, microsecond=0)
     hours = [top - timedelta(hours=k) for k in range(24, 0, -1)]
     opened = [r.started_at for r in readings]
+    spells: list[tuple[datetime, datetime]] = []
+    for lane in fix_lanes:
+        planning_until = lane.planned_at or lane.ended_at or now
+        spells.append((lane.planning_started_at, max(planning_until, lane.planning_started_at)))
+        if lane.started_at is not None:
+            spells.append((lane.started_at, max(lane.ended_at or now, lane.started_at)))
     gaps: list[datetime] = []
     for start in hours:
         end = start + timedelta(hours=1)
-        ran = any(
-            lane.planning_started_at < end and (lane.ended_at is None or lane.ended_at > start)
-            for lane in fix_lanes
-        )
+        ran = any(began < end and until > start for began, until in spells)
         looked = any(start <= at < end for at in opened)
         if ran and not looked:
             gaps.append(start)

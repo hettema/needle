@@ -345,6 +345,25 @@ def test_an_hour_in_which_a_lane_ran_and_nothing_was_read_is_a_gap():
     assert reading_gaps([], [], NOW) == [], "no lane ran: no hour is a gap"
     assert len(reading_gaps([lane], [], NOW)) == 3, "three whole hours of lane and no reading"
 
+    # A plan held at a closed door is nothing running: the wait between the
+    # plan landing and the Start is no hour of the Loop's, or a card parked
+    # for a week would give it a number it could never bring back to zero.
+    held = fix(FixStage.PLANNED).model_copy(
+        update={
+            "planning_started_at": top - timedelta(hours=3),
+            "planned_at": top - timedelta(hours=3) + timedelta(minutes=10),
+            "started_at": None,
+            "ended_at": None,
+        }
+    )
+    assert reading_gaps([held], [], NOW) == [top - timedelta(hours=3)], "the planning hour alone"
+    # Its Start an hour ago: the lane runs again, and that hour counts.
+    started = held.model_copy(update={"started_at": top - timedelta(hours=1)})
+    assert reading_gaps([started], [], NOW) == [
+        top - timedelta(hours=3),
+        top - timedelta(hours=1),
+    ], "the planning hour and the running hour, never the wait between"
+
 
 def test_a_planned_card_whose_start_is_closed_is_held_and_does_not_count():
     """The plan "as many lanes as the machine can hold", item 3: a planned
