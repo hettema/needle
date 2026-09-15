@@ -763,7 +763,10 @@ def test_with_the_dial_on_the_oldest_now_defect_is_planned_then_started_by_the_d
     # Every defect still on the rail says why the dial leaves it there — and
     # the reason is now the reading's own sentence, not the mark's (plan 59).
     assert "a reading says it is yours" in out
-    assert "4 readings of a mark, 2 of them taking the decision off your defects" in out
+    # How many marks were read on the way is the readings' own bound now,
+    # not the number (card #154): the walk to this card reads a few cards at
+    # a time, so the pin is the decisions this test took, never the total.
+    assert "readings of a mark, 2 of them taking the decision off your defects" in out
     assert f"#{gate_log:<4} The gate log loses its last line — the dial is planning it now" in out
     assert [w["why"] for w in report["waiting"] if w["card_number"] == gate_log] == [
         "the dial is planning it now"
