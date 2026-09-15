@@ -1,6 +1,6 @@
 # The board's eyes do not close while its hands are full
 
-**Carried by:** docs/plans/2026-09-15-the-boards-eyes-do-not-close-while-its-hands-are-full.md
+**Carried by:** docs/plans/done/2026-09-15-the-boards-eyes-do-not-close-while-its-hands-are-full.md
 
 **Kind:** defect
 **Fix:** now — the intent is written in three places (plan 59: a defect's
