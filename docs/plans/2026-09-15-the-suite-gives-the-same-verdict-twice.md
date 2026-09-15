@@ -9,19 +9,18 @@
 
 ## Intent
 
-Every lane lands its work on one question: is the suite green. Run the same
-suite twice on the same code today and it answers differently, so that
-question has no answer and the rule that nothing lands red is standing on
-nothing.
+Today the same code, checked twice, gives two different answers, so nobody can
+trust the one check that stands between a broken change and a client.
 
-It costs twice. A lane that sees a failure spends half an hour or more
-proving the failure is not its own, and a lane that sees green cannot be sure
-the green is real — a break that shows one run in three will be folded by the
-run where it hid.
+It costs twice over. A session that meets a failure spends half an hour or
+more proving the failure is not its own — that has happened twice this week,
+both times on a one-line change. And in the other direction, a break that
+shows up one run in three is waved through by the run where it hid, so work
+that passed its check may never have been safe.
 
-After this plan, a verdict is repeatable: the same code, the same scope, the
-same answer — and where a test cannot be made repeatable, the suite says which
-test that is rather than leaving a lane to find out.
+After this plan, the same code checked twice gives the same answer; and where
+a test genuinely cannot be held still, the check names that test instead of
+leaving the next session to discover it.
 
 ## The evidence this starts from
 
