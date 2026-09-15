@@ -36,12 +36,14 @@ from board.brief import (
     lane_name,
     planning_brief,
     planning_name,
+    retitle_brief,
     ruling_brief,
     split_brief,
     triage_brief,
     triage_name,
 )
 from board.dial import (
+    FOLLOWED_STAGES,
     LEFT_OUT,
     LIVE_STAGES,
     READINGS_AT_ONCE,
@@ -61,6 +63,7 @@ from board.dial import (
     seat_opens,
     spell_stands,
     stopped_words,
+    stranded_words,
     switch_was_on,
     text_of_mark,
     unread_titles,
@@ -69,7 +72,7 @@ from board.dial import (
 from board.lane import has_row, is_question
 from board.parked import parked_at, wants_parked_reading
 from board.release import carried, sentence, under
-from board.title import read_vocabulary
+from board.title import read_vocabulary, title_hold, wants_title_reading
 from board.triage import (
     already_ruled,
     at_or_above,
@@ -80,6 +83,7 @@ from board.triage import (
     split_row,
 )
 from domain.audit import AuditKind
+from domain.board import TrunkState
 from domain.card import Actor, Card
 from domain.column import Column
 from domain.dial import Dial as DialSetting
@@ -106,6 +110,7 @@ from domain.triage import (
     Ground,
     ReadingsSpent,
     Routing,
+    TitleVerdict,
     Triage,
     TriageResult,
 )
@@ -125,11 +130,24 @@ effort the Plan door gives a conversation with him."""
 PLANNING_SECONDS = 3600.0
 """A planning session still without a plan or a question past this is
 stopped and the card says so."""
-PLANNING_SETTLE_SECONDS = 120.0
-"""After a planning session's turn ends, how long the board waits for the
-corpus watcher to card the plan it pushed before calling the session ended
-without one: the commit lands before the turn does, and the watcher
-rescans within a second or two."""
+HANDED_BACK = "the reading refused the plan's title, handed back: "
+"""The fix lane's note while a title's refusal is with the writer (card
+#151, item 3), with the reading's own id after it: how the beat knows it
+has already handed this refusal back, across a restart and without reading
+a registry field. The idiom is `_start`'s — a note the beat compares before
+it says a thing twice."""
+
+FACE_UNLIKE_ITS_PLAN = "This card's face does not show its plan's title, so "
+"""How a card says the one refusal its writer cannot answer (card #151,
+ruling 8): the reading judges the face, the writer rewrites the document,
+and on a card imported from the first board those never meet (#150). Said
+once per spell, since every beat after it would say the same."""
+
+LEVEL_HELD = "The board could not level its own copy: "
+"""How a card says the beat's own levelling did not run (card #151, item
+1): a checkout behind the trunk it could not fast-forward. Said once per
+spell, as a left-out card is, because the cause is the board's and repeats
+every beat until someone clears it."""
 
 TRIAGE_EFFORT = Gate.HIGH
 """Reading one document against one source and applying a written rule is
@@ -398,6 +416,7 @@ class Dial:
             self.live.switched_on,
             self.live.held_by_release,
             self.live.below_line,
+            self.live.planning_is_open,
         )
         # Two bounds, one each (card #154): the number is the machine's,
         # one for every board (card #80), and it bounds what commits; the
@@ -764,12 +783,23 @@ class Dial:
         card = candidate.card
         now = clock.now()
         detail = self.live.detail(slug, card.number)
+        # The reading that already refused this card's title, when one
+        # stands (card #151, item 3): the plan's title becomes the card's,
+        # so the writer is told which words failed before it writes one.
+        document = document_of(card, live.index)
+        latest = self.live.store.latest_title_readings(slug).get(card.number)
+        refused = (
+            latest
+            if document is not None and latest is not None and title_hold(latest, document)
+            else None
+        )
         brief = planning_brief(
             detail,
             project,
             now.date().isoformat(),
             skill=plan_skill(Path(project.path)),
             first_lane=self._own_board(live),
+            refused=refused,
         )
         launch = self.runtime.start_windowless(
             WindowlessStart(
@@ -810,10 +840,12 @@ class Dial:
 
     def _follow(self, by_id) -> None:
         fix_lanes = self.live.store.fix_lanes()
-        if any(f.stage in LIVE_STAGES for f in fix_lanes):
+        if any(f.stage in FOLLOWED_STAGES for f in fix_lanes):
             # A plan that landed changed the card's gate and its footprint,
             # and a lane that folded changed its record: the doors the Start
-            # is judged by are this read's, not the beat before.
+            # is judged by are this read's, not the beat before. An ended
+            # lane is followed for the same reason since card #151: its card
+            # may have gained the plan that reaches Start.
             self.loops.reconcile_now()
         now = clock.now()
         for fix in fix_lanes:
@@ -826,9 +858,18 @@ class Dial:
             if fix.stage == FixStage.PLANNING:
                 self._follow_planning(live, fix, card, by_id, now)
             elif fix.stage == FixStage.PLANNED:
-                self._start(live, fix, card, now)
+                # A planning session still open on a planned card is a writer
+                # being handed its title's refusals (card #151, item 3); with
+                # none, the plan is written and Start is the only act left.
+                record = self._planning_record(live, card.number)
+                if record is None:
+                    self._hand_back_or_start(live, fix, card, now)
+                else:
+                    self._follow_title(live, fix, card, record, by_id, now)
             elif fix.stage == FixStage.STARTED:
                 self._follow_lane(live, fix, card, now)
+            elif fix.stage == FixStage.ENDED:
+                self._follow_ended(live, fix, card, now)
         # A planning session whose plan or question has landed is let finish
         # its turn and then stopped, as a finished reading is (review pass 1):
         # its record is ended but its process is not, and nothing else tends
@@ -900,48 +941,160 @@ class Dial:
                 )
                 self.live.bump()
 
+    def _planning_record(self, live: LiveProject, number: int):
+        """The planning session still open on this card, or None."""
+        return self.live.store.open_windowless_sessions(
+            live.project.slug, SessionWork.PLANNING
+        ).get(number)
+
+    def _levelled_after(self, live: LiveProject, session) -> TrunkState | None:
+        """The board's own copy of the project, levelled since this session's
+        turn ended — levelling it now when nothing has (card #151, item 1).
+
+        A planning session pushes its plan to origin from whatever machine it
+        was placed on, and the board reads its own checkout: the clock this
+        replaces waited two minutes for a watcher that only ever fires on a
+        commit already in that checkout, so a plan written on the rented
+        machine was never there in time and its card became the owner's with
+        a plan it could not see (Hello Revenue #453, 2026-09-15).
+
+        None while the registry has not stamped the turn's end: there is
+        nothing to measure a levelling against, and fetching on such a beat
+        is fetching on every beat (ruling 3). One fetch per turn's end — the
+        stamp only moves when the session works again, and any levelling
+        after it, this one or the five-minute loop's, answers the question."""
+        if session.updated_at is None:
+            return None
+        trunk = self.live.store.trunk(live.project.slug)
+        if trunk.read_at is not None and trunk.read_at > session.updated_at:
+            return trunk
+        return self.loops.level_project(live)
+
+    def _settled_against_the_trunk(self, live: LiveProject, card: Card, session) -> bool | None:
+        """Whether the corpus has been read as far as this session's turn:
+        True when a levelling since that turn answered level and the corpus
+        was read in after it, False when it did not run and the card was
+        told once, None while the turn's end is not stamped yet.
+
+        `level` answers `behind == 0`, so a checkout merely off develop or
+        dirty but level answers True *with a note*: the verdict is read and
+        the note never is, or a board that is simply not on develop would
+        stall every planning turn for the full hour."""
+        levelled = self._levelled_after(live, session)
+        if levelled is None:
+            return None
+        if levelled.level is not True:
+            self._say_once(
+                live.project.slug,
+                card.number,
+                LEVEL_HELD,
+                f"{LEVEL_HELD}{levelled.note or 'the level did not run'}. The board waits for the "
+                "plan within the planning hour, and says so when the hour ends it.",
+            )
+            return False
+        # The fast-forward wrote files; the watcher may not have run yet, and
+        # the beat's own judgment must be on the corpus as it now reads. The
+        # machine is read again with it, because the doors a Start is judged
+        # by are built by the loop's read and a plan that just landed changed
+        # the card's column, its gate and its footprint — without this the
+        # card would wait a beat for doors that were answered before it had a
+        # plan at all.
+        self.live.rescan(live.project.slug)
+        self.loops.reconcile_now()
+        return True
+
+    def _level_held(self, live: LiveProject) -> str | None:
+        """The board's own copy standing behind a trunk it could not level,
+        in the state's own words — what a card whose hour ran out says
+        instead of letting a silent hour read as a session that wrote
+        nothing (card #151, item 1)."""
+        trunk = self.live.store.trunk(live.project.slug)
+        if trunk.read_at is None or trunk.level is True:
+            return None
+        return trunk.note or "the level did not run"
+
+    def _planned_by_its_plan(
+        self, live: LiveProject, fix: FixLane, card: Card, record, now: datetime
+    ) -> bool:
+        """The card carries a plan now: the dial's part moves to Start, and
+        the writer's record is ended with it.
+
+        Start may still be closed — by a title a cold reading refused, among
+        everything else that closes it — and that is `_start`'s to say. The
+        writer is not kept alive waiting for the reading of its new title:
+        only one session of this card's may live at a time, or the reading
+        that has to judge the title could not open beside it under a number
+        of one (card #151, ruling 7)."""
+        if card.link is None or card.link.kind != DocumentKind.PLAN:
+            return False
+        store = self.live.store
+        if record is not None:
+            store.end_windowless_session(record.id, now)
+        planned_fix = store.stage_fix_lane(fix.id, FixStage.PLANNED, now)
+        self.live.note(
+            live.project.slug,
+            card.number,
+            AuditKind.DIAL,
+            Actor.MACHINE,
+            f"The plan landed ({card.link.path()}); the dial opens Start next",
+        )
+        self._start(live, planned_fix, card, now)
+        return True
+
+    def _title_is_the_writers(self, live: LiveProject, card: Card) -> bool:
+        """Whether a refused title on this card is one its writer can still
+        put right (card #151, ruling 8).
+
+        The reading judges the card's face; the writer rewrites its
+        document. On a card imported from the first board the two are never
+        the same string — the corpus read leaves an imported card's title
+        alone whatever its plan says (`board/reconcile.py`, the retitle
+        guard; #150) — so handing that reading back would spend the hour and
+        every reading in it on a rewrite that cannot pass. Such a card is
+        the owner's at once, and #150 is the card that makes the face
+        follow the plan."""
+        document = document_of(card, live.index)
+        if document is None:
+            return False
+        latest = self.live.store.latest_title_readings(live.project.slug).get(card.number)
+        if title_hold(latest, document) is None:
+            return False
+        return card.title == document.title
+
+    def _asked_on_the_card(
+        self, live: LiveProject, fix: FixLane, card: Card, record, now: datetime
+    ) -> bool:
+        """The planning session found a decision that is the owner's."""
+        if not has_row(card, RowKind.ASK):
+            return False
+        if record is not None:
+            self.live.store.end_windowless_session(record.id, now)
+        asked = next(r.text for r in card.rows if r.kind == RowKind.ASK)
+        self.live.store.stage_fix_lane(fix.id, FixStage.ASKED, now, note=asked)
+        self.live.note(
+            live.project.slug,
+            card.number,
+            AuditKind.DIAL,
+            Actor.MACHINE,
+            f"The planning session left it to you: {asked}",
+        )
+        return True
+
     def _follow_planning(self, live: LiveProject, fix: FixLane, card: Card, by_id, now) -> None:
         """A planning session ends one of three ways: its plan lands and the
-        card is the plan's (the corpus watcher relinked it), it left a
-        question on the card, or it ended with neither — and the record says
-        which."""
+        card is the plan's (the corpus read relinked it), it left a question
+        on the card, or it ended with neither — and the record says which.
+
+        Which of the three is true is judged against what has reached the
+        board, never against a clock (card #151, item 1): when the turn ends
+        with nothing on the card, the beat levels the board's own copy of the
+        project and reads the corpus in before it concludes anything."""
         slug = live.project.slug
         store = self.live.store
-        record = next(
-            (
-                r
-                for r in store.windowless_sessions(slug, work=SessionWork.PLANNING, open_only=True)
-                if r.card_number == card.number
-            ),
-            None,
-        )
-        planned = card.link is not None and card.link.kind == DocumentKind.PLAN
-        if planned:
-            if record is not None:
-                store.end_windowless_session(record.id, now)
-            planned_fix = store.stage_fix_lane(fix.id, FixStage.PLANNED, now)
-            assert card.link is not None
-            self.live.note(
-                slug,
-                card.number,
-                AuditKind.DIAL,
-                Actor.MACHINE,
-                f"The plan landed ({card.link.path()}); the dial opens Start next",
-            )
-            self._start(live, planned_fix, card, now)
+        record = self._planning_record(live, card.number)
+        if self._planned_by_its_plan(live, fix, card, record, now):
             return
-        if has_row(card, RowKind.ASK):
-            if record is not None:
-                store.end_windowless_session(record.id, now)
-            asked = next(r.text for r in card.rows if r.kind == RowKind.ASK)
-            store.stage_fix_lane(fix.id, FixStage.ASKED, now, note=asked)
-            self.live.note(
-                slug,
-                card.number,
-                AuditKind.DIAL,
-                Actor.MACHINE,
-                f"The planning session left it to you: {asked}",
-            )
+        if self._asked_on_the_card(live, fix, card, record, now):
             return
         if record is None:
             words = "no planning session is open for it and no plan landed"
@@ -959,21 +1112,202 @@ class Dial:
             without="without a plan",
         )
         if tended == Tended.TURN_DONE and session is not None:
-            settled = session.updated_at
-            if settled is None or (now - settled).total_seconds() < PLANNING_SETTLE_SECONDS:
-                return  # the plan it pushed may still be on its way onto the card
+            settled = self._settled_against_the_trunk(live, card, session)
+            if settled is not True:
+                return  # the turn's end is unstamped, or the level did not run
+            fresh = store.card(slug, card.number)
+            if fresh is not None and (
+                self._planned_by_its_plan(live, fix, fresh, record, now)
+                or self._asked_on_the_card(live, fix, fresh, record, now)
+            ):
+                return
             store.end_windowless_session(record.id, now)
             stopped = self.runtime.stop(session.short_id)
             words = (
                 f"the planning session {session.short_id} finished its turn without a plan or "
-                "a question and was stopped"
+                f"a question; the board levelled its own copy of {live.project.path} after that "
+                "turn and the corpus says nothing, so it was stopped"
                 + ("" if stopped.gone else f" (not gone: {stopped.words})")
             )
             tended = Tended.ENDED
         if tended == Tended.ENDED:
+            held = self._level_held(live)
+            if held is not None:
+                words += (
+                    f"; the board's own copy of {live.project.path} was never levelled ({held})"
+                )
             store.stage_fix_lane(fix.id, FixStage.ENDED, now, note=words)
             self.live.note(slug, card.number, AuditKind.DIAL, Actor.MACHINE, words)
             self.live.bump()
+
+    def _follow_title(
+        self, live: LiveProject, fix: FixLane, card: Card, record, by_id, now: datetime
+    ) -> None:
+        """The writer this card handed its title's refusal back to, working.
+
+        Its turn ends the way a planning turn does — against a levelling of
+        the board's own copy, never a clock — and then its record is ended
+        whatever it wrote: the seat reads the title it now stands behind, and
+        the next beat either opens Start or hands it the next refusal. Only
+        one of this card's sessions lives at a time, so the reading that
+        judges the title always has room beside the lane (ruling 7)."""
+        slug = live.project.slug
+        store = self.live.store
+        session = by_id.get(record.session_id)
+        tended, words = self.loops.tend_windowless(
+            live,
+            record,
+            session,
+            now,
+            ceiling_seconds=PLANNING_SECONDS,
+            what="planning",
+            without="with its title still failing",
+        )
+        if tended == Tended.ENDED:
+            self.live.note(slug, card.number, AuditKind.DIAL, Actor.MACHINE, words)
+            self.live.bump()
+            return
+        if tended != Tended.TURN_DONE or session is None:
+            return
+        if self._settled_against_the_trunk(live, card, session) is not True:
+            return
+        store.end_windowless_session(record.id, now)
+        stopped = self.runtime.stop(session.short_id)
+        self.live.note(
+            slug,
+            card.number,
+            AuditKind.DIAL,
+            Actor.MACHINE,
+            "The session rewriting this card's title finished its turn and was stopped"
+            + ("" if stopped.gone else f" (not gone: {stopped.words})")
+            + "; the board reads the title it now stands behind",
+        )
+        self.live.bump()
+
+    def _hours_up(self, fix: FixLane, now: datetime) -> bool:
+        """Whether the dial has spent its hour on this card's title.
+
+        Measured from the moment the dial took the card, never from the
+        latest rewrite: the hour bounds the rewrites together, so being
+        handed a third refusal buys no more time than the first (ruling 1)."""
+        return (now - fix.planning_started_at).total_seconds() >= PLANNING_SECONDS
+
+    def _hand_back_or_start(
+        self, live: LiveProject, fix: FixLane, card: Card, now: datetime
+    ) -> None:
+        """A planned card with no session of its own: either a cold reading
+        has refused its title and its writer is asked to rewrite it (card
+        #151, item 3), or Start is the only act left.
+
+        The writer is resumed from where it left off — the same colleague
+        that wrote the plan, with its own plan in front of it — and lives
+        only while it works. A card whose face is not its plan's title, or
+        whose hour is up, or whose writer cannot be reached, is the owner's
+        with the reading's words on it, and Start opens by itself the moment
+        a reading of the title he writes passes."""
+        slug = live.project.slug
+        store = self.live.store
+        document = document_of(card, live.index)
+        latest = store.latest_title_readings(slug).get(card.number)
+        if document is None or latest is None or title_hold(latest, document) is None:
+            self._start(live, fix, card, now)
+            return
+        if latest.verdict != TitleVerdict.UNPLACEABLE or wants_title_reading(document, latest):
+            return  # a reading of the title as it stands is still to come
+        handed = f"{HANDED_BACK}{latest.id}"
+        if fix.note == handed or self._hours_up(fix, now):
+            return  # already with its writer, or the dial's hour is spent
+        if not self._title_is_the_writers(live, card):
+            self._say_once(
+                slug,
+                card.number,
+                FACE_UNLIKE_ITS_PLAN,
+                f"{FACE_UNLIKE_ITS_PLAN}its writer cannot put that right, so the title is yours "
+                "to rewrite; Start opens by itself once a reading of it passes",
+            )
+            return
+        writer = self._wrote_the_plan(live, card.number)
+        if writer is None:
+            return
+        launch = self.runtime.resume(
+            writer,
+            prompt=retitle_brief(
+                self.live.detail(slug, card.number), live.project, latest, now.date().isoformat()
+            ),
+            card=planning_name(card.number, card.title),
+            reason="a cold reading refused the plan's title",
+        )
+        if launch.verdict != LaunchVerdict.ALIVE or launch.session is None:
+            self._say_once(
+                slug,
+                card.number,
+                REFUSED,
+                refused_words("the rewrite of its title", launch.reason or "no reason given"),
+            )
+            return
+        session = launch.session
+        try:
+            store.open_windowless_session(
+                slug, card.number, SessionWork.PLANNING, session.session_id, session.slot, now
+            )
+        except StoreRefusal as refusal:
+            log.info("a second rewrite was refused on #%s: %s", card.number, refusal)
+            return
+        store.stage_fix_lane(fix.id, FixStage.PLANNED, fix.planned_at or now, note=handed)
+        placement = launch.placement
+        where = rung_words(placement.model, placement.slot) if placement else session.slot
+        self.live.note(
+            slug,
+            card.number,
+            AuditKind.DIAL,
+            Actor.MACHINE,
+            f"A cold reading refused the plan's title: handed back to the session that wrote it, "
+            f"now {session.short_id}, {where}",
+        )
+        self.live.bump()
+
+    def _wrote_the_plan(self, live: LiveProject, number: int) -> str | None:
+        """The session that wrote this card's plan, by its short id: the
+        newest planning record's, whether or not that session still runs —
+        `resume` brings a stopped one back from its transcript."""
+        records = [
+            r
+            for r in self.live.store.windowless_sessions(
+                live.project.slug, work=SessionWork.PLANNING
+            )
+            if r.card_number == number
+        ]
+        return records[-1].session_id if records else None
+
+    def _follow_ended(self, live: LiveProject, fix: FixLane, card: Card, now: datetime) -> None:
+        """A plan that arrived after the board gave up on its session
+        re-opens the card's work (card #151, item 2).
+
+        Only a lane that ended before it was ever planned: one that reached
+        Planned and failed at the door, or ran and ended with nothing
+        folded, ended on its own work and is the owner's from here. The card
+        is still one the dial took once — `_ran` holds it and it is never
+        taken again — but it is no longer his for the wrong reason."""
+        if fix.planned_at is not None or fix.started_at is not None:
+            return
+        if card.link is None or card.link.kind != DocumentKind.PLAN:
+            return
+        planned = self.live.store.stage_fix_lane(
+            fix.id,
+            FixStage.PLANNED,
+            now,
+            note="its plan arrived after the board had called its session ended",
+        )
+        self.live.note(
+            live.project.slug,
+            card.number,
+            AuditKind.DIAL,
+            Actor.MACHINE,
+            f"The plan landed ({card.link.path()}) after the planning session was called ended; "
+            "the dial opens Start next",
+        )
+        self.live.bump()
+        self._start(live, planned, card, now)
 
     def _start(self, live: LiveProject, fix: FixLane, card: Card, now: datetime) -> None:
         """Open the Start door as the machine. A door that is closed —
@@ -1129,9 +1463,14 @@ class Dial:
             if alive and not overran:
                 if session.state == SessionState.WORKING:
                     continue
-                settled = session.updated_at
-                if settled is None or (now - settled).total_seconds() < PLANNING_SETTLE_SECONDS:
-                    continue  # its push may still be on its way into the corpus
+                # Its write went to origin through the same push line the
+                # planning brief uses, so the same settle stands between the
+                # beat and "the corpus does not say it" (card #151, item 1).
+                if self._settled_against_the_trunk(live, card, session) is not True:
+                    continue
+                document = document_of(card, live.index)
+                if self._applied(live, lane, document) is not None:
+                    continue  # the level read its write in; next beat lands it
             words = (
                 f"the {lane.kind.value} lane ran past {CORPUS_LANE_SECONDS / 60:.0f} minutes "
                 "without the corpus saying it"
@@ -1613,6 +1952,18 @@ class Dial:
             record = store.lane(fix.project, fix.card_number)
             name = lane_name(card.number, card.title)
             filed = bool(filed_against(card.number, name, live.index.documents))
+            # What the dial left behind by its own hand (card #151, item 4):
+            # the card's plan, whether a failing title holds it, whether a
+            # writer is on it now, and whether the dial's hour is spent.
+            titles = store.latest_title_readings(fix.project)
+            stranded = stranded_words(
+                fix,
+                carries_a_plan=card.link is not None and card.link.kind == DocumentKind.PLAN,
+                title_held=document is not None
+                and title_hold(titles.get(card.number), document) is not None,
+                writer_is_open=self.live.planning_is_open(fix.project, fix.card_number),
+                hours_up=self._hours_up(fix, clock.now()),
+            )
             reports.append(
                 FixReport(
                     project=fix.project,
@@ -1634,6 +1985,7 @@ class Dial:
                     and self.runtime.reverted(live.project.path, record.tip),
                     class_closer=_class_closer(document),
                     note=fix.note,
+                    stranded=stranded,
                     switch_was_on=switch_was_on(changes, fix.project, fix.planning_started_at)
                     and (
                         fix.started_at is None

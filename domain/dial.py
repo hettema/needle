@@ -398,6 +398,13 @@ class FixReport(BaseModel):
     planned card is waiting on, or how a lane ended. Without it a card held
     back — by a switch, by another card, by a release waiting on the owner —
     is a number on the head and nothing he can act on (card #139, item 4)."""
+    stranded: str | None = None
+    """Why this lane sits on the owner's desk by the dial's own hand, or None
+    (card #151, item 4): a lane the beat ended without a plan whose card
+    carries one now, or a planned lane held by a failing title whose writer
+    ended before its hour was up. Read from stages and stamps, never from a
+    note's words, so `needle fixes --stranded --count` is a number the Loop
+    can read: zero is the class closed."""
 
 
 class Waiting(BaseModel):

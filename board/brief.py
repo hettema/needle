@@ -17,7 +17,14 @@ from domain.row import RowKind
 from domain.signal import Signal
 from domain.slot import Make
 from domain.team import Challenge, Route
-from domain.triage import Commitment, CorpusLaneKind, Direction, Source, Triage
+from domain.triage import (
+    Commitment,
+    CorpusLaneKind,
+    Direction,
+    Source,
+    TitleReading,
+    Triage,
+)
 from domain.watercooler import WatercoolerLine
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
@@ -404,8 +411,67 @@ def reading_brief(
     )
 
 
+def refused_title_text(reading: TitleReading, *, subject: str) -> str:
+    """What a reading that could not place a title said, in the words a
+    writer can act on (card #151, item 3): the reader's own sentence, the
+    words that failed, and the owner's test quoted from the one place.
+
+    Carried into the planning brief so a plan's title is written in his
+    words the first time, and into the resume that hands a fresh refusal
+    back to the session that wrote the title. A paraphrase of a test is a
+    different test, so `TITLE_TEST` travels verbatim here as it does into
+    the reading's own brief."""
+    failed = f" The words that failed: {', '.join(reading.failed)}." if reading.failed else ""
+    return (
+        f"A cold reading with no share of your context could not place {subject} from its "
+        f"title. It said: {reading.words}.{failed}\n\n"
+        f"His test, from docs/plans/README.md: {TITLE_TEST}. The words a title never uses are "
+        f"listed in Needle's {VOCABULARY} — each is a fact about the machinery and not about "
+        "what he gets. The reader marks and never rewrites; you hold the evidence and write "
+        "the title, and the board reads again."
+    )
+
+
+def retitle_brief(detail: CardDetail, project: Project, reading: TitleReading, today: str) -> str:
+    """What the session that wrote a plan is told when a cold reading
+    refuses its title (card #151, item 3).
+
+    Its plan has landed and its card cannot start: the owner ranks cards
+    from their titles alone, so a title he cannot place is a card that
+    stops. This is the same session, resumed, with its own plan in front of
+    it — no new kind of session and no second writer. The hour is the one
+    its record began with, and it is told so, because a rewrite that waits
+    for the next turn may not get one."""
+    card = detail.card
+    path = detail.summary.document_path or "the plan"
+    return (
+        f"The plan you wrote for #{card.number} on {project.name} ({project.path}) has landed, "
+        f"and its card cannot start: {today}.\n\n"
+        + refused_title_text(reading, subject=f"#{card.number}")
+        + "\n\nRewrite the title so it says what will be true when this plan is done, in his "
+        f"words, and rewrite the line beneath it — the first sentence of the plan's intent — to "
+        f"match. The document is `{path}`; its `**Carries:**` line stays exactly as it is, since "
+        "that line is how the board knows this plan is this card's. If the new title makes the "
+        "stem wrong, `git mv` the file to the new stem in the same commit and the board follows "
+        "the rename. Change nothing else: not the items, not the gate, not the intent's "
+        "substance.\n\nCommit in this checkout on develop with a body saying the cold reading "
+        f"refused the title and what you changed it to, {PUSH_LINE}\n\n"
+        "The board reads your new title as coldly as it read the last one, and Start opens by "
+        "itself when a reading passes. You are inside the hour your session began with — a "
+        "rewrite does not buy a fresh one — and when it runs out the card goes to the owner "
+        "with the reading's words on it. Your turn ends with the push and one plain sentence "
+        "after it. Ask the owner nothing: nobody is reading this window."
+    )
+
+
 def planning_brief(
-    detail: CardDetail, project: Project, today: str, *, skill: str | None, first_lane: bool
+    detail: CardDetail,
+    project: Project,
+    today: str,
+    *,
+    skill: str | None,
+    first_lane: bool,
+    refused: TitleReading | None = None,
 ) -> str:
     """What the dial's planning session opens with (plan 11, item 4): the
     defect as its card reads, the plan shape, and the five rules it must
@@ -413,7 +479,14 @@ def planning_brief(
     suggestion's own words, the class-closer item with its `Class:` line,
     the live check when the terrain touches the page, and the one exit when
     the fix implies a decision that is his: an ASK row and a stop. It never
-    has hands on a tree; it writes back through the corpus and the card."""
+    has hands on a tree; it writes back through the corpus and the card.
+
+    `refused` is the cold reading that already could not place this card's
+    title, when one stands (card #151, item 3). It opens the brief, because
+    the plan's title becomes the card's and would otherwise be written under
+    the very words a reader has just refused — which is how the dial's first
+    card on Hello Revenue ended with a plan it had written and a Start its
+    own title had closed."""
     card = detail.card
     needle = needle_command()
     slug = card.project
@@ -427,7 +500,8 @@ def planning_brief(
         'with what "done means" as a behaviour someone can observe'
     )
     return (
-        f"A plan to write for a defect the dial took, on {project.name} ({project.path}), "
+        (refused_title_text(refused, subject="this card") + "\n\n" if refused is not None else "")
+        + f"A plan to write for a defect the dial took, on {project.name} ({project.path}), "
         f"{today}. The owner turned the dial — his standing ruling that a defect its finder "
         "marked `Fix: now` enters execution without him — and the board started this session "
         "to write the plan. Nobody is in the loop: this is a windowless session in the "

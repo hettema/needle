@@ -234,6 +234,51 @@ def test_the_planning_brief_carries_the_five_rules_and_the_one_exit_to_the_owner
     assert "/hm-plan-write" in own and "the board's own repository" in own
 
 
+def test_the_planning_brief_opens_with_a_refused_title_and_the_retitle_brief_quotes_it():
+    """Card #151, item 3: the plan's title becomes the card's, so a writer
+    whose card a cold reading has already refused is told which words failed
+    and against which test before it writes one — and a writer whose own
+    title is then refused is handed that refusal in the same words."""
+    from datetime import UTC, datetime
+
+    from board.brief import planning_brief, retitle_brief
+    from domain.triage import TitleReading, TitleVerdict
+
+    detail, project = _detail_beside()
+    reading = TitleReading(
+        id=7,
+        project="proj",
+        card_number=7,
+        at=datetime(2026, 9, 15, tzinfo=UTC),
+        verdict=TitleVerdict.UNPLACEABLE,
+        words="it names the machinery and not what he gets",
+        failed=["lane", "fix stage"],
+        title_fingerprint="deadbeef",
+        session_id=None,
+    )
+    plain = planning_brief(detail, project, "2026-09-15", skill=None, first_lane=False)
+    assert not plain.startswith("A cold reading")
+    told = planning_brief(
+        detail, project, "2026-09-15", skill=None, first_lane=False, refused=reading
+    )
+    assert told.startswith("A cold reading with no share of your context could not place")
+    assert "it names the machinery and not what he gets" in told
+    assert "The words that failed: lane, fix stage." in told
+    assert "could he place it against every other card without opening it?" in told
+    assert "docs/vocabulary.md" in told
+    # The plan's own brief still follows it, whole.
+    assert "A plan to write for a defect the dial took" in told
+    assert "1. The title" in told and "5. When the fix implies a decision" in told
+
+    back = retitle_brief(detail, project, reading, "2026-09-15")
+    assert back.startswith("The plan you wrote for #7")
+    assert "it names the machinery and not what he gets" in back
+    assert "Rewrite the title" in back
+    assert "`**Carries:**` line stays exactly as it is" in back
+    assert "inside the hour your session began with" in back
+    assert "git push origin develop" in back
+
+
 def _detail_beside():
     """A defect's detail with one live plan beside it on a file and one
     idea near it by words, as the corpus reading hands them in (card #69)."""

@@ -75,6 +75,7 @@ export interface FixReport {
   switch_was_on: boolean;
   below_the_line?: boolean | null;
   note?: string | null;
+  stranded?: string | null;
 }
 
 export interface Fixes {

@@ -1100,16 +1100,18 @@ def fixes(
     if slug is not None and slug not in live.projects:
         print(f'no project "{slug}" is on the board', file=sys.stderr)
         return 1
-    if args.count and not (args.started_off or args.below_the_line or args.reading_gaps):
+    if args.count and not (
+        args.started_off or args.below_the_line or args.stranded or args.reading_gaps
+    ):
         print(
-            "--count counts what --started-off, --below-the-line or --reading-gaps selects; "
+            "--count counts what --started-off, --below-the-line, --stranded or --reading-gaps "
             "name one",
             file=sys.stderr,
         )
         return 1
     loops.reconcile_now()
     report = Dial(live, runtime, loops, doors).fixes(slug)
-    if args.reading_gaps and (args.started_off or args.below_the_line):
+    if args.reading_gaps and (args.started_off or args.below_the_line or args.stranded):
         print(
             "--reading-gaps counts hours, not lanes; ask it on its own",
             file=sys.stderr,
@@ -1126,10 +1128,11 @@ def fixes(
         for start in report.reading_gaps:
             print(f"{start.isoformat()}: a fix lane ran and no reading opened")
         return 0
-    if args.started_off or args.below_the_line:
+    if args.started_off or args.below_the_line or args.stranded:
         # The Loops' counts: every fix lane whose planning began on a board
         # whose switch was off at that moment (card #80), or on a card whose
-        # band was below its board's line at that moment (card #149).
+        # band was below its board's line at that moment (card #149), or that
+        # the dial left on the owner's desk by its own hand (card #151).
         selected = [
             lane
             for lane in report.lanes
@@ -1137,6 +1140,7 @@ def fixes(
             # A lane with no band (None) was never checked, so it is not one
             # the Loop counts: only a lane read as below its line is.
             or (args.below_the_line and lane.below_the_line is True)
+            or (args.stranded and lane.stranded is not None)
         ]
         if args.count:
             print(len(selected))
@@ -1160,6 +1164,8 @@ def fixes(
             if args.started_off
             else "no fix lane began below its board's line"
             if args.below_the_line
+            else "no fix lane the dial left on your desk by its own hand"
+            if args.stranded
             else "no fix lane yet"
         )
     for lane in report.lanes:
@@ -1186,6 +1192,8 @@ def fixes(
         print("      " + "; ".join(facts))
         if lane.note:
             print(f"      {lane.note}")
+        if lane.stranded:
+            print(f"      left on your desk by the dial: {lane.stranded}")
     closed = [lane for lane in report.lanes if lane.stage.value in ("folded", "ended", "asked")]
     green = sum(1 for done in closed if done.folded and done.reviewed)
     asked = sum(1 for done in closed if done.stopped_to_ask)
@@ -1683,9 +1691,16 @@ def register(sub: "argparse._SubParsersAction[argparse.ArgumentParser]") -> None
         help="the whole hours of the last day in which a fix lane ran and no reading opened",
     )
     p_fixes.add_argument(
+        "--stranded",
+        action="store_true",
+        help="only the lanes the dial left on your desk by its own hand: ended without a plan "
+        "whose card carries one, or planned and held by a title whose writer is gone",
+    )
+    p_fixes.add_argument(
         "--count",
         action="store_true",
-        help="with --started-off, --below-the-line or --reading-gaps: print how many, nothing else",
+        help="with --started-off, --below-the-line, --stranded or --reading-gaps: print how "
+        "many, nothing else",
     )
     p_fixes.set_defaults(board=True, run=_with_board(fixes))
     p_team = sub.add_parser("team", help="which team earns its place, per kind of work (card #58)")

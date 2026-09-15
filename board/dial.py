@@ -62,6 +62,14 @@ and counting from there is the only reading under which the number bounds
 what the dial opens — otherwise a dial at one would open one planning
 session per defect on the rail before the first lane started."""
 
+FOLLOWED_STAGES: frozenset[FixStage] = frozenset(LIVE_STAGES | {FixStage.ENDED})
+"""The stages whose beat may reach a door, so the machine is re-read before
+it is judged (card #151, item 2). An ended lane joined the live ones when a
+plan arriving after the board gave up on its session began to re-open the
+card: the beat decides that card's Start on this read, not the beat before.
+Not the same set as the one that counts against the number — an ended lane
+counts against nothing."""
+
 _FIX_LANE = re.compile(r"\bfix lane\b|\bstarted by the dial\b", re.I)
 _OWNER = re.compile(r"^\W*(?:the\s+)?owner\b", re.I)
 _READING = re.compile(r"^\W*(?:#\d+'?s?\s+)?reading\b|^\W*the reading\b|\breading session\b", re.I)
@@ -281,6 +289,7 @@ def held_lanes(
     switched_on: Callable[[str], bool],
     held_by_release: Callable[[str, int], str | None] | None = None,
     below_line: Callable[[str, int], str | None] | None = None,
+    planning_open: Callable[[str, int], bool] | None = None,
 ) -> list[FixLane]:
     """The fix lanes at the planned stage the dial cannot start — the Start
     door closed (parked, waiting on a Sequencing card, nowhere to run, or
@@ -293,11 +302,20 @@ def held_lanes(
     night four of them held four slots while fourteen eligible defects
     waited. `start_offered` answers from the loop's last read; None
     (unread) is closed. `switched_on`, `held_by_release` and `below_line`
-    answer from the board's own state."""
+    answer from the board's own state.
+
+    *No process* is the whole reason a held lane counts against nothing, so
+    a planned lane whose planning session is still open is never held,
+    whatever closes its Start (card #151, ruling 7): while the board hands
+    a writer the readings that refuse its title, that writer is a live
+    session on a machine, and a number of four would otherwise hold four of
+    them at zero and open four more beside them. `planning_open` answers
+    whether that card still has one."""
     return [
         lane
         for lane in fix_lanes
         if lane.stage == FixStage.PLANNED
+        and not (planning_open is not None and planning_open(lane.project, lane.card_number))
         and (
             start_offered(lane.project, lane.card_number) is not True
             or not switched_on(lane.project)
@@ -368,6 +386,42 @@ def reading_gaps(
         if ran and not looked:
             gaps.append(start)
     return gaps
+
+
+def stranded_words(
+    fix: FixLane,
+    *,
+    carries_a_plan: bool,
+    title_held: bool,
+    writer_is_open: bool,
+    hours_up: bool,
+) -> str | None:
+    """Why this fix lane sits on the owner's desk by the dial's own hand, or
+    None (card #151, item 4). Two shapes, both read from stages and stamps
+    and never from a note's words.
+
+    A lane the beat ended before it was ever planned, whose card carries a
+    plan now — the plan arrived after the board gave up on its session, and
+    the beat that re-opens such a card has not run yet or could not.
+
+    A planned lane a failing title holds, with no writer on it and the
+    dial's hour spent: nobody will rewrite that title now but the owner.
+    While the hour stands the dial hands each refusal back to the writer, so
+    such a card is in flight and not stranded; a writer at work on it is the
+    same. Zero is the class closed: every card the dial planned either
+    started or reached him with a reason he can act on."""
+    if fix.stage == FixStage.ENDED and fix.planned_at is None and fix.started_at is None:
+        if carries_a_plan:
+            return "the beat ended it without a plan, and its card carries one now"
+        return None
+    if fix.stage != FixStage.PLANNED or not title_held:
+        return None
+    if writer_is_open or not hours_up:
+        return None
+    return (
+        "a cold reading refuses its title, the dial has spent its hour rewriting it, and no "
+        "writer is on it: the title is the owner's"
+    )
 
 
 def is_quiet(lanes_by_project: dict[str, dict[int, Lane]]) -> bool:

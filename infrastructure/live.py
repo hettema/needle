@@ -686,6 +686,7 @@ class Live:
                 on.__contains__,
                 self.held_by_release,
                 self.below_line,
+                self.planning_is_open,
             ),
             room=self.headroom,
             triaging=self.readings_open(),
@@ -701,6 +702,13 @@ class Live:
             len(self.store.open_windowless_sessions(slug, SessionWork.TRIAGE))
             for slug in self.projects
         )
+
+    def planning_is_open(self, slug: str, number: int) -> bool:
+        """Whether a planning session is open on this card: what keeps a
+        planned lane out of the held list while the dial has a writer on it
+        (card #151, ruling 7). Held means *no process*, and the board opens a
+        record only while a writer actually runs, so the record answers it."""
+        return number in self.store.open_windowless_sessions(slug, SessionWork.PLANNING)
 
     def switched_on(self, slug: str) -> bool:
         """Whether a board's auto-fix switch is on, from the store (card #80):
