@@ -398,6 +398,25 @@ class Dial:
         # machine has room, which is when the beat takes nothing.
         return room.sentence if room.full else None
 
+    def _under_the_number(self, fix_lanes: list[FixLane]) -> bool:
+        """Whether the dial may put one more piece of work into execution.
+
+        Asked at both doors that do so — taking the next defect, and bringing
+        back a card whose plan arrived after the board gave up on it (card
+        #151, item 2) — because the owner's number is a ceiling on what
+        enters execution without him, and a second door that did not ask
+        would be a second path past it. The number is the machine's, one for
+        every board (card #80)."""
+        held = held_lanes(
+            fix_lanes,
+            self.live.start_offered,
+            self.live.switched_on,
+            self.live.held_by_release,
+            self.live.below_line,
+            self.live.planning_is_open,
+        )
+        return running(fix_lanes, held) < self.live.store.fix_lanes_at_most()
+
     def _take_next(self, switches: dict[str, DialSetting]) -> None:
         """One act per beat: plan a defect a reading has verified, or open
         the reading that would verify one. Verified defects go first (card
@@ -416,19 +435,14 @@ class Dial:
         fix_lanes = store.fix_lanes()
         if self._full() is not None:
             return
-        held = held_lanes(
-            fix_lanes,
-            self.live.start_offered,
-            self.live.switched_on,
-            self.live.held_by_release,
-            self.live.below_line,
-            self.live.planning_is_open,
-        )
         # Two bounds, one each (card #154): the number is the machine's,
         # one for every board (card #80), and it bounds what commits; the
         # readings bound is a constant and bounds what only looks. Under
-        # the floor neither opens; at one bound, the other still does.
-        lanes_full = running(fix_lanes, held) >= store.fix_lanes_at_most()
+        # the floor neither opens; at one bound, the other still does. The
+        # number's half is `_under_the_number`, which the re-open asks too
+        # (card #151, item 2), so the one ceiling he holds is read in one
+        # place however many doors enter execution.
+        lanes_full = not self._under_the_number(fix_lanes)
         readings_full = self.live.readings_open() >= READINGS_AT_ONCE
         if lanes_full and readings_full:
             return
@@ -855,6 +869,7 @@ class Dial:
             # it for the one card that is actually about to reach Start.
             self.loops.reconcile_now()
         now = clock.now()
+        reopened = False
         for fix in fix_lanes:
             live = self.live.projects.get(fix.project)
             if live is None:
@@ -875,8 +890,13 @@ class Dial:
                     self._follow_title(live, fix, card, record, by_id, now)
             elif fix.stage == FixStage.STARTED:
                 self._follow_lane(live, fix, card, now)
-            elif fix.stage == FixStage.ENDED:
-                self._follow_ended(live, fix, card, now)
+            elif fix.stage == FixStage.ENDED and not reopened:
+                # One a beat, and never past his number: seven cards on Hello
+                # Revenue matched this the day it shipped, and starting seven
+                # lanes in one beat is not what a dial set to four means. The
+                # rest come back on the beats after, each judged on the room
+                # and the number as they stand then.
+                reopened = self._follow_ended(live, fix, card, now)
         # A planning session whose plan or question has landed is let finish
         # its turn and then stopped, as a finished reading is (review pass 1):
         # its record is ended but its process is not, and nothing else tends
@@ -1321,9 +1341,10 @@ class Dial:
         ]
         return records[-1].session_id if records else None
 
-    def _follow_ended(self, live: LiveProject, fix: FixLane, card: Card, now: datetime) -> None:
+    def _follow_ended(self, live: LiveProject, fix: FixLane, card: Card, now: datetime) -> bool:
         """A plan that arrived after the board gave up on its session
-        re-opens the card's work (card #151, item 2).
+        re-opens the card's work (card #151, item 2). Answers whether it
+        brought this one back, so the beat brings back at most one.
 
         Only a lane that ended before it was ever planned: one that reached
         Planned and failed at the door, or ran and ended with nothing
@@ -1331,9 +1352,11 @@ class Dial:
         is still one the dial took once — `_ran` holds it and it is never
         taken again — but it is no longer his for the wrong reason."""
         if fix.planned_at is not None or fix.started_at is not None:
-            return
+            return False
         if card.link is None or card.link.kind != DocumentKind.PLAN:
-            return
+            return False
+        if not self._under_the_number(self.live.store.fix_lanes()):
+            return False
         # The doors this card's Start is judged by were answered when it had
         # no plan; read the machine once, here, for the one card re-opening.
         self.loops.reconcile_now()
@@ -1353,6 +1376,7 @@ class Dial:
         )
         self.live.bump()
         self._start(live, planned, card, now)
+        return True
 
     def _start(self, live: LiveProject, fix: FixLane, card: Card, now: datetime) -> None:
         """Open the Start door as the machine. A door that is closed —

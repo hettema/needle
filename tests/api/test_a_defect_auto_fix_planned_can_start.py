@@ -318,6 +318,64 @@ def test_a_plan_that_arrives_after_the_board_gave_up_re_opens_the_card(
     assert len(store.fix_lanes("proj")) == 1, "not planned a second time"
 
 
+def test_the_beat_brings_back_one_card_a_beat_and_never_past_the_number(
+    client: TestClient, machine_floor: Floor, repo: Path, store: Store
+):
+    """A backlog of ended lanes whose plans arrived later does not become a
+    burst of lanes in one beat. Seven cards on Hello Revenue stood in exactly
+    this shape the day the re-open was written, and a dial set to one means
+    one — the rest come back on the beats after, each judged on the room and
+    the number as they stand then."""
+    from domain.dial import FixStage
+
+    turn(client, on=True, lanes=1)
+    tide = number_of(client, TIDE)
+    verify(client, machine_floor, tide)
+    a_planning_session(client, machine_floor, tide)
+    tick(client)
+    first = store.fix_lanes("proj")[0]
+    assert first.stage.value == "ended"
+
+    # Two more cards in the same state: a lane the dial ran and gave up on,
+    # planted on cards that already carry a plan of their own.
+    others = [
+        c.number
+        for c in store.cards("proj")
+        if c.link is not None and c.link.kind.value == "plan" and c.number != tide
+    ][:2]
+    assert len(others) == 2, "the fixture carries plan cards to lend this test"
+    for number in others:
+        planted = store.open_fix_lane("proj", number, first.planning_started_at)
+        store.stage_fix_lane(
+            planted.id, FixStage.ENDED, first.planning_started_at, note="the board gave up"
+        )
+
+    # The first card's own plan lands too, so three lanes could come back.
+    (repo / "docs" / "plans" / f"{STEM}.md").write_text(
+        plan_text(PLAIN, TIDE_PATH), encoding="utf-8"
+    )
+    done = repo / "docs" / "slice-suggestions" / "done" / Path(TIDE_PATH).name
+    done.parent.mkdir(exist_ok=True)
+    text = (repo / TIDE_PATH).read_text(encoding="utf-8").split("\n")
+    text.insert(2, f"**Carried by:** docs/plans/{STEM}.md")
+    done.write_text("\n".join(text), encoding="utf-8")
+    (repo / TIDE_PATH).unlink()
+    git(repo, "add", "-A")
+    git(repo, "commit", "-q", "-m", "the plans, late")
+    client.app.state.loops.live.rescan("proj")
+    reconcile(client)
+
+    ended_before = sum(1 for f in store.fix_lanes("proj") if f.stage == FixStage.ENDED)
+    assert ended_before == 3, "three lanes stand ended with a plan on their card"
+    tick(client)
+    stages = [f.stage.value for f in store.fix_lanes("proj")]
+    assert stages.count("ended") >= 2, (stages, "at most one comes back in a beat")
+    assert sum(1 for s in stages if s in ("planned", "started")) <= 1, (
+        stages,
+        "a dial set to one never puts a second lane into execution in one beat",
+    )
+
+
 def test_a_lane_that_ran_and_ended_on_its_own_work_is_never_re_opened(
     client: TestClient, machine_floor: Floor, repo: Path, store: Store
 ):
