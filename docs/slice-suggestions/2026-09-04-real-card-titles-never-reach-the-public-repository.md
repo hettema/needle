@@ -58,7 +58,7 @@ while it ran — which is the mechanism card #26 was building.
 ## A third sighting, 2026-09-15
 
 Found by the lane on card #149
-(`docs/plans/2026-09-15-auto-fix-stops-at-the-line-you-drew-and-leaves-the-rest-filed.md`),
+(`docs/plans/done/2026-09-15-auto-fix-stops-at-the-line-you-drew-and-leaves-the-rest-filed.md`),
 running the ratchets before its fold. The ratchet is red on `origin/develop`
 again from commit `9e90300` (2026-09-15, the owner's session at Hello
 Revenue's Idea door): a Needle suggestion,

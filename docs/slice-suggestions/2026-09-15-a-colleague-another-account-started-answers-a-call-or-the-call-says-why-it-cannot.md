@@ -2,7 +2,7 @@
 
 **Kind:** defect
 **Fix:** now — HOW-WE-WORK §12 says a session that needs a colleague's judgment calls one warm through Needle's `call` and waits on the answer, and §6 says a report is either the state or bad information; the fix stays inside the runtime's call door (`api/runtime_cli.py`, `runtime/service.py::call`) and removes the class the way #137's cross-machine refusal did — refuse at the door, by name, a colleague whose transcript the calling account cannot resume — rather than one more retry
-**Found by:** the lane on card #149 (docs/plans/2026-09-15-auto-fix-stops-at-the-line-you-drew-and-leaves-the-rest-filed.md), in the independent review
+**Found by:** the lane on card #149 (docs/plans/done/2026-09-15-auto-fix-stops-at-the-line-you-drew-and-leaves-the-rest-filed.md), in the independent review
 
 ## The intent it breaks
 
