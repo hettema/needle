@@ -69,6 +69,11 @@ third kind of file has gone round the guard: the fixture (held), a design
 comp (2026-09-04), and now a suggestion filed from another project's door
 whose evidence is that project's own words. The pre-fold gate this document
 asks for is still the mechanism: this commit landed on develop without any
-suite run, and every lane folding after it inherits the red. The lane on
-#149 did not edit the offending line — outside its change — and folded with
-this one ratchet red, saying so in its review record.
+suite run, and every lane that rebased while it stood inherited the red.
+
+It stood for about six hours and is gone: commit `ac9823c` on 2026-09-15
+rewrote that line, so the ratchet is green on the trunk again and card
+#149's lane folded green. That does not weaken the case here — it is the
+third time this guard has been gone round, each time by a new kind of
+file, and each time a lane that did not cause it had to work out whether
+the red was its own. What is still missing is the gate, not the cleanup.
