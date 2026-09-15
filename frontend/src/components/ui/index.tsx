@@ -198,6 +198,10 @@ export function lineWords(line: Band | null | undefined): string {
 
 export function DialControl({ state, others, onTurn, disabled, said }: { state: DialState; others: string[]; onTurn: (on: boolean, lanes: number, line: Band) => void; disabled: boolean; said: string | null }) {
   const { dial, running, held, full, quiet, release } = state;
+  // Readings are bounded on their own (card 154): the number bounds what
+  // commits, and the board keeps looking while auto-fix's hands are full.
+  const reading = state.triaging ?? 0;
+  const readingsAtMost = state.readings_at_most ?? 0;
   // Where this board's auto-fix stops (card 149): a rung of the grade's
   // ladder, the last rung being every defect. Always a band, never absent.
   const line: Band = dial.line ?? "nothing";
@@ -256,6 +260,9 @@ export function DialControl({ state, others, onTurn, disabled, said }: { state: 
       <input className="dial-lanes" type="number" inputMode="numeric" min={0} value={lanes} disabled={disabled} aria-label="Fix lanes at once" onChange={(e) => setLanes(e.target.value)} onBlur={commit} />
       <span className="dial-live" {...(running > 0 ? { "data-meaning": "live" as const } : {})} title={quiet ? "No lane has hands on any project: the board's own defects may run" : "A lane has hands on a project: the board's own defects wait"}>
         {running} of {dial.lanes} live
+      </span>
+      <span className="dial-live" {...(reading > 0 ? { "data-meaning": "live" as const } : {})} title="Readings open now, against their own bound: a reading grades a defect, reads a title cold or looks at a card parked on you, and is never held back by the fix lanes above">
+        {reading} of {readingsAtMost} reading
       </span>
       {held > 0 ? (
         <span className="dial-held" title={`${OPENING.quiet}: these planned cards cannot start yet, so they run nothing and take no account. Each waits on another card, on room to run, or is parked; each starts by itself when its wait ends.`}>

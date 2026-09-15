@@ -673,10 +673,6 @@ class Live:
             if live.snapshot is not None
         }
         fix_lanes = self.store.fix_lanes()
-        triaging = sum(
-            len(self.store.open_windowless_sessions(slug, SessionWork.TRIAGE))
-            for slug in self.projects
-        )
         switches = self.store.dials()
         on = {s.project for s in switches if s.on}
         return dial_state(
@@ -692,8 +688,18 @@ class Live:
                 self.below_line,
             ),
             room=self.headroom,
-            triaging=triaging,
+            triaging=self.readings_open(),
             release=self.release_held(slug),
+        )
+
+    def readings_open(self) -> int:
+        """How many readings are open right now across every board: the
+        one count the beat holds against `READINGS_AT_ONCE` and the head
+        shows (card #154). One reader, since the beat and the head had each
+        written its own sum and a bound read two ways is two bounds."""
+        return sum(
+            len(self.store.open_windowless_sessions(slug, SessionWork.TRIAGE))
+            for slug in self.projects
         )
 
     def switched_on(self, slug: str) -> bool:

@@ -984,7 +984,10 @@ def dial(args: argparse.Namespace, live: Live, runtime: Runtime, loops: Loops, d
         f"{lanes} fix lane{'' if lanes == 1 else 's'} at most across every board; "
         f"{state.running} live now"
         + (f", {state.held} held" if state.held else "")
-        + "; the machine is "
+        # Readings have their own bound (card #154): what only looks is
+        # never held back by what commits, and the line says both pairs.
+        + f"; {state.readings_at_most} reading{'' if state.readings_at_most == 1 else 's'} "
+        f"at once, {state.triaging} open now" + "; the machine is "
         f"{'quiet' if state.quiet else 'not quiet (a lane has hands on a project)'}"
         + (f"; {state.full}" if state.full else "")
     )
@@ -1097,14 +1100,26 @@ def fixes(
     if slug is not None and slug not in live.projects:
         print(f'no project "{slug}" is on the board', file=sys.stderr)
         return 1
-    if args.count and not (args.started_off or args.below_the_line):
+    if args.count and not (args.started_off or args.below_the_line or args.reading_gaps):
         print(
-            "--count counts the lanes --started-off or --below-the-line selects; name one",
+            "--count counts what --started-off, --below-the-line or --reading-gaps selects; "
+            "name one",
             file=sys.stderr,
         )
         return 1
     loops.reconcile_now()
     report = Dial(live, runtime, loops, doors).fixes(slug)
+    if args.reading_gaps:
+        # The plan's own class (card #154, item 5): every whole hour of the
+        # last day in which a fix lane ran and no reading opened anywhere.
+        if args.count:
+            print(len(report.reading_gaps))
+            return 0
+        if not report.reading_gaps:
+            print("no hour in the last day had a fix lane running and no reading opened")
+        for start in report.reading_gaps:
+            print(f"{start.isoformat()}: a fix lane ran and no reading opened")
+        return 0
     if args.started_off or args.below_the_line:
         # The Loops' counts: every fix lane whose planning began on a board
         # whose switch was off at that moment (card #80), or on a card whose
@@ -1657,9 +1672,14 @@ def register(sub: "argparse._SubParsersAction[argparse.ArgumentParser]") -> None
         help="only the fix lanes whose planning began on a card below its board's line",
     )
     p_fixes.add_argument(
+        "--reading-gaps",
+        action="store_true",
+        help="the whole hours of the last day in which a fix lane ran and no reading opened",
+    )
+    p_fixes.add_argument(
         "--count",
         action="store_true",
-        help="with --started-off or --below-the-line: print how many, nothing else",
+        help="with --started-off, --below-the-line or --reading-gaps: print how many, nothing else",
     )
     p_fixes.set_defaults(board=True, run=_with_board(fixes))
     p_team = sub.add_parser("team", help="which team earns its place, per kind of work (card #58)")

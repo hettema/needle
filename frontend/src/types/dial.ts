@@ -41,6 +41,7 @@ export interface DialState {
   others_on?: string[];
   running: number;
   triaging?: number;
+  readings_at_most?: number;
   held: number;
   full: string | null;
   quiet: boolean;
@@ -83,6 +84,7 @@ export interface Fixes {
   defects_at_first_on: DefectsCount[];
   waiting: Waiting[];
   decisions: Decision[];
+  reading_gaps?: string[];
 }
 
 export interface Headroom {

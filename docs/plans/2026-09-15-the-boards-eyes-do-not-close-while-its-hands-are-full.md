@@ -1,6 +1,6 @@
 # The board's eyes do not close while its hands are full
 
-**Status:** PENDING
+**Status:** SHIPPED
 **Carries:** docs/slice-suggestions/2026-09-15-the-boards-eyes-do-not-close-while-its-hands-are-full.md
 **Written:** 2026-09-15, at the owner's word after he asked why a planned card had waited six hours to start and was told the board had stopped reading while auto-fix worked.
 **Effort gate:** medium — the shape is one counter split into two bounds inside two functions that already exist (`board/dial.py::running`, `api/dial.py::_take_next`), with no new owner setting and no change to the store; the risk is not the edit but the boundary it must not cross, the forty-readings-at-once the shared count was put there to prevent, and that is one test away.
@@ -84,6 +84,11 @@ Done means: with the number at 1 and one fix lane live, a beat still opens a
 reading on an unread card; the same test with the reading already open shows
 the lane unaffected. Both directions pinned in `tests/api/test_dial.py`.
 
+**Met:** `board/dial.py::running` no longer takes `triaging=`, and both
+directions are pinned in `tests/api/test_dial.py::test_a_full_number_no_longer_stops_the_board_looking`:
+at the number with one lane live, the next beat opens a reading; with a
+reading open, the next verified defect is planned into the second lane.
+
 Hands out: search — every reader of `running`, `_triaging`, `fix_lanes_at_most` and `LIVE_STAGES` across `api/`, `board/`, `infrastructure/` and `tests/`, with path and line, so item 2 corrects all of them and none is left counting the old way; verifies opening each hit and confirming it is a read of the count rather than of the stage.
 
 ### 2. A board with forty unread cards still opens only a few readings at once
@@ -96,6 +101,12 @@ open, a beat opens no further reading and says so; the forty-untriaged-rail
 case from plan 59 item 3 is a test that fails on a bound removed and passes
 on a bound respected.
 
+**Met:** `board/dial.py::READINGS_AT_ONCE` is 3, beside `TRIAGE_ATTEMPTS`;
+`tests/api/test_dial.py::test_the_board_opens_a_few_readings_at_once_and_never_one_per_card`
+opens three on a rail of unread cards, shows three further beats opening
+nothing, and shows a landed result freeing a seat at once — so it is the
+bound and not an exhausted rail. It fails with the bound removed.
+
 ### 3. Memory still stops everything, and it stops it first
 The floor keeps its precedence: under it, neither a lane nor a reading opens,
 whatever either bound says.
@@ -103,6 +114,12 @@ whatever either bound says.
 Done means: the existing floor tests still pass unchanged, plus one that puts
 the machine under the floor with both bounds free and shows the beat opening
 nothing.
+
+**Met:** the floor is still read before either bound in `api/dial.py::_take_next`;
+`tests/api/test_dial.py::test_the_memory_floor_stops_a_reading_too_and_stops_it_first`
+puts the machine under the floor with nothing running and nothing reading,
+and the beat opens nothing until there is room. The existing floor test is
+unchanged but for the head's new sentence.
 
 ### 4. The board says which of the two it is holding back, and never confuses it with a card it gave up on
 `needle dial`'s last line reports the two bounds and what is live against
@@ -113,6 +130,15 @@ board's own bound, because the two no longer share a word.
 Done means: `needle dial` prints lanes and readings separately with their
 bounds; the head's sentence agrees with it; `docs/vocabulary.md` carries
 whatever word this plan lands on, and the doctrine ratchets stay green.
+
+**Met:** `needle dial`'s last line reads "N fix lanes at most across every
+board; M live now; 3 readings at once, K open now", and the head shows the
+same two pairs (`frontend/src/components/ui/index.tsx`), pinned by
+`tests/api/test_dial.py::test_the_board_says_which_of_the_two_it_is_holding_back`.
+The word landed on is "reading", which `docs/vocabulary.md` already gives as
+the owner's word for this (under **triage**), so the file needed no line; a
+card the per-card fuse stopped still says the board stopped reading *that
+card*, which no longer shares a word with the board's own bound.
 
 Hands out: execution — runs the suite one module per process from the lane's worktree, then `tsc` and `vitest`, and reports every failure verbatim; verifies re-running each named failure alone before treating it as this change's.
 
@@ -125,6 +151,11 @@ Done means: the command exists, prints a number, and prints a non-zero one
 against a board seeded with the 2026-09-15 shape — four lanes and no reading
 for two hours — so the count is proved to detect the thing before it is
 relied on to show its absence.
+
+**Met:** `needle fixes all --reading-gaps [--count]` prints the hours, or
+their number; `tests/api/test_dial.py::test_an_hour_the_board_fixed_and_never_looked_is_counted`
+seeds four lanes running for two hours with nothing read and reads 2, then
+lands one reading inside one of those hours and reads 1.
 
 ## Acceptance — behaviours
 

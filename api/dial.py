@@ -44,6 +44,7 @@ from board.brief import (
 from board.dial import (
     LEFT_OUT,
     LIVE_STAGES,
+    READINGS_AT_ONCE,
     REFUSED,
     Candidate,
     column_defects,
@@ -54,6 +55,7 @@ from board.dial import (
     is_quiet,
     left_out_words,
     line_at,
+    reading_gaps,
     refused_words,
     running,
     seat_opens,
@@ -374,16 +376,18 @@ class Dial:
 
     def _take_next(self, switches: dict[str, DialSetting]) -> None:
         """One act per beat: plan a defect a reading has verified, or open
-        the reading that would verify one. Verified defects go first — a column
-        of untriaged cards would otherwise fill the number with readings and
-        never plan anything, which is the starvation the ceiling makes
-        possible the moment a triage counts against it (plan 59, item 3).
-        A defect is planned only on a board whose switch is on (card #80,
-        item 2); a reading enters nothing and opens on any board, on or off
-        (ruling 3; card #100, item 4). The number caps what runs across
-        every board either way. Among the verified, the gravest goes first
-        and then the oldest (card #100, item 3); among the unread, the
-        oldest, since nothing unread has a grade."""
+        the reading that would verify one. Verified defects go first (card
+        #82, ruling 9: the order between defects, titles and parked cards is
+        settled). A defect is planned only on a board whose switch is on
+        (card #80, item 2); a reading enters nothing and opens on any board,
+        on or off (ruling 3; card #100, item 4). Each kind has its own
+        bound (card #154): the number caps what commits across every board,
+        `READINGS_AT_ONCE` caps what only looks, and a beat whose number is
+        full still opens a reading — before this, auto-fix at its number
+        closed the board's eyes, and a planned card waited six hours to
+        start on 2026-09-15 while nothing was read. Among the verified, the
+        gravest goes first and then the oldest (card #100, item 3); among
+        the unread, the oldest, since nothing unread has a grade."""
         store = self.live.store
         fix_lanes = store.fix_lanes()
         if self._full() is not None:
@@ -395,10 +399,13 @@ class Dial:
             self.live.held_by_release,
             self.live.below_line,
         )
-        triaging = self._triaging()
-        # The number is the machine's, one for every board (card #80).
-        lanes = store.fix_lanes_at_most()
-        if running(fix_lanes, held, triaging=triaging) >= lanes:
+        # Two bounds, one each (card #154): the number is the machine's,
+        # one for every board (card #80), and it bounds what commits; the
+        # readings bound is a constant and bounds what only looks. Under
+        # the floor neither opens; at one bound, the other still does.
+        lanes_full = running(fix_lanes, held) >= store.fix_lanes_at_most()
+        readings_full = self.live.readings_open() >= READINGS_AT_ONCE
+        if lanes_full and readings_full:
             return
         lanes_by_project = {
             slug: live.snapshot.lanes
@@ -480,10 +487,14 @@ class Dial:
             # titles.
             unread.extend(self._parked_unread(live, snapshot, open_triage, spent))
         for candidate in sorted(candidates, key=lambda c: c.order_key):
+            if lanes_full:
+                break  # the number is full: the beat's act is a reading, if any
             live = self.live.projects[candidate.project]
             if self._own_board(live) and not quiet:
                 continue  # a fold on the board restarts the service under every running lane
             self._plan(live, candidate)
+            return
+        if readings_full:
             return
         # A launch the runtime refuses for a cause the rooms do not carry —
         # a machine that did not answer, no subscription with allowance — is
@@ -559,12 +570,6 @@ class Dial:
                 continue
             ran.add(fix.card_number)
         return ran
-
-    def _triaging(self) -> int:
-        return sum(
-            len(self.live.store.open_windowless_sessions(slug, SessionWork.TRIAGE))
-            for slug in self.live.projects
-        )
 
     def _wants_a_reading(
         self,
@@ -1655,4 +1660,13 @@ class Dial:
             defects_at_first_on=store.defects_at_on(),
             waiting=self.waiting(slug),
             decisions=self.decisions(slug),
+            reading_gaps=reading_gaps(
+                store.fix_lanes(slug),
+                [
+                    reading
+                    for project in self.live.projects
+                    for reading in store.windowless_sessions(project, work=SessionWork.TRIAGE)
+                ],
+                clock.now(),
+            ),
         )

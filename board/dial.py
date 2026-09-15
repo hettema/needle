@@ -14,7 +14,7 @@ card's age are the facts every card has.
 
 import re
 from collections.abc import Callable, Sequence
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from pydantic import BaseModel
 
@@ -310,20 +310,57 @@ def held_lanes(
     ]
 
 
-def running(
-    fix_lanes: list[FixLane], held: list[FixLane] | None = None, *, triaging: int = 0
-) -> int:
+def running(fix_lanes: list[FixLane], held: list[FixLane] | None = None) -> int:
     """What counts against the number: every fix lane at a live stage that
-    is not held, plus every open triage reading. The planning stage always
-    counts, which bounds how many plans are written ahead; a triage counts
-    for the same reason — it is a live session on a machine whose ceiling is
-    memory, and a rail of forty untriaged defects would otherwise open forty
-    of them under a dial set to one (plan 59, item 3)."""
+    is not held. The planning stage always counts, which bounds how many
+    plans are written ahead. A reading does not count (card #154): plan 59,
+    item 3 folded readings in so a rail of forty untriaged defects could not
+    open forty sessions under a dial set to one, and the number then held
+    back the board's eyes whenever auto-fix filled it with hands — a
+    planned card waited six hours to start on 2026-09-15 because nothing
+    was read while four lanes ran. Readings have their own bound now,
+    `READINGS_AT_ONCE`, which keeps the forty out just the same."""
     held_ids = {lane.id for lane in held or []}
-    return (
-        sum(1 for lane in fix_lanes if lane.stage in LIVE_STAGES and lane.id not in held_ids)
-        + triaging
-    )
+    return sum(1 for lane in fix_lanes if lane.stage in LIVE_STAGES and lane.id not in held_ids)
+
+
+READINGS_AT_ONCE = 3
+"""How many readings the board holds open at once across every board (card
+#154, item 2): the bound that keeps a rail of forty unread cards from
+opening forty sessions, now that a reading no longer counts against the
+number. A constant and not a setting (ruling 1): the owner already sets one
+number and a line per board, and the thing this protects is the machine,
+which has a floor he never sets by hand and which stops everything first.
+Three is a few — enough that a night's rail is read in a night, few enough
+that readings never take the room a lane needs; if the evidence says it is
+wrong, this is a one-line change with a reason."""
+
+
+def reading_gaps(
+    fix_lanes: Sequence[FixLane], readings: Sequence[WindowlessSession], now: datetime
+) -> list[datetime]:
+    """The hours of the last day in which a fix lane ran and no reading
+    opened — the plan's own class made loud (card #154, item 5), what
+    `needle fixes --reading-gaps` prints and its Loop reads. Only whole
+    hours: the twenty-four ending at the top of this one, so the hour still
+    running never reads as a gap before it has had its chance. A lane ran
+    in an hour when its life — from its planning session's start to its
+    end, or to now while it has none — overlaps that hour; a reading opened
+    in it when its start falls inside."""
+    top = now.replace(minute=0, second=0, microsecond=0)
+    hours = [top - timedelta(hours=k) for k in range(24, 0, -1)]
+    opened = [r.started_at for r in readings]
+    gaps: list[datetime] = []
+    for start in hours:
+        end = start + timedelta(hours=1)
+        ran = any(
+            lane.planning_started_at < end and (lane.ended_at is None or lane.ended_at > start)
+            for lane in fix_lanes
+        )
+        looked = any(start <= at < end for at in opened)
+        if ran and not looked:
+            gaps.append(start)
+    return gaps
 
 
 def is_quiet(lanes_by_project: dict[str, dict[int, Lane]]) -> bool:
@@ -429,8 +466,9 @@ def dial_state(
     return DialState(
         dial=dial,
         others_on=[s.project for s in switches if s.on and s.project != dial.project],
-        running=running(fix_lanes, held, triaging=triaging),
+        running=running(fix_lanes, held),
         triaging=triaging,
+        readings_at_most=READINGS_AT_ONCE,
         held=len(held),
         full=room.sentence if room is not None and room.full else None,
         quiet=is_quiet(lanes_by_project),

@@ -19,6 +19,7 @@ from fastapi.testclient import TestClient
 from sqlalchemy import select
 
 from api.cli import main
+from board.dial import READINGS_AT_ONCE
 from domain.card import Actor, CardOrigin
 from domain.project import Project
 from domain.signal import SessionWork
@@ -322,6 +323,7 @@ def test_the_dial_is_off_until_turned_persists_and_is_audited_as_the_owners(
         "others_on": [],
         "running": 0,
         "triaging": 0,
+        "readings_at_most": READINGS_AT_ONCE,
         "held": 0,
         "full": None,
         "quiet": True,
@@ -614,10 +616,10 @@ def test_with_the_dial_on_the_oldest_now_defect_is_planned_then_started_by_the_d
     reading = read_the_rail_until(client, machine_floor, tide)
     capsys.readouterr()
     assert board(client)["dial"]["triaging"] == 1
-    assert board(client)["dial"]["running"] == 1, "a live session against the number"
-    read_so_far = len(machine_floor.state()["launch_log"])
+    assert board(client)["dial"]["running"] == 0, "a reading commits nothing (card #154)"
+    read_so_far = acts(machine_floor)
     tick(client)
-    assert len(machine_floor.state()["launch_log"]) == read_so_far, "full while it reads"
+    assert acts(machine_floor) == read_so_far, "nothing is planned while its mark is being read"
     assert detail(client, tide)["summary"]["triaging"]["session_id"] == reading["session_id"]
     brief = reading["argv"][-1]
     assert brief.startswith(f"A reading of #{tide}'s mark on Harbourmaster")
@@ -842,9 +844,10 @@ def test_a_held_plan_does_not_count_and_the_memory_floor_stops_the_beat(
     state = board(client)["dial"]
     assert (state["running"], state["held"], state["full"]) == (1, 1, None)
     assert main(["dial"]) == 0
-    assert "1 fix lane at most across every board; 1 live now, 1 held; the machine is" in (
-        capsys.readouterr().out
-    )
+    assert (
+        f"1 fix lane at most across every board; 1 live now, 1 held; "
+        f"{READINGS_AT_ONCE} readings at once, 0 open now; the machine is"
+    ) in capsys.readouterr().out
 
     # The machine runs short: the beat opens nothing, even with the number
     # allowing it, and the head reads the two numbers.
@@ -865,7 +868,10 @@ def test_a_held_plan_does_not_count_and_the_memory_floor_stops_the_beat(
     # what bounds plans written ahead of a full machine.
     assert main(["dial"]) == 0
     out = capsys.readouterr().out
-    assert "3 fix lanes at most across every board; 2 live now; the machine is not quiet" in out
+    assert (
+        f"3 fix lanes at most across every board; 2 live now; "
+        f"{READINGS_AT_ONCE} readings at once, 0 open now; the machine is not quiet"
+    ) in out
     assert f"; {full}" in out
     # Free swap short counts the same, on a machine that has swap.
     machine_floor.set_memory(available_gb=16.0, swap_free_gb=1.0)
@@ -1145,7 +1151,7 @@ def test_his_and_unmarked_defects_are_never_started_and_a_question_leaves_the_ca
     tick(client)
     assert acts(machine_floor) == read_so_far + 1, "asked: the owner's from here"
     state = board(client)["dial"]
-    assert state["running"] == state["triaging"], "nothing runs but readings"
+    assert state["running"] == 0, "nothing commits; what readings run are their own (card #154)"
 
 
 def test_a_planning_session_that_dies_ends_the_dials_part_and_the_card_says_why(
@@ -1166,9 +1172,9 @@ def test_a_planning_session_that_dies_ends_the_dials_part_and_the_card_says_why(
     assert fix.note.startswith("the planning session ended without a plan")
     assert detail(client, tide)["history"][0]["detail"] == fix.note
     assert detail(client, tide)["summary"]["planning"] is None
-    opened = len(machine_floor.state()["launch_log"])
+    opened = acts(machine_floor)
     tick(client)
-    assert len(machine_floor.state()["launch_log"]) == opened, "not taken again"
+    assert acts(machine_floor) == opened, "not taken again"
 
 
 # ── item 1: the close refuses a code lane without a review record ──────
@@ -1412,7 +1418,8 @@ def test_needle_dial_reads_and_turns_the_dial_from_the_terminal(
     out = capsys.readouterr().out.splitlines()
     assert out == [
         "proj: auto-fix off, takes every defect",
-        "1 fix lane at most across every board; 0 live now; the machine is quiet",
+        f"1 fix lane at most across every board; 0 live now; "
+        f"{READINGS_AT_ONCE} readings at once, 0 open now; the machine is quiet",
     ]
     assert main(["dial", "proj", "on", "--lanes", "2"]) == 0
     out = capsys.readouterr().out.splitlines()
@@ -1422,7 +1429,8 @@ def test_needle_dial_reads_and_turns_the_dial_from_the_terminal(
     # one was turned on naming nothing (card #139, item 2).
     assert out[1] == "      cannot be undone: nothing — everything here releases"
     assert out[2].startswith(
-        "2 fix lanes at most across every board; 0 live now; the machine is quiet"
+        f"2 fix lanes at most across every board; 0 live now; "
+        f"{READINGS_AT_ONCE} readings at once, 0 open now; the machine is quiet"
     )
     assert [(c.actor.value, c.project, c.on, c.lanes) for c in store.dial_changes()] == [
         ("owner", None, None, 2),
@@ -1517,10 +1525,144 @@ def test_a_now_on_ground_a_live_plan_covers_is_read_with_the_plan_beside_it_and_
     verify(client, machine_floor, second)
     capsys.readouterr()
     tick(client)
-    planning = machine_floor.state()["launch_log"][-1]
+    planning = last_act(machine_floor)
     assert planning["argv"][planning["argv"].index("-n") + 1].startswith(f"planning-card-{second}-")
     brief = planning["argv"][-1]
     assert f"  #{plan} The skipper sees the price before the berth (plan)" in brief
     assert f"  #{number} The price on the map is a day old (defect)" in brief
     for way in ("CARRY it", "SEQUENCE after it", "CITE it"):
         assert way in brief, way
+
+
+# ── card #154: the board's eyes do not close while its hands are full ──
+
+
+def test_a_full_number_no_longer_stops_the_board_looking(
+    client: TestClient, machine_floor: Floor, repo: Path, capsys
+):
+    """Card #154, item 1: readings stopped counting against the number, so
+    auto-fix at its number never again closes the board's eyes — the six
+    hours a planned card waited on 2026-09-15 while four lanes ran and
+    nothing was read. Both directions: a lane at the number does not stop a
+    reading, and a reading open does not stop the next lane."""
+    tide = number_of(client, TIDE)
+    live = client.app.state.loops.live
+    write_defect(
+        repo,
+        "2026-09-05-the-gate-log-loses-its-last-line",
+        "The gate log loses its last line",
+        "**Fix:** now",
+    )
+    live.rescan("proj")
+    reconcile(client)
+    gate_log = number_of(client, "The gate log loses its last line")
+    turn(client, on=True, lanes=1)
+    verify(client, machine_floor, tide)
+    capsys.readouterr()
+    tick(client)
+    assert last_act(machine_floor)["argv"][-1].startswith("A plan to write for a defect")
+    planned = len(machine_floor.state()["launch_log"])
+    state = board(client)["dial"]
+    assert (state["running"], state["dial"]["lanes"]) == (1, 1), "the number is full"
+
+    # The number is full and the board still looks: the beat's act is a
+    # reading, which enters nothing and commits nothing.
+    tick(client)
+    assert len(machine_floor.state()["launch_log"]) == planned + 1, "a reading opened at the number"
+    assert reading_for(machine_floor) is not None
+    state = board(client)["dial"]
+    assert state["running"] == 1, "the fix lane is untouched by the reading"
+    assert state["triaging"] == 1 and state["readings_at_most"] == READINGS_AT_ONCE
+
+    # And the other direction: a reading open takes nothing from the number.
+    # With room for a second lane, the next verified defect is planned while
+    # the reading runs.
+    turn(client, on=True, lanes=2)
+    verify(client, machine_floor, gate_log)
+    capsys.readouterr()
+    acted = acts(machine_floor)
+    tick(client)
+    assert acts(machine_floor) == acted + 1, "the second lane opened beside the readings"
+    assert board(client)["dial"]["running"] == 2
+
+
+def test_the_board_opens_a_few_readings_at_once_and_never_one_per_card(
+    client: TestClient, machine_floor: Floor
+):
+    """Card #154, item 2: the forty-untriaged-rail case plan 59, item 3 put
+    the shared count there to prevent. The bound is a constant of the
+    board's, not a number the owner sets (ruling 1), and it holds with
+    every switch off — a reading opens on any board (card #100, item 4)."""
+    for opened in range(READINGS_AT_ONCE):
+        before = len(machine_floor.state()["launch_log"])
+        tick(client)
+        assert len(machine_floor.state()["launch_log"]) == before + 1, f"reading {opened + 1}"
+        assert reading_for(machine_floor) is not None
+    head = board(client)["dial"]
+    assert head["triaging"] == READINGS_AT_ONCE == head["readings_at_most"]
+    assert head["running"] == 0, "nothing commits: the number is free the whole way"
+
+    at_the_bound = len(machine_floor.state()["launch_log"])
+    for _ in range(3):
+        tick(client)
+    assert len(machine_floor.state()["launch_log"]) == at_the_bound, "no forty-first reading"
+
+    # It is the bound and not an exhausted rail: land one result and the
+    # board opens the next card's reading at once.
+    land_on_the_way(client, next(iter(open_readings(client))))
+    tick(client)
+    assert len(machine_floor.state()["launch_log"]) == at_the_bound + 1, "a seat freed is a seat"
+
+
+def test_the_memory_floor_stops_a_reading_too_and_stops_it_first(
+    client: TestClient, machine_floor: Floor
+):
+    """Card #154, item 3: the floor keeps its precedence over both bounds —
+    under it, with no lane and no reading anywhere, the beat opens nothing
+    at all (the number is a ceiling the machine lowers, ruling 4)."""
+    machine_floor.set_memory(available_gb=2.0, swap_free_gb=8.0)
+    before = len(machine_floor.state()["launch_log"])
+    head = board(client)["dial"]
+    assert (head["running"], head["triaging"]) == (0, 0), "both bounds are free"
+    tick(client)
+    assert len(machine_floor.state()["launch_log"]) == before, "nothing opened under the floor"
+    assert board(client)["dial"]["full"] == "the machine is full: 2.0 GB available, 5 GB needed"
+    machine_floor.set_memory(available_gb=16.0, swap_free_gb=8.0)
+    tick(client)
+    assert len(machine_floor.state()["launch_log"]) == before + 1, "room again: the board looks"
+
+
+def test_the_board_says_which_of_the_two_it_is_holding_back(
+    client: TestClient, machine_floor: Floor, capsys
+):
+    """Card #154, item 4: `needle dial`'s last line reports the two bounds
+    and what is live against each, in place of one count that meant both."""
+    tick(client)
+    assert reading_for(machine_floor) is not None
+    assert main(["dial"]) == 0
+    out = capsys.readouterr().out
+    assert "1 fix lane at most across every board; 0 live now" in out
+    assert f"{READINGS_AT_ONCE} readings at once, 1 open now" in out
+
+
+def test_an_hour_the_board_fixed_and_never_looked_is_counted(
+    client: TestClient, store: Store, capsys
+):
+    """Card #154, item 5: the plan's own class, made loud before it is
+    relied on to show its absence. The 2026-09-15 shape — lanes running and
+    no reading for two hours — counts; a reading landing in one of those
+    hours takes that hour off the count."""
+    now = clock.now()
+    top = now.replace(minute=0, second=0, microsecond=0)
+    for card in (1, 2, 3, 4):
+        store.open_fix_lane("proj", card, top - timedelta(hours=2))
+    assert main(["fixes", "all", "--reading-gaps", "--count"]) == 0
+    assert capsys.readouterr().out.strip() == "2", "two whole hours of lanes and no reading"
+
+    store.open_windowless_session(
+        "proj", 9, SessionWork.TRIAGE, "s154", "alpha", top - timedelta(minutes=90)
+    )
+    assert main(["fixes", "all", "--reading-gaps", "--count"]) == 0
+    assert capsys.readouterr().out.strip() == "1", "the board looked in one of the two hours"
+    assert main(["fixes", "all", "--reading-gaps"]) == 0
+    assert "a fix lane ran and no reading opened" in capsys.readouterr().out

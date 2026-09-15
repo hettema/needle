@@ -270,9 +270,12 @@ class DialState(BaseModel):
     the planning sessions it has open: what counts against the number. A
     planned card whose Start is closed is no process and is not counted."""
     triaging: int = 0
-    """Triage readings open right now: live sessions against the same
-    number, so a column of unread defects cannot open one session per card
-    (plan 59, item 3)."""
+    """Readings open right now across every board, against their own
+    bound and never the number (card #154): the board keeps looking while
+    auto-fix's hands are full."""
+    readings_at_most: int = 0
+    """The bound on readings open at once, `board/dial.py::READINGS_AT_ONCE`,
+    carried here so the head and `needle dial` print the same two pairs."""
     held: int
     """Fix lanes at the planned stage whose Start door is closed — parked,
     waiting on a Sequencing card, nowhere to run: what the head shows
@@ -423,6 +426,10 @@ class Fixes(BaseModel):
     """Every decision a colleague took off the owner's defects, oldest first,
     with its source, its direction and its fate (plan 59, item 6): the
     sample the loop's cold audit reads."""
+    reading_gaps: list[datetime] = []
+    """The whole hours of the last day in which a fix lane ran and no
+    reading opened (card #154, item 5): the class the plan closes, counted
+    by `needle fixes --reading-gaps --count` and read by its Loop."""
 
 
 def _gb(byte_count: int) -> str:

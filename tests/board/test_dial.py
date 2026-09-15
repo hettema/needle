@@ -5,6 +5,7 @@ from datetime import UTC, datetime, timedelta
 
 from board.dial import (
     LIVE_STAGES,
+    READINGS_AT_ONCE,
     SEAT_OPENS,
     TRIAGE_ATTEMPTS,
     Candidate,
@@ -18,6 +19,7 @@ from board.dial import (
     held_lanes,
     is_quiet,
     mark_text,
+    reading_gaps,
     readings_spent,
     running,
     seat_opens,
@@ -307,12 +309,41 @@ def test_the_number_counts_a_fix_lane_from_its_planning_session_to_its_end():
     assert running([]) == 0
 
 
-def test_an_open_reading_counts_against_the_number_like_a_planning_session():
-    """A live session on a machine whose ceiling is memory (plan 59, item 3):
-    without this a rail of forty untriaged defects opens forty readings under
-    a dial set to one."""
-    assert running([], triaging=2) == 2
-    assert running([fix(FixStage.STARTED)], triaging=1) == 2
+def test_a_reading_does_not_count_against_the_number_that_bounds_fix_lanes():
+    """Card #154, item 1: readings are bounded on their own, so what only
+    looks is never held back by what commits. Plan 59, item 3 folded them
+    into this number to keep a rail of forty out; `READINGS_AT_ONCE` keeps
+    the forty out now, and the number means fix lanes again."""
+    assert running([]) == 0, "two readings open and no lane: the number is free"
+    assert running([fix(FixStage.STARTED)]) == 1
+    assert READINGS_AT_ONCE >= 1, "the board always keeps an eye open"
+
+
+def test_an_hour_in_which_a_lane_ran_and_nothing_was_read_is_a_gap():
+    """The class this plan closes, counted (card #154, item 5). Only whole
+    hours of the last day: the hour still running has not had its chance."""
+    top = NOW.replace(minute=0, second=0, microsecond=0)
+    lane = fix(FixStage.STARTED).model_copy(
+        update={"planning_started_at": top - timedelta(hours=3), "ended_at": None}
+    )
+    read = WindowlessSession(
+        id=1,
+        project="proj",
+        card_number=7,
+        work=SessionWork.TRIAGE,
+        session_id="abc",
+        slot="alpha",
+        started_at=top - timedelta(hours=2, minutes=30),
+        ended_at=None,
+    )
+    gaps = reading_gaps([lane], [read], NOW)
+    assert top - timedelta(hours=3) not in gaps, "a reading opened in the hour the lane began"
+    assert top - timedelta(hours=2) in gaps, "the lane ran that hour and nothing was read"
+    assert top - timedelta(hours=1) in gaps, "the lane is still running and nothing was read"
+    assert top not in gaps, "the hour still running is not counted"
+    assert top - timedelta(hours=4) not in gaps, "no lane ran before it began"
+    assert reading_gaps([], [], NOW) == [], "no lane ran: no hour is a gap"
+    assert len(reading_gaps([lane], [], NOW)) == 3, "three whole hours of lane and no reading"
 
 
 def test_a_planned_card_whose_start_is_closed_is_held_and_does_not_count():

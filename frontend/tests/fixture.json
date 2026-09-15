@@ -68,6 +68,7 @@
       "others_on": [],
       "running": 0,
       "triaging": 0,
+      "readings_at_most": 3,
       "held": 0,
       "full": null,
       "quiet": true,
