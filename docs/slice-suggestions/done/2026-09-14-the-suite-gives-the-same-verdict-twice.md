@@ -1,5 +1,7 @@
 # The suite gives the same verdict twice
 
+**Carried by:** docs/plans/2026-09-15-the-suite-gives-the-same-verdict-twice.md
+
 **Kind:** defect
 **Fix:** now — "a lane folds when its suite is green; nothing lands red" is
 written in CLAUDE.md and in the doctrine's §12, and a suite whose failures
