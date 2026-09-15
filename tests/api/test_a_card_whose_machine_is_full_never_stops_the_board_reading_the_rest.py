@@ -165,9 +165,11 @@ def test_a_card_left_out_says_so_once_per_spell_and_once_more_when_its_reading_o
     held = oldest_unread(store, GROUND)
     for _ in range(20):
         tick(client)
-        on = reading_for(machine_floor)
-        assert on is not None and open_readings(store, "proj") == [on]
-        land_on_the_way(client, on)  # the seat reads the rest, one card a beat
+        assert reading_for(machine_floor) is not None, "the seat read a card with room"
+        # The board holds a few readings open at once (card #154), so the
+        # rest of the rail is landed as it is read, never one card a beat.
+        for on in open_readings(store, "proj"):
+            land_on_the_way(client, on)
     assert len(notes(store, GROUND, held, LEFT_OUT)) == 1, notes(store, GROUND, held, LEFT_OUT)
     assert notes(store, GROUND, held, REFUSED) == []
     # The laptop has room again: the ground's oldest card is the oldest
@@ -218,10 +220,12 @@ def test_a_launch_refused_for_another_cause_holds_the_beat_no_more_than_room_doe
             f"the beat should have read on past the ground's #{held}, whose launch was refused"
         )
         on = reading_for(machine_floor)
-        assert on is not None and open_readings(store, "proj") == [on]
+        assert on is not None and on in open_readings(store, "proj")
         assert open_readings(store, GROUND) == []
         assert machine_floor.state()["launch_log"][-1]["config_dir"].startswith(str(other.root))
-        land_on_the_way(client, on)
+        # A few readings may stand open together (card #154): land them all.
+        for open_now in open_readings(store, "proj"):
+            land_on_the_way(client, open_now)
     refusals = notes(store, GROUND, held, REFUSED)
     assert len(refusals) == 1 and "no subscription has allowance" in refusals[0], refusals
     assert notes(store, GROUND, held, LEFT_OUT) == []

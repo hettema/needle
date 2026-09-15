@@ -39,6 +39,7 @@ from tests.api.test_dial import (
     is_parked,
     land_on_the_way,
     number_of,
+    open_readings,
     read_the_rail_until,
     reading_for,
     tick,
@@ -68,11 +69,15 @@ def park_the_rail(client: TestClient, machine_floor: Floor) -> None:
     for _ in range(READINGS_ON_THE_WAY):
         before = len(machine_floor.state()["launch_log"])
         tick(client)
-        if len(machine_floor.state()["launch_log"]) == before:
+        standing = open_readings(client)
+        if len(machine_floor.state()["launch_log"]) == before and not standing:
             return
-        on = reading_for(machine_floor)
-        assert on is not None, machine_floor.state()["launch_log"][-1]
-        land_on_the_way(client, on)
+        # Every reading standing, not only the last one launched: the board
+        # holds a few open at once (card #154), and a beat that opens
+        # nothing while three stand is the bound speaking, not a quiet rail.
+        assert standing, machine_floor.state()["launch_log"][-1]
+        for on in standing:
+            land_on_the_way(client, on)
     raise AssertionError("the rail never went quiet")
 
 
