@@ -486,16 +486,15 @@ class Dial:
             # the same seat, oldest park first, behind the defects and the
             # titles.
             unread.extend(self._parked_unread(live, snapshot, open_triage, spent))
-        for candidate in sorted(candidates, key=lambda c: c.order_key):
-            if lanes_full:
-                break  # the number is full: the beat's act is a reading, if any
-            live = self.live.projects[candidate.project]
-            if self._own_board(live) and not quiet:
-                continue  # a fold on the board restarts the service under every running lane
-            self._plan(live, candidate)
-            return
+        if not lanes_full:
+            for candidate in sorted(candidates, key=lambda c: c.order_key):
+                live = self.live.projects[candidate.project]
+                if self._own_board(live) and not quiet:
+                    continue  # a fold on the board restarts the service under every running lane
+                self._plan(live, candidate)
+                return
         if readings_full:
-            return
+            return  # the number may be free, but every reading seat is taken
         # A launch the runtime refuses for a cause the rooms do not carry —
         # a machine that did not answer, no subscription with allowance — is
         # not the beat's one act either: the card says so once, its project

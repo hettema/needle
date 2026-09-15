@@ -648,9 +648,10 @@ def test_with_the_dial_on_the_oldest_now_defect_is_planned_then_started_by_the_d
     capsys.readouterr()
     assert detail(client, tide)["summary"]["routing"]["state"] == "triaged now"
     tick(client)
-    log = machine_floor.state()["launch_log"]
-    assert len(log) == read_so_far + 1, "one defect per beat, and the number is one"
-    planning = log[-1]
+    # Acts, never the log: a beat may open a reading beside its act now that
+    # readings have their own bound (card #154), and the act is the subject.
+    assert acts(machine_floor) == read_so_far + 1, "one defect per beat, and the number is one"
+    planning = last_act(machine_floor)
     assert planning["cwd"] == str(repo) and "--worktree" not in planning["argv"]
     assert planning["argv"][planning["argv"].index("-n") + 1].startswith(f"planning-card-{tide}-")
     assert planning["argv"][planning["argv"].index("--effort") + 1] == "xhigh"
@@ -676,7 +677,7 @@ def test_with_the_dial_on_the_oldest_now_defect_is_planned_then_started_by_the_d
 
     # The number is full: another beat plans nothing more.
     tick(client)
-    assert len(machine_floor.state()["launch_log"]) == read_so_far + 1
+    assert acts(machine_floor) == read_so_far + 1
 
     # The planning session's plan lands: the card becomes the plan's, and
     # the dial opens Start itself, as the machine.
@@ -689,12 +690,11 @@ def test_with_the_dial_on_the_oldest_now_defect_is_planned_then_started_by_the_d
     live.rescan("proj")
     assert column_of(client, tide) == "Planned"
     tick(client)
-    log = machine_floor.state()["launch_log"]
-    assert len(log) == read_so_far + 2, (
+    assert acts(machine_floor) == read_so_far + 2, (
         "the plan landed, so the dial started the lane",
         store.fix_lanes("proj"),
     )
-    started = log[-1]
+    started = last_act(machine_floor)
     assert started["argv"][started["argv"].index("--worktree") + 1].startswith(f"card-{tide}-")
     assert started["argv"][started["argv"].index("--effort") + 1] == "medium", "the plan's gate"
     assert column_of(client, tide) == "Executing"
@@ -711,7 +711,7 @@ def test_with_the_dial_on_the_oldest_now_defect_is_planned_then_started_by_the_d
     assert store.fix_lanes("proj")[0].decision == store.triages("proj", tide)[0].decision
     # The second defect still waits: the fix lane counts until it folds.
     tick(client)
-    assert len(machine_floor.state()["launch_log"]) == read_so_far + 2
+    assert acts(machine_floor) == read_so_far + 2
 
     # The fix lane folds: it stops counting, and the next beat takes the next defect.
     worktree = (
@@ -728,7 +728,7 @@ def test_with_the_dial_on_the_oldest_now_defect_is_planned_then_started_by_the_d
     verify(client, machine_floor, gate_log)
     capsys.readouterr()
     tick(client)
-    next_planning = machine_floor.state()["launch_log"][-1]
+    next_planning = last_act(machine_floor)
     assert next_planning["argv"][next_planning["argv"].index("-n") + 1].startswith(
         f"planning-card-{gate_log}-"
     )

@@ -25,6 +25,7 @@ from pathlib import Path
 from fastapi.testclient import TestClient
 
 from api.cli import main
+from board.dial import READINGS_AT_ONCE
 from infrastructure.store import Store
 from tests.api import test_doors as doors
 from tests.api.test_dial import (
@@ -361,11 +362,17 @@ def test_readings_run_with_auto_fix_off_and_nothing_is_planned(
     assert len(machine_floor.state()["launch_log"]) == before + 1, "a reading opened, switch off"
     assert acts(machine_floor) == 0, "nothing planned while every switch is off"
     head = board(client)["dial"]
-    assert head["triaging"] == 1 and head["running"] == 1, "the head reads the reading live"
+    assert head["triaging"] == 1, "the head reads the reading live"
+    assert head["running"] == 0, "a reading commits nothing, so the number is free (card #154)"
     assert head["dial"]["on"] is False
-    # Under the number: one reading at a time while the number is one.
+    # Under the readings' own bound, never the owner's number: the board
+    # keeps looking, a few at a time (card #154, item 2).
+    for opened in range(READINGS_AT_ONCE - 1):
+        tick(client)
+        assert len(machine_floor.state()["launch_log"]) == before + 2 + opened
     tick(client)
-    assert len(machine_floor.state()["launch_log"]) == before + 1
+    assert len(machine_floor.state()["launch_log"]) == before + READINGS_AT_ONCE, "at the bound"
+    assert board(client)["dial"]["triaging"] == READINGS_AT_ONCE
     # The readings walk the column oldest first; our defect is read in its
     # turn, verified `now`, and still nothing is planned while the switch is off.
     verify(client, machine_floor, number)
