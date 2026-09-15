@@ -54,3 +54,21 @@ than a convention.
 #27's, whose lane wrote these files and was live when this was filed. Said on
 the watercooler to #27 at the same time, so the lane that can fix it heard it
 while it ran — which is the mechanism card #26 was building.
+
+## A third sighting, 2026-09-15
+
+Found by the lane on card #149
+(`docs/plans/2026-09-15-auto-fix-stops-at-the-line-you-drew-and-leaves-the-rest-filed.md`),
+running the ratchets before its fold. The ratchet is red on `origin/develop`
+again from commit `9e90300` (2026-09-15, the owner's session at Hello
+Revenue's Idea door): a Needle suggestion,
+`docs/slice-suggestions/2026-09-15-a-plan-that-takes-over-an-older-card-gives-it-the-plans-title.md`,
+line 13, quotes a Hello Revenue card's title in full as its evidence — the
+title is not repeated here for the reason the observation above gives. A
+third kind of file has gone round the guard: the fixture (held), a design
+comp (2026-09-04), and now a suggestion filed from another project's door
+whose evidence is that project's own words. The pre-fold gate this document
+asks for is still the mechanism: this commit landed on develop without any
+suite run, and every lane folding after it inherits the red. The lane on
+#149 did not edit the offending line — outside its change — and folded with
+this one ratchet red, saying so in its review record.
