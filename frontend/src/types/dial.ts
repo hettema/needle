@@ -72,7 +72,7 @@ export interface FixReport {
   fold_reverted: boolean;
   class_closer: string | null;
   switch_was_on: boolean;
-  below_the_line?: boolean;
+  below_the_line?: boolean | null;
   note?: string | null;
 }
 

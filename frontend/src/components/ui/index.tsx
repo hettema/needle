@@ -8,7 +8,7 @@ import type { CardState, ClaimCount, FoldedCard } from "../../types/board";
 import { OPENING, type Meaning } from "../../types/meaning";
 import type { Column } from "../../types/column";
 import type { DialState } from "../../types/dial";
-import { BAND_VALUES, type Band } from "../../types/triage";
+import { BAND_VALUES, LINE_WORDS, type Band } from "../../types/triage";
 import type { CardLeverage, FocusState, FocusStrip, Leverage, ProposedMove } from "../../types/focus";
 import type { DocumentState, Fix, Item, Review, SuggestionKind } from "../../types/document";
 import type { Progress } from "../../types/lane";
@@ -191,16 +191,7 @@ export function IdeaDoor({ onOpen, disabled, said }: { onOpen: (text: string) =>
  * keystroke is not a turn; the count is the one part that can carry a
  * meaning, and only while something runs.
  */
-/** The line in one phrase wherever it is said — the head, its said-sentence, `needle dial`, `needle fixes` (card 149, ruling 4): where auto-fix stops, or "takes every defect" for the last rung, whose own word on the ladder would read as "no line" beside a switch. */
-export const LINE_WORDS: Record<Band, string> = {
-  "harm outside": "stops at harm outside",
-  lies: "stops at lies",
-  loses: "stops at loses",
-  costs: "stops at costs",
-  looks: "stops at looks",
-  nothing: "takes every defect",
-};
-
+/** Where a board's auto-fix stops, in the one phrase (card 149, ruling 4). LINE_WORDS is generated from domain/triage.py, so the page and the terminal cannot drift apart; a board with no line drawn reads as the last rung. */
 export function lineWords(line: Band | null | undefined): string {
   return LINE_WORDS[line ?? "nothing"];
 }

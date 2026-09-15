@@ -9,6 +9,8 @@ What is held here:
   line's own sentence and takes one at or above it;
 - a planned card below the line is held and does not count, exactly as a
   card whose switch went off is (ruling 5);
+- the face's filed sentence is the Defects column's alone, since the beat
+  walks that column and moving the line cannot take a card outside it;
 - a board's line at a moment is read from the audit of turns, the last
   rung until a row names one, unmoved by a change of the number.
 """
@@ -25,10 +27,13 @@ from board.triage import (
     line_words,
 )
 from domain.card import Actor
+from domain.column import Column
 from domain.dial import DialChange, FixStage
-from domain.triage import Band, Breaks, Reach
+from domain.document import DocumentState
+from domain.triage import Band, Breaks, Reach, Reason, Routed, Routing
 from tests.board.test_dial import NOW, card, fix, routed_for, suggestion, verified
 from tests.board.test_grade import grade
+from tests.board.test_lane import card as language_card
 
 
 def test_a_band_is_at_or_above_a_line_by_the_ladders_order():
@@ -99,6 +104,39 @@ def test_a_planned_card_below_the_line_is_held_and_does_not_count():
     assert running(lanes, held) == 2, "the planned card above the line, and the started one"
     # Without the reader every planned card with an open door runs, as before.
     assert held_lanes(lanes, lambda project, number: True, lambda project: True) == []
+
+
+def test_the_filed_sentence_is_the_defects_columns_and_no_other():
+    """The second cold read of card #149, finding 2: the face's filed
+    sentence promises "taken the moment you move the line", and the beat
+    walks the Defects column alone (`board/dial.py::column_defects`), so a
+    graded defect card standing anywhere else would be promised something
+    moving the line cannot give it. The board refuses a hand move of a
+    defect card out of its column, so this ties the face to the same column
+    the beat reads rather than trusting every mover to keep refusing."""
+    from tests.board.test_language import state
+
+    routed = Routed(state=Routing.TRIAGED_NOW, why="the reading verified it", reason=Reason.NOW)
+    facts = dict(
+        document_state=DocumentState.SUGGESTION,
+        routed=routed,
+        defect=True,
+        grade=grade(Breaks.COSTS, Reach.YOU),
+        line=Band.HARM_OUTSIDE,
+    )
+    in_column = state(language_card(column=Column.DEFECTS), **facts)
+    assert in_column.detail.endswith(
+        "Filed below this board's line at harm outside; taken the moment you move the line "
+        "or a fresh reading grades it graver."
+    ), in_column.detail
+    for elsewhere in (Column.BACKLOG, Column.UP_NEXT, Column.NOT_NOW):
+        face = state(language_card(column=elsewhere), **facts)
+        assert "below this board's line" not in face.detail, (elsewhere, face.detail)
+    # With the line at the last rung nothing says it anywhere, as before.
+    assert (
+        "below this board's line"
+        not in state(language_card(column=Column.DEFECTS), **{**facts, "line": Band.NOTHING}).detail
+    )
 
 
 def test_a_boards_line_at_a_moment_is_read_from_the_audit_of_turns():

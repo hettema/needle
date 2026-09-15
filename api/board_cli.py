@@ -1113,7 +1113,9 @@ def fixes(
             lane
             for lane in report.lanes
             if (args.started_off and not lane.switch_was_on)
-            or (args.below_the_line and lane.below_the_line)
+            # A lane with no band (None) was never checked, so it is not one
+            # the Loop counts: only a lane read as below its line is.
+            or (args.below_the_line and lane.below_the_line is True)
         ]
         if args.count:
             print(len(selected))
@@ -1155,7 +1157,9 @@ def fixes(
             else "its board was OFF when planning began",
             "its card was BELOW its board's line when planning began"
             if lane.below_the_line
-            else "its card was at or above its board's line",
+            else "its card was at or above its board's line"
+            if lane.below_the_line is False
+            else "no band to compare against its board's line",
         ]
         print(f"{lane.project} #{lane.card_number:<4} {lane.title}")
         print("      " + "; ".join(facts))

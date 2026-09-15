@@ -907,11 +907,16 @@ def state_of(
         # reading's words for what in the document selected it as the why.
         # A verified `now` below the board's line says so and what would
         # take it (card #149, item 3), never that the board stopped or
-        # that it is his.
+        # that it is his. The column is part of the fact: the beat walks
+        # the Defects column alone (`board/dial.py::column_defects`), so a
+        # graded defect card that has been moved out of it would not be
+        # taken by moving the line, and must not say it would (the second
+        # cold read of card #149, 2026-09-15, finding 2).
         filed = (
             routed is not None
             and routed.state == Routing.TRIAGED_NOW
             and line is not None
+            and card.place.column == Column.DEFECTS
             and not at_or_above(band_of(grade), line)
         )
         return _state(
@@ -1487,15 +1492,18 @@ def assemble_board(
         ]
         if not groups:
             groups = [GroupView(name=None, cards=[])]
-        line = None
+        # `head_line` is the sentence under the column's name; `dial.dial.line`
+        # is the rung this board's auto-fix stops at (card #149). Two different
+        # things one word away from each other, so neither is spelled `line`.
+        head_line = None
         if definition.column == Column.DEFECTS:
-            groups, line = defects_column(groups, by_number, triages, line=dial.dial.line)
+            groups, head_line = defects_column(groups, by_number, triages, line=dial.dial.line)
         columns.append(
             ColumnView(
                 definition=definition,
                 groups=groups,
                 count=sum(len(g.cards) for g in groups),
-                line=line,
+                line=head_line,
             )
         )
 

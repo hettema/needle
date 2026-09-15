@@ -173,6 +173,15 @@ export const BREAKS_WORDS: Record<Breaks, string> = {
   "nothing": "describes no failure",
 };
 
+export const LINE_WORDS: Record<Band, string> = {
+  "harm outside": "stops at harm outside",
+  "lies": "stops at lies",
+  "loses": "stops at loses",
+  "costs": "stops at costs",
+  "looks": "stops at looks",
+  "nothing": "takes every defect",
+};
+
 export const ROUTES_TO_THE_MACHINE: readonly Routing[] = ["triaged now"];
 
 export const ROUTES_TO_THE_OWNER: readonly Routing[] = ["triaged his"];

@@ -258,6 +258,33 @@ class Band(StrEnum):
     """Graded as describing no failure: last of the graded."""
 
 
+LINE_WORDS: dict[Band, str] = {
+    Band.HARM_OUTSIDE: "stops at harm outside",
+    Band.LIES: "stops at lies",
+    Band.LOSES: "stops at loses",
+    Band.COSTS: "stops at costs",
+    Band.LOOKS: "stops at looks",
+    Band.NOTHING: "takes every defect",
+}
+"""Where a board's auto-fix stops, in one phrase per rung (card #149, ruling
+4): the head, its said-sentence, `needle dial` and `needle fixes` all say
+this and nothing else, so the page and the terminal never differ. It lives
+here, beside `Band`, because `api/typegen.py` mirrors an enum-to-words map
+declared in the same module as its enum into `frontend/src/types/` — which
+is what stops a second hand-written copy from drifting, as it already does
+for `REACH_WORDS`, `OFTEN_WORDS` and `BREAKS_WORDS`. The last rung is
+"takes every defect" because the ladder's own word for it, `nothing`, means
+"graded as describing no failure" on a card and would read as "no line"
+beside a switch.
+
+Found by the cold read of card #149 (2026-09-15, finding 2): the map was
+first written in `board/triage.py` and copied by hand into the page, with
+nothing holding the two together."""
+
+EVERY_DEFECT = "every defect"
+"""What the owner types to move a line back to the last rung."""
+
+
 class Routing(StrEnum):
     """Where a defect routes right now: the one state the CLI, the dial and
     the page all read from `board/triage.py::routing_of`. Distinct from

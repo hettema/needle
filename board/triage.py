@@ -24,6 +24,8 @@ from domain.audit import AuditEntry
 from domain.document import Document, FixMark
 from domain.triage import (
     BREAKS_WORDS,
+    EVERY_DEFECT,
+    LINE_WORDS,
     OFTEN_WORDS,
     REACH_WORDS,
     Band,
@@ -358,25 +360,11 @@ def at_or_above(band: Band, line: Band) -> bool:
     return BANDS.index(band) <= BANDS.index(line)
 
 
-LINE_WORDS: dict[Band, str] = {
-    Band.HARM_OUTSIDE: "stops at harm outside",
-    Band.LIES: "stops at lies",
-    Band.LOSES: "stops at loses",
-    Band.COSTS: "stops at costs",
-    Band.LOOKS: "stops at looks",
-    Band.NOTHING: "takes every defect",
-}
-"""The line in one phrase wherever it is said — the head, its said-sentence,
-`needle dial`, `needle fixes` — so the page and the terminal never differ
-(card #149, ruling 4). The last rung is "takes every defect" because the
-ladder's own word for it, nothing, means "graded as describing no failure"
-on a card and would read as "no line" beside a switch."""
-
-EVERY_DEFECT = "every defect"
-"""What the owner types to move a line back to the last rung."""
-
-
 def line_words(line: Band) -> str:
+    """Where a board's auto-fix stops, in the one phrase (card #149, ruling
+    4). The map is `domain/triage.py::LINE_WORDS`, beside the ladder it
+    names, so the page reads the generated mirror of the same words rather
+    than a second copy."""
     return LINE_WORDS[line]
 
 

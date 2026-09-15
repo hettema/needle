@@ -1351,6 +1351,13 @@ class Dial:
                 assert routed is not None
                 grade = current_grade(document, triage)
                 setting = switches.get(project_slug)
+                # The switch is the coarser gate and the operative reason:
+                # with it off nothing on this board runs at all, and saying
+                # "below the line" first would imply that moving the line
+                # would start it. So the line is asked only of a board that
+                # is on, which is the order `_start` already reads them in
+                # (both cold reads of card #149, 2026-09-15).
+                on = setting is not None and setting.on
                 why = why_not_eligible(
                     card,
                     document,
@@ -1361,7 +1368,7 @@ class Dial:
                     triage_open=card.number in triaging,
                     ran_before=card.number in ran,
                     grade=grade,
-                    line=setting.line if setting is not None else Band.NOTHING,
+                    line=setting.line if on and setting is not None else Band.NOTHING,
                 )
                 if why is None and grade is None:
                     why = "verified before the board graded defects; a reading grades it first"
@@ -1374,7 +1381,7 @@ class Dial:
                     why = stopped
                 elif why is None:
                     doors = snapshot.doors.get(card.number) if snapshot else None
-                    if setting is None or not setting.on:
+                    if not on:
                         why = "this board's switch is off"
                     elif snapshot is None:
                         why = "the machine has not been read for this project yet"
@@ -1628,8 +1635,9 @@ class Dial:
                         fix.started_at is None
                         or switch_was_on(changes, fix.project, fix.started_at)
                     ),
-                    below_the_line=band is not None
-                    and (
+                    below_the_line=None
+                    if band is None
+                    else (
                         not at_or_above(
                             band, line_at(changes, fix.project, fix.planning_started_at)
                         )

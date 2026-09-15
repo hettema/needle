@@ -375,13 +375,21 @@ class FixReport(BaseModel):
     """Its board's switch was on the moment its planning began, read from
     the audit of turns (card #80): a lane this is False for began on a
     board whose switch was off, which is what the Loop counts."""
-    below_the_line: bool = False
-    """Its planning began on a card whose band was below its board's line
-    at that moment (card #149, item 2), read from the audit of line moves
-    and the grade of the reading its decision came from: a lane this is
-    True for is the beat reading the wrong fact or a second path to Start,
-    and is what the Loop counts. False for a lane from before the seat
-    graded defects, whose reading has no band to compare."""
+    below_the_line: bool | None = False
+    """Whether this lane began on a card below its board's line (card #149,
+    item 2), read from the audit of line moves and the grade of the reading
+    its decision came from. True is the beat reading the wrong fact or a
+    second path to Start, and is what the Loop counts; False is a lane
+    checked and found at or above its line; None is a lane with no band to
+    compare — one from before the seat graded defects, whose reading landed
+    no grade — which was never checked at all and never says it was.
+
+    The three values are three facts, not two (the cold read of card #149,
+    2026-09-15, finding 1): on the store as it stands every fix lane
+    predates the grade, so a plain False would have `needle fixes` print
+    "its card was at or above its board's line" for every one of them —
+    stating a check nobody made, on the one verb the Loop is read
+    through."""
     note: str | None = None
     """Why this one stands where it does, in the board's own sentence: what a
     planned card is waiting on, or how a lane ended. Without it a card held

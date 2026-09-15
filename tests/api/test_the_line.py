@@ -166,6 +166,17 @@ def test_the_beat_takes_only_a_verified_defect_at_or_above_its_boards_line(
         assert face["state"]["detail"].endswith(FILED_SENTENCE), face["state"]["detail"]
         assert face["routing"]["state"] == "triaged now"
         assert detail(client, number)["summary"]["state"]["detail"].endswith(FILED_SENTENCE)
+    # The face's sentence is the Defects column's, and the board keeps a
+    # graded defect there: a hand move out is refused by the document
+    # (card #100, item 1), which is why the gate in the face is a tie to
+    # the beat's own column rather than a fix for a reachable face. The
+    # gate itself is held pure, in tests/board/test_the_line.py.
+    refused = client.post(
+        f"/api/projects/proj/cards/{looks}/move",
+        json={"to": {"column": "Backlog", "group": None, "position": 0}},
+    )
+    assert refused.status_code == 409, refused.text
+    assert "Kind: defect" in refused.text
     above = face_of(client, harm)["state"]["detail"]
     assert "below this board's line" not in above and above.endswith(
         "Create plan writes one when you want it planned."
@@ -174,6 +185,16 @@ def test_the_beat_takes_only_a_verified_defect_at_or_above_its_boards_line(
     assert (
         capsys.readouterr().out.splitlines()[0] == f"proj: {defects['count']} in Defects — {head}"
     )
+    # The switch is the operative reason when it is off: a board that runs
+    # nothing says so, rather than naming a line whose moving would start
+    # nothing. Same order as a held plan's note at Start.
+    turn(client, on=False)
+    off_rows = {
+        w["card_number"]: w["why"] for w in client.get("/api/fixes?slug=proj").json()["waiting"]
+    }
+    assert off_rows[looks] == "this board's switch is off"
+    assert off_rows[harm] == "this board's switch is off"
+    turn(client, on=True)
     # Item 2: the harm-outside card is planned and no other, beat after
     # beat, with room for three more under the number.
     tick(client)
@@ -245,3 +266,29 @@ def test_the_beat_takes_only_a_verified_defect_at_or_above_its_boards_line(
     # the line existed: no "filed" count at all.
     draw(client, "nothing")
     assert column(client, "Defects")["line"].endswith("fixing themselves")
+    # The Loop's counter fires. Everything above shows it reading 0 because
+    # the beat never plans below the line, which leaves 0 indistinguishable
+    # from a number that cannot move (the cold read of card #149, finding
+    # 3). So: the line at harm outside, and a fix lane opened straight in
+    # the store on a card below it — the second path to Start the Loop
+    # exists to catch, since the beat itself will not do this.
+    draw(client, "harm outside")
+    looks_reading = store.triage("proj", looks)
+    assert looks_reading is not None and looks_reading.grade is not None
+    store.open_fix_lane("proj", looks, clock.now(), decision=looks_reading.decision)
+    capsys.readouterr()
+    assert main(["fixes", "all", "--below-the-line", "--count"]) == 0
+    assert capsys.readouterr().out == "1\n", "the counter reads the lane the beat would not open"
+    assert main(["fixes", "proj", "--below-the-line"]) == 0
+    assert "its card was BELOW its board's line when planning began" in capsys.readouterr().out
+    # A lane with no band was never checked and never says it was: the third
+    # value, which every lane on the real store has (finding 1).
+    store.open_fix_lane("proj", costs, clock.now(), decision=None)
+    capsys.readouterr()
+    assert main(["fixes", "all", "--below-the-line", "--count"]) == 0
+    assert capsys.readouterr().out == "1\n", "a lane with no band is not one the Loop counts"
+    assert main(["fixes", "proj"]) == 0
+    out = capsys.readouterr().out
+    assert "no band to compare against its board's line" in out
+    lanes = client.get("/api/fixes?slug=proj").json()["lanes"]
+    assert [lane["below_the_line"] for lane in lanes][-2:] == [True, None]

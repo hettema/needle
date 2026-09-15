@@ -238,8 +238,9 @@ says why on the same line. A mark routes only after an independent reading has
 verified it against its source, and a reading tightens routing, never loosens
 it. The board's dial is the person's standing ruling that a verified `now`
 defect enters execution without them, down to the line they drew for that
-board; an unmarked defect, or one no reading has verified, is nobody's yet. A learning about the way we work is a suggestion
-marked `his` whose card edits this document and nothing else.
+board; an unmarked defect, or one no reading has verified, is nobody's yet.
+A learning about the way we work is a suggestion marked `his` whose card
+edits this document and nothing else.
 
 A slice of work is a plan in the project's plans folder, with the words that
 asked for it, an intent, an effort gate that names why, a "done means" per item
