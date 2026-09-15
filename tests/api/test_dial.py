@@ -847,10 +847,12 @@ def test_a_held_plan_does_not_count_and_the_memory_floor_stops_the_beat(
     state = board(client)["dial"]
     assert (state["running"], state["held"], state["full"]) == (1, 1, None)
     assert main(["dial"]) == 0
-    assert (
-        f"1 fix lane at most across every board; 1 live now, 1 held; "
-        f"{READINGS_AT_ONCE} readings at once, 0 open now; the machine is"
-    ) in capsys.readouterr().out
+    # Both pairs, each with its own bound. How many readings stand open at
+    # this moment is not this test's subject and is no longer the number's
+    # business (card #154), so the bound is pinned and the count is not.
+    out = capsys.readouterr().out
+    assert "1 fix lane at most across every board; 1 live now, 1 held; " in out
+    assert f"{READINGS_AT_ONCE} readings at once, " in out
 
     # The machine runs short: the beat opens nothing, even with the number
     # allowing it, and the head reads the two numbers.
@@ -871,10 +873,9 @@ def test_a_held_plan_does_not_count_and_the_memory_floor_stops_the_beat(
     # what bounds plans written ahead of a full machine.
     assert main(["dial"]) == 0
     out = capsys.readouterr().out
-    assert (
-        f"3 fix lanes at most across every board; 2 live now; "
-        f"{READINGS_AT_ONCE} readings at once, 0 open now; the machine is not quiet"
-    ) in out
+    assert "3 fix lanes at most across every board; 2 live now; " in out
+    assert f"{READINGS_AT_ONCE} readings at once, " in out
+    assert "the machine is not quiet" in out
     assert f"; {full}" in out
     # Free swap short counts the same, on a machine that has swap.
     machine_floor.set_memory(available_gb=16.0, swap_free_gb=1.0)
