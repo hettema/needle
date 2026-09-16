@@ -64,3 +64,37 @@ has to answer it for the warm call too.
 A test on the floor: a note handed from a machine that is not the board's is
 delivered to its colleague's next word, and stands on the board's head until
 it is, exactly as one handed from the board's own machine does.
+
+## More evidence, from card #155 (2026-09-16): a reviewer read as the worker
+
+The same root — a call made on the rented machine is a row in that machine's
+store, which the board never reads — has a second face, seen on Hello Revenue
+#601 on 2026-09-16 and written on Needle's watercooler by the session that
+diagnosed it at 18:07Z and 18:18Z. A fresh Codex reviewer (call 242) was
+launched on rented in #601's own worktree, read-only, to check a repair. The
+board showed that reviewer as the card's own session and main worker: the
+card's true implementer (a Claude session, still alive on rented) was not the
+face's session, the board tried at 18:04:15Z to move the reviewer from its
+own call scope into the card's occupied scope, and the owner's Watch on the
+card opened a terminal that closed at once, because the attach command the
+window runs is Claude's (`runtime/windows.py::attach_command` emits `claude
+attach <short id>` for any session, a Codex thread included). When the
+reviewer ended, the lane would have read that as the lane's own ending.
+
+Why it is this root and not another: `board/lane.py::elsewhere` is the reader
+that says a session sitting in a card's copy of the code is not that card's
+— it reads the board's own call rows (`facts.calls`, from the board's store)
+and the card each session was started on (`facts.started_on`). Both come
+from the laptop's store. A call launched on rented writes its row on rented,
+so the board sees no call for that session and no started-on record, and
+`board/lane.py::_winner` takes the first live background session in the
+directory, which was the reviewer. Card #137 made the reader; what it reads
+is missing on every call made where the lanes run, which is this card's
+finding exactly. Neighbours on this ground: #114 (a card shows another
+project's session as its own — the same face lie, a different cause), #120
+(a copy of the work read where its record says), #137 (shipped the reader),
+#155 (the exit that found this while closing).
+
+Not checked here: whether Watch on a legitimate Codex lane (a card whose own
+session is a Codex thread) is broken by the same attach command regardless of
+this misreading; the attach command has no branch on the session's make.
