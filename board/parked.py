@@ -19,7 +19,7 @@ from datetime import datetime
 
 from pydantic import BaseModel
 
-from board.lane import first_line, has_row
+from board.lane import answered_after, first_line, has_row
 from board.reconcile import home_of
 from board.signals import past_due, read_or_decline
 from board.triage import fingerprint
@@ -121,23 +121,6 @@ def owner_parked(placement: AuditEntry | None) -> bool:
     )
 
 
-def _answered_after(history: list[AuditEntry], kind: RowKind) -> bool:
-    """Whether an answer of the owner's landed after the newest row of this
-    kind was written. A row with no writing on the history (the import's)
-    is answered by any answer at all."""
-    written = next(
-        (
-            e.at
-            for e in history
-            if e.kind == AuditKind.ROW and e.detail.startswith(f"{kind.value} ")
-        ),
-        None,
-    )
-    return any(
-        e.kind == AuditKind.ANSWERED and (written is None or e.at >= written) for e in history
-    )
-
-
 def commitments_of(card: Card, history: list[AuditEntry], last: Reading | None) -> list[Commitment]:
     """Every commitment on the card that nothing accounts for (card #82,
     item 3), each naming the row. A commitment is what the card's rows
@@ -184,7 +167,7 @@ def commitments_of(card: Card, history: list[AuditEntry], last: Reading | None) 
             )
     for kind in (RowKind.ASK, RowKind.Q):
         row = next((r for r in card.rows if r.kind == kind), None)
-        if row is not None and not _answered_after(history, kind):
+        if row is not None and not answered_after(history, kind):
             found.append(
                 Commitment(
                     row=kind,

@@ -44,7 +44,7 @@ from domain.lane import (
 )
 from domain.launch import Rescue
 from domain.meaning import Meaning, say
-from domain.row import RowKind
+from domain.row import Row, RowKind
 from domain.session import Session, SessionKind, SessionState
 from domain.signal import Signal
 from domain.slot import Make, Placement, rung_words
@@ -96,6 +96,12 @@ class LaneFacts(BaseModel):
     calls: list[Call] = []
     """The calls still open: one names a colleague that is answering somebody
     else's question, wherever it happens to be sitting (card #135)."""
+    standing: dict[int, str] = {}
+    """The decision of the owner's still standing on each card's rows in
+    this life of its lane, by card number, as `owner_decision_outstanding`
+    reads it (card #155). An ended lane whose card carries one is his move,
+    not a session that died: the face reads the same fact the exit moves
+    on, so the two never disagree. A card absent here carries none."""
 
 
 def card_of_cwd(cwd: str, project_path: str) -> int | None:
@@ -547,6 +553,16 @@ def lane_for(card: Card, facts: LaneFacts) -> Lane:
                 why=f"{when} after putting a decision to you: {last_line(said)}",
                 then="open the card to resume it once you have decided",
             )
+        elif (standing := facts.standing.get(card.number)) is not None:
+            # A decision of his on the card's rows, written in this life
+            # of the lane: the session handed a checkpoint over and went,
+            # and the work waits for him, not for a fresh start (card #155).
+            sentence = say(
+                Meaning.YOURS,
+                "decide what it asked and bring it back",
+                why=f"{when} and {standing}",
+                then="open the card to resume it once you have decided",
+            )
         elif on_disk:
             sentence = say(
                 Meaning.BROKEN,
@@ -686,8 +702,56 @@ def _row_written_after(history: list[AuditEntry], kind: RowKind, since: datetime
     return False
 
 
+def _written_at(history: list[AuditEntry], kind: RowKind) -> datetime | None:
+    """When the newest row of this kind was written, from the record; None
+    for a row with no writing on the history (the import's). `history` is
+    newest first, as the store answers it."""
+    return next(
+        (
+            e.at
+            for e in history
+            if e.kind == AuditKind.ROW and e.detail.startswith(f"{kind.value} ")
+        ),
+        None,
+    )
+
+
+def answered_after(history: list[AuditEntry], kind: RowKind) -> bool:
+    """Whether an answer of the owner's landed after the newest row of this
+    kind was written. A row with no writing on the history (the import's)
+    is answered by any answer at all. The one reader of "he answered this"
+    for the parked card's commitments and for a lane's ending alike (card
+    #155): a question he answered through the card, whose session then ran
+    on and ended quietly, is not asked of him again."""
+    written = _written_at(history, kind)
+    return any(
+        e.kind == AuditKind.ANSWERED and (written is None or e.at >= written) for e in history
+    )
+
+
 def has_row(card: Card, kind: RowKind) -> bool:
     return any(r.kind == kind for r in card.rows)
+
+
+def newest_row(card: Card, kind: RowKind) -> Row | None:
+    """The newest row of this kind on the card: rows are appended in the
+    order they were written, so the last one is the current one, and a card
+    that has been through two checkpoints shows the words of the second."""
+    return next((r for r in reversed(card.rows) if r.kind == kind), None)
+
+
+def life_of(
+    record: LaneRecord | None, hands_on_since: datetime | None, history: list[AuditEntry]
+) -> datetime | None:
+    """When this life of the lane began, the way every reader of a card's
+    rows bounds "current": the lane record's first sighting, else when the
+    lane's hands went on, else when the card last entered Executing; None
+    for a card the board never saw start, whose rows all count. One reader,
+    because the recovery, the exit and the lane's face all read the same
+    rows against the same moment (card #155)."""
+    if record is not None:
+        return record.first_seen
+    return hands_on_since or entered_executing_at(history)
 
 
 def owner_moved_out_after(history: list[AuditEntry], since: datetime | None) -> bool:
@@ -775,24 +839,34 @@ def owner_decision_outstanding(
     card: Card, history: list[AuditEntry], since: datetime | None
 ) -> str | None:
     """A decision of the owner's still standing on the card's rows: an ASK
-    or a Q row, or a RULING with no RULED beneath it (plan 68, ruling 7),
-    written in this life of the lane — a row from a previous life is a
-    question already answered or overtaken, and `since` is None only for
-    a card the board never saw start, whose rows all count."""
+    or a Q row he has not answered, or a RULING with no RULED after it
+    (plan 68, ruling 7), written in this life of the lane — a row from a
+    previous life is a question already answered or overtaken, and `since`
+    is None only for a card the board never saw start, whose rows all
+    count. The newest row of each kind is the current one, an answer of
+    his after it settles it, and a RULED settles only the RULING it
+    follows (card #155's challenge round: the first ASK's words stood for
+    a second checkpoint's, an answered ASK parked the card on him again,
+    and a RULING after a RULED read as ruled on)."""
     for kind in (RowKind.ASK, RowKind.Q):
-        row = next((r for r in card.rows if r.kind == kind), None)
-        if row is not None and (since is None or _row_written_after(history, kind, since)):
+        row = newest_row(card, kind)
+        if (
+            row is not None
+            and (since is None or _row_written_after(history, kind, since))
+            and not answered_after(history, kind)
+        ):
             return f"the card carries a {kind.value} row: {first_line(row.text)}"
-    ruling = next((r for r in card.rows if r.kind == RowKind.RULING), None)
-    if (
-        ruling is not None
-        and (since is None or _row_written_after(history, RowKind.RULING, since))
-        and not (
+    ruling = newest_row(card, RowKind.RULING)
+    if ruling is not None and (since is None or _row_written_after(history, RowKind.RULING, since)):
+        ruled_since = _written_at(history, RowKind.RULING)
+        # A RULING with no writing on the history is the import's, and any
+        # RULED on the card rules on it; one that was written is ruled on
+        # only by a RULED written after it.
+        if not (
             has_row(card, RowKind.RULED)
-            and (since is None or _row_written_after(history, RowKind.RULED, since))
-        )
-    ):
-        return f"the card carries a RULING row nobody has ruled on: {first_line(ruling.text)}"
+            and (ruled_since is None or _row_written_after(history, RowKind.RULED, ruled_since))
+        ):
+            return f"the card carries a RULING row nobody has ruled on: {first_line(ruling.text)}"
     return None
 
 
@@ -892,6 +966,22 @@ def exit_for(
         )
     if folded is None and lane.session is None:
         return None
+    # The one point where the card would go back to the start queue: a
+    # decision of the owner's still standing — his rows in this life, or
+    # last words that put one to him — is read by the same reader the
+    # recovery uses, so an ending at a planned checkpoint waits for him
+    # instead of reading as failed work (Hello Revenue #601, 2026-09-16:
+    # a session ended after handing four ads over for marking, and the
+    # card went to Up next as "nothing folded"). Everything above this
+    # line keeps its order: a close, a lane lent out, a fold nobody wrote
+    # up and a stale DELIVERED are facts about the work, not about him.
+    stood, why = disposition(card, lane, history, since)
+    if stood == Disposition.OWNERS:
+        return Exit(
+            column=Column.DECISION_MOMENT,
+            reason=f"the lane ended; {why}",
+            evidence=Evidence.LANE_ENDED,
+        )
     return Exit(
         column=came_from(history),
         reason="the lane ended with nothing folded" + (f" ({lane.died})" if lane.died else ""),

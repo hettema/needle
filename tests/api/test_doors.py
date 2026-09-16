@@ -536,6 +536,53 @@ def test_watch_opens_a_tab_once_stop_ends_the_lane_and_look_takes_its_place(
     assert "--fork-session" in machine_floor.state()["spawned"][-1]["command"][-1]
 
 
+def test_a_lane_that_ends_at_a_checkpoint_it_handed_over_waits_for_the_owner(
+    client: TestClient, machine_floor: Floor, repo: Path
+):
+    """Hello Revenue #601, 2026-09-16: the session wrote what it waited on,
+    told the reviewers what to do in words that asked no question, and
+    ended; the board sent the card to Up next as "nothing folded" and the
+    experiment read as failed work to start again. The handoff the brief
+    teaches — an ASK row — keeps the card waiting for him, as his move,
+    with Resume as the way back (card #155)."""
+    from domain.card import Actor
+    from domain.row import Row, RowKind
+
+    live = client.app.state.loops.live
+    brief = client.get(f"/api/projects/proj/cards/{CARD}/brief").text
+    assert 'ASK "<what he needs to do>"' in brief and "WAITS says what the work waits on" in brief
+    start(client)
+    live.add_row("proj", CARD, Row(kind=RowKind.WAITS, text="both reviewers' marks"), Actor.SESSION)
+    live.add_row(
+        "proj",
+        CARD,
+        Row(kind=RowKind.ASK, text="Mark the four pilot ads and paste the box back"),
+        Actor.SESSION,
+    )
+    stopped = client.post(f"/api/projects/proj/cards/{CARD}/stop")
+    assert stopped.status_code == 200, stopped.text
+    assert "the card is in Decision moment" in stopped.json()["said"]
+    ended = detail(client)
+    assert ended["summary"]["lane_state"] == "ended"
+    assert ended["summary"]["state"]["word"] == "asked you"
+    assert ended["summary"]["state"]["detail"].startswith(
+        "Your move: decide what it asked and bring it back."
+    )
+    assert "Mark the four pilot ads" in ended["summary"]["state"]["detail"]
+    assert ended["doors"]["resume"]["offered"], "the same work continues without a new Start"
+    move = next(h for h in ended["history"] if h["kind"] == "moved" and h["actor"] == "machine")
+    assert move["detail"] == (
+        "Moved Executing → Decision moment — the lane ended; the card carries a ASK row: Mark "
+        "the four pilot ads and paste the box back"
+    )
+    assert len(machine_floor.state()["launch_log"]) == 1, "nothing relaunched it"
+    # The face's facts serve a lane with no record of its own the way the
+    # exit does: the life falls back to when the card entered Executing.
+    loops = client.app.state.loops
+    unrecorded = loops._standing("proj", live.store.cards("proj"), [])
+    assert unrecorded[CARD].startswith("the card carries a ASK row: Mark the four pilot ads")
+
+
 def test_discuss_opens_a_conversation_that_is_never_hands_on(
     client: TestClient, machine_floor: Floor
 ):

@@ -12,6 +12,7 @@ from board.lane import (
     exit_for,
     is_question,
     lane_for,
+    owner_decision_outstanding,
     should_enter_executing,
 )
 from board.signals import parse_watch
@@ -19,8 +20,8 @@ from domain.audit import AuditEntry, AuditKind
 from domain.call import Call
 from domain.card import Actor, Card, CardOrigin, DocumentLink, Place
 from domain.column import Column
-from domain.ending import Cause, Death
 from domain.document import DocumentKind
+from domain.ending import Cause, Death
 from domain.gate import Gate
 from domain.hook import HookEvent, HookKind
 from domain.lane import CollisionVerdict, Discussion, LaneRecord, LaneState, StartState, Wait
@@ -558,6 +559,167 @@ def test_a_hand_placed_card_with_no_lane_stays():
     placed = card(column=Column.EXECUTING)
     lane = lane_for(placed, facts(worktrees={}))
     assert exit_for(placed, lane, [], folded=None, signal=None, since=None) is None
+
+
+def answered(at: datetime, id: int) -> AuditEntry:
+    return AuditEntry(
+        id=id,
+        at=at,
+        actor=Actor.OWNER,
+        kind=AuditKind.ANSWERED,
+        card_number=7,
+        from_place=None,
+        to_place=None,
+        detail="Answered, and the lane resumed",
+    )
+
+
+def test_an_ended_lane_with_a_current_ask_waits_for_the_owner_instead_of_starting_again():
+    """Hello Revenue #601, 2026-09-16: the session ended after handing four
+    ads over for marking — imperative last words, a WAITS row, no question
+    mark — and the card went to Up next as "nothing folded", so the work
+    read as failed and ready to start again. The recovery already read the
+    owner's rows; the exit did not (card #155)."""
+    since = NOW - timedelta(hours=1)
+    entered = moved(Column.UP_NEXT, Column.EXECUTING, Actor.MACHINE, since, id=1)
+    waits = Row(kind=RowKind.WAITS, text="both reviewers' marks on the four pilot ads")
+    ask = Row(kind=RowKind.ASK, text="Mark the four pilot ads and paste the box back")
+    asked = card(column=Column.EXECUTING, rows=[waits, ask])
+    history = [
+        row_written(RowKind.ASK, NOW - timedelta(minutes=5), id=3),
+        row_written(RowKind.WAITS, NOW - timedelta(minutes=6), id=2),
+        entered,
+    ]
+    out = exit_for(asked, ended_lane(), history, folded=False, signal=None, since=since)
+    assert out is not None and out.column == Column.DECISION_MOMENT
+    assert out.reason == (
+        "the lane ended; the card carries a ASK row: Mark the four pilot ads and paste the box back"
+    )
+    # WAITS alone asks him nothing: the work stopped short, as before.
+    waiting = card(column=Column.EXECUTING, rows=[waits])
+    back = exit_for(waiting, ended_lane(), history[1:], folded=False, signal=None, since=since)
+    assert back is not None and back.column == Column.UP_NEXT and "nothing folded" in back.reason
+    # An ASK from a previous life is a question already answered or overtaken.
+    stale = [
+        moved(Column.UP_NEXT, Column.EXECUTING, Actor.MACHINE, since, id=2),
+        row_written(RowKind.ASK, NOW - timedelta(days=2), id=1),
+    ]
+    back = exit_for(asked, ended_lane(), stale, folded=False, signal=None, since=since)
+    assert back is not None and back.column == Column.UP_NEXT
+    # A question he answered through the card, whose session ran on and
+    # ended quietly, is not asked of him again.
+    settled = [answered(NOW - timedelta(minutes=2), id=4), *history]
+    back = exit_for(asked, ended_lane(), settled, folded=False, signal=None, since=since)
+    assert back is not None and back.column == Column.UP_NEXT
+    # Everything above the fallback keeps its order: a fold nobody wrote up
+    # still says so, whatever the rows say.
+    folded = exit_for(asked, ended_lane(), history, folded=True, signal=None, since=since)
+    assert folded is not None and "no session wrote it up" in folded.reason
+
+
+def test_an_ended_lane_whose_last_words_put_a_decision_to_him_waits_for_him():
+    since = NOW - timedelta(hours=1)
+    history = [moved(Column.PLANNED, Column.EXECUTING, Actor.MACHINE, since, id=1)]
+    ended = lane_for(
+        card(column=Column.EXECUTING),
+        facts(
+            sessions=[session(pid=None, state=SessionState.ENDED, recorded="stopped")],
+            events=[
+                event(HookKind.STOP, "Two readings disagree. Nothing can move until you rule.")
+            ],
+        ),
+    )
+    out = exit_for(
+        card(column=Column.EXECUTING), ended, history, folded=False, signal=None, since=since
+    )
+    assert out is not None and out.column == Column.DECISION_MOMENT
+    assert out.reason == (
+        "the lane ended; its last words put a decision to you: Two readings disagree. Nothing "
+        "can move until you rule."
+    )
+
+
+def test_the_standing_decision_reads_the_newest_row_his_answer_and_the_ruled_it_follows():
+    """The challenge round on card #155 reproduced three misreadings in the
+    reader the recovery already used: the first ASK's words stood for the
+    second checkpoint's; an answered ASK still stood; and any RULED in the
+    life silenced a RULING written after it."""
+    since = NOW - timedelta(hours=1)
+    entered = moved(Column.UP_NEXT, Column.EXECUTING, Actor.MACHINE, since, id=1)
+    twice = card(
+        column=Column.EXECUTING,
+        rows=[Row(kind=RowKind.ASK, text="OLD checkpoint"), Row(kind=RowKind.ASK, text="NEW one")],
+    )
+    history = [
+        row_written(RowKind.ASK, NOW - timedelta(minutes=5), id=3),
+        row_written(RowKind.ASK, NOW - timedelta(minutes=30), id=2),
+        entered,
+    ]
+    assert (
+        owner_decision_outstanding(twice, history, since) == "the card carries a ASK row: NEW one"
+    )
+    assert owner_decision_outstanding(twice, [answered(NOW, id=4), *history], since) is None
+    # An answer before the newest ASK settles only the older one.
+    between = [history[0], answered(NOW - timedelta(minutes=10), id=9), *history[1:]]
+    assert owner_decision_outstanding(twice, between, since) is not None
+    ruled = card(
+        column=Column.EXECUTING,
+        rows=[
+            Row(kind=RowKind.RULING, text="which tariff"),
+            Row(kind=RowKind.RULED, text="the flat one"),
+        ],
+    )
+    in_order = [
+        row_written(RowKind.RULED, NOW - timedelta(minutes=5), id=3),
+        row_written(RowKind.RULING, NOW - timedelta(minutes=30), id=2),
+        entered,
+    ]
+    assert owner_decision_outstanding(ruled, in_order, since) is None
+    re_asked = [
+        row_written(RowKind.RULING, NOW - timedelta(minutes=5), id=3),
+        row_written(RowKind.RULED, NOW - timedelta(minutes=30), id=2),
+        entered,
+    ]
+    assert owner_decision_outstanding(ruled, re_asked, since) == (
+        "the card carries a RULING row nobody has ruled on: which tariff"
+    )
+    # A RULED from a previous life never settles this life's RULING.
+    earlier = [
+        row_written(RowKind.RULING, NOW - timedelta(minutes=5), id=3),
+        entered,
+        row_written(RowKind.RULED, NOW - timedelta(days=2), id=0),
+    ]
+    assert owner_decision_outstanding(ruled, earlier, since) is not None
+    # An imported card's rows have no writing on the history: any RULED on
+    # it rules on its RULING, as before.
+    assert owner_decision_outstanding(ruled, [], None) is None
+    assert owner_decision_outstanding(ruled, [row_written(RowKind.RULING, NOW, id=1)], None) == (
+        "the card carries a RULING row nobody has ruled on: which tariff"
+    )
+
+
+def test_an_ended_lane_with_a_standing_decision_reads_as_his_move_not_a_death():
+    """The face reads the same fact the exit moved on: a card waiting on
+    him in Decision moment never says "session died, start again"."""
+    standing = "the card carries a ASK row: Mark the four pilot ads"
+    lane = lane_for(
+        card(column=Column.DECISION_MOMENT),
+        facts(
+            sessions=[session(pid=None, state=SessionState.ENDED, recorded="stopped")],
+            standing={7: standing},
+        ),
+    )
+    assert lane.state == LaneState.ENDED
+    assert lane.sentence == (
+        "Your move: decide what it asked and bring it back. The session on it ended 1 min ago "
+        f"and {standing}. Open the card to resume it once you have decided."
+    )
+    assert doors(card(column=Column.DECISION_MOMENT), lane).resume.offered
+    unasked = lane_for(
+        card(column=Column.DECISION_MOMENT),
+        facts(sessions=[session(pid=None, state=SessionState.ENDED, recorded="stopped")]),
+    )
+    assert unasked.sentence.startswith("Something is wrong: the session on it ended")
 
 
 # ── the doors ──────────────────────────────────────────────────────────

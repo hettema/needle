@@ -361,7 +361,7 @@ class Doors:
             "true state:"
             f"\n  {needle} card {slug} {card.number}            # this brief"
             f'\n  {needle} row {slug} {card.number} <KIND> "…"   # one row: DELIVERED, WATCH, '
-            "REVIEW, WAITS, RULING"
+            "REVIEW, WAITS, ASK, RULING"
             f'\n  {needle} close {slug} {card.number} --delivered "what the owner now has" '
             f'--watch "<signal>" --review docs/reviews/<file>.md'
             f"\n\nThe close is your whole job: the review record under docs/reviews/, the plan "
@@ -385,7 +385,14 @@ class Doors:
             + "."
             "\n\n" + review_guidance() + "."
             "\n\nTo ask the owner something, end your turn with the question; the board shows it "
-            "on the card and his answer resumes you."
+            "on the card and his answer resumes you. When the work has reached a point that "
+            "waits on him — a planned checkpoint, marks he owes, a call only he makes — and your "
+            "session will not stay for the answer, write it as a row before you stop: "
+            f'`{needle} row {slug} {card.number} ASK "<what he needs to do>"`. A lane that ends '
+            "carrying an ASK he has not answered waits for him in Decision moment, with Resume "
+            "as the way back; a lane that ends with nothing folded, no close, no question in "
+            "its last words and no such row goes back to the start queue as work that stopped "
+            "short. WAITS says what the work waits on and asks him nothing."
         )
         return text
 

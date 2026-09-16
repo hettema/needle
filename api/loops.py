@@ -67,11 +67,12 @@ from board.lane import (
     conversations_alive,
     disposition,
     doors_for,
-    entered_executing_at,
     exit_for,
     first_line,
     lane_for,
     last_line,
+    life_of,
+    owner_decision_outstanding,
     should_enter_executing,
     unpark,
     with_footprints,
@@ -1331,11 +1332,11 @@ class Loops:
             self.runtime.worktrees(project.path) if self.runtime.is_repository(project.path) else {}
         )
         records = self._keep_lane_records(slug, project.path, worktrees, now)
-        facts = self._facts(live, sessions, windows, records, worktrees, now)
+        facts = self._facts(live, cards, sessions, windows, records, worktrees, now)
         lanes = {c.number: lane_for(c, facts) for c in cards}
         self._sightings(slug, lanes, now)
         if self._name_deaths(slug, cards, lanes, now):
-            facts = self._facts(live, sessions, windows, records, worktrees, now)
+            facts = self._facts(live, cards, sessions, windows, records, worktrees, now)
             lanes = {c.number: lane_for(c, facts) for c in cards}
         # A recovery moved or resumed a session, so the lanes read here are
         # stale until the re-read below; the scope check waits for the next
@@ -1346,14 +1347,14 @@ class Loops:
         ):
             sessions = self.runtime.sessions()
             windows = self.runtime.open_windows()
-            facts = self._facts(live, sessions, windows, records, worktrees, now)
+            facts = self._facts(live, cards, sessions, windows, records, worktrees, now)
             lanes = {c.number: lane_for(c, facts) for c in cards}
         cards = self._machine_moves(slug, cards, lanes, records)
         self._tell_owner(live, cards, lanes)
         if self._release_finished(slug, cards, lanes, records):
             sessions = self.runtime.sessions()
             windows = self.runtime.open_windows()
-            facts = self._facts(live, sessions, windows, records, worktrees, now)
+            facts = self._facts(live, cards, sessions, windows, records, worktrees, now)
             lanes = {c.number: lane_for(c, facts) for c in cards}
         lanes = with_footprints(lanes, *self._footprints(live, cards, lanes))
         doors = self._doors(live, cards, lanes, placement, placement_note, now)
@@ -1366,6 +1367,7 @@ class Loops:
     def _facts(
         self,
         live: LiveProject,
+        cards: list[Card],
         sessions: list[Session],
         windows: list[Window],
         records: list[LaneRecord],
@@ -1379,6 +1381,7 @@ class Loops:
         rescues = {s.session_id: self.live.store.rescues(s.session_id) for s in here}
         store = self.live.store
         return LaneFacts(
+            standing=self._standing(slug, cards, records),
             project_path=path,
             sessions=sessions,
             started_on=store.started_on([s.session_id for s in sessions]),
@@ -1399,6 +1402,34 @@ class Loops:
                 if r.why is not None and r.observed_at is not None
             },
         )
+
+    def _standing(self, slug: str, cards: list[Card], records: list[LaneRecord]) -> dict[int, str]:
+        """The owner's decision standing on each card's rows in this life
+        of its lane (card #155), for the cards whose lane the loop judges:
+        one with a record, or one sitting in Executing or Decision moment —
+        the exit serves a lane with no record of its own too (the
+        challenge round's fourth correction), and the face of a parked card
+        reads it after the exit moved it. Every other card is left unread:
+        a history read per card per pass would be six hundred on Hello
+        Revenue for faces that never show a lane. The life is read with no
+        hands-on moment, which is what an ended lane has; a live lane's
+        face never reads this."""
+        recorded = {r.card_number: r for r in records}
+        standing: dict[int, str] = {}
+        for card in cards:
+            if card.folded_into is not None:
+                continue
+            record = recorded.get(card.number)
+            if record is None and card.place.column not in (
+                Column.EXECUTING,
+                Column.DECISION_MOMENT,
+            ):
+                continue
+            history = self.live.store.history(slug, card.number)
+            words = owner_decision_outstanding(card, history, life_of(record, None, history))
+            if words is not None:
+                standing[card.number] = words
+        return standing
 
     def _current_boot(self, machine_name: str = "") -> Boot | None:
         """The boot a machine is in now, by the board's name for it; an
@@ -1649,11 +1680,7 @@ class Loops:
                 continue
             record = by_record.get(number)
             history = store.history(slug, number)
-            since = (
-                record.first_seen
-                if record is not None
-                else lane.hands_on_since or entered_executing_at(history)
-            )
+            since = life_of(record, lane.hands_on_since, history)
             # Disposition first (item 4): finished or his, whatever the
             # interruption; and a park with nothing left to bring back lifts.
             stood, why_stood = disposition(card, lane, history, since)
@@ -2230,11 +2257,7 @@ class Loops:
             if lane.state != LaneState.NONE:
                 history = self.live.store.history(slug, card.number)
                 record = by_record.get(card.number)
-                since = (
-                    record.first_seen
-                    if record is not None
-                    else lane.hands_on_since or entered_executing_at(history)
-                )
+                since = life_of(record, lane.hands_on_since, history)
                 reason = should_enter_executing(card, lane, history)
                 if reason is not None:
                     self.live.move(
