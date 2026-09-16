@@ -159,6 +159,26 @@ def test_a_ruling_nobody_ruled_on_is_a_commitment_and_a_ruled_one_is_not():
     assert open_ruling.row == RowKind.RULING and not open_ruling.transferable
     ruled = ruling + [Row(kind=RowKind.RULED, text="The left.")]
     assert commitments_of(card(rows=ruled), [], None) == []
+    # A RULED settles only the RULING it follows: a RULING written after
+    # the last RULED stands, and the newest ASK is the current one (card
+    # #155's review, finding 4).
+    re_asked = [
+        entry(AuditKind.ROW, "RULING Which of the two?", hours_ago=1),
+        entry(AuditKind.ROW, "RULED The left.", hours_ago=2),
+    ]
+    [again] = commitments_of(card(rows=ruled), re_asked, None)
+    assert again.row == RowKind.RULING
+    twice = [Row(kind=RowKind.ASK, text="OLD checkpoint"), Row(kind=RowKind.ASK, text="NEW one")]
+    written = [
+        entry(AuditKind.ROW, "ASK NEW one", hours_ago=1),
+        entry(AuditKind.ANSWERED, "Answered", hours_ago=2, actor=Actor.OWNER),
+        entry(AuditKind.ROW, "ASK OLD checkpoint", hours_ago=3),
+    ]
+    [current] = commitments_of(card(rows=twice), written, None)
+    assert current.words == "a question in your words with no answer (ASK): NEW one"
+    # The machine's report that an answer never reached the lane is not his answer.
+    not_reached = [entry(AuditKind.ANSWERED, "The answer did not resume the lane", hours_ago=0.5)]
+    assert commitments_of(card(rows=twice), not_reached + written, None), "still his to answer"
 
 
 def test_age_shipped_code_and_an_absent_signal_are_not_read_at_all():

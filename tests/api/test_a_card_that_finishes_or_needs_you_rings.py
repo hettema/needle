@@ -91,7 +91,14 @@ def test_a_lane_that_folds_and_closes_rings_once_as_the_card_enters_executed(
 
     (argv,) = rings(machine_floor, 1)
     assert argv[:8] == [
-        "-u", "critical", "-t", "0", "-a", "notify-send", "-A", "default=Open the board"
+        "-u",
+        "critical",
+        "-t",
+        "0",
+        "-a",
+        "notify-send",
+        "-A",
+        "default=Open the board",
     ]
     assert argv[8] == "Needle · Harbourmaster #253: Every metered kilowatt is billed"
     assert argv[9] == (
@@ -298,9 +305,15 @@ def test_a_stop_that_becomes_an_exit_inside_the_grace_is_one_ring_the_exits(
     kill_lane(machine_floor, launched)
     post_hook(client, "SessionEnd", session_id, lane_path(repo), reason="prompt_input_exit")
     reconcile(client)
-    assert column_of(client, CARD) == "Up next"
+    # Its last words put a decision to him, so the exit waits for him
+    # rather than sending the work back to start again (card #155); the
+    # exit is still the one ring, and the question never rings a second.
+    assert column_of(client, CARD) == "Decision moment"
     (argv,) = rings(machine_floor, 1)
-    assert argv[9].startswith("Moved Executing → Up next — the lane ended with nothing folded")
+    assert argv[9].startswith(
+        "Moved Executing → Decision moment — the lane ended; its last words put a decision "
+        "to you: Done here. Merge it?"
+    )
 
     travel(loops_mod.TELL_GRACE_SECONDS + 5)
     reconcile(client)

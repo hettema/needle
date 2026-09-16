@@ -568,8 +568,12 @@ class Doors:
         lane, session = self._lane_session(detail, "answer")
         result = self.runtime.resume(session.short_id, prompt=text, card=lane.name)
         if result.verdict != LaunchVerdict.ALIVE or result.session is None:
+            # The machine's report, not his word: an answer that never
+            # reached the lane leaves his question standing, and every
+            # reader of "he answered this" counts only his own rows
+            # (card #155's review, finding 1).
             words = f"The answer did not resume the lane: {result.reason}"
-            self.live.note(slug, number, AuditKind.ANSWERED, Actor.OWNER, words)
+            self.live.note(slug, number, AuditKind.ANSWERED, Actor.MACHINE, words)
             raise DoorFailed(words)
         placement = result.placement
         where = rung_words(placement.model, placement.slot) if placement else result.session.slot

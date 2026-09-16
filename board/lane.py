@@ -546,22 +546,32 @@ def lane_for(card: Card, facts: LaneFacts) -> Lane:
                 why=died,
                 then=parked,
             )
-        elif asks_owner(said):
+        elif asks_owner(said) or (standing := facts.standing.get(card.number)) is not None:
+            # His move, by its last words or by a decision of his on the
+            # card's rows written in this life of the lane: the session
+            # handed a checkpoint over and went, and the work waits for
+            # him, not for a fresh start (card #155). The way back is the
+            # one the doors offer (the review's finding 3): Resume needs
+            # the session and its copy of the code; without the copy,
+            # Start opens a fresh one; with the copy and no session, Start
+            # is closed while the copy stays, in the Start door's own words.
+            if asks_owner(said):
+                why = f"{when} after putting a decision to you: {last_line(said)}"
+            else:
+                why = f"{when} and {standing}"
+            if on_disk and winner is not None:
+                way_back = "open the card to resume it once you have decided"
+            elif on_disk:
+                way_back = (
+                    "once you have decided, open the card: its own copy of the code is still "
+                    "on disk with no session to resume, and Start is closed while it stays"
+                )
+            else:
+                way_back = (
+                    "once you have decided, Start opens a fresh copy of the code: its own is gone"
+                )
             sentence = say(
-                Meaning.YOURS,
-                "decide what it asked and bring it back",
-                why=f"{when} after putting a decision to you: {last_line(said)}",
-                then="open the card to resume it once you have decided",
-            )
-        elif (standing := facts.standing.get(card.number)) is not None:
-            # A decision of his on the card's rows, written in this life
-            # of the lane: the session handed a checkpoint over and went,
-            # and the work waits for him, not for a fresh start (card #155).
-            sentence = say(
-                Meaning.YOURS,
-                "decide what it asked and bring it back",
-                why=f"{when} and {standing}",
-                then="open the card to resume it once you have decided",
+                Meaning.YOURS, "decide what it asked and bring it back", why=why, then=way_back
             )
         elif on_disk:
             sentence = say(
@@ -722,11 +732,27 @@ def answered_after(history: list[AuditEntry], kind: RowKind) -> bool:
     is answered by any answer at all. The one reader of "he answered this"
     for the parked card's commitments and for a lane's ending alike (card
     #155): a question he answered through the card, whose session then ran
-    on and ended quietly, is not asked of him again."""
+    on and ended quietly, is not asked of him again. Only his own row
+    counts: the machine writes the same kind when his answer never reached
+    the lane, and that leaves the question standing."""
     written = _written_at(history, kind)
     return any(
-        e.kind == AuditKind.ANSWERED and (written is None or e.at >= written) for e in history
+        e.kind == AuditKind.ANSWERED
+        and e.actor == Actor.OWNER
+        and (written is None or e.at >= written)
+        for e in history
     )
+
+
+def ruled_on(card: Card, history: list[AuditEntry]) -> bool:
+    """Whether the card's newest RULING has its RULED: one written after
+    the RULING was, or any RULED at all when the RULING has no writing on
+    the history (the import's). A RULED settles only the RULING it follows,
+    so a RULING written after the last RULED stands (card #155)."""
+    if not has_row(card, RowKind.RULED):
+        return False
+    written = _written_at(history, RowKind.RULING)
+    return written is None or _row_written_after(history, RowKind.RULED, written)
 
 
 def has_row(card: Card, kind: RowKind) -> bool:
@@ -857,16 +883,12 @@ def owner_decision_outstanding(
         ):
             return f"the card carries a {kind.value} row: {first_line(row.text)}"
     ruling = newest_row(card, RowKind.RULING)
-    if ruling is not None and (since is None or _row_written_after(history, RowKind.RULING, since)):
-        ruled_since = _written_at(history, RowKind.RULING)
-        # A RULING with no writing on the history is the import's, and any
-        # RULED on the card rules on it; one that was written is ruled on
-        # only by a RULED written after it.
-        if not (
-            has_row(card, RowKind.RULED)
-            and (ruled_since is None or _row_written_after(history, RowKind.RULED, ruled_since))
-        ):
-            return f"the card carries a RULING row nobody has ruled on: {first_line(ruling.text)}"
+    if (
+        ruling is not None
+        and (since is None or _row_written_after(history, RowKind.RULING, since))
+        and not ruled_on(card, history)
+    ):
+        return f"the card carries a RULING row nobody has ruled on: {first_line(ruling.text)}"
     return None
 
 

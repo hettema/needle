@@ -576,6 +576,9 @@ def test_a_lane_that_ends_at_a_checkpoint_it_handed_over_waits_for_the_owner(
         "the four pilot ads and paste the box back"
     )
     assert len(machine_floor.state()["launch_log"]) == 1, "nothing relaunched it"
+    board = client.get("/api/projects/proj/board").json()
+    assert claim_count(board, "lane ended") == 0, "a handed-over checkpoint is his, not a death"
+    assert claim_count(board, "decision") >= 1
     # The face's facts serve a lane with no record of its own the way the
     # exit does: the life falls back to when the card entered Executing.
     loops = client.app.state.loops

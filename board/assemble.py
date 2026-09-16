@@ -425,11 +425,16 @@ def _lane_died(card: Card, lane: Lane) -> bool:
     same fact, so the two never disagree (2026-09-09: they did, on three
     Hello Revenue cards, and the validator took the whole board down). A lane
     that ended with nothing landed lost the work it was doing, and that is
-    what red is for."""
+    what red is for. A lane whose sentence is his move — it put a decision
+    to him, or the card carries one on its rows — did not lose the work:
+    it handed a checkpoint over, and the head counts it as his, never as
+    a death (card #155's review, finding 2: the face said "asked you" while
+    the head counted a lane died)."""
     return (
         not lane.folded
         and not close_landed(card)
         and lane.park is None
+        and opening_of(lane.sentence) is not Meaning.YOURS
         and card.place.column not in SHIPPED
         and card.place.column != Column.NOT_NOW
     )

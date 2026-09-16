@@ -19,7 +19,7 @@ from datetime import datetime
 
 from pydantic import BaseModel
 
-from board.lane import answered_after, first_line, has_row
+from board.lane import answered_after, first_line, newest_row, ruled_on
 from board.reconcile import home_of
 from board.signals import past_due, read_or_decline
 from board.triage import fingerprint
@@ -165,8 +165,14 @@ def commitments_of(card: Card, history: list[AuditEntry], last: Reading | None) 
                     transferable=True,
                 )
             )
+    # The newest row of each kind is the current request, an answer of his
+    # after it settles it, and a RULED settles only the RULING it follows:
+    # the same reading the lane's ending makes (card #155's review,
+    # finding 4 — this read the first ASK and any RULED, so a second
+    # checkpoint showed the first's words and a RULING after a RULED went
+    # unaccounted for).
     for kind in (RowKind.ASK, RowKind.Q):
-        row = next((r for r in card.rows if r.kind == kind), None)
+        row = newest_row(card, kind)
         if row is not None and not answered_after(history, kind):
             found.append(
                 Commitment(
@@ -176,8 +182,8 @@ def commitments_of(card: Card, history: list[AuditEntry], last: Reading | None) 
                     transferable=False,
                 )
             )
-    ruling = next((r for r in card.rows if r.kind == RowKind.RULING), None)
-    if ruling is not None and not has_row(card, RowKind.RULED):
+    ruling = newest_row(card, RowKind.RULING)
+    if ruling is not None and not ruled_on(card, history):
         found.append(
             Commitment(
                 row=RowKind.RULING,

@@ -561,11 +561,11 @@ def test_a_hand_placed_card_with_no_lane_stays():
     assert exit_for(placed, lane, [], folded=None, signal=None, since=None) is None
 
 
-def answered(at: datetime, id: int) -> AuditEntry:
+def answered(at: datetime, id: int, actor: Actor = Actor.OWNER) -> AuditEntry:
     return AuditEntry(
         id=id,
         at=at,
-        actor=Actor.OWNER,
+        actor=actor,
         kind=AuditKind.ANSWERED,
         card_number=7,
         from_place=None,
@@ -611,6 +611,11 @@ def test_an_ended_lane_with_a_current_ask_waits_for_the_owner_instead_of_startin
     settled = [answered(NOW - timedelta(minutes=2), id=4), *history]
     back = exit_for(asked, ended_lane(), settled, folded=False, signal=None, since=since)
     assert back is not None and back.column == Column.UP_NEXT
+    # An answer that never reached the lane is the machine's report under
+    # the same kind, and leaves his question standing.
+    failed = [answered(NOW - timedelta(minutes=2), id=4, actor=Actor.MACHINE), *history]
+    out = exit_for(asked, ended_lane(), failed, folded=False, signal=None, since=since)
+    assert out is not None and out.column == Column.DECISION_MOMENT
     # Everything above the fallback keeps its order: a fold nobody wrote up
     # still says so, whatever the rows say.
     folded = exit_for(asked, ended_lane(), history, folded=True, signal=None, since=since)
@@ -715,6 +720,26 @@ def test_an_ended_lane_with_a_standing_decision_reads_as_his_move_not_a_death():
         f"and {standing}. Open the card to resume it once you have decided."
     )
     assert doors(card(column=Column.DECISION_MOMENT), lane).resume.offered
+    # The way back is the one the doors offer: no copy of the code, Start
+    # opens a fresh one; a copy with no session, Start is closed while it
+    # stays — the sentence never promises a Resume the card refuses.
+    gone = lane_for(
+        card(column=Column.DECISION_MOMENT),
+        facts(
+            sessions=[session(pid=None, state=SessionState.ENDED, recorded="stopped")],
+            standing={7: standing},
+            worktrees={},
+        ),
+    )
+    assert gone.sentence.endswith("Start opens a fresh copy of the code: its own is gone.")
+    assert not doors(card(column=Column.DECISION_MOMENT), gone).resume.offered
+    unmanned = lane_for(
+        card(column=Column.DECISION_MOMENT),
+        facts(records=[lane_record(folded_at=None, trunk_synced_at=None)], standing={7: standing}),
+    )
+    assert unmanned.state == LaneState.ENDED and unmanned.session is None
+    assert unmanned.sentence.endswith("and Start is closed while it stays.")
+    assert not doors(card(column=Column.DECISION_MOMENT), unmanned).resume.offered
     unasked = lane_for(
         card(column=Column.DECISION_MOMENT),
         facts(sessions=[session(pid=None, state=SessionState.ENDED, recorded="stopped")]),
