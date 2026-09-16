@@ -1,6 +1,6 @@
 # Work waiting for your feedback stays ready for your answer
 
-**Status:** PLANNED
+**Status:** SHIPPED — 2026-09-16
 **Written:** 2026-09-16, prompted by Dennis: "It looks like something corrupted 601 on the needle. Can you carefully find the root cause and resolve it?"
 **Effort gate:** high — a bounded lifecycle correction across recorded human decisions, session endings and recovery; preserve existing close precedence and distinguish stale requests from current ones.
 **Challenged:** 2026-09-16, by codex (call 240): 4 material corrections before build
